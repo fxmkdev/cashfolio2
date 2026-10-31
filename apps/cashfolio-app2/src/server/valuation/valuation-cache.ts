@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../resource-error";
 import { createServerFn } from "@tanstack/react-start";
 import { UserRole } from "../../.prisma-client/enums";
 import {
@@ -286,6 +287,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
           });
         }
       } catch (error) {
+        rethrowResourceError(error);
         if (!hasWarnedValuationCacheUnitsReadFailure) {
           console.warn("Failed to read valuation cache unit keys.", error);
           hasWarnedValuationCacheUnitsReadFailure = true;
@@ -337,6 +339,7 @@ export const getValuationCacheSeries = createServerFn({ method: "GET" })
         points,
       } satisfies ValuationCacheSeriesResponse;
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedValuationCacheSeriesReadFailure) {
         console.warn("Failed to read valuation cache TimeSeries data.", {
           seriesKey,

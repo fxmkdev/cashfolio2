@@ -1,3 +1,5 @@
+import { checkResourceBudget } from "../../resource-context.server";
+import { rethrowResourceError } from "../../resource-error";
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
 import { isReportingGrouping } from "../../../shared/reporting-grouping";
@@ -161,6 +163,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
         }
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedHistoryMetricsCacheReadFailure) {
         console.warn(
           "Failed to read period history metrics cache entry; continuing uncached.",
@@ -196,9 +199,11 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
         Buffer.byteLength(serialized, "utf8") <=
         PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES
       ) {
+        checkResourceBudget();
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedHistoryMetricsCacheWriteFailure) {
         console.warn(
           "Failed to write period history metrics cache entry; continuing uncached.",

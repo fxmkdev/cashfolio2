@@ -5,27 +5,11 @@ import {
   Stack,
   Text,
   Title,
-  useComputedColorScheme,
-  useMantineTheme,
 } from "@mantine/core";
-import type {
-  AgChartInstance,
-  AgChartOptions,
-  AgSeriesVisibilityChange,
-  AgZoomEvent,
-} from "ag-charts-community";
-import { AgCharts } from "ag-charts-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { useMemo, type ReactNode } from "react";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
-import {
-  createDisplayNumberFormatter,
-  getCurrencyDecimals,
-} from "@/shared/unit-format";
-import { useUserLocale } from "@/user-locale-context";
 import {
   getHistoryMetricLabel,
   isHistoryPeriodMode,
@@ -34,23 +18,14 @@ import {
   type HistoryViewSelection,
 } from "./-page-types";
 import { isHistoryScopedMetric } from "@/shared/history-scope";
-import {
-  addRollingAverageMetricToChartData,
-  createHistoryChartOptions,
-  mapHistoryPointsToChartData,
-  prependOpeningBalanceChartDatum,
-  rebaseHistoryChartDataCumulativeToVisibleRange,
-  type HistoryVisibleRange,
-} from "./-chart-options";
-import { getDefaultRangeButtonLabel } from "./-range-controls";
 import { HistoryViewSelect } from "./-view-select";
 import {
   resolveHistoryAccountDrillTarget,
   type HistoryAccountDrillTarget,
 } from "./-account-drilldown";
+import { HistoryChart } from "./-chart";
+import { useHistoryChartModel } from "./-use-chart-model";
 import classes from "./-page-view.module.css";
-
-ensureChartModulesRegistered();
 
 export type HistoryPageViewProps = {
   accountBookId: string;
@@ -58,6 +33,7 @@ export type HistoryPageViewProps = {
   selectedMetric: HistoryMetric;
   isViewPending: boolean;
   history: PeriodHistoryResponse;
+  loadError?: ReactNode;
   onAccountPeriodDoubleClick: (
     target: HistoryAccountDrillTarget,
     periodValue: string,
@@ -66,121 +42,18 @@ export type HistoryPageViewProps = {
   onViewChange: (selection: HistoryViewSelection) => void;
 };
 
-function findHistoryRangeButtons(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      ".ag-charts-range-buttons--buttons .ag-charts-toolbar__button",
-    ),
-  );
-}
-
-function clickRangeButtonByLabel(args: {
-  container: HTMLElement;
-  label: string;
-}): boolean {
-  const matchingButton = findHistoryRangeButtons(args.container).find(
-    (button) => {
-      const buttonLabel = button
-        .querySelector(".ag-charts-toolbar__label")
-        ?.textContent?.trim();
-      return buttonLabel === args.label;
-    },
-  );
-
-  if (!matchingButton) {
-    return false;
-  }
-
-  matchingButton.click();
-  return true;
-}
-
 export function HistoryPageView({
   accountBookId,
   selectedMode,
   selectedMetric,
   isViewPending,
   history,
+  loadError,
   onAccountPeriodDoubleClick,
   onModeChange,
   onViewChange,
 }: HistoryPageViewProps) {
-  const userLocale = useUserLocale();
   const activeReferenceCurrency = history.referenceCurrency;
-  const theme = useMantineTheme();
-  const isDarkMode = useComputedColorScheme() === "dark";
-  const colors = useMemo(
-    () => getDashboardChartThemeColors({ theme, isDarkMode }),
-    [theme, isDarkMode],
-  );
-
-  const currencyFormatter = useMemo(
-    () =>
-      createDisplayNumberFormatter({
-        locale: userLocale,
-        style: "currency",
-        currency: activeReferenceCurrency,
-        decimals: getCurrencyDecimals(activeReferenceCurrency),
-      }),
-    [activeReferenceCurrency, userLocale],
-  );
-
-  const amountCompactFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(userLocale, {
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }),
-    [userLocale],
-  );
-  const pointDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(userLocale, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        timeZone: "UTC",
-      }),
-    [userLocale],
-  );
-
-  const baseChartData = useMemo(
-    () =>
-      addRollingAverageMetricToChartData({
-        chartData: mapHistoryPointsToChartData(history.points),
-        selectedMetric,
-        periodMode: selectedMode,
-      }),
-    [selectedMetric, selectedMode, history.points],
-  );
-  const chartData = useMemo(
-    () =>
-      prependOpeningBalanceChartDatum({
-        chartData: baseChartData,
-        selectedMetric,
-        openingBalancePoint: history.openingBalancePoint,
-      }),
-    [baseChartData, selectedMetric, history.openingBalancePoint],
-  );
-  const [visibleRangeX, setVisibleRangeX] =
-    useState<HistoryVisibleRange | null>(null);
-  const [isCumulativeSeriesVisible, setIsCumulativeSeriesVisible] =
-    useState(false);
-  const rebasedChartData = useMemo(
-    () =>
-      rebaseHistoryChartDataCumulativeToVisibleRange({
-        chartData,
-        visibleRangeX,
-        selectedMetric,
-      }),
-    [chartData, selectedMetric, visibleRangeX],
-  );
-  const chartRef = useRef<AgChartInstance<AgChartOptions> | null>(null);
-  const appliedDefaultRangeModeRef = useRef<HistoryPeriodMode | null>(null);
-  const defaultRangeButtonLabel = useMemo(
-    () => getDefaultRangeButtonLabel(selectedMode),
-    [selectedMode],
-  );
   const selectedMetricSeriesLabel = useMemo(() => {
     if (!isHistoryScopedMetric(selectedMetric)) {
       return undefined;
@@ -203,36 +76,6 @@ export function HistoryPageView({
   }, [selectedMetric, history.scopeOptions, history.scopeSelection]);
   const shouldShowCashFlowEmptyState =
     selectedMetric === "cashFlow" && history.hasCashAccounts === false;
-
-  const handleChartZoom = useCallback((event: AgZoomEvent) => {
-    const nextRange = event.rangeX
-      ? { start: event.rangeX.start, end: event.rangeX.end }
-      : null;
-
-    setVisibleRangeX((previousRange) => {
-      const previousStart = previousRange?.start?.valueOf();
-      const previousEnd = previousRange?.end?.valueOf();
-      const nextStart = nextRange?.start?.valueOf();
-      const nextEnd = nextRange?.end?.valueOf();
-      if (previousStart === nextStart && previousEnd === nextEnd) {
-        return previousRange;
-      }
-
-      return nextRange;
-    });
-  }, []);
-
-  const handleSeriesVisibilityChange = useCallback(
-    (event: AgSeriesVisibilityChange) => {
-      if (event.itemId !== "cumulativeMetric") {
-        return;
-      }
-
-      setIsCumulativeSeriesVisible(event.visible);
-    },
-    [],
-  );
-
   const drillTarget = useMemo(
     () =>
       resolveHistoryAccountDrillTarget({
@@ -246,107 +89,22 @@ export function HistoryPageView({
       }),
     [selectedMetric, history.scopeSelection, history.scopeOptions],
   );
-  const handlePeriodDoubleClick = useCallback(
-    (periodValue: string) => {
-      if (drillTarget) onAccountPeriodDoubleClick(drillTarget, periodValue);
-    },
-    [drillTarget, onAccountPeriodDoubleClick],
-  );
-
-  const chartOptions = useMemo(
-    () =>
-      createHistoryChartOptions({
-        chartData: rebasedChartData,
-        periodMode: selectedMode,
-        selectedMetric,
-        selectedMetricSeriesLabel,
-        showCumulativeSeries: isCumulativeSeriesVisible,
-        amountCompactFormatter,
-        currencyFormatter,
-        pointDateFormatter,
-        colors,
-        theme,
-        isDarkMode,
-        onPeriodDoubleClick: drillTarget ? handlePeriodDoubleClick : undefined,
-        onZoom: handleChartZoom,
-        onSeriesVisibilityChange: handleSeriesVisibilityChange,
-      }),
-    [
-      amountCompactFormatter,
-      rebasedChartData,
-      colors,
-      currencyFormatter,
-      handleChartZoom,
-      drillTarget,
-      handlePeriodDoubleClick,
-      handleSeriesVisibilityChange,
-      isCumulativeSeriesVisible,
-      pointDateFormatter,
-      selectedMode,
-      selectedMetric,
-      selectedMetricSeriesLabel,
-      isDarkMode,
-      theme,
-    ],
-  );
-
-  useEffect(() => {
-    if (rebasedChartData.length === 0) {
-      return;
-    }
-
-    if (appliedDefaultRangeModeRef.current === selectedMode) {
-      return;
-    }
-
-    let animationFrameId = 0;
-    const clickDefaultRangeButton = (attemptsLeft: number) => {
-      const chartElement = chartRef.current?.getOptions().container;
-      if (!(chartElement instanceof HTMLElement)) {
-        if (attemptsLeft > 0) {
-          animationFrameId = window.requestAnimationFrame(() =>
-            clickDefaultRangeButton(attemptsLeft - 1),
-          );
-        }
-        return;
-      }
-
-      if (
-        clickRangeButtonByLabel({
-          container: chartElement,
-          label: defaultRangeButtonLabel,
-        })
-      ) {
-        appliedDefaultRangeModeRef.current = selectedMode;
-        return;
-      }
-
-      if (attemptsLeft > 0) {
-        animationFrameId = window.requestAnimationFrame(() =>
-          clickDefaultRangeButton(attemptsLeft - 1),
-        );
-      }
-    };
-
-    // Wait one frame so AG Charts can mount range-controls toolbar elements.
-    animationFrameId = window.requestAnimationFrame(() =>
-      clickDefaultRangeButton(4),
-    );
-    return () => {
-      window.cancelAnimationFrame(animationFrameId);
-    };
-  }, [defaultRangeButtonLabel, rebasedChartData, selectedMode]);
-
-  useEffect(() => {
-    setVisibleRangeX(null);
-  }, [accountBookId, selectedMode]);
-
+  const { chartRef, chartOptions, chartData } = useHistoryChartModel({
+    accountBookId,
+    selectedMode,
+    selectedMetric,
+    history,
+    selectedMetricSeriesLabel,
+    drillTarget,
+    onAccountPeriodDoubleClick,
+  });
   return (
     <PageShell className={classes.page}>
       <TopPageHeader
         heading={<Title order={2}>History</Title>}
         actions={
           <SegmentedControl
+            disabled={isViewPending}
             value={selectedMode}
             aria-label="History Period Mode"
             data={[
@@ -363,6 +121,7 @@ export function HistoryPageView({
       />
 
       <Card withBorder radius="md" p="lg" className={classes.chartCard}>
+        {loadError}
         <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
           <Stack gap={4}>
             <Text fw={600}>
@@ -388,7 +147,7 @@ export function HistoryPageView({
 
         {drillTarget &&
           !shouldShowCashFlowEmptyState &&
-          rebasedChartData.length > 0 && (
+          chartData.length > 0 && (
             <Text c="dimmed" size="sm" mt="sm">
               {drillTarget.kind === "reconciliation"
                 ? "Double-click a period to open gain/loss reconciliation."
@@ -402,17 +161,13 @@ export function HistoryPageView({
               No accounts are included in cash flow for this account book.
             </Text>
           </div>
-        ) : rebasedChartData.length === 0 ? (
+        ) : chartData.length === 0 ? (
           <Text c="dimmed" mt="md">
             No periods available yet.
           </Text>
         ) : (
           <div className={classes.chartContainer}>
-            <AgCharts
-              ref={chartRef}
-              options={chartOptions}
-              className={classes.chart}
-            />
+            <HistoryChart chartRef={chartRef} chartOptions={chartOptions} />
           </div>
         )}
       </Card>

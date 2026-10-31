@@ -1,3 +1,7 @@
+import {
+  RESOURCE_LIMITS,
+  assertTransactionLimits,
+} from "@/shared/resource-limits";
 import { useRef, useState } from "react";
 import {
   getStatementImportExistingBookings,
@@ -61,6 +65,12 @@ export function useStatementImportUploadState(args: {
 
     setIsCheckingExistingBookings(true);
     try {
+      if (nextFile.size > RESOURCE_LIMITS.bodyBytes) {
+        setParseErrors([
+          "The statement exceeds 5 MiB. Split the file and try again.",
+        ]);
+        return;
+      }
       const text = await nextFile.text();
       if (requestId !== fileReadRequestId.current) return;
 
@@ -72,6 +82,18 @@ export function useStatementImportUploadState(args: {
       setParseErrors(result.errors);
       if (result.errors.length > 0 || result.drafts.length === 0) return;
 
+      try {
+        assertTransactionLimits(
+          result.drafts.map((draft) => draft.transaction),
+        );
+      } catch (error) {
+        setParseErrors([
+          error instanceof Error
+            ? error.message
+            : "The statement exceeds the import limits.",
+        ]);
+        return;
+      }
       const bookings = await getStatementImportExistingBookings({
         data: {
           accountBookId: args.accountBookId,

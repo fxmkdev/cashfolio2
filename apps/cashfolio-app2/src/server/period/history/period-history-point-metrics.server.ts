@@ -1,335 +1,46 @@
-import { buildGainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
-import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
-import { round2 } from "../period-helpers";
-
-import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "../period-balance-stats";
+import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache";
+import { loadHistoryPointValuations } from "./period-history-point-metrics-valuation.server";
 import {
-  convertBookingValueToReferenceDetails,
-  getUnitToReferenceExchangeRateDetails,
-} from "../period-conversion";
-import {
-  getOrLoadPeriodBaseData,
-  type PeriodBaseData,
-} from "../cache/period-base-data-cache";
-import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
-import { processPeriodEquityBookingsFromBaseData } from "../overview/period-equity-bookings";
-import { createPeriodOverviewEquityAggregation } from "../overview/period-overview-aggregation";
-import {
-  preparePeriodCalculationContext,
-  prepareGainLossStructure,
-} from "../period-calculation-context";
-import type { GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
-import {
-  buildNetWorthHistoryScopeAmountMap,
-  buildHistoryGainLossScopeOptions,
-  buildHistoryScopeOptions,
-  buildNetWorthHistoryScopeOptions,
-  resolveScopedMetricValue,
-  type HistoryMetricScopeFilter,
-} from "./period-history-scopes.server";
-import { type HistoryScopeOption } from "../../../shared/history-scope";
-import { buildGainsLossesBreakdown } from "../breakdown/period-gains-losses-breakdown";
-import { computePeriodCashFlow } from "../overview/period-cash-flow";
+  assembleHistoryPointMetrics,
+  createEmptyHistoryPointMetrics,
+} from "./period-history-point-metrics-assembly";
 import type {
-  DecimalValuationRateLookupResult as ValuationRateLookupResult,
-  ValuationRateSource,
-} from "../../valuation/types";
+  HistoryPointMetricsInput,
+  PeriodHistoryPointMetrics,
+  PeriodHistoryPointMetricsResult,
+} from "./period-history-point-metrics-types";
 
-const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
+export type {
+  PeriodHistoryPointMetrics,
+  HistoryValuationContext,
+  PeriodHistoryPointMetricsResult,
+} from "./period-history-point-metrics-types";
 
-export type PeriodHistoryPointMetrics = {
-  totalReturn: Money;
-  savings: Money;
-  cashFlow: Money;
-  income: Money;
-  expenses: Money;
-  gainsLosses: Money;
-  assets: Money;
-  liabilities: Money;
-  netWorth: Money;
-  scopeOptions: {
-    cashFlow: HistoryScopeOption[];
-    income: HistoryScopeOption[];
-    expenses: HistoryScopeOption[];
-    gainsLosses: HistoryScopeOption[];
-    netWorth: HistoryScopeOption[];
-  };
-  scopedMetricValue?: Money;
-};
-
-export type HistoryValuationContext = {
-  exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
-};
-
-export type PeriodHistoryPointMetricsResult = {
-  metrics: PeriodHistoryPointMetrics;
-  cacheableFromPermanentValuationCache: boolean;
-};
-
-function isPermanentValuationSource(source: ValuationRateSource): boolean {
-  return source === "identity" || source === "timeSeries";
-}
-
-export async function loadPeriodHistoryPointMetrics(args: {
-  accountBookId: string;
-  period?: unknown;
-  baseData?: PeriodBaseData;
-  metricScopeFilter?: HistoryMetricScopeFilter;
-  valuationContext?: HistoryValuationContext;
-}): Promise<PeriodHistoryPointMetrics> {
+export async function loadPeriodHistoryPointMetrics(
+  args: HistoryPointMetricsInput,
+): Promise<PeriodHistoryPointMetrics> {
   const result = await loadPeriodHistoryPointMetricsWithCacheability(args);
   return result.metrics;
 }
 
-export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
-  accountBookId: string;
-  period?: unknown;
-  baseData?: PeriodBaseData;
-  metricScopeFilter?: HistoryMetricScopeFilter;
-  valuationContext?: HistoryValuationContext;
-}): Promise<PeriodHistoryPointMetricsResult> {
+export async function loadPeriodHistoryPointMetricsWithCacheability(
+  args: HistoryPointMetricsInput,
+): Promise<PeriodHistoryPointMetricsResult> {
   const baseData =
     args.baseData ??
     (await getOrLoadPeriodBaseData({
       accountBookId: args.accountBookId,
       period: args.period,
     }));
-
-  const selection = baseData.selection;
-  if (selection.isBeforeAccountBookStart) {
-    return {
-      metrics: {
-        totalReturn: toMoney(0),
-        savings: toMoney(0),
-        cashFlow: toMoney(0),
-        income: toMoney(0),
-        expenses: toMoney(0),
-        gainsLosses: toMoney(0),
-        assets: toMoney(0),
-        liabilities: toMoney(0),
-        netWorth: toMoney(0),
-        scopeOptions: {
-          cashFlow: [],
-          income: [],
-          expenses: [],
-          gainsLosses: [],
-          netWorth: [],
-        },
-        scopedMetricValue: args.metricScopeFilter ? toMoney(0) : undefined,
-      } satisfies PeriodHistoryPointMetrics,
-      cacheableFromPermanentValuationCache: true,
-    };
-  }
-
-  const referenceCurrency = baseData.referenceCurrency;
-  const exchangeRateByKey =
-    args.valuationContext?.exchangeRateByKey ??
-    new Map<string, Promise<ValuationRateLookupResult>>();
-  let cacheableFromPermanentValuationCache = true;
-  const markValuationSource = (source: ValuationRateSource) => {
-    if (!isPermanentValuationSource(source)) {
-      cacheableFromPermanentValuationCache = false;
-    }
-  };
-  const equityAggregation = createPeriodOverviewEquityAggregation();
-  const gainsLossesContributionByKey = new Map<
-    string,
-    GainLossContributionAccumulator
-  >();
-
-  await processPeriodEquityBookingsFromBaseData({
-    equityBookings: baseData.equityBookings,
-    explicitCounterparts: baseData.explicitCounterparts,
-    equityAggregation,
-    gainsLossesContributionByKey,
-    convertBookingToReference: async (booking) => {
-      const result = await convertBookingValueToReferenceDetails({
-        ...booking,
-        referenceCurrency,
-        exchangeRateByKey,
-      });
-      markValuationSource(result.source);
-      return result.value;
-    },
+  if (baseData.selection.isBeforeAccountBookStart)
+    return createEmptyHistoryPointMetrics(Boolean(args.metricScopeFilter));
+  const valuations = await loadHistoryPointValuations({
+    baseData,
+    valuationContext: args.valuationContext,
   });
-
-  const {
-    transferClearingHoldingAccounts,
-    assetLiabilityAccountNameById,
-    assetLiabilityAccounts,
-    allAccountGroups,
-    endOfPeriodRawBalanceByAccountId,
-  } = preparePeriodCalculationContext(baseData);
-
-  const [holdingGainLossTotals, endOfPeriodBalanceStats, cashFlowResult] =
-    await Promise.all([
-      computePeriodHoldingGainLoss({
-        periodStart: selection.from,
-        periodEndExclusive: selection.queryEndExclusive,
-        periodEnd: selection.to,
-        initialHoldingDate: selection.initialHoldingDate,
-        referenceCurrency,
-        transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
-        holdingAccounts: baseData.holdingAccountsResolved,
-        transferClearingHoldingAccounts,
-        transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
-        assetLiabilityAccountNameById,
-        gainsLossesContributionByKey,
-        resolveRate: async (input) => {
-          const result = await getUnitToReferenceExchangeRateDetails({
-            ...input,
-            referenceCurrency,
-            exchangeRateByKey,
-          });
-          markValuationSource(result.source);
-          return result.rate;
-        },
-        convertBookingToReference: async (booking) => {
-          const result = await convertBookingValueToReferenceDetails({
-            ...booking,
-            referenceCurrency,
-            exchangeRateByKey,
-          });
-          markValuationSource(result.source);
-          return result.value;
-        },
-        initialHoldingBalances: baseData.initialHoldingBalances,
-        holdingTransactions: baseData.holdingTransactions,
-        executionResidualTransactions: baseData.executionResidualTransactions,
-      }),
-      computeEndOfPeriodBalanceStatsWithConvertedBalances({
-        accounts: assetLiabilityAccounts,
-        rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
-        periodEnd: selection.to,
-        referenceCurrency,
-        convertBalanceToReference: async (input) => {
-          const result = await convertBookingValueToReferenceDetails({
-            ...input,
-            exchangeRateByKey,
-          });
-          markValuationSource(result.source);
-          return result.value;
-        },
-      }),
-      computePeriodCashFlow({
-        transactions: baseData.cashFlowTransactions,
-        periodStart: selection.from,
-        periodEndExclusive: selection.queryEndExclusive,
-        convertBookingToReference: async (booking) => {
-          const result = await convertBookingValueToReferenceDetails({
-            ...booking,
-            referenceCurrency,
-            exchangeRateByKey,
-          });
-          markValuationSource(result.source);
-          return result.value;
-        },
-      }),
-    ]);
-
-  const { income, expenses, explicitGainLoss } = equityAggregation;
-  const gainsLosses = moneySum([
-    explicitGainLoss,
-    holdingGainLossTotals.realizedGainLoss,
-    holdingGainLossTotals.unrealizedGainLoss,
-  ]);
-
-  const roundedIncome = round2(income);
-  const roundedExpenses = round2(expenses);
-  const roundedGainsLosses = round2(gainsLosses);
-  const roundedCashFlow = round2(cashFlowResult.cashFlow);
-  const roundedSavings = round2(
-    moneyAdd(roundedIncome, toMoney(roundedExpenses).neg()),
-  );
-  const roundedTotalReturn = round2(
-    moneyAdd(roundedSavings, roundedGainsLosses),
-  );
-  const roundedAssets = round2(endOfPeriodBalanceStats.assets);
-  const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);
-  const roundedNetWorth = round2(endOfPeriodBalanceStats.netWorth);
-  const netWorthAmountByAccountId = buildNetWorthHistoryScopeAmountMap({
-    accounts: assetLiabilityAccounts,
-    convertedBalanceByAccountId:
-      endOfPeriodBalanceStats.convertedBalanceByAccountId,
-  });
-  const cashFlowScopeOptions = buildHistoryScopeOptions({
-    amountByAccountId: cashFlowResult.cashFlowAmountByAccountId,
-    allAccountGroups,
-  });
-  const incomeScopeOptions = buildHistoryScopeOptions({
-    amountByAccountId: equityAggregation.incomeAmountByAccountId,
-    allAccountGroups,
-  });
-  const expenseScopeOptions = buildHistoryScopeOptions({
-    amountByAccountId: equityAggregation.expenseAmountByAccountId,
-    allAccountGroups,
-  });
-  const netWorthScopeOptions = buildNetWorthHistoryScopeOptions({
-    accounts: assetLiabilityAccounts.filter((account) =>
-      account.id.startsWith("virtual:"),
-    ),
-    groups: allAccountGroups.filter((group) => group.id.startsWith("virtual:")),
-  });
-  const gainsLossesBreakdown = buildGainsLossesBreakdown({
-    contributions: Array.from(gainsLossesContributionByKey.values()),
-    accountAttributionById: buildGainLossAccountAttribution(baseData, [
-      ...gainsLossesContributionByKey.values(),
-    ]),
-    referenceCurrency,
-  });
-  const accountStructureGainsLossesBreakdown = buildGainsLossesBreakdown({
-    contributions: Array.from(gainsLossesContributionByKey.values()),
-    accountAttributionById: buildGainLossAccountAttribution(baseData, [
-      ...gainsLossesContributionByKey.values(),
-    ]),
-    referenceCurrency,
-    grouping: "accountStructure",
-    ...prepareGainLossStructure(baseData),
-  });
-  const gainLossScopeOptions = [
-    ...buildHistoryGainLossScopeOptions({
-      hierarchy: accountStructureGainsLossesBreakdown.hierarchy,
-      grouping: "accountStructure",
-    }),
-    ...buildHistoryGainLossScopeOptions({
-      hierarchy: gainsLossesBreakdown.hierarchy,
-      grouping: "assetClass",
-    }),
-  ];
-  const scopedMetricValue = resolveScopedMetricValue({
+  return assembleHistoryPointMetrics({
+    baseData,
+    valuations,
     metricScopeFilter: args.metricScopeFilter,
-    amountByMetric: {
-      income: equityAggregation.incomeAmountByAccountId,
-      cashFlow: cashFlowResult.cashFlowAmountByAccountId,
-      expenses: equityAggregation.expenseAmountByAccountId,
-      netWorth: netWorthAmountByAccountId,
-    },
-    gainsLossesHierarchy: gainsLossesBreakdown.hierarchy,
-    accountStructureGainsLossesHierarchy:
-      accountStructureGainsLossesBreakdown.hierarchy,
-    allAccountGroups,
   });
-
-  return {
-    metrics: {
-      totalReturn: roundedTotalReturn,
-      savings: roundedSavings,
-      cashFlow: roundedCashFlow,
-      income: roundedIncome,
-      expenses: roundedExpenses,
-      gainsLosses: roundedGainsLosses,
-      assets: roundedAssets,
-      liabilities: roundedLiabilities,
-      netWorth: roundedNetWorth,
-      scopeOptions: {
-        cashFlow: cashFlowScopeOptions,
-        income: incomeScopeOptions,
-        expenses: expenseScopeOptions,
-        gainsLosses: gainLossScopeOptions,
-        netWorth: netWorthScopeOptions,
-      },
-      scopedMetricValue,
-    } satisfies PeriodHistoryPointMetrics,
-    cacheableFromPermanentValuationCache,
-  };
 }

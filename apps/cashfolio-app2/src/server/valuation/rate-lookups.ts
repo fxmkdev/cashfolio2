@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../resource-error";
 import {
   toMoney,
   type Money,
@@ -44,6 +45,7 @@ async function getCurrencyExchangeRateWithContext(
 
     return toMoney(moneyDivide(usdToTargetRate, usdToSourceRate));
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve valuation rate for ${sourceCurrency} -> ${targetCurrency}`,
       error,
@@ -83,6 +85,7 @@ async function getCurrencyExchangeRateDetailsWithContext(
       ]),
     };
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve valuation rate for ${sourceCurrency} -> ${targetCurrency}`,
       error,
@@ -129,6 +132,7 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
 
     return moneyMultiply(cryptoToUsdRate, usdToTargetRate);
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve valuation rate for ${cryptocurrency} -> ${targetCurrency}`,
       error,
@@ -163,6 +167,7 @@ export async function getCryptocurrencyToCurrencyExchangeRateDetails(args: {
       ]),
     };
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve valuation rate for ${cryptocurrency} -> ${targetCurrency}`,
       error,
@@ -200,6 +205,7 @@ export async function getSecurityToCurrencyExchangeRate(args: {
 
     return moneyMultiply(securityPrice, tradeToTargetRate);
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve security exchange rate for ${symbol} (${tradeCurrency} -> ${targetCurrency})`,
       error,
@@ -243,6 +249,7 @@ export async function getSecurityToCurrencyExchangeRateDetails(args: {
       ]),
     };
   } catch (error) {
+    rethrowResourceError(error);
     console.error(
       `Unable to retrieve security exchange rate for ${symbol} (${tradeCurrency} -> ${targetCurrency})`,
       error,

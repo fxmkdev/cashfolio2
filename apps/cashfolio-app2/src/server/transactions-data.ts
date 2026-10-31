@@ -1,3 +1,4 @@
+import { startReadBudget } from "./resource-context.server";
 import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
@@ -25,6 +26,7 @@ export const getTransactionsData = createServerFn({ method: "GET" })
   }))
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     const periodRange = getExplicitPeriodDateRange(data.period);
 
     const [transactions, openingBalanceTransactionIds, referenceCurrency] =

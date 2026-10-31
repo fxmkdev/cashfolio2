@@ -94,6 +94,20 @@ const FIXED_SYSTEM_TIME = new Date("2026-02-01T12:00:00.000Z");
 describe("transaction mutation boundary validation", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("rejects oversized imports before authorization or transaction creation", async () => {
+    await expect(
+      createTransactions({
+        data: {
+          accountBookId: "book-1",
+          transactions: Array(1001).fill(null),
+        } as never,
+      }),
+    ).rejects.toThrow("1'000");
+    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
   it.each([
     [
       createTransaction,

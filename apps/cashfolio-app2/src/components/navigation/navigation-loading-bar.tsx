@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { NavigationProgress, nprogress } from "@mantine/nprogress";
-
-const START_DELAY_MS = 120;
+import { NavigationProgress } from "@mantine/nprogress";
+import { useGlobalLoading } from "./global-loading";
 
 export function NavigationLoadingBar() {
   const { href, isLoading } = useRouterState({
@@ -17,8 +16,7 @@ export function NavigationLoadingBar() {
     lastSettledHrefRef.current !== undefined &&
     href !== lastSettledHrefRef.current;
 
-  const startTimeoutRef = useRef<number | undefined>(undefined);
-  const progressStartedRef = useRef(false);
+  useGlobalLoading(isRouteLoadPending);
 
   useEffect(() => {
     if (lastSettledHrefRef.current === undefined) {
@@ -30,46 +28,5 @@ export function NavigationLoadingBar() {
     }
   }, [href, isLoading]);
 
-  useEffect(() => {
-    if (isRouteLoadPending) {
-      if (
-        !progressStartedRef.current &&
-        startTimeoutRef.current === undefined
-      ) {
-        startTimeoutRef.current = window.setTimeout(() => {
-          progressStartedRef.current = true;
-          startTimeoutRef.current = undefined;
-          nprogress.start();
-        }, START_DELAY_MS);
-      }
-
-      return;
-    }
-
-    if (startTimeoutRef.current !== undefined) {
-      window.clearTimeout(startTimeoutRef.current);
-      startTimeoutRef.current = undefined;
-    }
-
-    if (progressStartedRef.current) {
-      nprogress.complete();
-      progressStartedRef.current = false;
-    }
-  }, [isRouteLoadPending]);
-
-  useEffect(() => {
-    return () => {
-      if (startTimeoutRef.current !== undefined) {
-        window.clearTimeout(startTimeoutRef.current);
-        startTimeoutRef.current = undefined;
-      }
-
-      if (progressStartedRef.current) {
-        nprogress.complete();
-        progressStartedRef.current = false;
-      }
-    };
-  }, []);
-
-  return <NavigationProgress />;
+  return <NavigationProgress data-testid="global-loading-indicator" />;
 }
