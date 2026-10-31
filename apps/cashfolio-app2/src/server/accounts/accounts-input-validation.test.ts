@@ -64,7 +64,6 @@ describe("account mutation input contracts", () => {
     },
   );
 
-
   it("preserves omitted classification and explicit clearing", () => {
     expect(validateAccountMutationInput(account).assetClassId).toBeUndefined();
     expect(

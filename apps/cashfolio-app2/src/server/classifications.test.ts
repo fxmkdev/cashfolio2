@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS } from "../shared/resource-limits";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   guard: vi.fn(),
@@ -64,6 +65,40 @@ beforeEach(() => {
   mocks.tx.classificationNode.findUnique.mockResolvedValue(nodes[0]);
 });
 describe("classification endpoints", () => {
+  it("applies shared name, identifier, and bulk limits before mutation", () => {
+    expect(() =>
+      saveAssetClass({
+        data: {
+          accountBookId: "book",
+          name: "x".repeat(RESOURCE_LIMITS.name + 1),
+          parentId: null,
+        },
+      }),
+    ).toThrow("cannot exceed");
+    expect(() =>
+      saveAssetClass({
+        data: {
+          accountBookId: "book",
+          name: "Class",
+          parentId: "x".repeat(RESOURCE_LIMITS.identifier + 1),
+        },
+      }),
+    ).toThrow("cannot exceed");
+    expect(() =>
+      reorderAssetClasses({
+        data: {
+          accountBookId: "book",
+          parentId: null,
+          orderedIds: Array.from(
+            { length: RESOURCE_LIMITS.bulkItems + 1 },
+            (_, index) => String(index),
+          ),
+        },
+      }),
+    ).toThrow("cannot exceed");
+    expect(mocks.guard).not.toHaveBeenCalled();
+    expect(mocks.lock).not.toHaveBeenCalled();
+  });
   it("authorizes reads and returns active/archived assignment counts", async () => {
     mocks.tx.classificationNode.findMany.mockResolvedValue([
       {

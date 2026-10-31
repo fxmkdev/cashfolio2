@@ -2,7 +2,6 @@ import { defaultAssetClassIds } from "./asset-class";
 import { describe, expect, test } from "vitest";
 import {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,

@@ -421,3 +421,79 @@ describe("automatic complete History loading", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 });
+
+it("keeps custom class ordering and nested investment selections when merging History batches", async () => {
+  const selection =
+    "gain-loss-investment:child-first:managed-portfolios" as const;
+  const newest = historyBatch(["2026-02"], "2026-02"),
+    oldest = historyBatch(["2026-01"]);
+  for (const batch of [newest, oldest])
+    batch.scopeSelection.gainsLosses = selection;
+  const rootFirst = {
+    value: "asset-class:z-root" as const,
+    label: "Z First",
+    kind: "gainLoss" as const,
+    sortOrder: 0,
+  };
+  const rootLast = {
+    value: "asset-class:a-root" as const,
+    label: "A Last",
+    kind: "gainLoss" as const,
+    sortOrder: 1,
+  };
+  newest.scopeOptions.gainsLosses.push(rootLast, rootFirst);
+  oldest.scopeOptions.gainsLosses.push(
+    rootFirst,
+    rootLast,
+    {
+      value: "asset-class:child-last",
+      label: "Z First / A Last",
+      parentValue: rootFirst.value,
+      kind: "gainLoss",
+      sortOrder: 1,
+    },
+    {
+      value: "gain-loss-investment:z-root:CURRENCY:USD",
+      label: "Z First / USD",
+      parentValue: rootFirst.value,
+      kind: "gainLoss",
+    },
+    {
+      value: selection,
+      label: "Z First / Z First / Managed Portfolios",
+      parentValue: "asset-class:child-first",
+      kind: "gainLoss",
+    },
+    {
+      value: "asset-class:child-first",
+      label: "Z First / Z First",
+      parentValue: rootFirst.value,
+      kind: "gainLoss",
+      sortOrder: 0,
+    },
+  );
+  const fetchBatch = fetcher()
+    .mockResolvedValueOnce(newest)
+    .mockResolvedValueOnce(oldest);
+  const result = await loadCompleteHistory(
+    {
+      ...historyRequest,
+      scopedMetric: "gainsLosses",
+      gainLossScope: selection,
+    },
+    fetchBatch,
+    signal(),
+  );
+  expect(result.scopeSelection.gainsLosses).toBe(selection);
+  expect(result.scopeOptions.gainsLosses.map((option) => option.value)).toEqual(
+    [
+      "total",
+      rootFirst.value,
+      "asset-class:child-first",
+      selection,
+      "asset-class:child-last",
+      "gain-loss-investment:z-root:CURRENCY:USD",
+      rootLast.value,
+    ],
+  );
+});

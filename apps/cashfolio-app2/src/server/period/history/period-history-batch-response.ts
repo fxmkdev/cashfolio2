@@ -35,10 +35,12 @@ function mergeScopeOptions({
   const scopeOptions = {} as ScopeOptions;
   for (const metric of metrics) {
     const options = new Map(
-      (metric === "netWorth" ? context.netWorthScopes : metric === "gainsLosses" ? (context.assetClassScopes ?? []) : []).map((option) => [
-        option.value,
-        option,
-      ]),
+      (metric === "netWorth"
+        ? context.netWorthScopes
+        : metric === "gainsLosses"
+          ? (context.assetClassScopes ?? [])
+          : []
+      ).map((option) => [option.value, option]),
     );
     for (const point of loadedPoints)
       for (const option of point.scopeOptions[metric])

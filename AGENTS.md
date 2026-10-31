@@ -26,20 +26,20 @@ file and the linked docs are for `apps/cashfolio-app2`.
   `git fetch origin` followed by `git rebase origin/main`. Never merge `main` or
   `origin/main` into a feature branch. Resolve conflicts and continue the rebase
   rather than switching to a merge.
-- Preserve individual commits during rebases by default. If replaying intermediate
-  commits would cause avoidable or repeated conflict resolution, consider
-  proposing a squash. Explain why it would help, identify the commits to combine,
-  and describe the loss of individual commit history. Obtain explicit user
-  confirmation of that proposal before squashing; permission to rebase, resolve
-  conflicts, or force-push does not imply permission to squash.
+- Preserve individual commits during rebases by default. If replaying
+  intermediate commits would cause avoidable or repeated conflict resolution,
+  consider proposing a squash. Explain why it would help, identify the commits
+  to combine, and describe the loss of individual commit history. Obtain
+  explicit user confirmation of that proposal before squashing; permission to
+  rebase, resolve conflicts, or force-push does not imply permission to squash.
 - Without that confirmation, preserve the commits. After confirmation, combine
   only the approved commits, preserve their combined changes, and rebase onto
   freshly fetched `origin/main`. This approval requirement applies to rewriting
   feature-branch history; completed PRs retain the existing squash-merge policy.
 - After rebasing a published feature branch, push the rewritten history to the
   same remote branch with `git push --force-with-lease origin <feature-branch>`
-  so its open PR updates in place. If the lease fails, inspect the remote changes
-  before retrying; never bypass it with `--force`.
+  so its open PR updates in place. If the lease fails, inspect the remote
+  changes before retrying; never bypass it with `--force`.
 - TanStack Start route filenames often contain `$` (for route params). In shell
   commands, always treat these paths as literals to avoid variable expansion.
   - Prefer wrapping such paths in single quotes, e.g.
