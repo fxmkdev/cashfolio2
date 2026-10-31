@@ -32,6 +32,47 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
   ).toBeVisible();
   await clickPinnedRowAction({
+    row: page.locator('[row-id="OTHER_ASSETS"]').first(),
+    actionLabel: "Reorder Siblings",
+  });
+  const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
+  const source = await reorder
+    .locator('[row-id="OTHER_ASSETS"] .ag-row-drag')
+    .boundingBox();
+  const target = await reorder
+    .locator('[row-id="CASH_AND_CASH_EQUIVALENTS"]')
+    .boundingBox();
+  if (!source || !target) throw new Error("Missing sibling drag rows");
+  await page.mouse.move(
+    source.x + source.width / 2,
+    source.y + source.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width / 2, target.y + 3, {
+    steps: 16,
+  });
+  await page.mouse.up();
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.classificationNode.findMany({
+            where: {
+              accountBookId: book.accountBookId,
+              schemeId: "assetClass",
+              parentId: null,
+            },
+            orderBy: { sortOrder: "asc" },
+          })
+        )[0]?.id,
+    )
+    .toBe("OTHER_ASSETS");
+  await reorder.getByRole("button", { name: "Close", exact: true }).click();
+  await page.reload();
+  await expect(
+    page.locator('.ag-grid-scrolling-container > .ag-row[row-index="0"]'),
+  ).toHaveAttribute("row-id", "OTHER_ASSETS");
+  await clickPinnedRowAction({
     row: page.locator('[row-id="EQUITIES"]').first(),
     actionLabel: "Add Child to Equities",
   });

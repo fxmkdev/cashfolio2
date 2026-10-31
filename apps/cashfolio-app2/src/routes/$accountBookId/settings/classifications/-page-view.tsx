@@ -3,8 +3,7 @@ import { IconPlus } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { useMemo, useState } from "react";
 import { DataGrid } from "@/components/grid/data-grid";
-import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
-import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { ReorderGroupChildrenModal } from "@/components/account-tree/reorder-group-children-modal";
 import {
   ClassDialog,
   type ManagedClass,
@@ -34,7 +33,7 @@ const NAME_COLUMN: ColDef<AssetClassGridRow> = {
 export function ClassificationsPageView(props: {
   nodes: ManagedClass[];
   onSave: (draft: ClassDraft) => Promise<void>;
-  onMove: (id: string, direction: "up" | "down") => Promise<void>;
+  onReorder: (parentId: string | null, orderedIds: string[]) => Promise<void>;
   onDelete: (id: string, replacementId: string | null) => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
@@ -42,16 +41,24 @@ export function ClassificationsPageView(props: {
     draft: ClassDraft;
     deleting?: boolean;
   } | null>(null);
-  const state = useDialogSubmitState({
-    captureErrors: true,
-    onRefreshConstraints: props.onRefresh,
-  });
+  const [reorderingRow, setReorderingRow] = useState<ManagedClass | null>(null);
   const rows = useMemo(
     () => buildAssetClassGridRows(props.nodes),
     [props.nodes],
   );
-  const { isSubmitting, runSubmit } = state;
-  const { onMove } = props;
+  const siblingRows = useMemo(
+    () =>
+      reorderingRow
+        ? rows
+            .filter((row) => row.parentId === reorderingRow.parentId)
+            .map((row) => ({
+              id: row.id,
+              name: row.name,
+              nodeType: "assetClass" as const,
+            }))
+        : [],
+    [rows, reorderingRow],
+  );
   const columns = useMemo<ColDef<AssetClassGridRow>[]>(
     () => [
       {
@@ -75,20 +82,17 @@ export function ClassificationsPageView(props: {
           data ? (
             <AssetClassActionsCell
               row={data}
-              isMoving={isSubmitting}
               onEdit={() => setDialog({ draft: data })}
               onAddChild={() =>
                 setDialog({ draft: { name: "", parentId: data.id } })
               }
-              onMove={(direction) => {
-                void runSubmit(() => onMove(data.id, direction));
-              }}
+              onReorder={() => setReorderingRow(data)}
               onDelete={() => setDialog({ draft: data, deleting: true })}
             />
           ) : null,
       },
     ],
-    [isSubmitting, runSubmit, onMove],
+    [],
   );
   return (
     <Stack flex={1} mih={0}>
@@ -104,10 +108,6 @@ export function ClassificationsPageView(props: {
         Organize asset classes for gain/loss reports. Accounts can be assigned
         to any level. Changes apply to all historical periods.
       </Text>
-      <MutationSubmitFeedback
-        state={state}
-        onRefreshConstraints={props.onRefresh}
-      />
       <DataGrid
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
@@ -126,6 +126,21 @@ export function ClassificationsPageView(props: {
       <Text size="sm" c="dimmed">
         Accounts without an assignment appear as Unclassified.
       </Text>
+      <ReorderGroupChildrenModal
+        opened={!!reorderingRow}
+        onClose={() => setReorderingRow(null)}
+        rowName={reorderingRow?.name ?? ""}
+        initialRows={siblingRows}
+        onRefreshConstraints={props.onRefresh}
+        onReorder={(ordered) =>
+          reorderingRow
+            ? props.onReorder(
+                reorderingRow.parentId,
+                ordered.map((row) => row.id),
+              )
+            : Promise.resolve()
+        }
+      />
       {dialog && (
         <ClassDialog
           {...dialog}

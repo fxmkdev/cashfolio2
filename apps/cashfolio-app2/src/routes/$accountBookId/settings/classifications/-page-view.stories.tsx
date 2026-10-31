@@ -56,7 +56,7 @@ const meta = {
     ],
     onSave: fn(async () => {}),
     onDelete: fn(async () => {}),
-    onMove: fn(async () => {}),
+    onReorder: fn(async () => {}),
     onRefresh: fn(async () => {}),
   },
 } satisfies Meta<typeof ClassificationsPageView>;
@@ -97,20 +97,14 @@ export const Hierarchy: Story = {
     await expect(equities).toHaveAttribute("aria-expanded", "true");
     const actions = await rowActions(canvasElement, "equities");
     await expect(
-      actions.getByRole("button", { name: "Move Equities Up" }),
-    ).toBeDisabled();
-    await expect(
-      actions.getByRole("button", { name: "Move Equities Down" }),
+      actions.getByRole("button", { name: "Reorder Siblings" }),
     ).toBeEnabled();
     await expect(
       actions.getByRole("button", { name: "Delete Equities" }),
     ).toBeDisabled();
     const swiss = await rowActions(canvasElement, "swiss");
     await expect(
-      swiss.getByRole("button", { name: "Move Swiss Equities Up" }),
-    ).toBeDisabled();
-    await expect(
-      swiss.getByRole("button", { name: "Move Swiss Equities Down" }),
+      swiss.getByRole("button", { name: "Reorder Siblings" }),
     ).toBeDisabled();
   },
 };
@@ -214,38 +208,21 @@ export const EditAndReorder: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    let finish!: () => void;
-    args.onMove.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          finish = resolve;
-        }),
-    );
     actions = await rowActions(canvasElement, "equities");
     await userEvent.click(
-      actions.getByRole("button", { name: "Move Equities Down" }),
+      actions.getByRole("button", { name: "Reorder Siblings" }),
     );
-    try {
-      await waitFor(() =>
-        expect(args.onMove).toHaveBeenCalledWith("equities", "down"),
-      );
-      await waitFor(() =>
-        expect(
-          within(canvasElement).getByRole("button", {
-            name: "Move Equities Down",
-          }),
-        ).toBeDisabled(),
-      );
-    } finally {
-      finish();
-    }
-    await waitFor(() =>
-      expect(
-        within(canvasElement).getByRole("button", {
-          name: "Move Equities Down",
-        }),
-      ).toBeEnabled(),
+    const reorder = within(
+      await body.findByRole("dialog", { name: "Reorder Siblings" }),
     );
+    await expect(reorder.getByText("Siblings of Equities")).toBeVisible();
+    await expect(
+      await reorder.findByText("Cash", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      reorder.queryByText("Swiss Equities", { exact: true }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(reorder.getByRole("button", { name: "Close" }));
   },
 };
 export const Empty: Story = {
@@ -328,5 +305,69 @@ export const DeepHierarchy: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(await gridRow(canvasElement, "grandchild")).toBeVisible();
+  },
+};
+
+async function dragClassSibling(
+  dialog: HTMLElement,
+  sourceId: string,
+  targetId: string,
+) {
+  const source = dialog.querySelector<HTMLElement>(
+    `.ag-row[row-id="${sourceId}"] .ag-row-drag`,
+  )!;
+  const target = dialog.querySelector<HTMLElement>(
+    `.ag-row[row-id="${targetId}"]`,
+  )!;
+  const from = source.getBoundingClientRect(),
+    to = target.getBoundingClientRect();
+  const clientX = from.left + from.width / 2;
+  await userEvent.pointer([
+    {
+      target: source,
+      coords: { clientX, clientY: from.top + from.height / 2 },
+      keys: "[MouseLeft>]",
+    },
+    { target, coords: { clientX, clientY: to.top + 3 } },
+    { keys: "[/MouseLeft]" },
+  ]);
+}
+
+export const ReorderFailureRestoresConfirmedOrder: Story = {
+  play: async ({ canvasElement, args }) => {
+    args.onReorder.mockRejectedValueOnce(
+      new Error("The siblings changed. Refresh and reorder the updated list."),
+    );
+    const actions = await rowActions(canvasElement, "equities");
+    await userEvent.click(
+      actions.getByRole("button", { name: "Reorder Siblings" }),
+    );
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Reorder Siblings" },
+    );
+    await waitFor(() =>
+      expect(
+        dialog.querySelector('.ag-row[row-id="cash"] .ag-row-drag'),
+      ).not.toBeNull(),
+    );
+    await dragClassSibling(dialog, "cash", "equities");
+    await waitFor(() =>
+      expect(args.onReorder).toHaveBeenCalledWith(null, ["cash", "equities"]),
+    );
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "The siblings changed",
+    );
+    expect(args.onRefresh).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        dialog.querySelector('.ag-row[row-index="0"] [col-id="name"]'),
+      ).toHaveTextContent("Equities"),
+    );
+    await dragClassSibling(dialog, "cash", "equities");
+    await waitFor(() => expect(args.onReorder).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument(),
+    );
   },
 };

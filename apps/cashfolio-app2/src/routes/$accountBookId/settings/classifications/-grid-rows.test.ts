@@ -35,18 +35,16 @@ describe("asset-class grid rows", () => {
       activeCount: 1,
       archivedCount: 0,
       hasChildren: true,
-      canMoveUp: false,
-      canMoveDown: true,
+      canReorder: true,
     });
     expect(rows[1]).toMatchObject({
       path: "Equities / Swiss Equities",
       activeCount: 3,
       archivedCount: 2,
       hasChildren: false,
-      canMoveUp: false,
-      canMoveDown: false,
+      canReorder: false,
     });
-    expect(rows[2]).toMatchObject({ canMoveUp: true, canMoveDown: false });
+    expect(rows[2]).toMatchObject({ canReorder: true });
   });
   it("reflects reordering and reparenting without changing class identities", () => {
     const rows = buildAssetClassGridRows(

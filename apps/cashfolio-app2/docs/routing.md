@@ -372,4 +372,5 @@ to account editors, bulk assignment, Accounts columns, and ledger badges. Router
 invalidation refreshes these choices after taxonomy changes. Gain/loss Report
 drill paths and History scopes retain stable class IDs when nodes move or are
 renamed; removed selections fall back to the root or Total. Asset/liability
-allocation remains based on account structure.
+allocation retains the Account Structure / Asset Class grouping lens; the latter
+uses the current class hierarchy and sibling order.

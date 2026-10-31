@@ -90,11 +90,13 @@ export function useAccountTreeColumnDefs(params: {
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;
+  categoryType?: "INCOME" | "EXPENSE";
   rowsByParentKey: Map<string, TreeRow[]>;
   referenceCurrency: string;
   isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
   onEditRow: (row: TreeRow) => void;
+  onAddChild?: (row: TreeRow, kind: "account" | "accountGroup") => void;
   onUnarchiveRow: (row: TreeRow) => Promise<void>;
   unarchivePending?: boolean;
   onArchiveRow: (row: RowTarget) => void;
@@ -106,11 +108,13 @@ export function useAccountTreeColumnDefs(params: {
     gainLossData,
     isGainLossLoading,
     isEquityTab,
+    categoryType,
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow,
+    onAddChild,
     onUnarchiveRow,
     unarchivePending,
     onArchiveRow,
@@ -259,7 +263,7 @@ export function useAccountTreeColumnDefs(params: {
       {
         colId: "actions",
         headerName: "",
-        width: 145,
+        width: 170,
         pinned: "right",
         sortable: false,
         filter: false,
@@ -316,6 +320,24 @@ export function useAccountTreeColumnDefs(params: {
 
           return (
             <ActiveAccountTreeActionsCell
+              addChildLabel={`Add Child to ${data.name}`}
+              addAccountLabel={
+                isEquityTab
+                  ? categoryType === "INCOME"
+                    ? "Add Income Category"
+                    : "Add Expense Category"
+                  : "Add Account"
+              }
+              onAddAccount={
+                data.nodeType === "accountGroup" && onAddChild
+                  ? () => onAddChild(data, "account")
+                  : undefined
+              }
+              onAddGroup={
+                data.nodeType === "accountGroup" && onAddChild
+                  ? () => onAddChild(data, "accountGroup")
+                  : undefined
+              }
               archiveLabel={
                 getAccountConstraintMessage(
                   data.archiveDisabledReason,
@@ -351,8 +373,10 @@ export function useAccountTreeColumnDefs(params: {
     gainLossData,
     isGainLossLoading,
     isEquityTab,
+    categoryType,
     referenceCurrency,
     onEditRow,
+    onAddChild,
     onUnarchiveRow,
     unarchivePending,
     onArchiveRow,

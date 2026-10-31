@@ -89,6 +89,7 @@ export type AccountInitialValuesSource = Pick<
 >;
 
 export type EditAccountModalProps = {
+  defaultGroupId?: string;
   opened: boolean;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;

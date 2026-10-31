@@ -1,8 +1,7 @@
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconEdit,
+  IconArrowsSort,
+  IconPencil,
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
@@ -10,37 +9,25 @@ import type { AssetClassGridRow } from "./-grid-rows";
 
 export function AssetClassActionsCell(props: {
   row: AssetClassGridRow;
-  isMoving: boolean;
   onEdit: () => void;
   onAddChild: () => void;
-  onMove: (direction: "up" | "down") => void;
+  onReorder: () => void;
   onDelete: () => void;
 }) {
   const { row } = props;
   const actions = [
-    { label: `Edit ${row.name}`, icon: IconEdit, onClick: props.onEdit },
+    {
+      label: "Reorder Siblings",
+      icon: IconArrowsSort,
+      onClick: props.onReorder,
+      disabled: !row.canReorder,
+      reason: "Cannot reorder because this row has no siblings",
+    },
+    { label: `Edit ${row.name}`, icon: IconPencil, onClick: props.onEdit },
     {
       label: `Add Child to ${row.name}`,
       icon: IconPlus,
       onClick: props.onAddChild,
-    },
-    {
-      label: `Move ${row.name} Up`,
-      icon: IconArrowUp,
-      onClick: () => props.onMove("up"),
-      disabled: !row.canMoveUp || props.isMoving,
-      reason: props.isMoving
-        ? "An ordering change is in progress"
-        : "This is the first class at this level",
-    },
-    {
-      label: `Move ${row.name} Down`,
-      icon: IconArrowDown,
-      onClick: () => props.onMove("down"),
-      disabled: !row.canMoveDown || props.isMoving,
-      reason: props.isMoving
-        ? "An ordering change is in progress"
-        : "This is the last class at this level",
     },
     {
       label: `Delete ${row.name}`,

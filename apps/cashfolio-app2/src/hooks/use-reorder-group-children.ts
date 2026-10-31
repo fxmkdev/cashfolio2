@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useDialogSubmitState } from "./use-dialog-submit-state";
 
+export type ReorderSiblingRow = { id: string; name: string; nodeType: string };
+
 export type ReorderGroupChildRow = {
   id: string;
   name: string;
   nodeType: "account" | "accountGroup";
 };
 
-function sameMembers(a: ReorderGroupChildRow[], b: ReorderGroupChildRow[]) {
+function sameMembers(a: ReorderSiblingRow[], b: ReorderSiblingRow[]) {
   const keys = new Set(a.map((row) => `${row.nodeType}:${row.id}`));
   return (
     a.length === b.length &&
@@ -15,22 +17,20 @@ function sameMembers(a: ReorderGroupChildRow[], b: ReorderGroupChildRow[]) {
   );
 }
 
-export function useReorderGroupChildren({
+export function useReorderGroupChildren<T extends ReorderSiblingRow>({
   opened,
   initialRows,
   onReorder,
   onRefreshConstraints,
 }: {
   opened: boolean;
-  initialRows: ReorderGroupChildRow[];
-  onReorder: (rows: ReorderGroupChildRow[]) => Promise<void>;
+  initialRows: T[];
+  onReorder: (rows: T[]) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const [rows, setRows] = useState(initialRows);
   const confirmedRows = useRef(initialRows);
-  const [attemptedRows, setAttemptedRows] = useState<
-    ReorderGroupChildRow[] | null
-  >(null);
+  const [attemptedRows, setAttemptedRows] = useState<T[] | null>(null);
   // Managed dragging changes AG Grid's internal order even when rowData is the
   // same reference. Remount on rejection to restore the confirmed order.
   const [gridVersion, setGridVersion] = useState(0);
@@ -45,7 +45,7 @@ export function useReorderGroupChildren({
     setRows(initialRows);
   }, [opened, initialRows]);
 
-  const save = async (nextRows: ReorderGroupChildRow[]) => {
+  const save = async (nextRows: T[]) => {
     return submitState.runSubmit(async () => {
       setAttemptedRows(nextRows);
       setRows(nextRows);
@@ -59,7 +59,7 @@ export function useReorderGroupChildren({
       }
     });
   };
-  const reorder = async (nextRows: ReorderGroupChildRow[]) => {
+  const reorder = async (nextRows: T[]) => {
     if (!sameMembers(rows, nextRows)) return;
     if (nextRows.every((row, index) => row.id === rows[index]?.id)) return;
     await save(nextRows);

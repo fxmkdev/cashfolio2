@@ -116,8 +116,8 @@ export function buildPeriodOverviewResponse(args: {
       accountName: account.name,
       groupId: account.groupId,
       accountType: account.type,
-      assetClass:
-        args.gainLossAccountAttributionById?.get(account.id)?.assetClass ??
+      assetClassId:
+        args.gainLossAccountAttributionById?.get(account.id)?.assetClassId ??
         null,
       convertedBalanceInReferenceCurrency:
         args.endOfPeriodBalanceStats.convertedBalanceByAccountId.get(
@@ -205,12 +205,14 @@ export function buildPeriodOverviewResponse(args: {
   const buildAccountBreakdowns = (grouping: ReportingGrouping) => ({
     assetBreakdown: buildPeriodEndAllocationBreakdown({
       side: "asset",
+      assetClasses: args.assetClasses,
       grouping,
       items: convertedPeriodEndBalances,
       groupById: args.groupById,
     }),
     liabilityBreakdown: buildPeriodEndAllocationBreakdown({
       side: "liability",
+      assetClasses: args.assetClasses,
       grouping,
       items: convertedPeriodEndBalances,
       groupById: args.groupById,
