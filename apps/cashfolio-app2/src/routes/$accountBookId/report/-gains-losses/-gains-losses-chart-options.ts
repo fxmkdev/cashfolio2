@@ -51,6 +51,10 @@ export function useGainsLossesWaterfallChartOptions(args: {
     onNodeDoubleClick,
   } = args;
   const safeTotalGainLoss = toFiniteNumber(totalGainLoss);
+  const labelById = useMemo(
+    () => new Map(chartData.map((datum) => [datum.id, datum.label])),
+    [chartData],
+  );
   const userLocale = useUserLocale();
   const amountCompactFormatter = useMemo(
     () =>
@@ -66,7 +70,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
   >(
     () => ({
       type: "waterfall",
-      xKey: "label",
+      xKey: "id",
       yKey: "totalGainLoss",
       yName: "Gain/Loss",
       widthRatio: 0.72,
@@ -154,7 +158,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
   >(
     () => ({
       type: "bar",
-      xKey: "label",
+      xKey: "id",
       yKey: "totalGainLoss",
       yName: "Gain/Loss",
       widthRatio: 0.72,
@@ -247,6 +251,8 @@ export function useGainsLossesWaterfallChartOptions(args: {
         x: {
           type: "category",
           label: {
+            formatter: ({ value }) =>
+              labelById.get(String(value)) ?? String(value),
             rotation: -25,
           },
         },
@@ -267,6 +273,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
     }),
-    [amountCompactFormatter, chartData, chartSeries, colors],
+    [amountCompactFormatter, chartData, chartSeries, colors, labelById],
   );
 }

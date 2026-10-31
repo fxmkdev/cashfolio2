@@ -269,9 +269,9 @@ model ValuationProviderRequest {
   symbol         String?
   tradeCurrency  String?
 
-  httpStatus   Int?
-  durationMs   Int
-  retryCount   Int     @default(0)
+  httpStatus  Int?
+  durationMs  Int
+  retryCount  Int     @default(0)
   errorMessage String?
 
   @@index([requestedAt])

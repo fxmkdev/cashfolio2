@@ -37,6 +37,13 @@ total gains/losses. Calculated and recorded contributions are combined per
 account, including reference-currency recorded adjustments; their provenance
 remains available in reconciliation.
 
+Investment groups below asset class use currency/cryptocurrency codes or
+security symbols, combining trade currencies for the same symbol. Currency
+accounts marked `trackingMethod = TOTAL_PORTFOLIO_VALUE` appear under Managed
+Portfolios instead; their recorded and calculated FX returns stay together.
+Tracking method is current reporting metadata, independent of valuation and FIFO
+identity, and applies to all historical periods.
+
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.
 - Route orchestration for this page is in
@@ -161,13 +168,6 @@ Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 - `COINLAYER_API_KEY` from `secrets.COINLAYER_API_KEY`
 - `MARKETSTACK_API_KEY` from `secrets.MARKETSTACK_API_KEY`
 - `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)
-
-Investment groups below asset class use currency/cryptocurrency codes or
-security symbols, combining trade currencies for the same symbol. Currency
-accounts marked `trackingMethod = TOTAL_PORTFOLIO_VALUE` appear under Managed
-Portfolios instead; their recorded and calculated FX returns stay together.
-Tracking method is current reporting metadata, independent of valuation and FIFO
-identity, and applies to all historical periods.
 
 ## Accumulated Holding Gain/Loss
 

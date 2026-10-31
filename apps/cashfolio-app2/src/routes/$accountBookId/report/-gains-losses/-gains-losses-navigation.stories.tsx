@@ -11,9 +11,11 @@ ensureChartModulesRegistered();
 
 function NavigationHarness({
   accountCount,
+  duplicateNames,
   onOpen,
 }: {
   accountCount: number;
+  duplicateNames?: boolean;
   onOpen: (id: string) => void;
 }) {
   const [path, setPath] = useState<string[]>([]);
@@ -21,7 +23,7 @@ function NavigationHarness({
     { length: accountCount },
     (_, index) => ({
       id: `gain-loss-account:usd-${index}`,
-      label: `USD Account ${index + 1}`,
+      label: duplicateNames ? "USD Account" : `USD Account ${index + 1}`,
       realizedGainLoss: 10,
       unrealizedGainLoss: 0,
       totalGainLoss: 10,
@@ -112,6 +114,7 @@ async function pointAtBar(
   container: HTMLElement,
   label: string,
   multiple = false,
+  second = false,
 ) {
   let target: HTMLElement;
   let coords: { clientX: number; clientY: number };
@@ -121,8 +124,8 @@ async function pointAtBar(
     const box = target.getBoundingClientRect();
     expect(box.width).toBeGreaterThan(0);
     coords = {
-      clientX: box.left + box.width * (multiple ? 1 / 6 : 0.5),
-      clientY: box.top + box.height * (multiple ? 0.75 : 0.5),
+      clientX: box.left + box.width * (multiple && !second ? 1 / 6 : 0.5),
+      clientY: box.top + box.height * (multiple ? (second ? 0.25 : 0.75) : 0.5),
     };
     await userEvent.pointer({ target, coords });
     const tooltip = container.ownerDocument.querySelector(".ag-charts-tooltip");
@@ -154,23 +157,34 @@ const exercise: NonNullable<Story["play"]> = async ({
   await expect(args.onOpen).not.toHaveBeenCalled();
   const accountBar = await pointAtBar(
     chart,
-    "USD Account 1",
+    args.duplicateNames ? "USD Account" : "USD Account 1",
     args.accountCount > 1,
   );
   await userEvent.pointer({ ...accountBar, keys: "[MouseLeft][MouseLeft]" });
   await waitFor(() => expect(args.onOpen).toHaveBeenCalledTimes(1));
   await expect(args.onOpen).toHaveBeenCalledWith("usd-0");
+  if (args.duplicateNames) {
+    const secondBar = await pointAtBar(chart, "USD Account", true, true);
+    await userEvent.pointer({ ...secondBar, keys: "[MouseLeft][MouseLeft]" });
+    await waitFor(() => expect(args.onOpen).toHaveBeenCalledTimes(2));
+    await expect(args.onOpen).toHaveBeenLastCalledWith("usd-1");
+  }
   await userEvent.click(canvas.getByRole("button", { name: /^Up$/ }));
   await expect(depth).toHaveTextContent("1");
   await userEvent.click(canvas.getByText("All Gains/Losses", { exact: true }));
   await expect(depth).toHaveTextContent("0");
   await userEvent.dblClick(chart);
   await expect(depth).toHaveTextContent("1");
-  await expect(args.onOpen).toHaveBeenCalledTimes(1);
+  await expect(args.onOpen).toHaveBeenCalledTimes(args.duplicateNames ? 2 : 1);
 };
 
 export const SingleAccount: Story = { play: exercise };
 export const MultipleAccounts: Story = {
   args: { accountCount: 2 },
+  play: exercise,
+};
+
+export const DuplicateAccountNames: Story = {
+  args: { accountCount: 2, duplicateNames: true },
   play: exercise,
 };
