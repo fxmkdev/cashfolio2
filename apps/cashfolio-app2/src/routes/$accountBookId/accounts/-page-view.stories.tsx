@@ -1739,9 +1739,7 @@ async function selectAssignmentAccount(canvasElement: HTMLElement, id: string) {
 }
 
 function assetClassCell(canvasElement: HTMLElement, id: string) {
-  return canvasElement.querySelector(
-    `[row-id="${id}"] [col-id="assetClassId"]`,
-  );
+  return canvasElement.querySelector(`[row-id="${id}"] [col-id="assetClass"]`);
 }
 
 export const BulkAssetClassSelection: Story = {
@@ -1796,7 +1794,7 @@ export const BulkAssetClassSelection: Story = {
     );
     await expect(
       canvasElement.querySelector(
-        '[row-id="account-checking"] [col-id="assetClassId"]',
+        '[row-id="account-checking"] [col-id="assetClass"]',
       ),
     ).toHaveTextContent("Equities");
   },
@@ -2167,7 +2165,7 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
       ),
     );
     await expect(
-      canvasElement.querySelector('[row-id="old"] [col-id="assetClassId"]'),
+      canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
     ).toHaveTextContent("Digital Assets");
   },
 };

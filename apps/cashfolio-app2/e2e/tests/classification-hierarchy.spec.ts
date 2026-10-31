@@ -25,7 +25,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     name: "New Asset Class",
     exact: true,
   });
-  await dialog.getByLabel("Name", { exact: true }).fill("Pension Equities");
+  await dialog.getByRole("textbox", { name: /^Name/ }).fill("Pension Equities");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   const node = await prisma.classificationNode.findFirstOrThrow({

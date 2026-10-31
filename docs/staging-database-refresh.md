@@ -342,9 +342,11 @@ GRANT CONNECT ON DATABASE neondb TO cashfolio_staging_seed;
 GRANT USAGE ON SCHEMA public TO cashfolio_staging_seed;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account",
-  "Transaction", "Booking"
+  "Transaction", "Booking", "ClassificationScheme", "ClassificationNode",
+  "AccountClassification"
 TO cashfolio_staging_seed;
-GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book()
+GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(),
+  public.initialize_book_classifications(), public.seed_asset_class_scheme(text)
 TO cashfolio_staging_seed;
 ```
 
@@ -352,7 +354,9 @@ Adjust the database name to the reviewed target. Do not create this role through
 shared migrations, the Neon Console/API's privileged role-creation flow, or a
 production SQL session. It needs no schema ownership, migration permissions,
 role membership, `TRUNCATE`, or `neon_superuser` membership. Add explicit grants
-when future seed changes require additional application tables.
+when future seed changes require additional application tables. When upgrading
+an existing staging seed role for editable classifications, apply the table and
+function grants above after the migration and before running the updated seed.
 
 Before enabling seeding, use an independently authorized read-only production
 connection to confirm that the role is absent:

@@ -249,7 +249,8 @@ async function replaceStagingDataOnce(
       // Reads can continue until the complete replacement commits.
       await tx.$executeRaw`
         LOCK TABLE "User", "AccountBook", "UserAccountBookLink", "AccountGroup",
-          "Account", "Transaction", "Booking" IN SHARE ROW EXCLUSIVE MODE
+          "Account", "Transaction", "Booking", "ClassificationScheme",
+          "ClassificationNode", "AccountClassification" IN SHARE ROW EXCLUSIVE MODE
       `;
       const retainedAdmins = await tx.user.count({
         where: {

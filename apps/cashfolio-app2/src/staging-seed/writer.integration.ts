@@ -24,6 +24,9 @@ import { replaceStagingData } from "./writer";
 
 const run = promisify(execFile);
 const applicationTables = [
+  "AccountClassification",
+  "ClassificationNode",
+  "ClassificationScheme",
   "Booking",
   "Transaction",
   "Account",
