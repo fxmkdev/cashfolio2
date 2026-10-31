@@ -476,6 +476,11 @@ submit UX and prevent duplicate requests.
   - Expense/Income charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
+- Gains/Losses processes each native double-click once across the chart's node
+  and single-item container handlers, including across rerenders. A unit with
+  one account still opens the account chart; opening details requires a separate
+  account double-click. A background double-click retains the single-item
+  shortcut.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
 - Gains/Losses supports Account Structure and Asset Class → Investment Group → Account. Account

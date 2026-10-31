@@ -59,6 +59,56 @@ it("keeps all unit metadata off equity accounts while retaining booking units", 
   }
 });
 
+it("funds two active USD accounts within the same investment group", () => {
+  const household = dataset.books.find((book) => book.key === "household")!;
+  const savings = household.accounts.find(
+    (account) => account.key === "usd-savings",
+  )!;
+  const broker = household.accounts.find((account) => account.key === "usd")!;
+  for (const account of [savings, broker]) {
+    expect(account).toMatchObject({
+      isActive: true,
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      isCashAccount: true,
+      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    });
+    expect(account.trackingMethod ?? "INDIVIDUAL_UNITS").toBe(
+      "INDIVIDUAL_UNITS",
+    );
+  }
+  const exchanges = household.transactions.filter(
+    (transaction) =>
+      transaction.description === "USD savings: monthly currency exchange",
+  );
+  expect(exchanges.length).toBeGreaterThan(30);
+  for (const transaction of exchanges) {
+    expect(transaction.bookings).toMatchObject([
+      {
+        accountKey: "current",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: "-90",
+      },
+      {
+        accountKey: "usd-savings",
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        value: "100",
+      },
+    ]);
+    expect(transaction.bookings[0].date.getUTCDate()).toBe(6);
+  }
+  const opening = household.transactions.find(
+    (transaction) =>
+      transaction.description === "Opening balance: USD Savings Account",
+  )!;
+  expect(opening.bookings).toMatchObject([
+    { accountKey: "usd-savings", currency: "USD", value: "1250" },
+    { accountKey: "opening", currency: "USD", value: "-1250" },
+  ]);
+});
+
 it("marks the curated managed portfolio for total-value tracking", () => {
   const managed = dataset.books
     .flatMap((book) => book.accounts)
@@ -86,6 +136,7 @@ it("uses curated asset classes for active and archived demo balance accounts", (
     wallet: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     eur: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     usd: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "usd-savings": AssetClass.CASH_AND_CASH_EQUIVALENTS,
     spare: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     pension: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     aapl: AssetClass.EQUITIES,
@@ -219,6 +270,7 @@ describe("staging synthetic dataset", () => {
     ["eur", ["Cash", "PostFinance", "Travel account EUR"]],
     ["spare", ["Cash", "PostFinance", "Holiday savings CHF"]],
     ["usd", ["Cash", "Swissquote", "Broker cash USD"]],
+    ["usd-savings", ["Cash", "Zürcher Kantonalbank", "USD Savings Account"]],
     ["wallet", ["Cash", "Cash wallet CHF"]],
     ["aapl", ["Investments", "Shares", "Apple shares"]],
     ["btc", ["Investments", "Cryptocurrencies", "Bitcoin wallet"]],

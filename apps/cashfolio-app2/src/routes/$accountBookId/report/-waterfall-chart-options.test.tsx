@@ -166,7 +166,11 @@ describe("gains/losses waterfall v14 callbacks", () => {
     listener({ datum: undefined } as Event);
     listener({ datum: {} } as Event);
     expect(onNodeDoubleClick).not.toHaveBeenCalled();
-    listener({ datum } as Event);
-    expect(onNodeDoubleClick).toHaveBeenCalledExactlyOnceWith(datum);
+    const nativeEvent = new globalThis.Event("dblclick");
+    listener({ datum, event: nativeEvent } as Event);
+    expect(onNodeDoubleClick).toHaveBeenCalledExactlyOnceWith(
+      datum,
+      nativeEvent,
+    );
   });
 });

@@ -65,6 +65,7 @@ export function householdAccounts(target: SeedBook) {
     ["wallet", "Cash wallet CHF", "cash", CHF],
     ["eur", "Travel account EUR", "postfinance", EUR],
     ["usd", "Broker cash USD", "swissquote", USD],
+    ["usd-savings", "USD Savings Account", "zkb", USD],
     ["spare", "Holiday savings CHF", "postfinance", CHF],
   ] as const) {
     addAccount(target, key, name, AccountType.BALANCE, {
@@ -177,6 +178,7 @@ export function householdTransactions(target: SeedBook, today: Date) {
     ["wallet", "350"],
     ["eur", "1800"],
     ["usd", "5000"],
+    ["usd-savings", "1250"],
     ["pension", "24000"],
     ["managed-portfolio", "50000"],
     ["aapl", "25"],
@@ -313,6 +315,12 @@ export function householdTransactions(target: SeedBook, today: Date) {
       GAIN_LOSS_ACCOUNT_KEY,
       "managed-portfolio",
       adjustment,
+    );
+    on(6, (date) =>
+      post(target, date, "USD savings: monthly currency exchange", [
+        { accountKey: "current", value: "-90" },
+        { accountKey: "usd-savings", value: "100" },
+      ]),
     );
     on(6, (date) =>
       transfer(

@@ -38,7 +38,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
     total: string;
   };
   currencyFormatter: Intl.NumberFormat;
-  onNodeDoubleClick: (datum: GainsLossesWaterfallDatum) => void;
+  onNodeDoubleClick: (datum: GainsLossesWaterfallDatum, event: Event) => void;
 }): AgCartesianChartOptions {
   const {
     chartData,
@@ -111,7 +111,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
       listeners: {
-        seriesNodeDoubleClick: ({ datum }) => {
+        seriesNodeDoubleClick: ({ datum, event }) => {
           if (datum == null) {
             return;
           }
@@ -125,12 +125,15 @@ export function useGainsLossesWaterfallChartOptions(args: {
             return;
           }
 
-          onNodeDoubleClick({
-            id: node.id,
-            label: node.label,
-            totalGainLoss: toFiniteNumber(node.totalGainLoss),
-            isDrillable: node.isDrillable,
-          });
+          onNodeDoubleClick(
+            {
+              id: node.id,
+              label: node.label,
+              totalGainLoss: toFiniteNumber(node.totalGainLoss),
+              isDrillable: node.isDrillable,
+            },
+            event,
+          );
         },
       },
     }),
@@ -183,7 +186,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
       listeners: {
-        seriesNodeDoubleClick: ({ datum }) => {
+        seriesNodeDoubleClick: ({ datum, event }) => {
           const node = datum as Partial<GainsLossesWaterfallDatum>;
           if (
             typeof node.id !== "string" ||
@@ -193,12 +196,15 @@ export function useGainsLossesWaterfallChartOptions(args: {
             return;
           }
 
-          onNodeDoubleClick({
-            id: node.id,
-            label: node.label,
-            totalGainLoss: toFiniteNumber(node.totalGainLoss),
-            isDrillable: node.isDrillable,
-          });
+          onNodeDoubleClick(
+            {
+              id: node.id,
+              label: node.label,
+              totalGainLoss: toFiniteNumber(node.totalGainLoss),
+              isDrillable: node.isDrillable,
+            },
+            event,
+          );
         },
       },
     }),

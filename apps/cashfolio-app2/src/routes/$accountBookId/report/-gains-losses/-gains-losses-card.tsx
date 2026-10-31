@@ -1,3 +1,4 @@
+import type { MouseEventHandler } from "react";
 import { IconChartBar, IconTable } from "@tabler/icons-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
@@ -29,7 +30,7 @@ type GainsLossesCardProps = {
   chartOptions: AgCartesianChartOptions;
   onSelectedChartTypeChange: (value: GainsLossesChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
-  onChartContainerDoubleClick?: (() => void) | null;
+  onChartContainerDoubleClick?: MouseEventHandler<HTMLDivElement> | null;
   onUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
