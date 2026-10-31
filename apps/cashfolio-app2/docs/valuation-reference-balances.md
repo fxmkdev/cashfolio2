@@ -27,12 +27,15 @@ flow. Selecting the Cash & Cash Equivalents asset class does not enable this
 setting, and changing cash-flow inclusion does not change the asset class. Child
 accounts inherit cash-flow inclusion from their parent group.
 
-Report and History group gains/losses by the account's current asset class for
-all periods. Changing classification moves contributions between reporting
-classes without changing valuation, balances, or total gains/losses. Calculated
-and recorded contributions are combined per account, including
-reference-currency recorded adjustments; their provenance remains available in
-reconciliation.
+Report offers Account Structure and Asset Class grouping for Assets,
+Liabilities, and Gain/Loss. History offers the same two lenses within its
+Gain/Loss View selector. Both use the current account structure/classification
+for all periods, including archived accounts. Asset classes remain flat, with
+Unclassified for accounts without a class. Changing classification moves
+contributions between reporting classes without changing valuation, balances, or
+total gains/losses. Calculated and recorded contributions are combined per
+account, including reference-currency recorded adjustments; their provenance
+remains available in reconciliation.
 
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.

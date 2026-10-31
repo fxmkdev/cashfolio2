@@ -3,6 +3,27 @@ import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import { buildGainsLossesWaterfallModel } from "./-gains-losses-waterfall-model";
 
 describe("buildGainsLossesWaterfallModel", () => {
+  test("reconciles rounded bars to the scope total without making rounding drillable", () => {
+    const model = buildGainsLossesWaterfallModel({
+      nodes: ["a", "b"].map((id) => ({
+        id: `account:${id}`,
+        label: id,
+        realizedGainLoss: 0.01,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 0.01,
+        children: [],
+      })),
+      totalGainLoss: 0.01,
+    });
+    expect(model.totalGainLoss).toBe(0.01);
+    expect(model.data.at(-1)).toEqual({
+      id: "rounding",
+      label: "Rounding",
+      totalGainLoss: -0.01,
+      isDrillable: false,
+    });
+    expect(model.totals[0].index).toBe(2);
+  });
   test("keeps top-level node order in chart data", () => {
     const model = buildGainsLossesWaterfallModel({
       nodes: [

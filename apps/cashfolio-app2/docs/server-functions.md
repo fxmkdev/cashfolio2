@@ -543,10 +543,15 @@ are split into dedicated modules under `src/server/period/`:
 
 ## Asset-Class Gain/Loss Reporting
 
-Period overview and History share the contribution pipeline and the
-`Asset Class → Account` breakdown. Current `Account.assetClass` applies to every
-period, including archived assets and liabilities. Unit and instrument identity
-continue to control valuation and FIFO independently of classification.
+Period overview and History share the contribution pipeline and support Account
+Structure and `Asset Class → Account` breakdowns. Overview returns
+`accountBreakdownsByGrouping`, keyed by `accountStructure` and `assetClass`,
+with `assetBreakdown`, `liabilityBreakdown`, and `gainsLossesBreakdown` per
+lens. Both variants reuse one valuation pass. G/L breakdowns carry aggregate
+realized, unrealized, and total amounts, computed from exact contributions
+before rounding. Current `Account.assetClass` applies to every period, including
+archived assets and liabilities. Unit and instrument identity continue to
+control valuation and FIFO independently of classification.
 
 Calculated holdings G/L uses the owning account's classification. Recorded
 Gain/Loss equity bookings use their resolved asset/liability counterpart.
@@ -554,6 +559,20 @@ Calculated and recorded amounts are combined once per account, with their
 provenance retained in account-node metadata. Reference-currency accounts have
 no calculated FX contribution, but their recorded adjustments remain included.
 Null classification is Unclassified, distinct from Other Assets.
+
+Account Structure places real G/L accounts under their current nested groups.
+Transfer Clearing retains its virtual hierarchy, including G/L contributors
+whose closing clearing balance is zero. Contributions without an identifiable
+financial account/group appear in a virtual Unattributed group. Offsetting
+contributions remain visible even when a group's net G/L is zero.
+
+History G/L options carry `grouping` metadata. Account Structure uses
+`group:<id>` and `account:<id>`; Asset Class retains `asset-class:<class>` and
+`gain-loss-account:<id>`. Both leaves carry account metadata for reconciliation.
+The grouping headings exist only in the client selector. Scopes are unioned
+across periods; an absent contribution at a point evaluates to zero. History
+metrics cache v12 replaces v11 to include the expanded scopes; base-data and
+valuation cache versions remain compatible.
 
 Execution residual amounts retain their existing allocation weights. Only
 contributing residual portions carry originating-account metadata; fully
@@ -914,12 +933,14 @@ determines eligibility; equity accounts are excluded. Virtual transfer-clearing
 accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
-Allocation charts and tables preserve the original account/group hierarchy on
-each side, even when a group's accounts have mixed signs. Unavailable valuations
-are omitted; both allocation views report the same overall missing-balance
-count. Amounts on the liability side are positive debt magnitudes. Existing
-allocation rounding and hidden-small-balance discrepancy indicators remain
-applicable.
+Allocation charts and tables support either the original account/group hierarchy
+or flat Asset Class → Account grouping on each side, even when a structural
+group's accounts have mixed signs. Classification by balance sign precedes
+either grouping; total amounts use the same exact balances. Unavailable
+valuations are omitted; both allocation views report the same overall
+missing-balance count. Amounts on the liability side are positive debt
+magnitudes. Existing allocation rounding and hidden-small-balance discrepancy
+indicators remain applicable.
 
 History applies classification independently at every month/year endpoint and
 its opening baseline. Assets and Liabilities expose aggregate totals only. Net

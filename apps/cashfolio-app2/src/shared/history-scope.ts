@@ -1,4 +1,5 @@
 import { Unit } from "../.prisma-client/enums";
+import type { ReportingGrouping } from "./reporting-grouping";
 
 export type HistoryScopedMetric =
   "cashFlow" | "income" | "expenses" | "gainsLosses" | "netWorth";
@@ -24,6 +25,7 @@ export type HistoryScopeOption = {
   parentValue?: HistoryScopeSelection;
   accountId?: string;
   legacyValues?: string[];
+  grouping?: ReportingGrouping;
 };
 
 export function isHistoryScopedMetric(
@@ -155,7 +157,9 @@ export function normalizeGainLossScope(
   }
   return scope === "total" ||
     scope.startsWith("asset-class:") ||
-    scope.startsWith("gain-loss-account:")
+    scope.startsWith("gain-loss-account:") ||
+    scope.startsWith("group:") ||
+    scope.startsWith("account:")
     ? scope
     : "total";
 }

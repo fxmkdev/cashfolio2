@@ -101,7 +101,10 @@ describe("period overview response", () => {
     });
     expect(response.currentMonthValue).toBe("2026-02");
     expect(response.availableYears).toEqual([2026]);
-    expect(response.gainsLossesBreakdown.hierarchy).toEqual([]);
+    expect(
+      response.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toEqual([]);
   });
 
   it("assembles breakdowns and end-of-period stats from converted balances", () => {
@@ -290,8 +293,14 @@ describe("period overview response", () => {
       endOfPeriodLiabilities: 40,
       endOfPeriodNetWorth: 60,
     });
-    expect(response.assetBreakdown.totalAmount).toBe(100);
-    expect(response.liabilityBreakdown.totalAmount).toBe(40);
+    expect(
+      response.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+        .totalAmount,
+    ).toBe(100);
+    expect(
+      response.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .totalAmount,
+    ).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
     expect(response.cashFlowBreakdown).toMatchObject({
@@ -329,7 +338,10 @@ describe("period overview response", () => {
         },
       ],
     });
-    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      response.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -448,7 +460,10 @@ describe("period overview response", () => {
       gainsLosses: 3.67,
       explicitGainLoss: 0.34,
     });
-    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      response.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",

@@ -17,6 +17,7 @@ import type {
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 
 type PeriodAllocationBreakdownCardProps = {
+  totalAmount?: number;
   selectedBreakdown: AllocationBreakdownType;
   selectedChartType: BreakdownChartType;
   tableExpandedGroupsStorageKey?: string;
@@ -45,6 +46,7 @@ function isAllocationBreakdownType(
 }
 
 export function PeriodAllocationBreakdownCard({
+  totalAmount,
   selectedBreakdown,
   selectedChartType,
   tableExpandedGroupsStorageKey,
@@ -82,6 +84,8 @@ export function PeriodAllocationBreakdownCard({
       tableContent={
         isTableView ? (
           <BreakdownTable
+            key={tableExpandedGroupsStorageKey}
+            totalAmount={totalAmount}
             hierarchy={breakdownHierarchy}
             valueHeaderName="Balance"
             displayDecimals={displayDecimals}

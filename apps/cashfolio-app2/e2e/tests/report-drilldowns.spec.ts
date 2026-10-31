@@ -10,6 +10,7 @@ import {
 } from "../support/db";
 import { expect, test, type Locator, type Page } from "../support/fixtures";
 import { selectSegmentedControlOption } from "../support/segmented-control";
+import { selectReportGrouping } from "../support/report-page";
 
 let seeded: SeededData;
 
@@ -183,6 +184,27 @@ test("period gains/losses table account drilldown opens reconciliation page and 
     controlName: "Gains/Losses Chart Type",
     tableTestId: "period-gains-losses-breakdown-table",
   });
+
+  await expect(
+    page.getByRole("combobox", { name: "Group Accounts By" }),
+  ).toHaveValue("Account Structure");
+  const structureGroupRow = gridRowByText(gainsLossesTable, "Assets");
+  await expect(structureGroupRow).toBeVisible();
+  await expandRowIfCollapsed(structureGroupRow);
+  await gridRowByText(gainsLossesTable, seeded.securityAccount.name).dblclick();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.securityAccount.id}\\?period=${period}$`,
+    ),
+  );
+  await expect(
+    page.getByRole("heading", {
+      name: new RegExp(seeded.securityAccount.name),
+    }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(gainsLossesTable).toBeVisible();
+  await selectReportGrouping(page, "Asset Class");
 
   const assetClassRow = gridRowByText(gainsLossesTable, "Equities");
   await expect(assetClassRow).toBeVisible();
@@ -420,6 +442,7 @@ test("archived manual portfolio reclassification moves historical G/L without ch
   });
   const reportUrl = `/${book.accountBookId}/report?period=2026-01`;
   await page.goto(reportUrl);
+  await selectReportGrouping(page, "Asset Class");
   let table = await openTableView({
     page,
     controlName: "Gains/Losses Chart Type",
@@ -445,6 +468,9 @@ test("archived manual portfolio reclassification moves historical G/L without ch
     data: { assetClass: AssetClass.OTHER_ASSETS },
   });
   await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "Group Accounts By" }),
+  ).toHaveValue("Asset Class");
   table = await openTableView({
     page,
     controlName: "Gains/Losses Chart Type",

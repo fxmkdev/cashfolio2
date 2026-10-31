@@ -36,9 +36,10 @@ function getTransferClearingUnitTypeLabel(unitType: TransferClearingUnitType) {
 
 export function buildTransferClearingVirtualHierarchy(args: {
   unitBuckets: TransferClearingUnitBucket[];
+  includeZeroBalances?: boolean;
 }) {
   const nonZeroBuckets = args.unitBuckets.filter(
-    (bucket) => !isNearZero(bucket.rawBalance),
+    (bucket) => args.includeZeroBalances || !isNearZero(bucket.rawBalance),
   );
   if (nonZeroBuckets.length === 0) {
     return {

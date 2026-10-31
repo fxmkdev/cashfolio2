@@ -64,6 +64,7 @@ function resolveNodeTotalGainLoss(node: GainsLossesBreakdownNode): number {
 export function buildGainsLossesWaterfallModel(args: {
   nodes: GainsLossesBreakdownNode[];
   totalAxisLabel?: string;
+  totalGainLoss?: number;
 }): GainsLossesWaterfallModel {
   const totalAxisLabel = args.totalAxisLabel ?? DEFAULT_TOTAL_AXIS_LABEL;
   const data = args.nodes.map((node) => ({
@@ -72,10 +73,19 @@ export function buildGainsLossesWaterfallModel(args: {
     totalGainLoss: resolveNodeTotalGainLoss(node),
     isDrillable: isGainsLossesNodeDrillable(node),
   }));
-  const totalGainLoss = data.reduce(
+  const displayedTotal = data.reduce(
     (sum, datum) => sum + datum.totalGainLoss,
     0,
   );
+  const totalGainLoss = args.totalGainLoss ?? displayedTotal;
+  const rounding = Number((totalGainLoss - displayedTotal).toFixed(2));
+  if (rounding !== 0)
+    data.push({
+      id: "rounding",
+      label: "Rounding",
+      totalGainLoss: rounding,
+      isDrillable: false,
+    });
 
   return {
     data,

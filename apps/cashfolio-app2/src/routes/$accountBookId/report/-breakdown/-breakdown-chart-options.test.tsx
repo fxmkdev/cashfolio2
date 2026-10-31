@@ -90,6 +90,7 @@ describe("report breakdown bar colors and legends", () => {
       const options = renderChartOptions(
         () =>
           usePeriodAllocationBreakdownViewModel({
+            grouping: "accountStructure",
             ...commonArgs,
             selectedAllocationBreakdown,
             selectedAllocationChartType: "bar",

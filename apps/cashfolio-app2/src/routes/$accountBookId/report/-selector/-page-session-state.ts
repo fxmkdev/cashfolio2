@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  isReportingGrouping,
+  type ReportingGrouping,
+} from "@/shared/reporting-grouping";
 import type {
   AllocationBreakdownType,
   BreakdownChartType,
@@ -22,15 +26,20 @@ export type DrillPathByAllocationBreakdownUpdater =
 export type DrillPathByGainsLossesUpdater =
   string[] | ((previousValue: string[]) => string[]);
 
+export type GroupingDrillPaths = {
+  allocation: DrillPathByAllocationBreakdown;
+  gainsLosses: string[];
+};
+
 export type ReportPageSessionState = {
+  selectedGrouping: ReportingGrouping;
+  drillPathsByGrouping: Record<ReportingGrouping, GroupingDrillPaths>;
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
   selectedAllocationBreakdown: AllocationBreakdownType;
   selectedAllocationChartType: BreakdownChartType;
   selectedGainsLossesChartType: GainsLossesChartType;
   drillPathByBreakdown: DrillPathByBreakdown;
-  drillPathByAllocationBreakdown: DrillPathByAllocationBreakdown;
-  drillPathByGainsLosses: string[];
 };
 
 function isBreakdownType(value: unknown): value is BreakdownType {
@@ -63,6 +72,14 @@ function normalizeDrillPath(value: unknown): string[] {
 
 export function getDefaultReportPageSessionState(): ReportPageSessionState {
   return {
+    selectedGrouping: "accountStructure",
+    drillPathsByGrouping: {
+      accountStructure: {
+        allocation: { asset: [], liability: [] },
+        gainsLosses: [],
+      },
+      assetClass: { allocation: { asset: [], liability: [] }, gainsLosses: [] },
+    },
     selectedBreakdown: "expense",
     selectedChartType: "donut",
     selectedAllocationBreakdown: "asset",
@@ -73,11 +90,6 @@ export function getDefaultReportPageSessionState(): ReportPageSessionState {
       income: [],
       cashFlow: [],
     },
-    drillPathByAllocationBreakdown: {
-      asset: [],
-      liability: [],
-    },
-    drillPathByGainsLosses: [],
   };
 }
 
@@ -102,7 +114,37 @@ export function parseStoredReportPageSessionState(
       ? (stored.drillPathByAllocationBreakdown as Record<string, unknown>)
       : {};
 
+  const record = (value: unknown): Record<string, unknown> =>
+    typeof value === "object" && value != null
+      ? (value as Record<string, unknown>)
+      : {};
+  const grouped = record(stored.drillPathsByGrouping);
+  const parseGrouping = (grouping: ReportingGrouping): GroupingDrillPaths => {
+    const group = record(grouped[grouping]);
+    const allocation = record(group.allocation);
+    const legacyAllocation =
+      grouping === "accountStructure" ? drillPathByAllocationBreakdown : {};
+    return {
+      allocation: {
+        asset: normalizeDrillPath(allocation.asset ?? legacyAllocation.asset),
+        liability: normalizeDrillPath(
+          allocation.liability ?? legacyAllocation.liability,
+        ),
+      },
+      gainsLosses: normalizeDrillPath(
+        group.gainsLosses ??
+          (grouping === "assetClass" ? stored.drillPathByGainsLosses : []),
+      ),
+    };
+  };
   return {
+    selectedGrouping: isReportingGrouping(stored.selectedGrouping)
+      ? stored.selectedGrouping
+      : defaults.selectedGrouping,
+    drillPathsByGrouping: {
+      accountStructure: parseGrouping("accountStructure"),
+      assetClass: parseGrouping("assetClass"),
+    },
     selectedBreakdown: isBreakdownType(stored.selectedBreakdown)
       ? stored.selectedBreakdown
       : defaults.selectedBreakdown,
@@ -129,11 +171,6 @@ export function parseStoredReportPageSessionState(
       income: normalizeDrillPath(drillPathByBreakdown.income),
       cashFlow: normalizeDrillPath(drillPathByBreakdown.cashFlow),
     },
-    drillPathByAllocationBreakdown: {
-      asset: normalizeDrillPath(drillPathByAllocationBreakdown.asset),
-      liability: normalizeDrillPath(drillPathByAllocationBreakdown.liability),
-    },
-    drillPathByGainsLosses: normalizeDrillPath(stored.drillPathByGainsLosses),
   };
 }
 
@@ -156,34 +193,38 @@ function loadReportPageSessionState(
 
 export function useReportPageSessionState(accountBookId: string) {
   const storageKey = `cashfolio:reportPageState:${accountBookId}`;
-  const [state, setState] = useState<ReportPageSessionState>(
+  const [storedState, setState] = useState<ReportPageSessionState>(
     getDefaultReportPageSessionState,
   );
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [hydratedStorageKey, setHydratedStorageKey] = useState<string | null>(
+    null,
+  );
+  // A new book must not expose the previous book's paths to drill-path clamping.
+  const state =
+    hydratedStorageKey === storageKey
+      ? storedState
+      : getDefaultReportPageSessionState();
 
   useEffect(() => {
-    setIsHydrated(false);
-    setState(getDefaultReportPageSessionState());
-
     if (typeof window === "undefined") {
       return;
     }
 
     setState(loadReportPageSessionState(storageKey));
-    setIsHydrated(true);
+    setHydratedStorageKey(storageKey);
   }, [storageKey]);
 
   useEffect(() => {
-    if (!isHydrated || typeof window === "undefined") {
+    if (hydratedStorageKey !== storageKey || typeof window === "undefined") {
       return;
     }
 
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify(state));
+      sessionStorage.setItem(storageKey, JSON.stringify(storedState));
     } catch {
       // Ignore storage persistence failures so the page still functions.
     }
-  }, [isHydrated, state, storageKey]);
+  }, [hydratedStorageKey, storedState, storageKey]);
 
   const setSelectedBreakdown = useCallback((nextValue: BreakdownType) => {
     setState((previousState) => ({
@@ -249,51 +290,74 @@ export function useReportPageSessionState(accountBookId: string) {
     [],
   );
 
-  const setDrillPathByAllocationBreakdown = useCallback(
-    (nextValue: DrillPathByAllocationBreakdownUpdater) => {
-      setState((previousState) => ({
-        ...previousState,
-        drillPathByAllocationBreakdown: (() => {
-          const resolvedValue =
-            typeof nextValue === "function"
-              ? nextValue(previousState.drillPathByAllocationBreakdown)
-              : nextValue;
-
-          return {
-            asset: normalizeDrillPath(resolvedValue.asset),
-            liability: normalizeDrillPath(resolvedValue.liability),
-          };
-        })(),
-      }));
+  const setSelectedGrouping = useCallback(
+    (selectedGrouping: ReportingGrouping) => {
+      setState((previous) => ({ ...previous, selectedGrouping }));
     },
     [],
+  );
+  const selectedGrouping = state.selectedGrouping;
+  const setDrillPathByAllocationBreakdown = useCallback(
+    (nextValue: DrillPathByAllocationBreakdownUpdater) => {
+      setState((previous) => {
+        const current = previous.drillPathsByGrouping[selectedGrouping];
+        const resolved =
+          typeof nextValue === "function"
+            ? nextValue(current.allocation)
+            : nextValue;
+        return {
+          ...previous,
+          drillPathsByGrouping: {
+            ...previous.drillPathsByGrouping,
+            [selectedGrouping]: {
+              ...current,
+              allocation: {
+                asset: normalizeDrillPath(resolved.asset),
+                liability: normalizeDrillPath(resolved.liability),
+              },
+            },
+          },
+        };
+      });
+    },
+    [selectedGrouping],
   );
   const setDrillPathByGainsLosses = useCallback(
     (nextValue: DrillPathByGainsLossesUpdater) => {
-      setState((previousState) => ({
-        ...previousState,
-        drillPathByGainsLosses: (() => {
-          const resolvedValue =
-            typeof nextValue === "function"
-              ? nextValue(previousState.drillPathByGainsLosses)
-              : nextValue;
-
-          return normalizeDrillPath(resolvedValue);
-        })(),
-      }));
+      setState((previous) => {
+        const current = previous.drillPathsByGrouping[selectedGrouping];
+        const resolved =
+          typeof nextValue === "function"
+            ? nextValue(current.gainsLosses)
+            : nextValue;
+        return {
+          ...previous,
+          drillPathsByGrouping: {
+            ...previous.drillPathsByGrouping,
+            [selectedGrouping]: {
+              ...current,
+              gainsLosses: normalizeDrillPath(resolved),
+            },
+          },
+        };
+      });
     },
-    [],
+    [selectedGrouping],
   );
 
   return {
+    selectedGrouping,
+    setSelectedGrouping,
     selectedBreakdown: state.selectedBreakdown,
     selectedChartType: state.selectedChartType,
     selectedAllocationBreakdown: state.selectedAllocationBreakdown,
     selectedAllocationChartType: state.selectedAllocationChartType,
     selectedGainsLossesChartType: state.selectedGainsLossesChartType,
     drillPathByBreakdown: state.drillPathByBreakdown,
-    drillPathByAllocationBreakdown: state.drillPathByAllocationBreakdown,
-    drillPathByGainsLosses: state.drillPathByGainsLosses,
+    drillPathByAllocationBreakdown:
+      state.drillPathsByGrouping[selectedGrouping].allocation,
+    drillPathByGainsLosses:
+      state.drillPathsByGrouping[selectedGrouping].gainsLosses,
     setSelectedBreakdown,
     setSelectedChartType,
     setSelectedAllocationBreakdown,

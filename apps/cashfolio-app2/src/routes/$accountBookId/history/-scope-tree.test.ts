@@ -6,6 +6,7 @@ import {
   getHistoryViewTreeSelection,
   getHistoryViewTreeValue,
   buildHistoryScopeTreeData,
+  isHistoryGroupingBranch,
 } from "./-scope-tree";
 
 describe("buildHistoryScopeTreeData", () => {
@@ -217,6 +218,71 @@ const emptyScopeOptions = {
 };
 
 describe("unified history view tree", () => {
+  test("separates G/L lenses with navigation-only branches and searchable grouping paths", () => {
+    const options = {
+      ...emptyScopeOptions,
+      gainsLosses: [
+        {
+          value: "group:pension",
+          label: "Pension",
+          kind: "gainLoss",
+          grouping: "accountStructure",
+        },
+        {
+          value: "account:bank:portfolio",
+          label: "Pension / Portfolio",
+          treeLabel: "Portfolio",
+          parentValue: "group:pension",
+          kind: "gainLoss",
+          accountId: "bank:portfolio",
+          grouping: "accountStructure",
+        },
+        {
+          value: "asset-class:EQUITIES",
+          label: "Equities",
+          kind: "gainLoss",
+          grouping: "assetClass",
+        },
+        {
+          value: "gain-loss-account:bank:portfolio",
+          label: "Equities / Portfolio",
+          treeLabel: "Portfolio",
+          parentValue: "asset-class:EQUITIES",
+          kind: "gainLoss",
+          accountId: "bank:portfolio",
+          grouping: "assetClass",
+        },
+      ] as const,
+    };
+    const mutable = { ...options, gainsLosses: [...options.gainsLosses] };
+    const root = buildHistoryViewTreeData(mutable).find(
+      (node) => node.value === "gainsLosses:total",
+    )!;
+    expect(root.children?.map((node) => node.label)).toEqual([
+      "By Account Structure",
+      "By Asset Class",
+    ]);
+    for (const branch of root.children!) {
+      expect(isHistoryGroupingBranch(branch.value)).toBe(true);
+      expect(
+        getHistoryViewTreeSelection(branch.value, mutable),
+      ).toBeUndefined();
+    }
+    const leaf = root.children![0].children![0].children![0];
+    expect(getHistoryScopeTreeSearchLabel(leaf)).toBe(
+      "Gain/Loss / By Account Structure / Pension / Portfolio",
+    );
+    expect(getHistoryViewTreeSelection(leaf.value, mutable)).toEqual({
+      metric: "gainsLosses",
+      scope: "account:bank:portfolio",
+    });
+    expect(
+      getHistoryViewTreeSelection(
+        root.children![1].children![0].value,
+        mutable,
+      ),
+    ).toEqual({ metric: "gainsLosses", scope: "asset-class:EQUITIES" });
+  });
   test("keeps all views in order as selectable totals, even without children", () => {
     const data = buildHistoryViewTreeData(emptyScopeOptions);
     expect(data.map((node) => node.label)).toEqual(
@@ -346,7 +412,7 @@ describe("unified history view tree", () => {
     const root = buildHistoryViewTreeData(mutableOptions).find(
       (node) => node.value === "gainsLosses:total",
     )!;
-    const account = root.children![0].children![0].children![0];
+    const account = root.children![1].children![0].children![0].children![0];
     expect(account.value).toBe(
       "gainsLosses:unit-account:security:AAPL:USD:bank",
     );

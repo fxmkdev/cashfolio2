@@ -10,6 +10,7 @@ import { ReportPageView } from "./-page-view";
 import {
   STORYBOOK_ACCOUNT_BOOK_ID,
   baseOverview,
+  withAccountBreakdowns,
   clearReportStorySessionStorage,
   deriveOverviewFromSelectedPeriodValue,
 } from "./-page-view.story-fixtures";
@@ -426,10 +427,10 @@ export const BreakdownTableDoubleClickSmoke: Story = {
 export const AllocationTableDoubleClickSmoke: Story = {
   args: {
     onBreakdownAccountDoubleClick: fn(),
-    overview: {
-      ...baseOverview,
+    overview: withAccountBreakdowns({
       assetBreakdown: {
-        ...baseOverview.assetBreakdown,
+        ...baseOverview.accountBreakdownsByGrouping.accountStructure
+          .assetBreakdown,
         items: [
           {
             id: "group:investments",
@@ -463,7 +464,7 @@ export const AllocationTableDoubleClickSmoke: Story = {
           },
         ],
       },
-    },
+    }),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -494,10 +495,10 @@ export const AllocationTableDoubleClickSmoke: Story = {
 export const AllocationChartContainerDoubleClickSmoke: Story = {
   args: {
     onBreakdownAccountDoubleClick: fn(),
-    overview: {
-      ...baseOverview,
+    overview: withAccountBreakdowns({
       assetBreakdown: {
-        ...baseOverview.assetBreakdown,
+        ...baseOverview.accountBreakdownsByGrouping.accountStructure
+          .assetBreakdown,
         items: [
           {
             id: "account:account-allocation-chart-only",
@@ -517,7 +518,7 @@ export const AllocationChartContainerDoubleClickSmoke: Story = {
           },
         ],
       },
-    },
+    }),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -537,10 +538,10 @@ export const AllocationChartContainerDoubleClickSmoke: Story = {
 export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
   args: {
     onBreakdownAccountDoubleClick: fn(),
-    overview: {
-      ...baseOverview,
+    overview: withAccountBreakdowns({
       assetBreakdown: {
-        ...baseOverview.assetBreakdown,
+        ...baseOverview.accountBreakdownsByGrouping.accountStructure
+          .assetBreakdown,
         items: [
           {
             id: "account:virtual:transfer-clearing:account:currency:CHF",
@@ -560,7 +561,7 @@ export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
           },
         ],
       },
-    },
+    }),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -582,10 +583,10 @@ export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
 export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
   args: {
     onBreakdownAccountDoubleClick: fn(),
-    overview: {
-      ...baseOverview,
+    overview: withAccountBreakdowns({
       assetBreakdown: {
-        ...baseOverview.assetBreakdown,
+        ...baseOverview.accountBreakdownsByGrouping.accountStructure
+          .assetBreakdown,
         items: [
           {
             id: "account:virtual:transfer-clearing:account:currency:CHF",
@@ -605,7 +606,7 @@ export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
           },
         ],
       },
-    },
+    }),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -654,12 +655,14 @@ export const GainsLossesToggleSmoke: Story = {
 
 export const GainsLossesDrillSmoke: Story = {
   args: {
-    overview: {
-      ...baseOverview,
+    overview: withAccountBreakdowns({
       gainsLossesBreakdown: {
-        hierarchy: [baseOverview.gainsLossesBreakdown.hierarchy[0]!],
+        hierarchy: [
+          baseOverview.accountBreakdownsByGrouping.accountStructure
+            .gainsLossesBreakdown.hierarchy[0]!,
+        ],
       },
-    },
+    }),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -678,8 +681,135 @@ export const GainsLossesDrillSmoke: Story = {
         canvas.getByText(/Drilled gains\/losses in the selected period/),
       ).toBeInTheDocument();
     });
+    await expect(canvas.getByText("Cash")).toBeInTheDocument();
+  },
+};
+
+export const SharedAccountGrouping: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const selector = canvas.getByRole("combobox", {
+      name: "Group Accounts By",
+    });
+    await expect(selector).toHaveValue("Account Structure");
+    await userEvent.click(
+      within(canvas.getByLabelText("Allocation Chart Type")).getByRole(
+        "radio",
+        { name: "Table" },
+      ),
+    );
+    await userEvent.click(
+      within(canvas.getByLabelText("Gains/Losses Chart Type")).getByRole(
+        "radio",
+        { name: "Table" },
+      ),
+    );
+    const allocation = within(
+      await canvas.findByTestId("period-allocation-breakdown-table"),
+    );
+    const gainsLosses = within(
+      await canvas.findByTestId("period-gains-losses-breakdown-table"),
+    );
+    await expect(await allocation.findByText("Investments")).toBeVisible();
+    await expect(await gainsLosses.findByText("Investments")).toBeVisible();
+    await userEvent.click(selector);
+    await userEvent.click(
+      within(canvasElement.ownerDocument.body).getByRole("option", {
+        name: "Asset Class",
+      }),
+    );
+    await expect(await allocation.findByText("Equities")).toBeVisible();
+    await expect(await gainsLosses.findByText("Equities")).toBeVisible();
+    await userEvent.click(selector);
+    await userEvent.click(
+      within(canvasElement.ownerDocument.body).getByRole("option", {
+        name: "Account Structure",
+      }),
+    );
+    await expect(await allocation.findByText("Investments")).toBeVisible();
+    await expect(await gainsLosses.findByText("Investments")).toBeVisible();
+    const stored = JSON.parse(
+      sessionStorage.getItem(
+        `cashfolio:reportPageState:${STORYBOOK_ACCOUNT_BOOK_ID}`,
+      )!,
+    );
+    await expect(stored.selectedGrouping).toBe("accountStructure");
+    await expect(stored.selectedAllocationChartType).toBe("table");
+    await expect(stored.selectedGainsLossesChartType).toBe("table");
+  },
+};
+
+function singleGainLossGroup(grouping: "accountStructure" | "assetClass") {
+  const breakdowns = baseOverview.accountBreakdownsByGrouping[grouping];
+  const first = breakdowns.gainsLossesBreakdown.hierarchy[0];
+  return {
+    ...breakdowns,
+    gainsLossesBreakdown: { ...first, hierarchy: [first] },
+  };
+}
+
+export const GroupingDrillRestoration: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      accountBreakdownsByGrouping: {
+        accountStructure: singleGainLossGroup("accountStructure"),
+        assetClass: singleGainLossGroup("assetClass"),
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const selector = canvas.getByRole("combobox", {
+      name: "Group Accounts By",
+    });
+    const chart = await canvas.findByTestId(
+      "period-gains-losses-breakdown-chart",
+    );
+    await userEvent.dblClick(chart);
     await expect(
-      canvas.getByText("Cash & Cash Equivalents"),
-    ).toBeInTheDocument();
+      await canvas.findByText(
+        "Drilled gains/losses in the selected period · Amounts shown in CHF",
+      ),
+    ).toBeVisible();
+    await userEvent.click(selector);
+    await userEvent.click(
+      within(canvasElement.ownerDocument.body).getByRole("option", {
+        name: "Asset Class",
+      }),
+    );
+    await expect(
+      await canvas.findByText(
+        "Top-level groups for gains/losses in the selected period · Amounts shown in CHF",
+      ),
+    ).toBeVisible();
+    await userEvent.dblClick(chart);
+    await expect(
+      await canvas.findByText(
+        "Drilled gains/losses in the selected period · Amounts shown in CHF",
+      ),
+    ).toBeVisible();
+    await userEvent.click(selector);
+    await userEvent.click(
+      within(canvasElement.ownerDocument.body).getByRole("option", {
+        name: "Account Structure",
+      }),
+    );
+    await expect(
+      await canvas.findByText(
+        "Drilled gains/losses in the selected period · Amounts shown in CHF",
+      ),
+    ).toBeVisible();
+    const stored = JSON.parse(
+      sessionStorage.getItem(
+        `cashfolio:reportPageState:${STORYBOOK_ACCOUNT_BOOK_ID}`,
+      )!,
+    );
+    await expect(
+      stored.drillPathsByGrouping.accountStructure.gainsLosses,
+    ).toEqual(["group:cash"]);
+    await expect(stored.drillPathsByGrouping.assetClass.gainsLosses).toEqual([
+      "asset-class:CASH_AND_CASH_EQUIVALENTS",
+    ]);
   },
 };

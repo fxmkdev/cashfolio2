@@ -1,6 +1,31 @@
 import type { PeriodBaseData } from "./base-data/period-base-data-types";
 import { buildTransferClearingVirtualHierarchy } from "./transfer-clearing/period-transfer-clearing-hierarchy";
 
+/** G/L can have activity on a clearing account whose closing balance is zero. */
+export function prepareGainLossStructure(
+  baseData: Pick<
+    PeriodBaseData,
+    | "baseAssetLiabilityAccounts"
+    | "allAccountGroups"
+    | "transferClearingUnitBuckets"
+  >,
+) {
+  const { virtualAccounts, virtualGroups } =
+    buildTransferClearingVirtualHierarchy({
+      unitBuckets: baseData.transferClearingUnitBuckets,
+      includeZeroBalances: true,
+    });
+  return {
+    accounts: [...baseData.baseAssetLiabilityAccounts, ...virtualAccounts],
+    groupById: new Map(
+      [...baseData.allAccountGroups, ...virtualGroups].map((group) => [
+        group.id,
+        group,
+      ]),
+    ),
+  };
+}
+
 /** Build per-calculation maps without changing the cached base data. */
 export function preparePeriodCalculationContext(
   baseData: Pick<

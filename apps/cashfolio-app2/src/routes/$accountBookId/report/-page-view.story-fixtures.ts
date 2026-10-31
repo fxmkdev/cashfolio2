@@ -27,6 +27,11 @@ export function clearReportStorySessionStorage(accountBookId: string) {
     `cashfolio:periodExpandedGroups:${accountBookId}:allocation:asset`,
     `cashfolio:periodExpandedGroups:${accountBookId}:allocation:liability`,
     `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses`,
+    ...["accountStructure", "assetClass"].flatMap((grouping) => [
+      `cashfolio:periodExpandedGroups:${accountBookId}:allocation:asset:${grouping}`,
+      `cashfolio:periodExpandedGroups:${accountBookId}:allocation:liability:${grouping}`,
+      `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses:v3:${grouping}`,
+    ]),
   ];
 
   for (const storageKey of storageKeys) {
@@ -115,7 +120,16 @@ export function deriveOverviewFromSelectedPeriodValue(
   };
 }
 
-export const baseOverview: ReportPageViewProps["overview"] = {
+type Overview = ReportPageViewProps["overview"];
+type AccountBreakdowns =
+  Overview["accountBreakdownsByGrouping"]["accountStructure"];
+const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
+  Omit<AccountBreakdowns, "gainsLossesBreakdown"> & {
+    gainsLossesBreakdown: Pick<
+      AccountBreakdowns["gainsLossesBreakdown"],
+      "hierarchy"
+    >;
+  } = {
   selectedPeriodValue: DEFAULT_PERIOD_VALUE,
   selectedPeriodSpecifier: "last-month",
   selectedPeriodLabel: "February 2026",
@@ -639,3 +653,106 @@ export const baseOverview: ReportPageViewProps["overview"] = {
     ],
   },
 };
+
+const {
+  assetBreakdown,
+  liabilityBreakdown,
+  gainsLossesBreakdown,
+  ...commonOverview
+} = originalOverview;
+const gainLossTotals = (
+  hierarchy: AccountBreakdowns["gainsLossesBreakdown"]["hierarchy"],
+) => ({
+  realizedGainLoss: hierarchy.reduce(
+    (sum, node) => sum + node.realizedGainLoss,
+    0,
+  ),
+  unrealizedGainLoss: hierarchy.reduce(
+    (sum, node) => sum + node.unrealizedGainLoss,
+    0,
+  ),
+  totalGainLoss: hierarchy.reduce((sum, node) => sum + node.totalGainLoss, 0),
+});
+const structureGainLossHierarchy = gainsLossesBreakdown.hierarchy.map(
+  (node, i) => ({
+    ...node,
+    id: `group:${["cash", "investments", "crypto"][i]}`,
+    label: ["Cash", "Investments", "Crypto"][i],
+    children: node.children.map((child) => ({
+      ...child,
+      id: `account:${child.account!.id}`,
+    })),
+  }),
+);
+const classAllocation = (
+  breakdown: AccountBreakdowns["assetBreakdown"],
+  liability = false,
+): AccountBreakdowns["assetBreakdown"] => {
+  const classes = liability
+    ? ["unclassified"]
+    : ["EQUITIES", "CASH_AND_CASH_EQUIVALENTS"];
+  const labels = liability
+    ? ["Unclassified"]
+    : ["Equities", "Cash & Cash Equivalents"];
+  return {
+    ...breakdown,
+    items: breakdown.items.map((node, i) => ({
+      ...node,
+      id: `asset-class:${classes[i]}`,
+      label: labels[i],
+    })),
+    hierarchy: breakdown.hierarchy.map((node, i) => ({
+      ...node,
+      id: `asset-class:${classes[i]}`,
+      label: labels[i],
+    })),
+  };
+};
+export const baseOverview: Overview = {
+  ...commonOverview,
+  accountBreakdownsByGrouping: {
+    accountStructure: {
+      assetBreakdown,
+      liabilityBreakdown,
+      gainsLossesBreakdown: {
+        hierarchy: structureGainLossHierarchy,
+        ...gainLossTotals(structureGainLossHierarchy),
+      },
+    },
+    assetClass: {
+      assetBreakdown: classAllocation(assetBreakdown),
+      liabilityBreakdown: classAllocation(liabilityBreakdown, true),
+      gainsLossesBreakdown: {
+        ...gainsLossesBreakdown,
+        ...gainLossTotals(gainsLossesBreakdown.hierarchy),
+      },
+    },
+  },
+};
+export function withAccountBreakdowns(
+  changes: Partial<Omit<AccountBreakdowns, "gainsLossesBreakdown">> & {
+    gainsLossesBreakdown?: Pick<
+      AccountBreakdowns["gainsLossesBreakdown"],
+      "hierarchy"
+    >;
+  },
+): Overview {
+  const breakdowns = {
+    ...baseOverview.accountBreakdownsByGrouping.accountStructure,
+    ...changes,
+    gainsLossesBreakdown: changes.gainsLossesBreakdown
+      ? {
+          ...changes.gainsLossesBreakdown,
+          ...gainLossTotals(changes.gainsLossesBreakdown.hierarchy),
+        }
+      : baseOverview.accountBreakdownsByGrouping.accountStructure
+          .gainsLossesBreakdown,
+  };
+  return {
+    ...baseOverview,
+    accountBreakdownsByGrouping: {
+      ...baseOverview.accountBreakdownsByGrouping,
+      accountStructure: breakdowns,
+    },
+  };
+}

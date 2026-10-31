@@ -13,7 +13,13 @@ export function TopPageHeader({
   actions,
 }: TopPageHeaderProps) {
   return (
-    <Group mb="lg" justify="space-between" align="center" mih={36}>
+    <Group
+      mb="lg"
+      justify="space-between"
+      align="center"
+      mih={36}
+      flex="0 0 auto"
+    >
       <Group gap="md" align="center">
         {heading}
         {headingAccessory}

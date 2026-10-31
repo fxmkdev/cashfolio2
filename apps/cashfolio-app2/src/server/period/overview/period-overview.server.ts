@@ -15,7 +15,10 @@ import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-lo
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
 import { type GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
-import { preparePeriodCalculationContext } from "../period-calculation-context";
+import {
+  preparePeriodCalculationContext,
+  prepareGainLossStructure,
+} from "../period-calculation-context";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 import { computePeriodCashFlow } from "./period-cash-flow";
 import type { BreakdownHierarchyAccumulatorItem } from "../period-helpers";
@@ -181,6 +184,7 @@ export async function loadPeriodOverview(args: {
       ...gainsLossesContributionByKey.values(),
     ]),
     gainsLossesContributions: Array.from(gainsLossesContributionByKey.values()),
+    gainLossStructure: prepareGainLossStructure(baseData),
     locale: args.locale,
   });
 }

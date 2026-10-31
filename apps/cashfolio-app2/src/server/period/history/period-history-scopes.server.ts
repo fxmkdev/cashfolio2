@@ -22,6 +22,7 @@ import {
 import type { PeriodGainsLossesBreakdownNode } from "../breakdown/period-gains-losses-breakdown";
 
 import { isBalanceAccount } from "../../../shared/account-presentation";
+import type { ReportingGrouping } from "../../../shared/reporting-grouping";
 
 export type HistoryMetricScopeFilter = {
   metric: HistoryScopedMetric;
@@ -186,6 +187,7 @@ export function resolveScopedMetricValue(args: {
     Record<HistoryScopedMetric, Map<string, BreakdownHierarchyAccumulatorItem>>
   >;
   gainsLossesHierarchy?: PeriodGainsLossesBreakdownNode[];
+  accountStructureGainsLossesHierarchy?: PeriodGainsLossesBreakdownNode[];
   allAccountGroups: Array<{
     id: string;
     name: string;
@@ -202,12 +204,16 @@ export function resolveScopedMetricValue(args: {
   }
 
   if (args.metricScopeFilter.metric === "gainsLosses") {
+    const hierarchy =
+      parsedScope.startsWith("account:") || parsedScope.startsWith("group:")
+        ? (args.accountStructureGainsLossesHierarchy ?? [])
+        : (args.gainsLossesHierarchy ?? []);
     return resolveScopedGainLossValue({
-      hierarchy: args.gainsLossesHierarchy ?? [],
+      hierarchy,
       scope: normalizeGainLossScope(
         parsedScope,
         buildHistoryGainLossScopeOptions({
-          hierarchy: args.gainsLossesHierarchy ?? [],
+          hierarchy,
         }),
       ),
     });
@@ -233,6 +239,7 @@ export function resolveScopedMetricValue(args: {
 
 export function buildHistoryGainLossScopeOptions(args: {
   hierarchy: PeriodGainsLossesBreakdownNode[];
+  grouping?: ReportingGrouping;
 }): HistoryScopeOption[] {
   const options: HistoryScopeOption[] = [];
 
@@ -248,11 +255,14 @@ export function buildHistoryGainLossScopeOptions(args: {
         value,
         label,
         kind: "gainLoss",
+        grouping: args.grouping ?? "assetClass",
         treeLabel: node.label,
         ...(node.account
           ? {
               accountId: node.account.id,
-              legacyValues: node.account.legacyScopes,
+              ...(args.grouping !== "accountStructure"
+                ? { legacyValues: node.account.legacyScopes }
+                : {}),
             }
           : {}),
         ...(parentValue ? { parentValue } : {}),

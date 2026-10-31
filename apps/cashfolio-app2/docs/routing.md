@@ -158,7 +158,11 @@ their default handling. Revisit this filter if the app enables RSC.
 - `$accountBookId/report/route.tsx` - period layout route with shared period
   search validation and loader data used by nested report pages
 - `$accountBookId/report/index.tsx` - report overview page with contribution,
-  allocation, and gains/losses breakdown cards
+  allocation, and gains/losses breakdown cards. Group Accounts By sits beside
+  the period control and switches Assets, Liabilities, and Gain/Loss together
+  between Account Structure (default) and Asset Class. Grouping and independent
+  drill paths are stored per book in session storage; category/cash-flow
+  breakdowns retain their existing structure.
 - `$accountBookId/report/gains-losses/$accountId/route.tsx` - dedicated
   gain/loss reconciliation page for account drill-down (opened from Gains/Losses
   Breakdown leaf rows). Recorded-adjustment transaction links open Transactions
@@ -179,18 +183,19 @@ their default handling. Revisit this filter if the app enables RSC.
   - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
     assets (green), liabilities (red), net worth sign-split (green/red)
   - The scope combobox applies to `cashFlow`, `income`, `expenses`,
-    `gainsLosses`, `assets`, and `liabilities`. The `Total` scope preserves the
-    aggregate view; concrete scopes replace the selected metric series with that
-    scope's value. Gain/Loss scopes use asset class then account, with explicit
-    account metadata driving navigation. Current classification applies to all
-    history periods, and an account scope survives reclassification.
-  - When an account scope is selected, double-click a period bar or an
-    Assets/Liabilities balance point to open its ledger with that exact month or
-    year. Gain/Loss account scopes open the unified account reconciliation page,
-    including recorded adjustments, calculated holdings and residuals. Supported
-    synthetic and unattributed accounts retain their own explanations. Totals,
-    asset classes, groups, overlays, and the opening-balance point do not open
-    an account. A hint appears when a destination is available.
+    `gainsLosses`, and `netWorth`. The `Total` scope preserves the aggregate
+    view; concrete scopes replace the selected metric series with that scope's
+    value. Gain/Loss scopes use either Account Structure or Asset Class then
+    Account, with explicit account metadata driving navigation. Current
+    classification applies to all history periods, and an account scope survives
+    reclassification.
+  - When an account scope is selected, double-click a period bar or an Net Worth
+    balance point to open its ledger with that exact month or year. Gain/Loss
+    account scopes open the unified account reconciliation page, including
+    recorded adjustments, calculated holdings and residuals. Supported synthetic
+    and unattributed accounts retain their own explanations. Totals, asset
+    classes, groups, overlays, and the opening-balance point do not open an
+    account. A hint appears when a destination is available.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
@@ -324,17 +329,21 @@ controllers.
     monthly)
   - `metric?: "totalReturn" | "savings" | "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`
     to select the history metric (default: `totalReturn`)
-  - `cashFlowScope?`, `incomeScope?`, `expenseScope?`, `assetScope?`, and
-    `liabilityScope?` use `total`, `group:<id>`, or `account:<id>` for scoped
-    history metrics. `gainLossScope?` uses `total` or Period Gain/Loss hierarchy
-    node IDs such as `unit-type:fx`, `unit:fx:USD`, `asset-class:EQUITIES`,
-    `asset-class:unclassified`, and `gain-loss-account:<accountId>`. Legacy
-    `explicit-account:` and `unit-account:` leaves translate to a combined
-    account scope when their complete identity is known. Old valuation-type/unit
-    scopes and unknown selections fall back to Total. The loader normalizes
-    scope before calculating scoped metrics and choosing derived cache keys; the
-    route writes the valid selection back to the URL. Obsolete report drill
-    paths are clamped, and G/L expanded-group storage uses a new version.
+  - `cashFlowScope?`, `incomeScope?`, `expenseScope?`, and `netWorthScope?` use
+    `total`, `group:<id>`, or `account:<id>` for scoped history metrics.
+    `gainLossScope?` uses `total` or Period Gain/Loss hierarchy node IDs:
+    `group:<id>` / `account:<id>` for Account Structure and
+    `asset-class:EQUITIES`, `asset-class:unclassified`, or
+    `gain-loss-account:<accountId>` for Asset Class. The View selector nests
+    them under By Account Structure and By Asset Class navigation-only headings;
+    headings are never URL scopes. Selecting Gain/Loss itself shows the total.
+    Legacy `explicit-account:` and `unit-account:` leaves translate to a
+    combined account scope when their complete identity is known. Old
+    valuation-type/unit scopes and unknown selections fall back to Total. The
+    loader normalizes scope before calculating scoped metrics and choosing
+    derived cache keys; the route writes the valid selection back to the URL.
+    Obsolete report drill paths are clamped, and G/L expanded-group storage uses
+    a new version.
 
 ### Global Navigation Progress
 

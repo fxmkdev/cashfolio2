@@ -559,6 +559,67 @@ describe("getPeriodHistory", () => {
     ]);
   });
 
+  test("unions Account Structure G/L scopes across periods and keeps missing points at zero", async () => {
+    const original = loadPeriodHistoryPoint.getMockImplementation()!;
+    loadPeriodHistoryPoint.mockImplementation(async (args) => {
+      const point = await original(args);
+      return {
+        ...point,
+        scopedMetricValue: args.period === "2026-01" ? 12 : 0,
+        scopeOptions: {
+          ...point.scopeOptions,
+          gainsLosses: [
+            ...point.scopeOptions.gainsLosses,
+            ...(args.period === "2026-01"
+              ? [
+                  {
+                    value: "group:pension",
+                    label: "Pension",
+                    kind: "gainLoss",
+                    grouping: "accountStructure",
+                  },
+                  {
+                    value: "account:portfolio",
+                    label: "Pension / Portfolio",
+                    kind: "gainLoss",
+                    grouping: "accountStructure",
+                    accountId: "portfolio",
+                    parentValue: "group:pension",
+                  },
+                ]
+              : []),
+          ],
+        },
+      };
+    });
+    const result = await getPeriodHistory({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+        scopedMetric: "gainsLosses",
+        gainLossScope: "group:pension",
+      },
+    });
+    expect(result.scopeSelection.gainsLosses).toBe("group:pension");
+    expect(result.points.map((point) => point.gainsLosses)).toEqual([12, 0, 0]);
+    expect(result.scopeOptions.gainsLosses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: "account:portfolio",
+          grouping: "accountStructure",
+        }),
+        expect.objectContaining({
+          value: "asset-class:CASH_AND_CASH_EQUIVALENTS",
+        }),
+      ]),
+    );
+    expect(loadPeriodHistoryPoint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricScopeFilter: { metric: "gainsLosses", scope: "group:pension" },
+      }),
+    );
+  });
+
   test("applies scoped Net Worth values and scoped opening balance", async () => {
     loadHistoryOpeningBalancePoint.mockResolvedValueOnce({
       date: "2026-01-04T00:00:00.000Z",

@@ -32,6 +32,7 @@ import {
 } from "../breakdown/period-gains-losses-breakdown";
 import type { NormalizedPeriodSelection } from "../period-selection";
 import type { UserLocale } from "../../../user-locale";
+import type { ReportingGrouping } from "../../../shared/reporting-grouping";
 
 type PeriodOverviewAssetLiabilityAccount = {
   id: string;
@@ -70,6 +71,10 @@ export function buildPeriodOverviewResponse(args: {
     GainLossAccountAttribution
   >;
   gainsLossesContributions?: PeriodGainsLossesContribution[];
+  gainLossStructure?: {
+    accounts: Array<{ id: string; groupId: string | null }>;
+    groupById: Map<string, PeriodGroupNode>;
+  };
   locale?: UserLocale;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
@@ -109,22 +114,15 @@ export function buildPeriodOverviewResponse(args: {
       accountName: account.name,
       groupId: account.groupId,
       accountType: account.type,
+      assetClass:
+        args.gainLossAccountAttributionById?.get(account.id)?.assetClass ??
+        null,
       convertedBalanceInReferenceCurrency:
         args.endOfPeriodBalanceStats.convertedBalanceByAccountId.get(
           account.id,
         ) ?? null,
     }),
   );
-  const assetBreakdown = buildPeriodEndAllocationBreakdown({
-    side: "asset",
-    items: convertedPeriodEndBalances,
-    groupById: args.groupById,
-  });
-  const liabilityBreakdown = buildPeriodEndAllocationBreakdown({
-    side: "liability",
-    items: convertedPeriodEndBalances,
-    groupById: args.groupById,
-  });
 
   const {
     hierarchy: expenseBreakdownHierarchy,
@@ -202,10 +200,29 @@ export function buildPeriodOverviewResponse(args: {
     firstBookingDate: args.minPeriodDate,
     now: args.currentDay,
   });
-  const gainsLossesBreakdown = buildGainsLossesBreakdown({
-    contributions: args.gainsLossesContributions ?? [],
-    accountAttributionById: args.gainLossAccountAttributionById,
-    referenceCurrency: args.referenceCurrency,
+  const buildAccountBreakdowns = (grouping: ReportingGrouping) => ({
+    assetBreakdown: buildPeriodEndAllocationBreakdown({
+      side: "asset",
+      grouping,
+      items: convertedPeriodEndBalances,
+      groupById: args.groupById,
+    }),
+    liabilityBreakdown: buildPeriodEndAllocationBreakdown({
+      side: "liability",
+      grouping,
+      items: convertedPeriodEndBalances,
+      groupById: args.groupById,
+    }),
+    gainsLossesBreakdown: buildGainsLossesBreakdown({
+      contributions: args.gainsLossesContributions ?? [],
+      accountAttributionById: args.gainLossAccountAttributionById,
+      referenceCurrency: args.referenceCurrency,
+      grouping,
+      ...(args.gainLossStructure ?? {
+        accounts: args.assetLiabilityAccounts,
+        groupById: args.groupById,
+      }),
+    }),
   });
 
   return toNumericMoney({
@@ -274,8 +291,9 @@ export function buildPeriodOverviewResponse(args: {
       hasHiddenAmountDiscrepancy: cashFlowBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: cashFlowBreakdownDiscrepancyNodeIds,
     },
-    assetBreakdown,
-    liabilityBreakdown,
-    gainsLossesBreakdown,
+    accountBreakdownsByGrouping: {
+      accountStructure: buildAccountBreakdowns("accountStructure"),
+      assetClass: buildAccountBreakdowns("assetClass"),
+    },
   });
 }

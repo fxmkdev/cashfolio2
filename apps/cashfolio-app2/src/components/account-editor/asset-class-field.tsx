@@ -60,9 +60,9 @@ export function AssetClassField(props: SelectProps) {
           />
           <Popover.Dropdown data-mantine-stop-propagation>
             <Text size="sm">
-              Classifies what this account represents. Future asset-class
-              reports will apply this selection to all historical periods.
-              Changing it does not change total amounts or valuation.
+              Classifies what this account represents. Asset-class reports apply
+              this selection to all historical periods. Changing it does not
+              change total amounts or valuation.
             </Text>
           </Popover.Dropdown>
         </Popover>

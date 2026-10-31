@@ -19,6 +19,7 @@ import {
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
 import { selectSegmentedControlOption } from "../support/segmented-control";
+import { selectReportGrouping } from "../support/report-page";
 
 const today = new Date("2026-10-10T00:00:00Z");
 let seeded: SeedSummary;
@@ -144,6 +145,7 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     ["2023-11", "-350.00"],
   ]) {
     await page.goto(`/${household.id}/report?period=${period}`);
+    await selectReportGrouping(page, "Asset Class");
     await selectSegmentedControlOption(
       page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
       "Table",
@@ -204,6 +206,7 @@ test("the seeded EUR card purchase explains its gain/loss asset-class grouping",
     expect(booking.date.toISOString()).toBe("2026-10-08T00:00:00.000Z");
   }
   await page.goto(`/${household.id}/report?period=2026-10`);
+  await selectReportGrouping(page, "Asset Class");
   await selectSegmentedControlOption(
     page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
     "Table",

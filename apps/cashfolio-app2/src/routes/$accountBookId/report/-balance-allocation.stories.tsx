@@ -5,6 +5,7 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ReportPageView } from "./-page-view";
 import {
   baseOverview,
+  withAccountBreakdowns,
   clearReportStorySessionStorage,
   STORYBOOK_ACCOUNT_BOOK_ID,
 } from "./-page-view.story-fixtures";
@@ -28,7 +29,7 @@ function overviewForBalances(bank: number, card: number): typeof baseOverview {
   ];
   const allocation = (
     side: "asset" | "liability",
-  ): typeof baseOverview.assetBreakdown => {
+  ): typeof baseOverview.accountBreakdownsByGrouping.accountStructure.assetBreakdown => {
     const relevant = positions.filter(({ balance }) =>
       side === "asset" ? balance > 0 : balance < 0,
     );
@@ -73,8 +74,10 @@ function overviewForBalances(bank: number, card: number): typeof baseOverview {
       endOfPeriodLiabilities: allocation("liability").totalAmount,
       endOfPeriodNetWorth: bank + card,
     },
-    assetBreakdown: allocation("asset"),
-    liabilityBreakdown: allocation("liability"),
+    accountBreakdownsByGrouping: withAccountBreakdowns({
+      assetBreakdown: allocation("asset"),
+      liabilityBreakdown: allocation("liability"),
+    }).accountBreakdownsByGrouping,
   };
 }
 

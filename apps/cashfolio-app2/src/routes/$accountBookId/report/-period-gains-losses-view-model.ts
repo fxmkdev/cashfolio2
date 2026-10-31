@@ -1,3 +1,4 @@
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useCallback, useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
@@ -23,7 +24,8 @@ export type PeriodGainsLossesViewModel = {
 
 export function usePeriodGainsLossesViewModel(args: {
   accountBookId: string;
-  gainsLossesBreakdownHierarchy: PeriodOverview["gainsLossesBreakdown"]["hierarchy"];
+  grouping: ReportingGrouping;
+  gainsLossesBreakdown: PeriodOverview["accountBreakdownsByGrouping"]["assetClass"]["gainsLossesBreakdown"];
   selectedGainsLossesChartType: GainsLossesChartType;
   drillPathByGainsLosses: string[];
   setDrillPathByGainsLosses: (
@@ -40,7 +42,8 @@ export function usePeriodGainsLossesViewModel(args: {
 }): PeriodGainsLossesViewModel {
   const {
     accountBookId,
-    gainsLossesBreakdownHierarchy,
+    grouping,
+    gainsLossesBreakdown,
     selectedGainsLossesChartType,
     drillPathByGainsLosses,
     setDrillPathByGainsLosses,
@@ -49,7 +52,8 @@ export function usePeriodGainsLossesViewModel(args: {
     waterfallPalette,
     onUnitAccountDoubleClick,
   } = args;
-  const gainsLossesTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses:v2`;
+  const gainsLossesBreakdownHierarchy = gainsLossesBreakdown.hierarchy;
+  const gainsLossesTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses:v3:${grouping}`;
   const gainsLossesDrillState = useMemo(
     () =>
       getGainsLossesDrillState({
@@ -71,8 +75,15 @@ export function usePeriodGainsLossesViewModel(args: {
     () =>
       buildGainsLossesWaterfallModel({
         nodes: gainsLossesDrillState.currentNodes,
+        totalGainLoss:
+          gainsLossesDrillState.currentPathNodes.at(-1)?.totalGainLoss ??
+          gainsLossesBreakdown.totalGainLoss,
       }),
-    [gainsLossesDrillState.currentNodes],
+    [
+      gainsLossesDrillState.currentNodes,
+      gainsLossesDrillState.currentPathNodes,
+      gainsLossesBreakdown.totalGainLoss,
+    ],
   );
   const hasGainsLosses = waterfallModel.data.length > 0;
   const updateGainsLossesDrillPath = useCallback(

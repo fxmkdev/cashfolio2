@@ -40,6 +40,23 @@ const options: HistoryScopeOption[] = [
 ];
 
 describe("History account drill-down", () => {
+  test("opens Account Structure G/L accounts in the same reconciliation as Asset Class", () => {
+    expect(
+      resolveHistoryAccountDrillTarget({
+        metric: "gainsLosses",
+        scope: "account:asset",
+        options: [
+          {
+            value: "account:asset",
+            accountId: "asset",
+            label: "Asset",
+            kind: "gainLoss",
+            grouping: "accountStructure",
+          },
+        ],
+      }),
+    ).toEqual({ kind: "reconciliation", accountId: "asset" });
+  });
   test.each(["cashFlow", "income", "expenses", "netWorth"] as const)(
     "opens %s account scopes in ledger",
     (metric) => {
