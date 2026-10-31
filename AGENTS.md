@@ -22,6 +22,14 @@ file and the linked docs are for `apps/cashfolio-app2`.
 - Keep docs in sync when introducing new patterns or conventions.
 - Before starting implementation work, run `git fetch origin` and base new
   branches or worktrees on the freshly fetched `origin/main`.
+- When updating an existing feature branch with changes from `main`, always run
+  `git fetch origin` followed by `git rebase origin/main`. Never merge `main` or
+  `origin/main` into a feature branch. Resolve conflicts and continue the rebase
+  rather than switching to a merge.
+- After rebasing a published feature branch, push the rewritten history to the
+  same remote branch with `git push --force-with-lease origin <feature-branch>`
+  so its open PR updates in place. If the lease fails, inspect the remote changes
+  before retrying; never bypass it with `--force`.
 - TanStack Start route filenames often contain `$` (for route params). In shell
   commands, always treat these paths as literals to avoid variable expansion.
   - Prefer wrapping such paths in single quotes, e.g.
@@ -37,8 +45,8 @@ file and the linked docs are for `apps/cashfolio-app2`.
     the canonical squash commit message.
 - When the current Codex/chat thread already has an open pull request, push any
   newly applied changes to that PR branch unless explicitly instructed
-  otherwise; still fetch first and account for `origin/main` being newer than
-  the branch base.
+  otherwise; fetch first and follow the rebase requirement above when
+  `origin/main` has advanced beyond the branch base.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
 - Keep `@types/node` aligned with the current runtime major (Node 26). Do not
