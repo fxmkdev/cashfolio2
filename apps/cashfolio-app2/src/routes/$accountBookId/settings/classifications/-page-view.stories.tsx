@@ -321,7 +321,19 @@ async function dragClassSibling(
   const target = dialog.querySelector<HTMLElement>(
     `.ag-row[row-id="${targetId}"]`,
   )!;
-  await waitFor(() => expect(source).toBeVisible());
+  // Modal and row transitions can move the drop target after it becomes visible.
+  await waitFor(async () => {
+    expect(source).toBeVisible();
+    const bounds = () =>
+      [source.getBoundingClientRect(), target.getBoundingClientRect()].map(
+        (rect) => [rect.x, rect.y, rect.width, rect.height],
+      );
+    const before = bounds();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    expect(bounds()).toEqual(before);
+  });
   const from = source.getBoundingClientRect(),
     to = target.getBoundingClientRect();
   const clientX = from.left + from.width / 2;
@@ -331,8 +343,13 @@ async function dragClassSibling(
       coords: { clientX, clientY: from.top + from.height / 2 },
       keys: "[MouseLeft>]",
     },
-    { target, coords: { clientX, clientY: to.top + 3 } },
-    { keys: "[/MouseLeft]" },
+    {
+      target: source,
+      coords: { clientX, clientY: from.top + from.height / 2 - 8 },
+    },
+    { target, coords: { clientX, clientY: to.top + to.height / 2 } },
+    { target, coords: { clientX, clientY: to.top + 8 } },
+    { target, coords: { clientX, clientY: to.top + 8 }, keys: "[/MouseLeft]" },
   ]);
 }
 

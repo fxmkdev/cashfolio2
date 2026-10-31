@@ -152,20 +152,13 @@ function PeriodSwitchHarness() {
     },
   };
   return (
-    <>
-      <Button
-        onClick={() => setPeriod(period === "2026-01" ? "2026-02" : "2026-01")}
-      >
-        {period === "2026-01" ? "Next Period" : "Previous Period"}
-      </Button>
-      <ReportPageView
-        accountBookId={periodBookId}
-        overview={overview}
-        selectedPeriodValue={period}
-        onPeriodChange={setPeriod}
-        onBreakdownAccountDoubleClick={fn()}
-      />
-    </>
+    <ReportPageView
+      accountBookId={periodBookId}
+      overview={overview}
+      selectedPeriodValue={period}
+      onPeriodChange={setPeriod}
+      onBreakdownAccountDoubleClick={fn()}
+    />
   );
 }
 export const PeriodChangesRetainSurvivingClass: Story = {
