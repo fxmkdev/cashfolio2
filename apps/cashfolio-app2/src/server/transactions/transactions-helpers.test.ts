@@ -24,6 +24,10 @@ import {
   validateCreateTransaction,
 } from "./transactions-helpers";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
+import type {
+  BookingUnitFields,
+  BookingUnitFieldsSource,
+} from "../../shared/booking-unit-fields";
 import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../../shared/gain-loss-transaction-invariant";
 
 function createAccountMap(
@@ -36,6 +40,7 @@ function createAccountMap(
         id: "income",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.INCOME,
+        unit: null,
       },
     ],
     [
@@ -44,6 +49,7 @@ function createAccountMap(
         id: "expense",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        unit: null,
       },
     ],
     [
@@ -52,6 +58,7 @@ function createAccountMap(
         id: "opening",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        unit: null,
       },
     ],
     [
@@ -60,6 +67,7 @@ function createAccountMap(
         id: "gain-loss",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        unit: null,
       },
     ],
     [
@@ -68,6 +76,8 @@ function createAccountMap(
         id: "asset",
         type: AccountType.BALANCE,
         equityAccountSubtype: null,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
       },
     ],
     [
@@ -76,6 +86,8 @@ function createAccountMap(
         id: "liability",
         type: AccountType.BALANCE,
         equityAccountSubtype: null,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
       },
     ],
   ]);
@@ -365,6 +377,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "income",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 100,
             date: "2026-01-03T00:00:00.000Z",
           },
@@ -375,7 +389,16 @@ describe("transactions helpers", () => {
 
     expect(prisma.account.findMany).toHaveBeenCalledWith({
       where: { id: { in: ["income"] }, accountBookId: "book-1" },
-      select: { id: true, type: true, equityAccountSubtype: true },
+      select: {
+        id: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
     });
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-1" },
@@ -397,11 +420,21 @@ describe("transactions helpers", () => {
         id: "account-1",
         type: AccountType.BALANCE,
         equityAccountSubtype: null,
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
       }),
     ).toEqual({
       id: "account-1",
       type: AccountType.BALANCE,
       equityAccountSubtype: null,
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
     });
   });
 
@@ -411,6 +444,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "income",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 10,
             date: "2026-01-03T00:00:00.000Z",
           },
@@ -427,6 +462,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "expense",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -10,
             date: "2026-01-03T00:00:00.000Z",
           },
@@ -445,6 +482,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "opening",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-03T00:00:00.000Z",
           },
@@ -463,6 +502,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "income",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-03T00:00:00.000Z",
           },
@@ -481,6 +522,8 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "income",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
@@ -499,11 +542,15 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "gain-loss",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
           {
             accountId: "asset",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 100,
             date: "2026-01-04T00:00:00.000Z",
           },
@@ -522,16 +569,22 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "gain-loss",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
           {
             accountId: "asset",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 40,
             date: "2026-01-04T00:00:00.000Z",
           },
           {
             accountId: "liability",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 60,
             date: "2026-01-04T00:00:00.000Z",
           },
@@ -550,11 +603,15 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "gain-loss",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
           {
             accountId: "income",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
@@ -573,11 +630,15 @@ describe("transactions helpers", () => {
         [
           {
             accountId: "gain-loss",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: -100,
             date: "2026-01-04T00:00:00.000Z",
           },
           {
             accountId: "gain-loss",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
             value: 100,
             date: "2026-01-04T00:00:00.000Z",
           },
@@ -588,6 +649,95 @@ describe("transactions helpers", () => {
         },
       ),
     ).toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+  });
+});
+
+describe("booking and balance account unit compatibility", () => {
+  function validate(
+    account: BookingUnitFieldsSource,
+    booking: BookingUnitFields,
+    type: AccountType = AccountType.BALANCE,
+  ) {
+    validateAccountTypeBookingsWithAccounts(
+      [{ ...booking, accountId: "account", value: 10, date: "2026-01-12" }],
+      new Map([
+        [
+          "account",
+          { ...account, id: "account", type, equityAccountSubtype: null },
+        ],
+      ]),
+      { accountBookStartDate: new Date("2026-01-01T00:00:00Z") },
+    );
+  }
+
+  test.each([
+    {
+      name: "different currencies",
+      account: { unit: Unit.CURRENCY, currency: "EUR" },
+      booking: { unit: Unit.CURRENCY, currency: "USD" },
+    },
+    {
+      name: "different cryptocurrencies",
+      account: { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+      booking: { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "ETH" },
+    },
+    {
+      name: "different security symbols",
+      account: { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "USD" },
+      booking: { unit: Unit.SECURITY, symbol: "MSFT", tradeCurrency: "USD" },
+    },
+    {
+      name: "different unit types",
+      account: { unit: Unit.CURRENCY, currency: "USD" },
+      booking: { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    },
+  ])("rejects $name", ({ account, booking }) => {
+    expect(() => validate(account, booking)).toThrow(
+      "Booking 0: Account must use the same unit as the booking.",
+    );
+  });
+
+  test.each<BookingUnitFieldsSource>([
+    { unit: null },
+    { unit: Unit.CURRENCY, currency: null },
+    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: null },
+    { unit: Unit.SECURITY, symbol: null, tradeCurrency: "USD" },
+    { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: null },
+  ])("rejects incomplete balance account metadata %j", (account) => {
+    expect(() =>
+      validate(account, {
+        unit: Unit.SECURITY,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      }),
+    ).toThrow("Booking 0: Account must use the same unit as the booking.");
+  });
+
+  test.each<BookingUnitFields>([
+    { unit: Unit.CURRENCY, currency: "CHF" },
+    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "USD" },
+  ])("accepts matching units %j", (unit) => {
+    expect(() => validate(unit, unit)).not.toThrow();
+  });
+
+  test("accepts the same security symbol with a different trade currency", () => {
+    expect(() =>
+      validate(
+        { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "EUR" },
+        { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "USD" },
+      ),
+    ).not.toThrow();
+  });
+
+  test.each<BookingUnitFields>([
+    { unit: Unit.CURRENCY, currency: "CHF" },
+    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "USD" },
+  ])("accepts unrestricted units for equity categories %j", (booking) => {
+    expect(() =>
+      validate({ unit: null }, booking, AccountType.EQUITY),
+    ).not.toThrow();
   });
 });
 

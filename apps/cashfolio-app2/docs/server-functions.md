@@ -702,9 +702,17 @@ schema migration is needed.
 
 Same-unit transactions must sum to exactly zero using Decimal, matching the
 transaction editor. The former server tolerance of `0.001` no longer applies;
-mixed-unit validation semantics are unchanged. The existing FIFO quantity
-threshold (`1e-9`) and opening-balance threshold (`1e-6`) remain unchanged and
-are compared using Decimal.
+mixed-unit transactions remain supported when each booking matches its balance
+account's unit identity. Create, update, and statement-import mutations validate
+account units inside the serialized book transaction, before replacing or
+creating bookings. Currencies, cryptocurrencies, and security symbols must
+match; security trade currency remains pricing metadata rather than unit
+identity. Balance accounts with incomplete unit metadata are rejected. Equity
+categories remain unit-independent. Any incompatible booking rejects the entire
+mutation, including a complete import batch. Existing data is not rewritten;
+edits must meet the same validation. The existing FIFO quantity threshold
+(`1e-9`) and opening-balance threshold (`1e-6`) remain unchanged and are
+compared using Decimal.
 
 Reports retain their existing rounding stages. Round income, expenses, and
 gains/losses to two decimal places with half-even rounding; calculate savings
