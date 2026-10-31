@@ -51,7 +51,10 @@ export const CreateChild: Story = {
       await body.findByRole("dialog", { name: "New Asset Class" }),
     );
     await expect(dialog.getByLabelText("Parent Class")).toHaveValue("Equities");
-    await userEvent.type(dialog.getByLabelText("Name"), "International");
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /^Name/ }),
+      "International",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(args.onSave).toHaveBeenCalledWith({
@@ -98,12 +101,17 @@ export const SaveFailurePreservesDraft: Story = {
     const dialog = within(
       await body.findByRole("dialog", { name: "New Asset Class" }),
     );
-    await userEvent.type(dialog.getByLabelText("Name"), "My Class");
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /^Name/ }),
+      "My Class",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Save" }));
     await expect(await dialog.findByRole("alert")).toHaveTextContent(
       "no longer available",
     );
-    await expect(dialog.getByLabelText("Name")).toHaveValue("My Class");
+    await expect(dialog.getByRole("textbox", { name: /^Name/ })).toHaveValue(
+      "My Class",
+    );
     await expect(args.onRefresh).toHaveBeenCalled();
   },
 };
