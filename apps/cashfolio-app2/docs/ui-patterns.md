@@ -410,7 +410,10 @@ submit UX and prevent duplicate requests.
 - Use `TopPageHeader` (`src/components/layout/top-page-header.tsx`) for
   page-level headers on account-book routes.
 - Keep layout props centralized in `TopPageHeader`: `mb="lg"`,
-  `justify="space-between"`, `align="center"`, `mih={36}`.
+  `justify="space-between"`, `align="center"`, `mih={36}`, and
+  `flex="0 0 auto"`. Headers retain their full content height inside constrained
+  page flex columns, including when actions wrap or have labels above their
+  inputs.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
 - For hierarchical subpages, pass `PageBreadcrumbs`
@@ -484,6 +487,8 @@ submit UX and prevent duplicate requests.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Report's **Group Accounts By** selector sits beside the period control and
+  uses a compact 13rem width on desktop. Below the `sm` breakpoint, the selector
+  fills the available width and the period control moves to the next row. It
   applies together to Assets, Liabilities, and Gains/Losses charts and tables.
   It defaults to Account Structure and uses per-book session storage. Income,
   Expenses, and Cash Flow retain their existing category/account breakdowns.

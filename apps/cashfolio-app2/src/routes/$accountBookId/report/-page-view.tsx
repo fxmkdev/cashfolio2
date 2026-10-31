@@ -1,6 +1,6 @@
 import {
   Alert,
-  Group,
+  Flex,
   Select,
   Grid,
   SimpleGrid,
@@ -218,9 +218,15 @@ export function ReportPageView({
       <TopPageHeader
         heading={<Title order={2}>{overview.selectedPeriodLabel}</Title>}
         actions={
-          <Group gap="sm" align="flex-end">
+          <Flex
+            gap="sm"
+            direction={{ base: "column", sm: "row" }}
+            align={{ base: "stretch", sm: "flex-end" }}
+            w={{ base: "100%", sm: "auto" }}
+          >
             <Select
               label="Group Accounts By"
+              w={{ base: "100%", sm: "13rem" }}
               data={reportingGroupingOptions}
               value={selectedGrouping}
               allowDeselect={false}
@@ -229,7 +235,7 @@ export function ReportPageView({
               }}
             />
             <PeriodFilterAction {...periodFilterActionProps} />
-          </Group>
+          </Flex>
         }
       />
 
