@@ -98,6 +98,7 @@ export function ClassDialog(props: {
               <Select
                 label="Replacement Asset Class"
                 placeholder="Choose a replacement"
+                openOnFocus={false}
                 searchable
                 value={replacement}
                 onChange={setReplacement}
@@ -121,6 +122,7 @@ export function ClassDialog(props: {
               <Select
                 label="Parent Class"
                 placeholder="Top Level"
+                openOnFocus={false}
                 searchable
                 clearable
                 value={parentId}

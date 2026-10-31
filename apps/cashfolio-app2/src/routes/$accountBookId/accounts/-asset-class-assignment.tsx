@@ -50,6 +50,7 @@ export function AssetClassAssignmentDialog(props: {
             periods in Report and History.
           </Text>
           <Select
+            openOnFocus={false}
             searchable
             label="Asset Class"
             placeholder="Select asset class"

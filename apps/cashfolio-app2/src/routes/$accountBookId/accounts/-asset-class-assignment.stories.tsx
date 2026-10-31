@@ -83,3 +83,16 @@ export const CustomNestedClass: Story = {
     await waitFor(() => expect(args.onSubmit).toHaveBeenCalledWith("custom"));
   },
 };
+
+export const CancelBeforeChoosing: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Set Asset Class" }),
+    );
+    await expect(body.queryByRole("option")).not.toBeInTheDocument();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await expect(args.onClose).toHaveBeenCalledTimes(1);
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+  },
+};
