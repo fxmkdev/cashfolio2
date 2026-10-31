@@ -1,3 +1,8 @@
+import { createClassifiedAccounts } from "../support/classifications";
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../src/server/classification-data";
 import { createId } from "@paralleldrive/cuid2";
 import { seedDatabase, type SeededData } from "../support/db";
 import { prisma } from "../support/db-client";
@@ -47,8 +52,9 @@ for (const scenario of [
     const accountId = createId();
     const accountName = `Archived account with ${scenario}`;
     const siblingName = `Archived sibling with ${scenario}`;
-    await prisma.account.createMany({
-      data: [accountName, siblingName].map((name, index) => ({
+    await createClassifiedAccounts(
+      prisma,
+      [accountName, siblingName].map((name, index) => ({
         id: index === 0 ? accountId : createId(),
         accountBookId,
         name,
@@ -58,7 +64,7 @@ for (const scenario of [
         currency: "CHF",
         isActive: false,
       })),
-    });
+    );
 
     await page.goto(`/${accountBookId}/${accountId}`);
     await page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -107,15 +113,22 @@ for (const scenario of [
     await expect(assetClassInput).toHaveValue("Real Estate");
     await expect(dialog.getByText(/no longer available/)).toHaveCount(0);
     await expect(
-      prisma.account.findUniqueOrThrow({
-        where: { id_accountBookId: { id: accountId, accountBookId } },
-        select: { name: true, groupId: true, isActive: true, assetClass: true },
-      }),
+      prisma.account
+        .findUniqueOrThrow({
+          where: { id_accountBookId: { id: accountId, accountBookId } },
+          select: {
+            classifications: assetClassSelection,
+            name: true,
+            groupId: true,
+            isActive: true,
+          },
+        })
+        .then(withAssetClassId),
     ).resolves.toEqual({
       name: updatedName,
       groupId,
       isActive: false,
-      assetClass: "REAL_ESTATE",
+      assetClassId: "REAL_ESTATE",
     });
   });
 }

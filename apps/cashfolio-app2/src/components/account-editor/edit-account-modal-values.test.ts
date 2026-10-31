@@ -1,6 +1,6 @@
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { describe, expect, test } from "vitest";
 import {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -20,21 +20,21 @@ import {
 import { toFormValues } from "./values";
 
 describe("asset class form values", () => {
-  test.each([null, ...Object.values(AssetClass)])(
+  test.each([null, ...Object.values(defaultAssetClassIds)])(
     "round-trips classification %s",
-    (assetClass) => {
+    (assetClassId) => {
       const initial = createAccountInitialValues({
         name: "Portfolio",
         type: AccountType.BALANCE,
-        assetClass,
+        assetClassId,
         unit: Unit.CURRENCY,
         currency: "USD",
       });
       const form = toFormValues(initial);
-      expect(form.assetClass).toBe(assetClass);
+      expect(form.assetClassId).toBe(assetClassId);
       for (const unit of Object.values(Unit)) {
-        expect(transformAccountValues({ ...form, unit }).assetClass).toBe(
-          assetClass,
+        expect(transformAccountValues({ ...form, unit }).assetClassId).toBe(
+          assetClassId,
         );
       }
     },
@@ -48,15 +48,15 @@ describe("asset class form values", () => {
           typeDescriptor: AccountType.BALANCE,
           unit,
           isCashAccount: true,
-        }).assetClass,
+        }).assetClassId,
       ).toBeNull();
     }
     expect(
       transformAccountValues({
         typeDescriptor: AccountType.BALANCE,
         unit: Unit.CURRENCY,
-        assetClass: "",
-      }).assetClass,
+        assetClassId: "",
+      }).assetClassId,
     ).toBeNull();
   });
 });
@@ -83,7 +83,8 @@ describe("transformAccountValues", () => {
       }),
     ).toEqual({
       trackingMethod: "INDIVIDUAL_UNITS",
-      assetClass: null,
+      assetClassId: null,
+
       name: "Groceries",
       typeDescriptor: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
       groupId: "group-expenses",
@@ -123,7 +124,8 @@ describe("transformAccountValues", () => {
       }),
     ).toEqual({
       trackingMethod: "INDIVIDUAL_UNITS",
-      assetClass: null,
+      assetClassId: null,
+
       name: "Brokerage",
       typeDescriptor: AccountType.BALANCE,
       groupId: "group-assets",
@@ -215,7 +217,8 @@ describe("createAccountInitialValues", () => {
       }),
     ).toEqual({
       trackingMethod: "INDIVIDUAL_UNITS",
-      assetClass: null,
+      assetClassId: null,
+
       name: "Checking",
       type: AccountType.BALANCE,
       equityAccountSubtype: null,

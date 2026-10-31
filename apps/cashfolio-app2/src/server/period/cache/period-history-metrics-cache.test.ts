@@ -117,19 +117,19 @@ describe("period history metrics cache", () => {
         scope: "asset-class:EQUITIES" as const,
       },
     };
-    const options = (assetClass: string) => ({
+    const options = (assetClassId: string) => ({
       ...createMetrics().scopeOptions,
       gainsLosses: [
         {
-          value: `asset-class:${assetClass}`,
-          label: assetClass,
+          value: `asset-class:${assetClassId}`,
+          label: assetClassId,
           kind: "gainLoss",
         },
         {
           value: "gain-loss-account:portfolio",
-          label: `${assetClass} / Portfolio`,
+          label: `${assetClassId} / Portfolio`,
           kind: "gainLoss",
-          parentValue: `asset-class:${assetClass}`,
+          parentValue: `asset-class:${assetClassId}`,
           accountId: "portfolio",
           legacyValues: ["explicit-account:portfolio"],
         },

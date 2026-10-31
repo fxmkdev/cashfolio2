@@ -373,10 +373,11 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class → Investment Group → Account; recorded adjustments use their
+or Asset Class → Subclass → Investment Group → Account; recorded adjustments use their
 counterpart financial account's class and group. Changing classification does
 not change amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to
 the Equities asset class.
+
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -521,6 +522,7 @@ submit UX and prevent duplicate requests.
 - Gains/Losses supports Account Structure and Asset Class → Investment Group →
   Account. Account metadata drives navigation from chart and table leaves to the
   unified explanation, including calculated holdings, recorded adjustments, and
+
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
@@ -1492,3 +1494,18 @@ than local calendar days.
 
 The app no longer directly depends on date-fns. Date validation, comparison,
 formatting, and arithmetic use the shared Temporal-backed helpers.
+
+## Classification Management
+
+Settings → Classifications exposes the Asset Class tree. Users can create roots
+and children, rename, change parents, and reorder siblings with Move Up/Move
+Down. The scheme is protected; all default nodes remain editable. Parent
+selectors exclude the edited class and descendants, with the same checks
+repeated on the server. Names follow existing sibling-name validation.
+
+Parents cannot be deleted until their children are moved or deleted. Leaf
+deletion shows direct active/archived assignment counts and requires choosing a
+replacement class or Unclassified. Submission uses shared waiting, error, and
+refresh feedback, retaining drafts on failure. All classification changes apply
+to historical reports. Additional classification schemes and percentage splits
+are deferred.

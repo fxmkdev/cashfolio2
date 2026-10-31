@@ -589,7 +589,7 @@ describe("getPeriodHistory", () => {
     const original = loadPeriodHistoryPoint.getMockImplementation()!;
     loadPeriodHistoryPoint.mockImplementation(async (args) => {
       const point = await original(args);
-      const assetClass =
+      const assetClassId =
         args.period === "2026-01"
           ? "unclassified"
           : args.period === "2026-02"
@@ -601,15 +601,15 @@ describe("getPeriodHistory", () => {
           ...point.scopeOptions,
           gainsLosses: [
             {
-              value: `asset-class:${assetClass}`,
-              label: assetClass,
+              value: `asset-class:${assetClassId}`,
+              label: assetClassId,
               kind: "gainLoss",
             },
             {
-              value: `gain-loss-account:${assetClass}`,
-              label: `${assetClass} / Account`,
+              value: `gain-loss-account:${assetClassId}`,
+              label: `${assetClassId} / Account`,
               kind: "gainLoss",
-              parentValue: `asset-class:${assetClass}`,
+              parentValue: `asset-class:${assetClassId}`,
             },
           ],
         },
@@ -936,4 +936,72 @@ describe("getPeriodHistory", () => {
       }),
     ).rejects.toMatchObject({ status: 400 });
   });
+  test.each([
+    ["asset-class:child", "asset-class:child"],
+    ["asset-class:deleted", "total"],
+  ] as const)(
+    "uses current hierarchy metadata to normalize %s",
+    async (requested, expected) => {
+      const original = loadPeriodHistoryPoint.getMockImplementation()!;
+      loadPeriodHistoryPoint.mockImplementation(async (args) => {
+        const point = await original(args);
+        return {
+          ...point,
+          scopeOptions: { ...point.scopeOptions, gainsLosses: [] },
+        };
+      });
+      loadPeriodHistoryPointContext.mockResolvedValueOnce({
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+        netWorthScopes: [],
+        hasCashAccounts: true,
+        assetClassScopes: [
+          {
+            value: "asset-class:z",
+            label: "Z First",
+            treeLabel: "Z First",
+            kind: "gainLoss",
+            sortOrder: 0,
+          },
+          {
+            value: "asset-class:child",
+            label: "Z First / Child",
+            treeLabel: "Child",
+            kind: "gainLoss",
+            parentValue: "asset-class:z",
+            sortOrder: 0,
+          },
+          {
+            value: "asset-class:a",
+            label: "A Last",
+            treeLabel: "A Last",
+            kind: "gainLoss",
+            sortOrder: 1,
+          },
+        ],
+      });
+      const result = await getPeriodHistory({
+        data: {
+          accountBookId: "book-1",
+          granularity: "month",
+          scopedMetric: "gainsLosses",
+          gainLossScope: requested,
+        },
+      });
+      expect(result.scopeSelection.gainsLosses).toBe(expected);
+      expect(
+        result.scopeOptions.gainsLosses
+          .filter((o) => o.value.startsWith("asset-class:"))
+          .map((o) => o.value),
+      ).toEqual(["asset-class:z", "asset-class:child", "asset-class:a"]);
+      expect(
+        loadPeriodHistoryPoint.mock.calls[0]?.[0].metricScopeFilter,
+      ).toEqual(
+        expected === "total"
+          ? undefined
+          : { metric: "gainsLosses", scope: requested },
+      );
+    },
+  );
 });

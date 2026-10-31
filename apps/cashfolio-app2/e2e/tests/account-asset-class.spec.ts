@@ -1,3 +1,7 @@
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../src/server/classification-data";
 import { createId } from "@paralleldrive/cuid2";
 import { seedDatabase, type SeededData } from "../support/db";
 import { prisma } from "../support/db-client";
@@ -20,17 +24,20 @@ for (const type of ["BALANCE"] as const) {
     test(`${isActive ? "active" : "archived"} ${type} classification updates in the header and list`, async ({
       page,
     }) => {
-      const account = await prisma.account.create({
-        data: {
-          id: createId(),
-          accountBookId: seeded.accountBookId,
-          name: `${isActive ? "Active" : "Archived"} ${type} classification`,
-          type,
-          isActive,
-          unit: "CURRENCY",
-          currency: "CHF",
-        },
-      });
+      const account = await prisma.account
+        .create({
+          include: { classifications: assetClassSelection },
+          data: {
+            id: createId(),
+            accountBookId: seeded.accountBookId,
+            name: `${isActive ? "Active" : "Archived"} ${type} classification`,
+            type,
+            isActive,
+            unit: "CURRENCY",
+            currency: "CHF",
+          },
+        })
+        .then(withAssetClassId);
       await page.goto(`/${seeded.accountBookId}/${account.id}`);
       await expect(
         page.getByTitle("Asset Class: Unclassified", { exact: true }),
@@ -115,18 +122,18 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   });
   const name = "Manually classified portfolio";
   await dialog.getByLabel("Name").fill(name);
-  const assetClass = dialog.getByRole("combobox", { name: "Asset Class" });
-  await expect(assetClass).toHaveValue("");
-  await expect(assetClass).toHaveAttribute("placeholder", "Unclassified");
+  const assetClassId = dialog.getByRole("combobox", { name: "Asset Class" });
+  await expect(assetClassId).toHaveValue("");
+  await expect(assetClassId).toHaveAttribute("placeholder", "Unclassified");
   const unit = dialog.getByRole("combobox", { name: "Unit", exact: true });
   await unit.click();
   await page.getByRole("option", { name: "Security", exact: true }).click();
-  await expect(assetClass).toHaveValue("");
-  await assetClass.click();
+  await expect(assetClassId).toHaveValue("");
+  await assetClassId.click();
   await page.getByRole("option", { name: "Equities", exact: true }).click();
   await unit.click();
   await page.getByRole("option", { name: "Currency", exact: true }).click();
-  await expect(assetClass).toHaveValue("Equities");
+  await expect(assetClassId).toHaveValue("Equities");
   await dialog.getByRole("combobox", { name: "Currency", exact: true }).click();
   await page.getByRole("option", { name: "CHF" }).first().click();
   await dialog.getByLabel("Opening Balance").fill("50");
@@ -149,10 +156,13 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
     nextCreate.getByRole("combobox", { name: "Asset Class" }),
   ).toHaveValue("");
   await nextCreate.getByRole("button", { name: "Cancel", exact: true }).click();
-  const account = await prisma.account.findFirstOrThrow({
-    where: { accountBookId: seeded.accountBookId, name },
-  });
-  expect(account.assetClass).toBe("EQUITIES");
+  const account = await prisma.account
+    .findFirstOrThrow({
+      include: { classifications: assetClassSelection },
+      where: { accountBookId: seeded.accountBookId, name },
+    })
+    .then(withAssetClassId);
+  expect(account.assetClassId).toBe("EQUITIES");
   const bookings = await prisma.booking.findMany({
     where: { accountBookId: seeded.accountBookId, accountId: account.id },
     orderBy: { id: "asc" },
@@ -203,13 +213,19 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await expect(edit.getByRole("combobox", { name: "Asset Class" })).toHaveValue(
     "",
   );
-  const reloaded = await prisma.account.findUniqueOrThrow({
-    where: {
-      id_accountBookId: { id: account.id, accountBookId: seeded.accountBookId },
-    },
-  });
+  const reloaded = await prisma.account
+    .findUniqueOrThrow({
+      include: { classifications: assetClassSelection },
+      where: {
+        id_accountBookId: {
+          id: account.id,
+          accountBookId: seeded.accountBookId,
+        },
+      },
+    })
+    .then(withAssetClassId);
   expect(reloaded).toMatchObject({
-    assetClass: null,
+    assetClassId: null,
     unit: account.unit,
     currency: account.currency,
     isCashAccount: account.isCashAccount,

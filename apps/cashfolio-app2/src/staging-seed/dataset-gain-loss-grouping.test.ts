@@ -1,5 +1,6 @@
+import { defaultAssetClassIds } from "../shared/asset-class";
 import { describe, expect, it } from "vitest";
-import { AccountType, AssetClass, Unit } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { toMoney } from "../shared/money";
 import { toNumericMoney } from "../server/money-boundary";
 import { buildGainLossAccountAttribution } from "../server/period/breakdown/period-gain-loss-attribution";
@@ -72,7 +73,7 @@ describe("staging gain/loss grouping demo", () => {
       );
       expect(accounts.get("travel")).toMatchObject({
         type: AccountType.EQUITY,
-        assetClass: null,
+        assetClassId: null,
       });
       expect(accounts.get("travel")!.currency).toBeUndefined();
       const baseAssetLiabilityAccounts = household.accounts
@@ -163,12 +164,13 @@ describe("staging gain/loss grouping demo", () => {
                   totalGainLoss: -10,
                   account: {
                     id: "travel",
-                    assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+                    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
                     explanation:
                       "Grouped under Cash & Cash Equivalents based on the originating account: Everyday account CHF.",
                   },
                 },
               ],
+
             },
           ],
         },

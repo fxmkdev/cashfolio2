@@ -1,6 +1,6 @@
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -61,7 +61,7 @@ function createScenario(): PeriodBaseData {
     cryptocurrency: null,
     symbol: "ABC",
     tradeCurrency: "CHF",
-    assetClass: null,
+    assetClassId: null,
     isCashAccount: false,
   };
   const date = new Date("2026-02-15T00:00:00Z");
@@ -155,11 +155,11 @@ describe("Decimal monetary pipelines", () => {
     const args = { accountBookId: "book-1", period: "2026-02" };
     const overview = await loadPeriodOverview({ ...args, baseData: scenario });
     const history = await loadPeriodHistoryPointMetrics(args);
-    for (const assetClass of Object.values(AssetClass)) {
+    for (const assetClassId of Object.values(defaultAssetClassIds)) {
       const classified: PeriodBaseData = {
         ...scenario,
         baseAssetLiabilityAccounts: scenario.baseAssetLiabilityAccounts.map(
-          (account) => ({ ...account, assetClass }),
+          (account) => ({ ...account, assetClassId }),
         ),
       };
       getOrLoadPeriodBaseData.mockResolvedValue(classified);
@@ -175,7 +175,7 @@ describe("Decimal monetary pipelines", () => {
     const scenario = createScenario();
     const stock = {
       ...scenario.baseAssetLiabilityAccounts[0]!,
-      assetClass: AssetClass.EQUITIES,
+      assetClassId: defaultAssetClassIds.EQUITIES,
       unit: Unit.SECURITY,
     };
     const portfolio = {
@@ -193,7 +193,8 @@ describe("Decimal monetary pipelines", () => {
       id: "bank",
       name: "USD Bank",
       trackingMethod: "INDIVIDUAL_UNITS" as const,
-      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+
     };
     const chf = {
       ...portfolio,
@@ -357,7 +358,7 @@ describe("Decimal monetary pipelines", () => {
         baseAssetLiabilityAccounts: baseData.baseAssetLiabilityAccounts.map(
           (account) =>
             account.id === "portfolio"
-              ? { ...account, assetClass: AssetClass.OTHER_ASSETS }
+              ? { ...account, assetClassId: defaultAssetClassIds.OTHER_ASSETS }
               : account,
         ),
       };

@@ -1,7 +1,7 @@
+import { defaultAssetClassIds } from "../../src/shared/asset-class";
 import { createId } from "@paralleldrive/cuid2";
 import {
   AccountType,
-  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../../src/.prisma-client/enums";
@@ -90,7 +90,15 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
         accountBookId: args.accountBookId,
       },
     },
-    data: { assetClass: AssetClass.EQUITIES },
+    data: {
+      classifications: {
+        deleteMany: { schemeId: "assetClass" },
+        create: {
+          schemeId: "assetClass",
+          nodeId: defaultAssetClassIds.EQUITIES,
+        },
+      },
+    },
   });
   const securityAccount = await prisma.account.findFirstOrThrow({
     where: {

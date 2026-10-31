@@ -1,6 +1,7 @@
+import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { toNumericMoney } from "../../money-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType, AssetClass, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 
 const redisState = vi.hoisted(() => ({
   kv: new Map<string, string>(),
@@ -89,6 +90,7 @@ describe("period base-data cache", () => {
     process.env.PERIOD_BASE_CACHE_ENV = "preview-app-123";
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       periodCacheRevision: "0",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
@@ -107,8 +109,9 @@ describe("period base-data cache", () => {
             {
               id: "asset-1",
               name: "Cash",
-              assetClass: AssetClass.EQUITIES,
+              classifications: [{ nodeId: defaultAssetClassIds.EQUITIES }],
               trackingMethod: "INDIVIDUAL_UNITS",
+
               groupId: null,
               type: AccountType.BALANCE,
               unit: Unit.CURRENCY,
@@ -152,11 +155,11 @@ describe("period base-data cache", () => {
     );
 
     expect(first.selection.from).toBeInstanceOf(Date);
-    expect(first.baseAssetLiabilityAccounts[0].assetClass).toBe(
-      AssetClass.EQUITIES,
+    expect(first.baseAssetLiabilityAccounts[0].assetClassId).toBe(
+      defaultAssetClassIds.EQUITIES,
     );
-    expect(second.baseAssetLiabilityAccounts[0].assetClass).toBe(
-      AssetClass.EQUITIES,
+    expect(second.baseAssetLiabilityAccounts[0].assetClassId).toBe(
+      defaultAssetClassIds.EQUITIES,
     );
     expect(second.selection.from).toBeInstanceOf(Date);
     expect(second.baseAssetLiabilityAccounts[0].trackingMethod).toBe(
@@ -168,25 +171,27 @@ describe("period base-data cache", () => {
     const args = { accountBookId: "book-1", period: "2026-02" };
     redisState.kv.set("period:base:v10:preview-app-123:book-1:0:2026-02", "{}");
     const first = await periodBaseCache.getOrLoadPeriodBaseData(args);
-    expect(first.baseAssetLiabilityAccounts[0].assetClass).toBe(
-      AssetClass.EQUITIES,
+    expect(first.baseAssetLiabilityAccounts[0].assetClassId).toBe(
+      defaultAssetClassIds.EQUITIES,
     );
     const query = prisma.account.findMany.getMockImplementation()!;
     prisma.account.findMany.mockImplementation(async (input) =>
       (await query(input)).map((account: Record<string, unknown>) => ({
         ...account,
-        assetClass: AssetClass.OTHER_ASSETS,
+        classifications: [{ nodeId: defaultAssetClassIds.OTHER_ASSETS }],
         trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+
       })),
     );
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       periodCacheRevision: "classification-edit",
       startDate: new Date("2026-01-01"),
     });
     const reloaded = await periodBaseCache.getOrLoadPeriodBaseData(args);
-    expect(reloaded.baseAssetLiabilityAccounts[0].assetClass).toBe(
-      AssetClass.OTHER_ASSETS,
+    expect(reloaded.baseAssetLiabilityAccounts[0].assetClassId).toBe(
+      defaultAssetClassIds.OTHER_ASSETS,
     );
     expect(reloaded.baseAssetLiabilityAccounts[0].trackingMethod).toBe(
       "TOTAL_PORTFOLIO_VALUE",
@@ -200,6 +205,7 @@ describe("period base-data cache", () => {
     prisma.accountBook.findUniqueOrThrow
       .mockResolvedValueOnce({ periodCacheRevision: "before-commit" })
       .mockResolvedValue({
+        classificationSchemes: [],
         referenceCurrency: "EUR",
         startDate: new Date("2026-01-01T00:00:00Z"),
         periodCacheRevision: "after-commit",
@@ -513,6 +519,7 @@ describe("period base-data cache", () => {
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       periodCacheRevision: "gen-2",
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00Z"),
     });
@@ -636,6 +643,7 @@ describe("period base-data cache", () => {
     expect(booking.value.toString()).toBe("123.123456789123456789");
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       periodCacheRevision: "1",
       startDate: new Date("2026-01-01"),
@@ -693,6 +701,7 @@ describe("period base-data cache", () => {
       const oldKey = redisClient.setEx.mock.calls[0][0];
       prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
         periodCacheRevision: "committed-revision",
+        classificationSchemes: [],
         referenceCurrency: "EUR",
         startDate: new Date("2026-01-01T00:00:00Z"),
       });
@@ -736,6 +745,7 @@ describe("period base-data cache", () => {
     ).resolves.toBeUndefined();
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       periodCacheRevision: "after-outage",
+      classificationSchemes: [],
       referenceCurrency: "EUR",
       startDate: new Date("2026-01-01T00:00:00Z"),
     });
@@ -799,6 +809,7 @@ describe("period base-data cache", () => {
     await ready;
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       periodCacheRevision: "new-revision",
+      classificationSchemes: [],
       referenceCurrency: "EUR",
       startDate: new Date("2026-01-01T00:00:00Z"),
     });

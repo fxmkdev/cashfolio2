@@ -1,3 +1,7 @@
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../classification-data";
 import { toMoney } from "../../../shared/money";
 import {
   AccountType,
@@ -69,6 +73,14 @@ async function loadPeriodBaseDataFromClient(
       referenceCurrency: true,
       startDate: true,
       periodCacheRevision: true,
+      classificationSchemes: {
+        where: { id: "assetClass" },
+        select: {
+          nodes: {
+            select: { id: true, name: true, parentId: true, sortOrder: true },
+          },
+        },
+      },
     },
   });
 
@@ -101,8 +113,9 @@ async function loadPeriodBaseDataFromClient(
           symbol: true,
           tradeCurrency: true,
           isCashAccount: true,
-          assetClass: true,
+          classifications: assetClassSelection,
           trackingMethod: true,
+
         },
       }),
       db.account.findMany({
@@ -322,7 +335,11 @@ async function loadPeriodBaseDataFromClient(
         minPeriodDate: accountBookStartDate,
       },
       allAccountGroups,
-      baseAssetLiabilityAccounts,
+      baseAssetLiabilityAccounts:
+        baseAssetLiabilityAccounts.map(withAssetClassId),
+      assetClasses: accountBook.classificationSchemes.flatMap(
+        (scheme) => scheme.nodes,
+      ),
       holdingAccountsResolved,
       endOfPeriodRawBalances: endOfPeriodRawBalancesGrouped.map((row) => ({
         accountId: row.accountId,

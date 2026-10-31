@@ -1,3 +1,4 @@
+import { defaultAssetClassIds } from "../../../../shared/asset-class";
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -6,7 +7,6 @@ import { useEffect, useMemo, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   AccountType,
-  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "@/.prisma-client/enums";
@@ -56,8 +56,9 @@ const statementImportCsvFormat: StatementImportCsvFormat = {
 };
 
 const assetAccount = {
-  assetClass: null,
+  assetClassId: null,
   trackingMethod: "INDIVIDUAL_UNITS" as const,
+
   id: "account-checking",
   name: "Checking",
   isActive: true,
@@ -149,7 +150,7 @@ function LedgerPageStoryHarness({
   accountActionsDisabled = false,
   equitySubtype,
   returnLabel,
-  assetClass = null,
+  assetClassId = null,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -161,7 +162,7 @@ function LedgerPageStoryHarness({
   accountActionsDisabled?: boolean;
   equitySubtype?: EquityAccountSubtype;
   returnLabel?: string;
-  assetClass?: AssetClass | null;
+  assetClassId?: string | null;
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -262,8 +263,9 @@ function LedgerPageStoryHarness({
           ...assetAccount,
           type: accountType,
           isActive: accountActive,
-          assetClass,
+          assetClassId,
           trackingMethod: "INDIVIDUAL_UNITS" as const,
+
         };
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {
@@ -360,7 +362,7 @@ function LedgerPageStoryHarness({
         splitModalOpened={splitModalOpened}
         accountEditModalOpened={accountEditModalOpened}
         accountEditInitialValues={{
-          assetClass: account.assetClass,
+          assetClassId: account.assetClassId,
           name: account.name,
           type: account.type,
           equityAccountSubtype: account.equityAccountSubtype,
@@ -638,7 +640,7 @@ export const HappyPath: Story = {
 export const ClassifiedAsset: Story = {
   render: () => (
     <LedgerPageStoryHarness
-      assetClass={AssetClass.COMMODITIES_AND_PRECIOUS_METALS}
+      assetClassId={defaultAssetClassIds.COMMODITIES_AND_PRECIOUS_METALS}
     />
   ),
   play: async ({ canvasElement }) => {
@@ -666,7 +668,7 @@ export const ArchivedClassifiedLiability: Story = {
     <LedgerPageStoryHarness
       accountType={AccountType.BALANCE}
       accountActive={false}
-      assetClass={AssetClass.FIXED_INCOME}
+      assetClassId={defaultAssetClassIds.FIXED_INCOME}
     />
   ),
   play: async ({ canvasElement }) => {

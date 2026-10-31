@@ -68,8 +68,9 @@ function setup() {
       accountBookId: "book-1",
       account: {
         ...currentAccount,
-        assetClass: null,
+        assetClassId: null,
         trackingMethod: "INDIVIDUAL_UNITS",
+
         name: "Cash",
         type: AccountType.BALANCE,
         equityAccountSubtype: null,

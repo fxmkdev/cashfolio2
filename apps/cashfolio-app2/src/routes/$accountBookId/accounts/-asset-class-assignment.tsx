@@ -1,7 +1,8 @@
+import { useAssetClasses } from "@/classification-context";
 import { Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
 import { useState } from "react";
-import type { AssetClass } from "@/.prisma-client/enums";
-import { assetClassOptions } from "@/shared/asset-class";
+
+import { classificationOptions } from "@/shared/asset-class";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import type { AccountBulkActionTarget } from "./-bulk-account-targets";
@@ -9,9 +10,10 @@ import type { AccountBulkActionTarget } from "./-bulk-account-targets";
 export function AssetClassAssignmentDialog(props: {
   target: AccountBulkActionTarget;
   onClose: () => void;
-  onSubmit: (assetClass: AssetClass | null) => Promise<void>;
+  onSubmit: (assetClassId: string | null) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
+  const assetClassOptions = classificationOptions(useAssetClasses());
   const [value, setValue] = useState<string | null>(null);
   const state = useDialogSubmitState({
     captureErrors: true,
@@ -34,9 +36,7 @@ export function AssetClassAssignmentDialog(props: {
           event.preventDefault();
           if (value === null) return;
           void state.runSubmit(() =>
-            props.onSubmit(
-              value === "unclassified" ? null : (value as AssetClass),
-            ),
+            props.onSubmit(value === "unclassified" ? null : (value as string)),
           );
         }}
       >
@@ -50,6 +50,7 @@ export function AssetClassAssignmentDialog(props: {
             periods in Report and History.
           </Text>
           <Select
+            searchable
             label="Asset Class"
             placeholder="Select asset class"
             data={[

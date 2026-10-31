@@ -1,3 +1,4 @@
+import type { ClassificationNode } from "../../../shared/asset-class";
 import type { GainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toNumericMoney } from "../../money-boundary";
 import {
@@ -49,6 +50,7 @@ type PeriodOverviewEndOfPeriodStats = {
 };
 
 export function buildPeriodOverviewResponse(args: {
+  assetClasses?: readonly ClassificationNode[];
   selection: NormalizedPeriodSelection;
   minPeriodDate: Date;
   currentDay: Date;
@@ -214,6 +216,7 @@ export function buildPeriodOverviewResponse(args: {
       groupById: args.groupById,
     }),
     gainsLossesBreakdown: buildGainsLossesBreakdown({
+      assetClasses: args.assetClasses,
       contributions: args.gainsLossesContributions ?? [],
       accountAttributionById: args.gainLossAccountAttributionById,
       referenceCurrency: args.referenceCurrency,

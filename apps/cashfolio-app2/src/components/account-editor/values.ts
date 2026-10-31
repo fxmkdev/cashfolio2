@@ -17,8 +17,9 @@ export function createAccountInitialValues(
 ): AccountInitialValues {
   return {
     name: source.name,
-    assetClass: source.assetClass ?? null,
+    assetClassId: source.assetClassId ?? null,
     trackingMethod: source.trackingMethod ?? "INDIVIDUAL_UNITS",
+
     type: source.type,
     equityAccountSubtype: source.equityAccountSubtype,
     groupId: source.groupId ?? undefined,
@@ -42,8 +43,9 @@ export function toFormValues(initial: AccountInitialValues): FormValues {
 
   return {
     name: initial.name,
-    assetClass: initial.assetClass ?? null,
+    assetClassId: initial.assetClassId ?? null,
     trackingMethod: initial.trackingMethod ?? "INDIVIDUAL_UNITS",
+
     typeDescriptor,
     groupId: initial.groupId ?? undefined,
     sortOrder: initial.sortOrder ?? undefined,
@@ -83,11 +85,12 @@ export function transformAccountValues(
   const transformed = {
     ...values,
     type,
-    assetClass: values.assetClass || null,
+    assetClassId: values.assetClassId || null,
     trackingMethod:
       type === AccountType.BALANCE && values.unit === Unit.CURRENCY
         ? (values.trackingMethod ?? "INDIVIDUAL_UNITS")
         : ("INDIVIDUAL_UNITS" as const),
+
     openingBalance,
     statementImportCsvFormat: parseStatementImportCsvFormatJson(
       values.statementImportCsvFormat,
@@ -98,7 +101,7 @@ export function transformAccountValues(
   if (type === AccountType.EQUITY) {
     return {
       ...transformed,
-      assetClass: null,
+      assetClassId: null,
       unit: undefined,
       currency: undefined,
       cryptocurrency: undefined,

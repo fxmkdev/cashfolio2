@@ -147,7 +147,7 @@ must continue to respect the supported browser baseline.
 
 ### Account Mutation Operations
 
-Account mutations accept optional nullable `assetClass`. Creation stores null
+Account mutations accept optional nullable `assetClassId`. Creation stores null
 when omitted; updates preserve an omitted value and clear it when explicitly
 null. Non-null classification is restricted to assets and liabilities, but is
 independent of Unit and cash-flow eligibility. It remains editable independently
@@ -155,22 +155,34 @@ of immutable instrument identity. Statement imports preserve classification;
 system-created equity accounts remain null.
 
 `setAccountsAssetClass` accepts an account book ID, a nonempty list of account
-IDs, and an explicit nullable asset class. IDs are deduplicated. Authorization
-and the serialized account-book mutation boundary apply; every target must exist
-in that book and be a balance account before any write. Active and archived
-accounts are eligible. The transaction updates only asset class and invalidates
-period base-data caches after commit. It returns the target count. The selection
-toolbar submits explicit account IDs frozen when the dialog opens. Group
-checkboxes select filtered descendant accounts in the grid; group IDs and newly
-added group members are excluded from the submitted snapshot. There is no
+IDs, and an explicit nullable asset-class node ID. IDs are deduplicated.
+Authorization and the serialized account-book mutation boundary apply; every
+target must exist in that book and be a balance account before any write. Active
+and archived accounts are eligible. The transaction updates only asset class and
+invalidates period base-data caches after commit. It returns the target count.
+The selection toolbar submits explicit account IDs frozen when the dialog opens.
+Group checkboxes select filtered descendant accounts in the grid; group IDs and
+newly added group members are excluded from the submitted snapshot. There is no
 group-level value or ongoing inheritance.
+
+Asset-class IDs are validated against the account book’s protected scheme inside
+the mutation transaction. Reads expose a nullable `assetClassId`; assignments
+are stored separately from accounts.
+
+`getAssetClasses` returns the book-specific tree and direct active/archived
+assignment counts. `saveAssetClass`, `moveAssetClass`, and `deleteAssetClass`
+use the existing same-origin, authorization, retry, and serialized book
+boundaries. Deletion requires an explicit replacement ID or null; children must
+be moved or deleted first. Reassignment and deletion commit atomically.
+Successful mutations invalidate period caches after commit.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
 trigger, post-commit cleanup, and router invalidation. Base-data cache v11
-includes classification and tracking method. Classification drives the
-[Asset Class → Investment Group → Account reporting hierarchy](#asset-class-gainloss-reporting)
+includes classification assignments, the class tree, and tracking method. Classification drives the
+[Asset Class → Subclass → Investment Group → Account reporting hierarchy](#asset-class-gainloss-reporting)
 in Period overview and History; Unit and instrument identity continue to control
+
 valuation and FIFO calculations independently of classification.
 
 `src/server/accounts/accounts-mutation-operations.ts` keeps the existing
@@ -352,6 +364,7 @@ namespaces and preserves global valuation caches.
 - History metrics entry:
   `period:history:metrics:v13:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - Base-data v11 and History metrics v13 store monetary values as tagged exact
+
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -556,12 +569,12 @@ are split into dedicated modules under `src/server/period/`:
 ## Asset-Class Gain/Loss Reporting
 
 Period overview and History share the contribution pipeline and support Account
-Structure and `Asset Class → Investment Group → Account` breakdowns. Overview
+Structure and `Asset Class → Subclass → Investment Group → Account` breakdowns. Overview
 returns `accountBreakdownsByGrouping`, keyed by `accountStructure` and
 `assetClass`, with `assetBreakdown`, `liabilityBreakdown`, and
 `gainsLossesBreakdown` per lens. Both variants reuse one valuation pass. G/L
 breakdowns carry aggregate realized, unrealized, and total amounts, computed
-from exact contributions before rounding. Current `Account.assetClass` applies
+from exact contributions before rounding. Current `account classification` applies
 to every period, including archived assets and liabilities. Unit and instrument
 identity continue to control valuation and FIFO independently of classification.
 
@@ -571,6 +584,7 @@ Managed Portfolios, keeping recorded performance and calculated FX together.
 Account identity metadata determines grouping, so an adjustment booking's
 currency cannot move an investment to a different unit. Synthetic accounts use
 their clearing-bucket or unique contribution unit, otherwise Unknown Unit.
+
 
 Calculated holdings G/L uses the owning account's classification. Recorded
 Gain/Loss equity bookings use their resolved asset/liability counterpart.
@@ -628,6 +642,7 @@ Base-data v11 includes account tracking methods alongside originating-account
 IDs and recorded booking descriptions. History metrics v13 carries both grouping
 lenses, investment scopes, and explicit account metadata; older hierarchy
 payloads are not reused. Classification and tracking-method edits advance
+
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
 
@@ -958,7 +973,7 @@ accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
 Allocation charts and tables support either the original account/group hierarchy
-or flat Asset Class → Account grouping on each side, even when a structural
+or flat Asset Class → Subclass → Account grouping on each side, even when a structural
 group's accounts have mixed signs. Classification by balance sign precedes
 either grouping; total amounts use the same exact balances. Unavailable
 valuations are omitted; both allocation views report the same overall
@@ -977,6 +992,7 @@ Unavailable valuations remain omitted from amounts without removing real scope
 options. History metrics v13 includes Net Worth scopes, both Gain/Loss grouping
 lenses, and investment groups; base-data v11 includes tracking methods.
 Valuation caches remain compatible.
+
 
 ### Unified account management queries
 

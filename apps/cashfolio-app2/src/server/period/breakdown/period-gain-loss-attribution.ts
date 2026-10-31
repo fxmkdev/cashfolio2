@@ -1,5 +1,5 @@
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
-import type { AssetClass } from "../../../.prisma-client/enums";
+
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import { getAssetClassLabel } from "../../../shared/asset-class";
 import {
@@ -8,7 +8,7 @@ import {
 } from "./period-gain-loss-investment-group";
 
 export type GainLossAccountAttribution = {
-  assetClass: AssetClass | null;
+  assetClassId: string | null;
   kind: "account" | "transferClearing" | "unattributed";
   explanation: string | null;
   instrumentLabel?: string;
@@ -19,6 +19,7 @@ export type GainLossAccountAttribution = {
 export function buildGainLossAccountAttribution(
   baseData: Pick<
     PeriodBaseData,
+    | "assetClasses"
     | "baseAssetLiabilityAccounts"
     | "transferClearingUnitBuckets"
     | "executionResidualTransactions"
@@ -34,7 +35,7 @@ export function buildGainLossAccountAttribution(
   const result = new Map<string, GainLossAccountAttribution>();
   for (const account of accounts.values()) {
     result.set(account.id, {
-      assetClass: account.assetClass ?? null,
+      assetClassId: account.assetClassId ?? null,
       kind: "account",
       explanation: null,
       investmentGroup: getGainLossInvestmentGroup(account),
@@ -54,10 +55,10 @@ export function buildGainLossAccountAttribution(
   ): GainLossAccountAttribution => {
     const account = ids.size === 1 ? accounts.get([...ids][0]) : undefined;
     return {
-      assetClass: account?.assetClass ?? null,
+      assetClassId: account?.assetClassId ?? null,
       kind,
       explanation: account
-        ? `Grouped under ${getAssetClassLabel(account.assetClass)} based on the originating account: ${account.name}.`
+        ? `Grouped under ${getAssetClassLabel(account.assetClassId, baseData.assetClasses)} based on the originating account: ${account.name}.`
         : "No single originating asset/liability account can be established; the amount remains Unclassified.",
     };
   };

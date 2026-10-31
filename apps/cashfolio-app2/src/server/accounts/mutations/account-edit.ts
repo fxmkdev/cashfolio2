@@ -1,3 +1,9 @@
+import {
+  assetClassSelection,
+  withAssetClassId,
+  writeAssetClass,
+  assertAssetClassExists,
+} from "../../classification-data";
 import { type AccountInput } from "../accounts-types";
 import { Prisma } from "../../../.prisma-client/client";
 import { AccountType } from "../../../.prisma-client/enums";
@@ -128,11 +134,16 @@ export async function createAccountOperation(
     })
   ).map((a) => a.name);
   validateAccountInput(normalizedData, siblingNames);
+  await assertAssetClassExists(
+    tx,
+    normalizedData.accountBookId,
+    normalizedData.assetClassId,
+  );
   const account = await tx.account.create({
     data: {
       name: normalizedData.name,
-      assetClass: normalizedData.assetClass ?? null,
       trackingMethod: normalizedData.trackingMethod,
+
       type: normalizedData.type,
       equityAccountSubtype: normalizedData.equityAccountSubtype,
       groupId: normalizedData.groupId ?? null,
@@ -153,6 +164,12 @@ export async function createAccountOperation(
     },
   });
 
+  await writeAssetClass(
+    tx,
+    normalizedData.accountBookId,
+    [account.id],
+    normalizedData.assetClassId ?? null,
+  );
   await applyOpeningBalanceTarget({
     tx,
     accountBookId: normalizedData.accountBookId,
@@ -168,7 +185,10 @@ export async function createAccountOperation(
     },
     openingBalance: normalizedData.openingBalance,
   });
-  return { data: account, invalidatePeriodCache: true };
+  return {
+    data: { ...account, assetClassId: normalizedData.assetClassId ?? null },
+    invalidatePeriodCache: true,
+  };
 }
 
 export async function updateAccountOperation(
@@ -176,28 +196,31 @@ export async function updateAccountOperation(
   tx: Prisma.TransactionClient,
 ) {
   const submittedData = normalizeEquityAccountUnitIdentity(data);
-  const existing = await tx.account.findUniqueOrThrow({
-    where: {
-      id_accountBookId: {
-        id: submittedData.id,
-        accountBookId: submittedData.accountBookId,
+  const existing = withAssetClassId(
+    await tx.account.findUniqueOrThrow({
+      where: {
+        id_accountBookId: {
+          id: submittedData.id,
+          accountBookId: submittedData.accountBookId,
+        },
       },
-    },
-    select: {
-      assetClass: true,
-      trackingMethod: true,
-      type: true,
-      equityAccountSubtype: true,
-      unit: true,
-      currency: true,
-      cryptocurrency: true,
-      symbol: true,
-      tradeCurrency: true,
-      statementImportCsvFormat: true,
-      isCashAccount: true,
-      isActive: true,
-    },
-  });
+      select: {
+        classifications: assetClassSelection,
+        trackingMethod: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+        statementImportCsvFormat: true,
+        isCashAccount: true,
+        isActive: true,
+      },
+    }),
+  );
+
   assertNoSystemManagedAccountSubtype(existing);
   if (
     submittedData.type !== existing.type ||
@@ -210,10 +233,11 @@ export async function updateAccountOperation(
   const submittedDataWithExistingCashFlag = {
     ...submittedData,
     trackingMethod: submittedData.trackingMethod ?? existing.trackingMethod,
-    assetClass:
-      submittedData.assetClass === undefined
-        ? existing.assetClass
-        : submittedData.assetClass,
+    assetClassId:
+      submittedData.assetClassId === undefined
+        ? existing.assetClassId
+        : submittedData.assetClassId,
+
     isCashAccount: submittedData.isCashAccount ?? existing.isCashAccount,
   };
   const normalizedData = await resolveAccountCashFlag(
@@ -240,6 +264,11 @@ export async function updateAccountOperation(
     })
   ).map((a) => a.name);
   validateAccountInput(dataWithExistingUnitIdentity, siblingNames);
+  await assertAssetClassExists(
+    tx,
+    normalizedData.accountBookId,
+    normalizedData.assetClassId,
+  );
   const account = await tx.account.update({
     where: {
       id_accountBookId: {
@@ -249,8 +278,8 @@ export async function updateAccountOperation(
     },
     data: {
       name: normalizedData.name,
-      assetClass: normalizedData.assetClass,
       trackingMethod: normalizedData.trackingMethod,
+
       groupId: normalizedData.groupId ?? null,
       sortOrder:
         typeof normalizedData.sortOrder === "number"
@@ -263,6 +292,12 @@ export async function updateAccountOperation(
     },
   });
 
+  await writeAssetClass(
+    tx,
+    normalizedData.accountBookId,
+    [account.id],
+    normalizedData.assetClassId ?? null,
+  );
   await applyOpeningBalanceTarget({
     tx,
     accountBookId: normalizedData.accountBookId,
@@ -278,5 +313,8 @@ export async function updateAccountOperation(
     },
     openingBalance: normalizedData.openingBalance,
   });
-  return { data: account, invalidatePeriodCache: true };
+  return {
+    data: { ...account, assetClassId: normalizedData.assetClassId ?? null },
+    invalidatePeriodCache: true,
+  };
 }

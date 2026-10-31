@@ -36,17 +36,6 @@ enum Unit {
   SECURITY
 }
 
-enum AssetClass {
-  CASH_AND_CASH_EQUIVALENTS
-  EQUITIES
-  FIXED_INCOME
-  REAL_ESTATE
-  COMMODITIES_AND_PRECIOUS_METALS
-  DIGITAL_ASSETS
-  ALTERNATIVE_INVESTMENTS
-  OTHER_ASSETS
-}
-
 enum UserRole {
   ADMIN
 }
@@ -135,10 +124,11 @@ model AccountBook {
   startDate           DateTime
   periodCacheRevision String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
-  groups       AccountGroup[]
-  accounts     Account[]
-  transactions Transaction[]
-  bookings     Booking[]
+  groups                AccountGroup[]
+  accounts              Account[]
+  transactions          Transaction[]
+  bookings              Booking[]
+  classificationSchemes ClassificationScheme[]
 
   userLinks UserAccountBookLink[]
 
@@ -191,8 +181,9 @@ model Account {
   symbol         String?
   tradeCurrency  String?
   isCashAccount  Boolean               @default(false)
-  assetClass     AssetClass?
+  classifications AccountClassification[]
   trackingMethod AccountTrackingMethod @default(INDIVIDUAL_UNITS)
+
 
   statementImportCsvFormat Json?
 
@@ -207,6 +198,44 @@ model Account {
   @@id([id, accountBookId])
   @@index([accountBookId, isActive, type, equityAccountSubtype])
   @@index([accountBookId, groupId, isActive])
+}
+
+model ClassificationScheme {
+  id            String
+  accountBookId String
+  name          String
+  accountBook   AccountBook          @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  nodes         ClassificationNode[]
+
+  @@id([id, accountBookId])
+}
+
+model ClassificationNode {
+  id            String
+  schemeId      String
+  accountBookId String
+  name          String
+  parentId      String?
+  sortOrder     Int
+  scheme        ClassificationScheme    @relation(fields: [schemeId, accountBookId], references: [id, accountBookId], onDelete: Cascade)
+  parent        ClassificationNode?     @relation("classification-parent", fields: [parentId, schemeId, accountBookId], references: [id, schemeId, accountBookId], onDelete: Restrict)
+  children      ClassificationNode[]    @relation("classification-parent")
+  assignments   AccountClassification[]
+
+  @@id([id, schemeId, accountBookId])
+  @@index([accountBookId, schemeId, parentId, sortOrder])
+}
+
+model AccountClassification {
+  accountId     String
+  schemeId      String
+  accountBookId String
+  nodeId        String
+  account       Account            @relation(fields: [accountId, accountBookId], references: [id, accountBookId], onDelete: Cascade)
+  node          ClassificationNode @relation(fields: [nodeId, schemeId, accountBookId], references: [id, schemeId, accountBookId], onDelete: Restrict)
+
+  @@id([accountId, schemeId, accountBookId])
+  @@index([nodeId, schemeId, accountBookId])
 }
 
 model Transaction {
@@ -269,9 +298,9 @@ model ValuationProviderRequest {
   symbol         String?
   tradeCurrency  String?
 
-  httpStatus  Int?
-  durationMs  Int
-  retryCount  Int     @default(0)
+  httpStatus   Int?
+  durationMs   Int
+  retryCount   Int     @default(0)
   errorMessage String?
 
   @@index([requestedAt])

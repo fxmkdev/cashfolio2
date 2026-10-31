@@ -93,6 +93,7 @@ export async function loadAccountGainLossSources(
   }
   const contributions = [...gainsLossesContributionByKey.values()];
   const hierarchy = buildGainsLossesBreakdown({
+    assetClasses: baseData.assetClasses,
     contributions,
     referenceCurrency: baseData.referenceCurrency,
     accountAttributionById: buildGainLossAccountAttribution(
@@ -103,12 +104,14 @@ export async function loadAccountGainLossSources(
   const findAccount = (
     nodes: PeriodGainsLossesBreakdownNode[],
   ): PeriodGainsLossesBreakdownNode | undefined => {
+
     for (const node of nodes) {
       if (node.account?.id === accountId) return node;
       const child = findAccount(node.children);
       if (child) return child;
     }
     return undefined;
+
   };
   return {
     node: findAccount(hierarchy),

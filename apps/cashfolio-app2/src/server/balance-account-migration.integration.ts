@@ -1,3 +1,4 @@
+import { assetClassSelection, withAssetClassId } from "./classification-data";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cp, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
@@ -279,6 +280,7 @@ describe("unified balance account migration against disposable PostgreSQL", () =
             equityAccountSubtype: subtype,
           },
         }),
+
       ).rejects.toThrow();
     }
     await expect(
@@ -296,13 +298,15 @@ describe("unified balance account migration against disposable PostgreSQL", () =
 
   it("preserves asset classification and enforces its balance-account constraint", async () => {
     expect(
-      await db.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: { id: "archived-asset", accountBookId: "book" },
-        },
-        select: { type: true, assetClass: true },
-      }),
-    ).toEqual({ type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" });
+      await db.account
+        .findUniqueOrThrow({
+          where: {
+            id_accountBookId: { id: "archived-asset", accountBookId: "book" },
+          },
+          select: { classifications: assetClassSelection, type: true },
+        })
+        .then(withAssetClassId),
+    ).toEqual({ type: "BALANCE", assetClassId: "CASH_AND_CASH_EQUIVALENTS" });
     await expect(
       db.account.update({
         select: { id: true },
@@ -315,6 +319,7 @@ describe("unified balance account migration against disposable PostgreSQL", () =
       where: { id_accountBookId: { id: "liability", accountBookId: "book" } },
       data: { assetClass: "FIXED_INCOME" },
     });
+
   });
 
   it("keeps cache triggers active and their revisions transactional", async () => {

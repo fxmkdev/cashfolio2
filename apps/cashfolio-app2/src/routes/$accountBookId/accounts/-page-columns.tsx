@@ -1,3 +1,5 @@
+import { useAssetClasses } from "@/classification-context";
+import type { ClassificationNode } from "@/shared/asset-class";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { buildAccountGainLossColumns } from "./-gain-loss-columns";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
@@ -30,6 +32,7 @@ import { shouldShowReferenceBalanceLoadingIndicator } from "./-reference-balance
 
 export function getAccountListAssetClassValue(
   data: AccountsGridRow | undefined,
+  assetClasses?: readonly ClassificationNode[],
 ): string | undefined {
   if (!data || isReferenceCurrencyTotalFooterRow(data)) {
     return undefined;
@@ -38,9 +41,9 @@ export function getAccountListAssetClassValue(
     if (data.groupAssetClass === undefined) return undefined;
     return data.groupAssetClass === "Mixed"
       ? "Mixed"
-      : getAssetClassLabel(data.groupAssetClass);
+      : getAssetClassLabel(data.groupAssetClass, assetClasses);
   }
-  return getAssetClassLabel(data.assetClass);
+  return getAssetClassLabel(data.assetClassId, assetClasses);
 }
 
 export function getAccountListTrackingMethodValue(
@@ -112,6 +115,7 @@ export function useAccountTreeColumnDefs(params: {
   onDeleteRow: (row: RowTarget) => void;
   onReorderRow: (value: { name: string; parentKey: string }) => void;
 }): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
+  const assetClasses = useAssetClasses();
   const {
     gainLossData,
     isGainLossLoading,
@@ -244,9 +248,10 @@ export function useAccountTreeColumnDefs(params: {
               resizable: true,
               sortable: false,
               filter: "agTextColumnFilter",
-              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
+              valueGetter: ({ data }) =>
+                getAccountListAssetClassValue(data, assetClasses),
               tooltipValueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data),
+                getAccountListAssetClassValue(data, assetClasses),
               cellRenderer: ({
                 value,
               }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
@@ -368,6 +373,7 @@ export function useAccountTreeColumnDefs(params: {
       } satisfies ColDef<AccountsGridRow>,
     ];
   }, [
+    assetClasses,
     gainLossData,
     isGainLossLoading,
     isEquityTab,

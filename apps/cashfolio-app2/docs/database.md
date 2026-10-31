@@ -89,14 +89,20 @@ paths are relative to that app directory.
 
 ## Enums
 
-- `AssetClass`: Cash & Cash Equivalents, Equities, Fixed Income, Real Estate,
-  Commodities & Precious Metals, Digital Assets, Alternative Investments, and
-  Other Assets. `Account.assetClass` is nullable: null means Unclassified,
-  distinct from Other Assets. A database check permits non-null classification
-  only on balance accounts. The migration performs no backfill; all existing
-  accounts, including archived accounts, remain Unclassified. New accounts also
-  default to Unclassified, with classification selected manually. Groups and
-  bookings have no asset class, and classification has no history.
+- Asset classification uses `ClassificationScheme`, `ClassificationNode`, and
+  `AccountClassification`. Composite keys and foreign keys isolate nodes and
+  assignments by book and scheme. Each account has at most one node per scheme;
+  only balance accounts may have assignments. A missing assignment means
+  Unclassified, distinct from Other Assets. The fixed `AssetClass` enum and
+  `Account.assetClass` column have been removed. Every book receives the
+  protected `assetClass` scheme and eight editable roots through a database
+  initialization trigger. Migrated roots retain their old enum keys as IDs,
+  preserving active and archived assignments and History links. New custom nodes
+  use CUID2 IDs. Parent classes can also have direct assignments. Classification
+  has no history; current names, hierarchy, and assignments apply to all
+  periods. Classification writes participate in period cache revision triggers.
+  Sibling names have a case-insensitive unique index; cycle checks run within
+  the serialized account-book mutation boundary.
 
 - `AccountType`: `BALANCE`, `EQUITY`. Balance accounts and their groups use
   `BALANCE` regardless of whether their signed balances are owned or owed.

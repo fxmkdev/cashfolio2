@@ -61,11 +61,12 @@ export function useEditAccountModalController({
     initialValues: initialValues
       ? toFormValues(initialValues)
       : {
-          assetClass: null,
+          assetClassId: null,
           trackingMethod: "INDIVIDUAL_UNITS" as const,
           unit: Unit.CURRENCY,
           typeDescriptor,
         },
+
     validate: {
       name: (value, values) => {
         const siblingNames = existingNodes
@@ -153,11 +154,12 @@ export function useEditAccountModalController({
       initialValues
         ? toFormValues(initialValues)
         : {
-            assetClass: null,
+            assetClassId: null,
             trackingMethod: "INDIVIDUAL_UNITS" as const,
             unit: Unit.CURRENCY,
             typeDescriptor,
           },
+
     [initialValues, typeDescriptor],
   );
 
