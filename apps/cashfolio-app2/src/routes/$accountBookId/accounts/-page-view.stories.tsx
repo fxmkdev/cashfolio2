@@ -2202,7 +2202,7 @@ export const ContextualAccountCreation: Story = {
     let dialog = within(
       await body.findByRole("dialog", { name: "New Account" }),
     );
-    expect(dialog.getByLabelText("Group")).toHaveValue("Assets / Cash");
+    expect(dialog.getByLabelText("Group")).toHaveValue("Cash");
     expect(dialog.getByLabelText("Group")).toBeEnabled();
     expect(
       dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
@@ -2229,7 +2229,7 @@ export const ContextualAccountCreation: Story = {
       await body.findByRole("menuitem", { name: "Add Group" }),
     );
     dialog = within(await body.findByRole("dialog", { name: "New Group" }));
-    expect(dialog.getByLabelText("Parent Group")).toHaveValue("Assets / Cash");
+    expect(dialog.getByLabelText("Parent Group")).toHaveValue("Cash");
     expect(
       dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
     ).toBeChecked();
@@ -2275,9 +2275,11 @@ export const ContextualIncomeCategoryCreation: Story = {
     await userEvent.click(
       within(row).getByRole("button", { name: "Add Child to Housing" }),
     );
-    expect(
-      await body.findByRole("menuitem", { name: "Add Income Category" }),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        body.getByRole("menuitem", { name: "Add Income Category" }),
+      ).toBeVisible(),
+    );
     expect(
       body.queryByRole("menuitem", { name: "Add Expense Category" }),
     ).not.toBeInTheDocument();

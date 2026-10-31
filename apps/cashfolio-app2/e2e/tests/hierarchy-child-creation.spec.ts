@@ -48,7 +48,7 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       }),
     ).toHaveValue(parentName);
     if (!isCategory) {
-      await dialog.getByLabel("Currency", { exact: true }).click();
+      await dialog.getByRole("combobox", { name: "Currency" }).click();
       await page.getByRole("option", { name: /CHF/ }).first().click();
       await expect(
         dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),

@@ -36,6 +36,8 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     actionLabel: "Reorder Siblings",
   });
   const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
+  // Hover waits for the opening transition before measuring drag coordinates.
+  await reorder.locator('[row-id="OTHER_ASSETS"] .ag-row-drag').hover();
   const source = await reorder
     .locator('[row-id="OTHER_ASSETS"] .ag-row-drag')
     .boundingBox();
