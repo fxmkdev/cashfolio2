@@ -371,9 +371,11 @@ Adjust the database name to the reviewed target. Do not create this role through
 shared migrations, the Neon Console/API's privileged role-creation flow, or a
 production SQL session. It needs no schema ownership, migration permissions,
 role membership, `TRUNCATE`, or `neon_superuser` membership. Add explicit grants
-when future seed changes require additional application tables. When upgrading
-an existing staging seed role for editable classifications, apply the table and
-function grants above after the migration and before running the updated seed.
+when future seed changes require additional application tables. The
+classification migration extends these grants when the existing
+`cashfolio_staging_seed` role is present; it never creates that role. For a
+custom seed role name, apply the table and function grants above after the
+migration and before running the updated seed.
 
 Before enabling seeding, use an independently authorized read-only production
 connection to confirm that the role is absent:
