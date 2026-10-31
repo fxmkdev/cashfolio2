@@ -3,8 +3,10 @@ import { toMoney } from "../../shared/money";
 import { encodeMoneyCache } from "../money-cache-codec";
 import type { loadAccountGainLossRange as LoadRange } from "./account-gain-loss-range.server";
 import { deferred } from "../test-support/deferred";
+import { withUserResourceRequest } from "../test-support/resource-request";
 import {
   checkResourceBudget,
+  getResourceSignal,
   withResourceRequest,
 } from "../resource-context.server";
 
@@ -102,6 +104,48 @@ afterEach(() => {
 });
 
 describe("account G/L summary cache", () => {
+  it("shares a same-user Redis miss after the initiating request cancels", async () => {
+    const ready = deferred();
+    const release = deferred();
+    let jobSignal!: AbortSignal;
+    mocks.get.mockImplementationOnce(async () => {
+      jobSignal = getResourceSignal()!;
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = () => getOrLoadAccountGainLossSummaries("book");
+    const first = withUserResourceRequest(
+      "user",
+      async () => {
+        await load();
+      },
+      controller.signal,
+    );
+    await ready.promise;
+    const second = withUserResourceRequest("user", async () => {
+      await load();
+    });
+    try {
+      await vi.waitFor(() => expect(mocks.revision).toHaveBeenCalledTimes(2));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mocks.get).toHaveBeenCalledOnce();
+      controller.abort();
+      expect((await first).status).toBe(503);
+      expect(jobSignal.aborted).toBe(false);
+      release.resolve();
+      expect((await second).status).toBe(200);
+      expect(mocks.load).toHaveBeenCalledOnce();
+      expect(mocks.setEx).toHaveBeenCalledOnce();
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
   it("does not join another request's cancelled Redis miss", async () => {
     const ready = deferred();
     const release = deferred();

@@ -1,6 +1,6 @@
 import {
   checkResourceBudget,
-  createRequestScopedInFlightMap,
+  createUserScopedSharedWork,
 } from "../resource-context.server";
 import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
@@ -22,8 +22,7 @@ import {
 } from "./account-gain-loss-cache-data";
 
 const MAX_SERIALIZED_BYTES = 512 * 1024;
-const getInflightLoads =
-  createRequestScopedInFlightMap<AccountGainLossCacheData>();
+const runSharedLoad = createUserScopedSharedWork<AccountGainLossCacheData>();
 let hasWarnedReadFailure = false;
 let hasWarnedWriteFailure = false;
 
@@ -50,11 +49,7 @@ export async function getOrLoadAccountGainLossSummaries(
     asOfDate: formatUtcDateKey(asOfDate),
     latestFetchableDate: formatUtcDateKey(latestFetchableDate),
   });
-  const inflightByCacheKey = getInflightLoads();
-  const existing = inflightByCacheKey.get(cacheKey);
-  if (existing) return existing;
-
-  const promise = (async () => {
+  return runSharedLoad(cacheKey, async () => {
     try {
       const cached = await redis.get(cacheKey);
       if (cached && Buffer.byteLength(cached, "utf8") <= MAX_SERIALIZED_BYTES) {
@@ -104,12 +99,5 @@ export async function getOrLoadAccountGainLossSummaries(
       }
     }
     return data;
-  })();
-
-  inflightByCacheKey.set(cacheKey, promise);
-  try {
-    return await promise;
-  } finally {
-    inflightByCacheKey.delete(cacheKey);
-  }
+  });
 }

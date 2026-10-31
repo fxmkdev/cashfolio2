@@ -1,6 +1,6 @@
 import {
   checkResourceBudget,
-  createRequestScopedInFlightMap,
+  createUserScopedSharedWork,
 } from "../../resource-context.server";
 import { rethrowResourceError } from "../../resource-error";
 import {
@@ -31,7 +31,7 @@ let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
 let hasWarnedPeriodBaseCacheInvalidationFailure = false;
 
-const getInflightLoads = createRequestScopedInFlightMap<PeriodBaseData>();
+const runSharedLoad = createUserScopedSharedWork<PeriodBaseData>();
 
 export type { PeriodBaseData };
 export async function getOrLoadPeriodBaseData(args: {
@@ -60,13 +60,7 @@ export async function getOrLoadPeriodBaseData(args: {
     return loadUncached();
   }
   const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${cacheEnv}:${args.accountBookId}:${generation}:${inflightPeriodKey}`;
-  const inflightByCacheKey = getInflightLoads();
-  const existingInflight = inflightByCacheKey.get(inflightKey);
-  if (existingInflight) {
-    return existingInflight;
-  }
-
-  const loadPromise = (async () => {
+  return runSharedLoad(inflightKey, async () => {
     const periodCacheKey = await resolvePeriodCachePeriodKey({
       accountBookId: args.accountBookId,
       periodValue,
@@ -147,14 +141,7 @@ export async function getOrLoadPeriodBaseData(args: {
     }
 
     return loaded;
-  })();
-
-  inflightByCacheKey.set(inflightKey, loadPromise);
-  try {
-    return await loadPromise;
-  } finally {
-    inflightByCacheKey.delete(inflightKey);
-  }
+  });
 }
 
 export async function invalidatePeriodBaseDataCacheForAccountBook(

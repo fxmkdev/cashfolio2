@@ -1,6 +1,7 @@
 import {
   checkResourceBudget,
-  createRequestScopedInFlightMap,
+  createUserScopedSharedWork,
+  isSharedResourceWork,
 } from "../../resource-context.server";
 import { rethrowResourceError } from "../../resource-error";
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
@@ -28,8 +29,7 @@ import {
 
 const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
-const getInflightLoads =
-  createRequestScopedInFlightMap<PeriodHistoryPointMetrics>();
+const runSharedLoad = createUserScopedSharedWork<PeriodHistoryPointMetrics>();
 
 let hasWarnedHistoryMetricsCacheReadFailure = false;
 let hasWarnedHistoryMetricsCacheWriteFailure = false;
@@ -149,13 +149,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     scopeKey: getScopeKey(args.metricScopeFilter),
   });
 
-  const inflightByCacheKey = getInflightLoads();
-  const existingInflight = inflightByCacheKey.get(cacheKey);
-  if (existingInflight) {
-    return existingInflight;
-  }
-
-  const loadPromise = (async () => {
+  return runSharedLoad(cacheKey, async () => {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -179,7 +173,9 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
       accountBookId: args.accountBookId,
       period: args.period,
       metricScopeFilter: args.metricScopeFilter,
-      valuationContext: args.valuationContext,
+      valuationContext: isSharedResourceWork()
+        ? undefined
+        : args.valuationContext,
     });
 
     if (!result.cacheableFromPermanentValuationCache) {
@@ -216,12 +212,5 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     }
 
     return result.metrics;
-  })();
-
-  inflightByCacheKey.set(cacheKey, loadPromise);
-  try {
-    return await loadPromise;
-  } finally {
-    inflightByCacheKey.delete(cacheKey);
-  }
+  });
 }

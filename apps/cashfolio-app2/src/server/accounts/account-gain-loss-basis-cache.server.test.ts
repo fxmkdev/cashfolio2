@@ -3,8 +3,10 @@ import { moneyMultiply, toMoney } from "../../shared/money";
 import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
 import type { ValuationRateSource } from "../valuation/types";
 import { deferred } from "../test-support/deferred";
+import { withUserResourceRequest } from "../test-support/resource-request";
 import {
   checkResourceBudget,
+  getResourceSignal,
   withResourceRequest,
 } from "../resource-context.server";
 
@@ -626,7 +628,50 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(current.asOfDate).toBe("2026-05-12T00:00:00.000Z");
   });
 
-  it("does not join another request's cancelled Redis miss", async () => {
+  it("shares a same-user Redis miss after the initiating request cancels", async () => {
+    const ready = deferred();
+    const release = deferred();
+    let jobSignal!: AbortSignal;
+    redis.get.mockImplementationOnce(async () => {
+      jobSignal = getResourceSignal()!;
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const first = withUserResourceRequest(
+      "user",
+      async () => {
+        await load();
+      },
+      controller.signal,
+    );
+    await ready.promise;
+    const second = withUserResourceRequest("user", async () => {
+      await load();
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(mocks.db.booking.findFirst).toHaveBeenCalledTimes(2),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(redis.get).toHaveBeenCalledOnce();
+      controller.abort();
+      expect((await first).status).toBe(503);
+      expect(jobSignal.aborted).toBe(false);
+      release.resolve();
+      expect((await second).status).toBe(200);
+      expect(mocks.db.transaction.findMany).toHaveBeenCalledOnce();
+      expect(redis.setEx).toHaveBeenCalledOnce();
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it("does not join another unbound request's cancelled Redis miss", async () => {
     const ready = deferred();
     const release = deferred();
     redis.get.mockImplementationOnce(async () => {

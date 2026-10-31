@@ -48,7 +48,7 @@ There are five complementary layers:
 2. Redis TimeSeries daily rates
 3. Redis fallback key-value cache for backtracked results and explicit no-data
 4. Redis miss-attempt cooldown cache for day-level misses
-5. Request-scoped in-flight provider fetch deduplication (per series/day)
+5. Per-user in-flight provider fetch deduplication (per series/day)
 
 ```mermaid
 flowchart LR
@@ -58,7 +58,7 @@ flowchart LR
   D --> E["Redis TimeSeries daily series"]
   D --> F["Redis fallback key-value entries"]
   D --> H["Redis miss-attempt cooldown entries"]
-  D --> I["Request-scoped in-flight provider dedup map"]
+  D --> I["Per-user shared provider job"]
   I --> G["Provider APIs"]
   G --> D
   E --> D
@@ -77,14 +77,17 @@ This deduplicates identical lookups during a single server-function execution.
 
 This layer is in-memory only and is cleared after each request.
 
-In-flight promise maps are scoped to the incoming HTTP request for provider
-fetches and the period base-data, History metrics, and account gain/loss summary
-and basis caches. Identical work within one request still deduplicates, but
-separate requests cannot inherit each other's cancellation, deadline, or budget
-failure. Completed Redis results remain shared. Simultaneous cold-cache requests
-may perform duplicate provider or calculation work, and each request accounts
-for the HTTP attempts it starts. Context-free background callers use separate
-maps that never share running work with HTTP requests.
+Provider fetches and the period base-data, History metrics, and account
+gain/loss summary and basis caches share in-flight jobs across requests from the
+same verified application user. Each job owns its cancellation signal, fixed
+deadline, attempt ledger, and mutable valuation maps; it never borrows the
+initiating request's context or pending History rate promises. A caller can stop
+waiting independently while other subscribers retain the shared work. The last
+departing subscriber aborts the job. Different users cannot join the same job,
+and every caller must authorize its own book access before joining. Completed
+Redis results remain shared under their existing keys. See
+[Resource limits](resource-limits.md) for nested attempt accounting, late joins,
+and the separate job/caller limits.
 
 ## Historical Publish Window
 
@@ -280,20 +283,21 @@ flowchart TD
 
 ## In-Flight Provider Dedup
 
-Implementation: `src/server/valuation/backtracking.ts`
-(`inFlightProviderFetchByKey`)
+Implementation: `src/server/valuation/backtracking.ts` and
+`src/server/shared-resource-work.server.ts` (`createUserScopedSharedWork`)
 
-Within each incoming request, provider calls are deduplicated by:
+Within one server process, provider calls are deduplicated by:
 
-- key: `<seriesKey>:<timestamp>`
-- behavior: concurrent lookups for the same key await the same Promise
-- cleanup: key is removed when the Promise settles
+- key: verified application user ID plus `<seriesKey>:<timestamp>`
+- behavior: concurrent authorized callers subscribe to one detached job
+- cleanup: remove the job on settlement or when all subscribers leave; remove
+  empty user registries and never admit a new subscriber to aborted work
 
-The shared factory in `src/server/resource-context.server.ts` selects a map by
-request context using weak references. Context-free callers use a separate map.
-This layer removes settled promises; the bounded request-local memo retains
-successful probes for reuse until the request ends. Separate HTTP requests never
-join these running promises, even when they query the same series/day.
+The factory is re-exported through `src/server/resource-context.server.ts`.
+Unbound HTTP requests retain request-local maps; context-free background callers
+use a separate map and cannot join authenticated jobs. This layer removes
+settled jobs; the bounded resource-context memo retains successful probes within
+the owning request/job. Shared job limits stay fixed when another caller joins.
 
 ## Provider Semantics and Cache Impact
 
@@ -331,8 +335,8 @@ Implementation:
 
 Every real external provider HTTP attempt is recorded in Postgres as a
 `ValuationProviderRequest` row. Cache hits, fallback hits, miss-cooldown skips,
-identity conversions, and in-flight dedup waiters are not counted because they
-do not call an external provider.
+identity conversions, and in-flight dedup waiters are not counted in provider
+usage because they do not call an external provider.
 
 Recorded fields include provider, unit type, outcome, request reason, valuation
 date, unit identifiers, HTTP status, duration, retry count, and a sanitized

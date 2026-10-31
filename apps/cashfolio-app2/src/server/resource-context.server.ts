@@ -1,116 +1,23 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
 import { ResourceLimitError } from "./resource-error";
 import { RESOURCE_ERROR_HEADER } from "../shared/resource-error";
-
-type ResourceContext = {
-  controller: AbortController;
-  deadline?: number;
-  deadlineTimer?: ReturnType<typeof setTimeout>;
-  failure?: ResourceLimitError;
-  closed: boolean;
-  closeReason?: unknown;
-  attempts: number;
-  memo: Map<string, Promise<unknown>>;
-};
-const storage = new AsyncLocalStorage<ResourceContext>();
-const deadlineError = () =>
-  new ResourceLimitError(
-    "This calculation took too long. Select a narrower range and try again.",
-    503,
-    5,
-    "read_deadline",
-  );
-
-export function failResourceRequest(error: ResourceLimitError): never {
-  const context = storage.getStore();
-  if (context) {
-    context.failure ??= error;
-    context.controller.abort(context.failure);
-  }
-  throw error;
-}
-
-export function checkResourceBudget() {
-  const context = storage.getStore();
-  if (!context) return;
-  if (context.failure) throw context.failure;
-  if (context.closed) throw context.closeReason;
-  if (context.deadline !== undefined && Date.now() >= context.deadline)
-    failResourceRequest(deadlineError());
-}
-
-/** Call after authorization; internal helpers share the original deadline. */
-export function startReadBudget() {
-  checkResourceBudget();
-  const context = storage.getStore();
-  if (!context || context.deadline !== undefined) return;
-  context.deadline = Date.now() + RESOURCE_LIMITS.readMs;
-  context.deadlineTimer = setTimeout(() => {
-    context.failure ??= deadlineError();
-    context.controller.abort(context.failure);
-  }, RESOURCE_LIMITS.readMs);
-  context.deadlineTimer.unref();
-}
-
-export function getResourceSignal() {
-  return storage.getStore()?.controller.signal;
-}
-
-/** Keep cancellation-sensitive promises within their owning request. */
-export function createRequestScopedInFlightMap<T>() {
-  const requests = new WeakMap<ResourceContext, Map<string, Promise<T>>>();
-  // Background callers have no request cancellation or budget to inherit.
-  const background = new Map<string, Promise<T>>();
-  return (): Map<string, Promise<T>> => {
-    checkResourceBudget();
-    const context = storage.getStore();
-    if (!context) return background;
-    let entries = requests.get(context);
-    if (!entries) {
-      entries = new Map();
-      requests.set(context, entries);
-    }
-    return entries;
-  };
-}
-
-/** Reuse settled provider probes within this request even without Redis. */
-export function reuseResourceRequestWork<T>(
-  key: string,
-  operation: () => Promise<T>,
-): Promise<T> {
-  checkResourceBudget();
-  const context = storage.getStore();
-  if (!context) return operation();
-  const existing = context.memo.get(key);
-  if (existing) return existing as Promise<T>;
-  const work = operation();
-  if (context.memo.size < RESOURCE_LIMITS.providerAttempts) {
-    context.memo.set(key, work);
-    void work.catch(() => {
-      if (context.memo.get(key) === work) context.memo.delete(key);
-    });
-  }
-  return work;
-}
-
-/** Charge immediately before starting HTTP work, including retries. */
-export function consumeProviderAttempt() {
-  checkResourceBudget();
-  const context = storage.getStore();
-  if (!context) return;
-  if (context.attempts >= RESOURCE_LIMITS.providerAttempts)
-    failResourceRequest(
-      new ResourceLimitError(
-        "This calculation needs too many provider requests. Select a narrower range and try again.",
-        429,
-        1,
-        "provider_request_limit",
-      ),
-    );
-  context.attempts += 1;
-}
+import {
+  checkResourceBudget,
+  closeResourceContext,
+  createResourceContext,
+  resourceStorage as storage,
+} from "./resource-scope.server";
+export {
+  bindResourceUser,
+  checkResourceBudget,
+  consumeProviderAttempt,
+  createRequestScopedInFlightMap,
+  failResourceRequest,
+  getResourceSignal,
+  isSharedResourceWork,
+  reuseResourceRequestWork,
+  startReadBudget,
+} from "./resource-scope.server";
+export { createUserScopedSharedWork } from "./shared-resource-work.server";
 
 function errorResponse(error: ResourceLimitError) {
   console.warn("Resource budget rejected.", {
@@ -132,21 +39,13 @@ export async function withResourceRequest(
   signal: AbortSignal,
   operation: () => Promise<Response> | Response,
 ): Promise<Response> {
-  const context: ResourceContext = {
-    controller: new AbortController(),
-    closed: false,
-    attempts: 0,
-    memo: new Map(),
-  };
+  const context = createResourceContext("request");
   return storage.run(context, async () => {
     const close = (reason: unknown = new Error("Request has finished.")) => {
       if (context.closed) return;
-      context.closed = true;
-      context.closeReason = context.failure ?? reason;
-      clearTimeout(context.deadlineTimer);
       signal.removeEventListener("abort", cancel);
       context.controller.signal.removeEventListener("abort", closeOnAbort);
-      storage.run(context, () => context.controller.abort(context.closeReason));
+      closeResourceContext(context, reason);
     };
     const closeOnAbort = () => close(context.controller.signal.reason);
     const cancel = () =>
