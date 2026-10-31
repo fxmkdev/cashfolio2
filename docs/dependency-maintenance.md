@@ -58,14 +58,19 @@ and
 
 ## Remaining audit findings
 
-As of 2026-10-10, after the scoped Prisma override and removal of the Storybook
-runner, `pnpm audit` reports no findings. Runner removal eliminates the
-previously reported moderate `sprintf-js` advisory.
+As of 2026-10-31, after the Storybook, Zod, and fast-uri security updates,
+`pnpm audit` reports four moderate findings: two in Seroval, one in minimatch,
+and one in glob. There are no high, critical, or low findings. Those remaining
+packages are outside the focused Zod/fast-uri update; this is not a clean audit
+or an assessment of production exploitability.
 
-The Docker release-migration payload now reads the same reviewed workspace
-release-age, build-script, and security override policy. Its separate audit also
-reports no findings; this fixes its previously reported two high and one
-moderate findings through `deepmerge-ts` and `mysql2`.
+Historical verification on 2026-10-10 reported no findings after the scoped
+Prisma override and removal of the Storybook runner. Runner removal eliminated
+the previously reported moderate `sprintf-js` advisory. The separate Docker
+release-migration payload audit also reported no findings at that time after
+adopting the reviewed workspace release-age, build-script, and security override
+policy, resolving its earlier `deepmerge-ts` and `mysql2` findings. Those
+earlier counts do not describe the current dependency graph.
 
 These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because
@@ -311,6 +316,33 @@ and
 [pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0),
 and
 [pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
+
+## October 31 Zod and fast-uri security update
+
+The lockfile updates compatible transitive Zod resolutions from 4.6.5 to 4.6.7
+without adding a direct application dependency or a Zod override. This patches
+the collection-validation resource exhaustion advisory
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
+
+The existing `ajv>fast-uri` override moves from 3.1.8 to 3.1.9, patching
+[GHSA-w74x-v6f9-j3xg](https://github.com/advisories/GHSA-w74x-v6f9-j3xg),
+[GHSA-xhq7-xmqj-769h](https://github.com/advisories/GHSA-xhq7-xmqj-769h),
+[GHSA-wjr9-j795-jxcr](https://github.com/advisories/GHSA-wjr9-j795-jxcr), and
+[GHSA-333x-w4r6-6crp](https://github.com/advisories/GHSA-333x-w4r6-6crp).
+Docker's release-migration payload continues to consume the same workspace
+override policy. No other package versions, direct dependency declarations,
+build approvals, or release-age exceptions change; the 1440-minute release-age
+policy remains enforced.
+
+The before/after workspace audits remove all five targeted advisory IDs without
+adding findings. Counts change from one high, six moderate, and two low to four
+moderate findings, affecting unchanged Seroval, minimatch, and glob packages.
+These are dependency-audit results, not a production-reachability assessment.
+
+Local verification on Node 26.13.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma generation, the app typecheck and ESLint, changed-file
+formatting, and `git diff --check`. Builds, coverage, database integration,
+Storybook browser tests, and E2E remain assigned to final-revision CI.
 
 ## October 31 Storybook security update
 
