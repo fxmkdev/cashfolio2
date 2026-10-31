@@ -3,12 +3,16 @@ import type { AgGridReactProps } from "ag-grid-react";
 import type { GridApi } from "ag-grid-enterprise";
 
 import { notifications } from "@mantine/notifications";
+import type { AccountTrackingMethod } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   createAccountBulkActionTarget,
+  createTrackingMethodBulkActionTarget,
+  isTrackingMethodAccount,
   isBulkAccountRow,
   isBulkAccount,
   type AccountBulkActionTarget,
+  type TrackingMethodBulkActionTarget,
 } from "./-bulk-account-targets";
 
 export function useBulkAccountActions(args: {
@@ -19,6 +23,10 @@ export function useBulkAccountActions(args: {
     accountIds: string[],
     assetClassId: string | null,
   ) => Promise<unknown>;
+  submitTrackingMethod: (
+    accountIds: string[],
+    trackingMethod: AccountTrackingMethod,
+  ) => Promise<unknown>;
   invalidate: () => void;
   onRefreshConstraints?: () => Promise<void>;
 }) {
@@ -26,6 +34,8 @@ export function useBulkAccountActions(args: {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [assetClassTarget, setAssetClassTarget] =
     useState<AccountBulkActionTarget>();
+  const [trackingMethodTarget, setTrackingMethodTarget] =
+    useState<TrackingMethodBulkActionTarget>();
   const clearSelection = useCallback(() => {
     apiRef.current?.deselectAll();
     setSelectedIds([]);
@@ -33,6 +43,7 @@ export function useBulkAccountActions(args: {
   useEffect(() => {
     clearSelection();
     setAssetClassTarget(undefined);
+    setTrackingMethodTarget(undefined);
   }, [args.scopeKey, clearSelection]);
 
   const reconcileSelection = useCallback((api: GridApi<AccountsGridRow>) => {
@@ -98,15 +109,39 @@ export function useBulkAccountActions(args: {
     gridProps,
     selectedCount: selectedAccounts.length,
     assetClassTarget,
+    trackingMethodTarget,
+    trackingMethodEligibleCount: selectedAccounts.filter(
+      isTrackingMethodAccount,
+    ).length,
     clearSelection,
     openAssetClass: () => {
       if (selectedAccounts.length)
         setAssetClassTarget(createAccountBulkActionTarget(selectedAccounts));
     },
+    openTrackingMethod: () => {
+      const target = createTrackingMethodBulkActionTarget(selectedAccounts);
+      if (target.accountIds.length) setTrackingMethodTarget(target);
+    },
     close: () => {
       setAssetClassTarget(undefined);
+      setTrackingMethodTarget(undefined);
     },
     onRefreshConstraints: args.onRefreshConstraints,
+    applyTrackingMethod: async (trackingMethod: AccountTrackingMethod) => {
+      if (!trackingMethodTarget) return;
+      await args.submitTrackingMethod(
+        trackingMethodTarget.accountIds,
+        trackingMethod,
+      );
+      setTrackingMethodTarget(undefined);
+      clearSelection();
+      args.invalidate();
+      const count = trackingMethodTarget.accountIds.length;
+      notifications.show({
+        color: "green",
+        message: `Tracking method updated for ${count} ${count === 1 ? "account" : "accounts"}.`,
+      });
+    },
     applyAssetClass: async (assetClassId: string | null) => {
       if (!assetClassTarget) return;
       await args.submitAssetClass(assetClassTarget.accountIds, assetClassId);

@@ -359,14 +359,14 @@ Unit, cash flags, groups, or other fields. Users can choose any class or clear
 back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
-Accounts supports checkbox selection with the **Set Asset Class** toolbar
-action. Balance-account leaves, real groups, and virtual Archived groups show
-checkboxes. Group checkboxes select matching descendant accounts, including
-nested and archived accounts regardless of expansion, using AG Grid's native
-filtered-descendant selection. Empty groups have disabled checkboxes; totals and
-categories are excluded. Groups show native checked/indeterminate states, and
-individual accounts can be excluded from a selection. The toolbar counts
-accounts, and requests contain only account IDs.
+Accounts supports checkbox selection with the **Set Asset Class** and **Set
+Tracking Method** toolbar actions. Balance-account leaves, real groups, and
+virtual Archived groups show checkboxes. Group checkboxes select matching
+descendant accounts, including nested and archived accounts regardless of
+expansion, using AG Grid's native filtered-descendant selection. Empty groups
+have disabled checkboxes; totals and categories are excluded. Groups show native
+checked/indeterminate states, and individual accounts can be excluded from a
+selection. The toolbar counts accounts, and requests contain only account IDs.
 
 Filtered-out selections are removed, header select-all uses the filtered account
 set, and clearing a filter does not add accounts to an existing selection.
@@ -377,6 +377,21 @@ explicit asset class or Unclassified. Applying replaces existing classifications
 for the selected accounts and all historical Report/History periods. Errors
 retain the choice for retry. Success clears selection and refreshes data. Groups
 do not store a class or provide inheritance.
+
+**Set Tracking Method** updates only selected currency-denominated balance
+accounts, including booked and archived accounts. Securities, cryptocurrencies,
+and accounts with missing unit metadata are skipped. The toolbar retains the
+full selected count; the action is disabled with an explanation when no currency
+accounts are selected. Its dialog freezes eligible account IDs, shows the
+affected and archived counts plus any skipped count, and requires an explicit
+**Individual Units** or **Total Portfolio Value** choice. The shared field
+includes its help popover. Applying replaces tracking methods for all historical
+Report/History periods without rewriting bookings or changing valuation.
+Submission prevents duplicate requests and dismissal; errors retain the choice
+for refresh/retry, and success clears selection and refreshes data. Server
+validation rechecks every submitted account inside one authorized book mutation
+and rejects the whole request if any target is missing or no longer eligible.
+Groups do not store or inherit a tracking method.
 
 Assets and liabilities show classification beside the type and unit badges in
 the ledger header. The gray pill uses the light variant for a selected class and

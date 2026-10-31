@@ -164,6 +164,23 @@ export function validateSetAccountsAssetClassInput(data: unknown): {
   };
 }
 
+export function validateSetAccountsTrackingMethodInput(data: unknown): {
+  accountBookId: string;
+  accountIds: string[];
+  trackingMethod: AccountTrackingMethod;
+} {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    accountIds: readAccountIds(data, "accountIds"),
+    trackingMethod: requireEnumField(
+      data,
+      "trackingMethod",
+      Object.values(AccountTrackingMethod),
+    ),
+  };
+}
+
 function readAccountIds(
   data: Record<string, unknown>,
   field: string,

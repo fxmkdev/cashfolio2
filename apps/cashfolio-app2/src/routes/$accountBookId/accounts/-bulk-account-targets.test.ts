@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AccountType } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
 import type { TreeRow } from "./-page-types";
 import {
   createAccountBulkActionTarget,
   isBulkAccountRow,
   isBulkAccount,
+  isTrackingMethodAccount,
+  createTrackingMethodBulkActionTarget,
 } from "./-bulk-account-targets";
 
 function row(
@@ -104,6 +106,67 @@ describe("asset class assignment targets", () => {
     expect(target).toEqual({
       accountIds: ["active", "archived", "old-child"],
       archivedCount: 2,
+    });
+  });
+});
+
+describe("tracking method assignment targets", () => {
+  it("includes active and archived currency accounts, counting skipped accounts separately", () => {
+    const accounts = [
+      { ...row("active", "account"), unit: Unit.CURRENCY },
+      { ...row("archived", "account", undefined, false), unit: Unit.CURRENCY },
+      { ...row("security", "account"), unit: Unit.SECURITY },
+      {
+        ...row("crypto", "account", undefined, false),
+        unit: Unit.CRYPTOCURRENCY,
+      },
+      row("missing", "account"),
+    ];
+    const target = createTrackingMethodBulkActionTarget(accounts);
+    accounts.push({ ...row("later", "account"), unit: Unit.CURRENCY });
+    expect(target).toEqual({
+      accountIds: ["active", "archived"],
+      archivedCount: 1,
+      skippedCount: 3,
+    });
+  });
+
+  it.each([Unit.SECURITY, Unit.CRYPTOCURRENCY, null])(
+    "excludes accounts with unit %s",
+    (unit) => {
+      expect(
+        isTrackingMethodAccount({ ...row("account", "account"), unit }),
+      ).toBe(false);
+    },
+  );
+
+  it("excludes groups, categories, missing rows, and totals", () => {
+    expect(
+      isTrackingMethodAccount({
+        ...row("group", "accountGroup"),
+        unit: Unit.CURRENCY,
+      }),
+    ).toBe(false);
+    expect(
+      isTrackingMethodAccount({
+        ...row("category", "account"),
+        unit: Unit.CURRENCY,
+        type: AccountType.EQUITY,
+      }),
+    ).toBe(false);
+    expect(isTrackingMethodAccount(undefined)).toBe(false);
+    expect(
+      isTrackingMethodAccount({
+        id: "__reference_currency_total_footer__",
+        rowType: "referenceCurrencyTotalFooter",
+        name: "Total",
+        balanceInReferenceCurrency: 0,
+      }),
+    ).toBe(false);
+    expect(createTrackingMethodBulkActionTarget([])).toEqual({
+      accountIds: [],
+      archivedCount: 0,
+      skippedCount: 0,
     });
   });
 });

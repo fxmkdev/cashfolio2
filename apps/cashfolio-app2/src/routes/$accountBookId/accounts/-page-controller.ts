@@ -12,6 +12,7 @@ import type { TransformedFormValues } from "@/components/account-editor/edit-acc
 import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
   setAccountsAssetClass,
+  setAccountsTrackingMethod,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
@@ -471,6 +472,10 @@ export function useAccountsPageController(args: {
     submitAssetClass: (accountIds, assetClassId) =>
       setAccountsAssetClass({
         data: { accountBookId: args.accountBookId, accountIds, assetClassId },
+      }),
+    submitTrackingMethod: (accountIds, trackingMethod) =>
+      setAccountsTrackingMethod({
+        data: { accountBookId: args.accountBookId, accountIds, trackingMethod },
       }),
     invalidate: args.invalidate,
     onRefreshConstraints,

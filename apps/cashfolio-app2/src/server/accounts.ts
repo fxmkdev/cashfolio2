@@ -17,6 +17,7 @@ export {
 
 export {
   setAccountsAssetClass,
+  setAccountsTrackingMethod,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
