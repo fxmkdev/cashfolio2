@@ -28,6 +28,13 @@ const abandoned = () =>
     "cancelled",
   );
 
+async function runCheckedOperation<T>(operation: () => Promise<T>): Promise<T> {
+  checkResourceBudget();
+  const value = await operation();
+  checkResourceBudget();
+  return value;
+}
+
 function subscribe<T>(job: SharedJob<T>, parent: ResourceContext): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let detached = false;
@@ -95,12 +102,7 @@ function createJob<T>(
     });
     startReadBudget();
     // Subscribe the initiating caller before any work can consume attempts.
-    const work = Promise.resolve().then(async () => {
-      checkResourceBudget();
-      const value = await operation();
-      checkResourceBudget();
-      return value;
-    });
+    const work = Promise.resolve().then(() => runCheckedOperation(operation));
     // One settlement handler avoids retaining cancelled callers in Promise.then
     // callbacks until a long-running job completes. Only live subscribers remain.
     void Promise.race([work, cancelled])
@@ -133,7 +135,7 @@ export function createUserScopedSharedWork<T>() {
       const entries = getLocalEntries();
       const existing = entries.get(key);
       if (existing) return existing;
-      const work = Promise.resolve().then(operation);
+      const work = Promise.resolve().then(() => runCheckedOperation(operation));
       entries.set(key, work);
       try {
         return await work;

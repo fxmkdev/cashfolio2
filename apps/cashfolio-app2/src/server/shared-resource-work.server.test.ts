@@ -4,15 +4,49 @@ import {
   bindResourceUser,
   createUserScopedSharedWork,
   getResourceSignal,
+  startReadBudget,
   withResourceRequest,
 } from "./resource-context.server";
 import { deferred } from "./test-support/deferred";
 import { withUserResourceRequest } from "./test-support/resource-request";
+import { RESOURCE_LIMITS } from "../shared/resource-limits";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe("per-user shared work lifecycle", () => {
+  it.each([
+    ["unbound", "cancel"],
+    ["unbound", "deadline"],
+    ["authenticated", "cancel"],
+    ["authenticated", "deadline"],
+  ] as const)(
+    "does not start queued %s work after request %s",
+    async (identity, failure) => {
+      const shared = createUserScopedSharedWork<number>();
+      const operation = vi.fn(async () => 1);
+      const controller = new AbortController();
+      const response = await withResourceRequest(
+        controller.signal,
+        async () => {
+          if (identity === "authenticated") bindResourceUser("user");
+          startReadBudget();
+          const work = shared("key", operation);
+          if (failure === "cancel") controller.abort();
+          else vi.setSystemTime(Date.now() + RESOURCE_LIMITS.readMs);
+          await work;
+          return new Response();
+        },
+      );
+      expect(response.status).toBe(503);
+      expect(response.headers.get("X-Cashfolio-Resource-Limit")).toBe(
+        failure === "cancel" ? "cancelled" : "read_deadline",
+      );
+      expect(operation).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
   it.each([0, 1])(
     "keeps work alive when subscriber %s cancels",
     async (failed) => {
