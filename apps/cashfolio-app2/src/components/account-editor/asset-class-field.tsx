@@ -72,6 +72,7 @@ export function AssetClassField(props: SelectProps) {
       <Select
         id={inputId}
         placeholder="Unclassified"
+        openOnFocus={false}
         searchable
         clearable
         data={[{ value: "", label: "Unclassified" }, ...assetClassOptions]}
