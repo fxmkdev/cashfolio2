@@ -42,7 +42,7 @@ export function SettingsNavigation({
           to="/$accountBookId/settings/classifications"
           params={{ accountBookId }}
         >
-          Classifications
+          Asset Classes
         </LinkTab>
       </Tabs.List>
     </Tabs>

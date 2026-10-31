@@ -4,7 +4,7 @@ import {
   seedExplicitGainLossDrilldownScenario,
 } from "../support/db";
 import { prisma } from "../support/db-client";
-import { agGridRowByText } from "../support/grid";
+import { agGridRowByText, clickPinnedRowAction } from "../support/grid";
 test("creates, assigns, reports, reparents and deletes an asset class", async ({
   page,
   e2eExternalId,
@@ -18,9 +18,23 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     counterAccountId: book.cashAccount.id,
   });
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await page
-    .getByRole("button", { name: "Add Child to Equities", exact: true })
-    .click();
+  await expect(
+    page.getByRole("tab", { name: "Asset Classes", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveTitle(/Asset Classes/);
+  await expect(
+    page.getByRole("heading", { name: "Classifications", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Asset Class", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
+  ).toBeVisible();
+  await clickPinnedRowAction({
+    row: page.locator('[row-id="EQUITIES"]').first(),
+    actionLabel: "Add Child to Equities",
+  });
   let dialog = page.getByRole("dialog", {
     name: "New Asset Class",
     exact: true,
@@ -54,9 +68,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await page
-    .getByRole("button", { name: "Edit Pension Equities", exact: true })
-    .click();
+  await clickPinnedRowAction({
+    row: page.locator(`[row-id="${node.id}"]`).first(),
+    actionLabel: "Edit Pension Equities",
+  });
   dialog = page.getByRole("dialog", { name: "Edit Asset Class", exact: true });
   await dialog.getByLabel("Parent Class", { exact: true }).click();
   await page.getByRole("option", { name: "Fixed Income", exact: true }).click();
@@ -69,9 +84,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await page
-    .getByRole("button", { name: "Delete Pension Equities", exact: true })
-    .click();
+  await clickPinnedRowAction({
+    row: page.locator(`[row-id="${node.id}"]`).first(),
+    actionLabel: "Delete Pension Equities",
+  });
   dialog = page.getByRole("dialog", {
     name: "Delete Asset Class",
     exact: true,

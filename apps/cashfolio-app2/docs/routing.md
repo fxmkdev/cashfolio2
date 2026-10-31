@@ -365,10 +365,11 @@ controllers.
 ### Classification Settings
 
 `/$accountBookId/settings/classifications` loads the Asset Class tree and direct
-assignment counts. The Settings navigation includes Classifications. The book
-layout supplies current class metadata to account editors, bulk assignment,
-Accounts columns, and ledger badges. Router invalidation refreshes these choices
-after taxonomy changes. Gain/loss Report drill paths and History scopes retain
-stable class IDs when nodes move or are renamed; removed selections fall back to
-the root or Total. Asset/liability allocation remains based on account
-structure.
+assignment counts. The Settings navigation and document title use Asset Classes.
+The page uses a native AG Grid tree without additional headings; its generic URL
+and data model remain unchanged. The book layout supplies current class metadata
+to account editors, bulk assignment, Accounts columns, and ledger badges. Router
+invalidation refreshes these choices after taxonomy changes. Gain/loss Report
+drill paths and History scopes retain stable class IDs when nodes move or are
+renamed; removed selections fall back to the root or Total. Asset/liability
+allocation remains based on account structure.

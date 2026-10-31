@@ -62,7 +62,7 @@ existing Storybook titles and story export names stable when moving files.
 
 ## Mantine
 
-- **Mantine 9** for all UI components, forms (`@mantine/form`), and theming
+- **Mantine 9** for general UI components, forms (`@mantine/form`), and theming
 - **AG Grid Enterprise** wrapped in `src/components/grid/data-grid.tsx` with
   tree data support
 - Use `LinkAnchor` from `src/components/navigation/link-anchor.tsx` for in-app
@@ -72,6 +72,18 @@ existing Storybook titles and story export names stable when moving files.
   navigation control should look like a Mantine button.
 - Use `LinkTab` from `src/components/navigation/link-tab.tsx` for tab-like
   navigation that changes route/search state.
+
+## Tables
+
+Use **AG Grid Enterprise** through the shared `DataGrid` wrapper
+(`src/components/grid/data-grid.tsx`) for all tabular UI, including small,
+read-only, and modal tables. This keeps theme, locale, scrolling, resizing, and
+row actions consistent. Apply this guideline when adding or changing tables;
+existing tables elsewhere can be migrated in focused follow-ups.
+
+Use native tree data for hierarchical records, with stable row IDs. Keep stored
+manual ordering authoritative when rows have explicit reorder actions. Follow
+the shared column and actions-cell conventions below.
 
 ## UI Copy
 
@@ -1432,11 +1444,19 @@ formatting, and arithmetic use the shared Temporal-backed helpers.
 
 ## Classification Management
 
-Settings → Classifications exposes the Asset Class tree. Users can create roots
-and children, rename, change parents, and reorder siblings with Move Up/Move
-Down. The scheme is protected; all default nodes remain editable. Parent
-selectors exclude the edited class and descendants, with the same checks
-repeated on the server. Names follow existing sibling-name validation.
+Settings → Asset Classes exposes the Asset Class tree through the shared
+`DataGrid` with native tree data. The tab and document title are Asset Classes;
+the page has no additional visible headings. Class identities and the generic
+classification model remain unchanged. Users can create roots and children,
+rename, change parents, and reorder siblings with Move Up/Move Down. The grid
+starts fully expanded and retains expansion state across data refreshes using
+stable class IDs. Siblings retain their configured order; sorting and filtering
+are disabled. The flexible name column and direct active/archived assignment
+counts are resizable, and row actions are pinned on the right using the shared
+row-hover styling. The grid handles scrolling and its empty state. The scheme is
+protected; all default nodes remain editable. Parent selectors exclude the
+edited class and descendants, with the same checks repeated on the server. Names
+follow existing sibling-name validation.
 
 Parents cannot be deleted until their children are moved or deleted. Leaf
 deletion shows direct active/archived assignment counts and requires choosing a
