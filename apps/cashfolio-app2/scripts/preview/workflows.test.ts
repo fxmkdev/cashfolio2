@@ -60,6 +60,21 @@ test("deploy and cleanup share noncancelling per-PR concurrency and protected en
   assert.match(deploy, /workflow_run:/);
   assert.match(cleanup, /pull_request_target:/);
 });
+test("trusted deployment reports its required status on the resolved PR commit, including failures", () => {
+  const deploy = read("workflows/deploy-preview.yml").replace(/\s+/g, " ");
+  assert.match(deploy, /statuses: write/);
+  const statusSteps = deploy
+    .split("- name:")
+    .filter((step) =>
+      step.includes("run: node apps/cashfolio-app2/scripts/preview/status.ts"),
+    );
+  assert.equal(statusSteps.length, 2);
+  for (const step of statusSteps)
+    assert.match(step, /PR_SHA: \$\{\{ needs\.resolve\.outputs\.sha \}\}/);
+  assert.match(statusSteps[0], /PREVIEW_STATUS: pending/);
+  assert.match(statusSteps[1], /if: always\(\)/);
+  assert.match(statusSteps[1], /PREVIEW_STATUS: \$\{\{ job\.status \}\}/);
+});
 test("ordinary staging and preview releases seed, while production stays migration-only", () => {
   const shared = read("workflows/deploy-version.yml").replace(/\s+/g, " ");
   assert.match(
