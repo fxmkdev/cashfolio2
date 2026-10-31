@@ -15,7 +15,10 @@ test("PR builds and preview deployment reuse the shared Fly image settings", () 
     /IMAGE_APP: \$\{\{ vars\.FLY_CASHFOLIO_APP_STAGING_APP \}\}/,
   );
   assert.match(build, /FLY_API_TOKEN: \$\{\{ secrets\.FLY_API_TOKEN \}\}/);
-  assert.match(build, /password: \$\{\{ secrets\.FLY_API_TOKEN \}\}/);
+  assert.match(
+    build,
+    /run: flyctl auth docker env: FLY_API_TOKEN: \$\{\{ secrets\.FLY_API_TOKEN \}\}/,
+  );
   assert.match(
     deploy,
     /FLY_CASHFOLIO_APP_STAGING_APP: \$\{\{ vars\.FLY_CASHFOLIO_APP_STAGING_APP \}\}/,
