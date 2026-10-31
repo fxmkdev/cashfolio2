@@ -321,6 +321,7 @@ async function dragClassSibling(
   const target = dialog.querySelector<HTMLElement>(
     `.ag-row[row-id="${targetId}"]`,
   )!;
+  await waitFor(() => expect(source).toBeVisible());
   const from = source.getBoundingClientRect(),
     to = target.getBoundingClientRect();
   const clientX = from.left + from.width / 2;
@@ -365,6 +366,11 @@ export const ReorderFailureRestoresConfirmedOrder: Story = {
       expect(
         dialog.querySelector('.ag-row[row-index="0"] [col-id="name"]'),
       ).toHaveTextContent("Equities"),
+    );
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Close" }),
+      ).toBeEnabled(),
     );
     await dragClassSibling(dialog, "cash", "equities");
     await waitFor(() => expect(args.onReorder).toHaveBeenCalledTimes(2));
