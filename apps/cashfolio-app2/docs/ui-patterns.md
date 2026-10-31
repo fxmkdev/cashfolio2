@@ -495,7 +495,9 @@ submit UX and prevent duplicate requests.
 - Preserve allocation and G/L drill paths separately per grouping, and namespace
   expanded-table storage by grouping. Legacy allocation paths belong to Account
   Structure; legacy G/L paths belong to Asset Class. Chart type choices survive
-  switching. Recreate the table when its expansion-storage key changes.
+  switching. Recreate the table when its expansion-storage key changes. When
+  switching account books, hydrate the destination book's session state before
+  clamping paths or writing preferences under its storage key.
 - History's Gain/Loss View contains **By Account Structure** and **By Asset
   Class** navigation headings, in that order. Clicking or pressing Enter on a
   heading only toggles expansion; it keeps the dropdown open and preserves the

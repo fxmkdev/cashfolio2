@@ -193,34 +193,38 @@ function loadReportPageSessionState(
 
 export function useReportPageSessionState(accountBookId: string) {
   const storageKey = `cashfolio:reportPageState:${accountBookId}`;
-  const [state, setState] = useState<ReportPageSessionState>(
+  const [storedState, setState] = useState<ReportPageSessionState>(
     getDefaultReportPageSessionState,
   );
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [hydratedStorageKey, setHydratedStorageKey] = useState<string | null>(
+    null,
+  );
+  // A new book must not expose the previous book's paths to drill-path clamping.
+  const state =
+    hydratedStorageKey === storageKey
+      ? storedState
+      : getDefaultReportPageSessionState();
 
   useEffect(() => {
-    setIsHydrated(false);
-    setState(getDefaultReportPageSessionState());
-
     if (typeof window === "undefined") {
       return;
     }
 
     setState(loadReportPageSessionState(storageKey));
-    setIsHydrated(true);
+    setHydratedStorageKey(storageKey);
   }, [storageKey]);
 
   useEffect(() => {
-    if (!isHydrated || typeof window === "undefined") {
+    if (hydratedStorageKey !== storageKey || typeof window === "undefined") {
       return;
     }
 
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify(state));
+      sessionStorage.setItem(storageKey, JSON.stringify(storedState));
     } catch {
       // Ignore storage persistence failures so the page still functions.
     }
-  }, [isHydrated, state, storageKey]);
+  }, [hydratedStorageKey, storedState, storageKey]);
 
   const setSelectedBreakdown = useCallback((nextValue: BreakdownType) => {
     setState((previousState) => ({

@@ -44,6 +44,18 @@ export type PeriodGainsLossesBreakdownNode = {
   };
 };
 
+type AccountProjection = {
+  node: PeriodGainsLossesBreakdownNode & {
+    account: NonNullable<PeriodGainsLossesBreakdownNode["account"]>;
+  };
+  contributions: PeriodGainsLossesContribution[];
+};
+
+type GainLossStructure = {
+  accounts?: Array<{ id: string; groupId: string | null }>;
+  groupById?: Map<string, PeriodGroupNode>;
+};
+
 function totals(realizedGainLoss: Money, unrealizedGainLoss: Money) {
   return {
     realizedGainLoss: round2(realizedGainLoss),
@@ -52,16 +64,53 @@ function totals(realizedGainLoss: Money, unrealizedGainLoss: Money) {
   };
 }
 
-export function buildGainsLossesBreakdown(args: {
-  contributions: PeriodGainsLossesContribution[];
-  referenceCurrency: string;
-  accountAttributionById?: ReadonlyMap<string, GainLossAccountAttribution>;
-  grouping?: ReportingGrouping;
-  accounts?: Array<{ id: string; groupId: string | null }>;
-  groupById?: Map<string, PeriodGroupNode>;
-}) {
+function contributionTotals(values: PeriodGainsLossesContribution[]) {
+  return totals(
+    moneySum(values.map((value) => value.realizedGainLoss)),
+    moneySum(values.map((value) => value.unrealizedGainLoss)),
+  );
+}
+
+function buildAccountMetadata(
+  accountId: string,
+  values: PeriodGainsLossesContribution[],
+  attribution: GainLossAccountAttribution,
+): AccountProjection["node"]["account"] {
+  const first = values[0]!;
+  const calculated = values.filter((value) => value.sourceKind === "HOLDING");
+  const recorded = values.filter((value) => value.sourceKind === "EXPLICIT");
+  return {
+    ...attribution,
+    id: accountId,
+    legacyScopes: values.map((value) =>
+      value.sourceKind === "EXPLICIT"
+        ? `explicit-account:${accountId}`
+        : getLegacyHoldingGainLossScope({ ...value, id: accountId }),
+    ),
+    sources: [...new Set(values.map((value) => value.sourceKind))],
+    instrumentLabel:
+      attribution.instrumentLabel ??
+      [first.currency, first.cryptocurrency, first.symbol, first.tradeCurrency]
+        .filter(Boolean)
+        .join(" / "),
+    calculatedRealizedGainLoss: round2(
+      moneySum(calculated.map((value) => value.realizedGainLoss)),
+    ),
+    calculatedUnrealizedGainLoss: round2(
+      moneySum(calculated.map((value) => value.unrealizedGainLoss)),
+    ),
+    recordedGainLoss: round2(
+      moneySum(recorded.map((value) => value.realizedGainLoss)),
+    ),
+  };
+}
+
+function buildAccountProjections(
+  contributions: PeriodGainsLossesContribution[],
+  accountAttributionById?: ReadonlyMap<string, GainLossAccountAttribution>,
+): AccountProjection[] {
   const byAccount = new Map<string, PeriodGainsLossesContribution[]>();
-  for (const contribution of args.contributions) {
+  for (const contribution of contributions) {
     if (
       toMoney(contribution.realizedGainLoss).isZero() &&
       toMoney(contribution.unrealizedGainLoss).isZero()
@@ -71,153 +120,148 @@ export function buildGainsLossesBreakdown(args: {
       .getOrInsertComputed(contribution.accountId, () => [])
       .push(contribution);
   }
+  return Array.from(byAccount, ([accountId, values]) => {
+    const attribution = accountAttributionById?.get(accountId) ?? {
+      assetClass: null,
+      kind: "unattributed" as const,
+      explanation:
+        "No single originating asset/liability account can be established; the amount remains Unclassified.",
+    };
+    return {
+      contributions: values,
+      node: {
+        id: `gain-loss-account:${accountId}`,
+        label: values[0]!.accountName,
+        ...contributionTotals(values),
+        account: buildAccountMetadata(accountId, values, attribution),
+        children: [],
+      },
+    };
+  });
+}
+
+function compareNodes(
+  a: PeriodGainsLossesBreakdownNode,
+  b: PeriodGainsLossesBreakdownNode,
+): number {
+  return a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id, "en");
+}
+
+function buildAssetClassHierarchy(
+  accounts: AccountProjection[],
+): PeriodGainsLossesBreakdownNode[] {
   const classes = [
     ...assetClassOptions,
     { value: "unclassified", label: "Unclassified" },
   ];
-  const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
-  for (const descriptor of classes) {
-    const contributions: PeriodGainsLossesContribution[] = [];
-    const children: PeriodGainsLossesBreakdownNode[] = [];
-    for (const [accountId, values] of byAccount) {
-      const attribution = args.accountAttributionById?.get(accountId) ?? {
-        assetClass: null,
-        kind: "unattributed" as const,
-        explanation:
-          "No single originating asset/liability account can be established; the amount remains Unclassified.",
-      };
-      if ((attribution.assetClass ?? "unclassified") !== descriptor.value)
-        continue;
-      contributions.push(...values);
-      const first = values[0]!;
-      const calculated = values.filter(
-        (value) => value.sourceKind === "HOLDING",
-      );
-      const recorded = values.filter(
-        (value) => value.sourceKind === "EXPLICIT",
-      );
-      children.push({
-        id: `gain-loss-account:${accountId}`,
-        label: first.accountName,
-        ...totals(
-          moneySum(values.map((value) => value.realizedGainLoss)),
-          moneySum(values.map((value) => value.unrealizedGainLoss)),
+  return classes.flatMap((descriptor) => {
+    const matching = accounts.filter(
+      ({ node }) =>
+        (node.account.assetClass ?? "unclassified") === descriptor.value,
+    );
+    if (!matching.length) return [];
+    return [
+      {
+        id: `asset-class:${descriptor.value}`,
+        label: descriptor.label,
+        ...contributionTotals(
+          matching.flatMap((account) => account.contributions),
         ),
-        account: {
-          ...attribution,
-          id: accountId,
-          legacyScopes: values.map((value) =>
-            value.sourceKind === "EXPLICIT"
-              ? `explicit-account:${accountId}`
-              : getLegacyHoldingGainLossScope({ ...value, id: accountId }),
-          ),
-          sources: [...new Set(values.map((value) => value.sourceKind))],
-          instrumentLabel:
-            attribution.instrumentLabel ??
-            [
-              first.currency,
-              first.cryptocurrency,
-              first.symbol,
-              first.tradeCurrency,
-            ]
-              .filter(Boolean)
-              .join(" / "),
-          calculatedRealizedGainLoss: round2(
-            moneySum(calculated.map((value) => value.realizedGainLoss)),
-          ),
-          calculatedUnrealizedGainLoss: round2(
-            moneySum(calculated.map((value) => value.unrealizedGainLoss)),
-          ),
-          recordedGainLoss: round2(
-            moneySum(recorded.map((value) => value.realizedGainLoss)),
-          ),
-        },
-        children: [],
-      });
-    }
-    if (!children.length) continue;
-    hierarchy.push({
-      id: `asset-class:${descriptor.value}`,
-      label: descriptor.label,
-      ...totals(
-        moneySum(contributions.map((value) => value.realizedGainLoss)),
-        moneySum(contributions.map((value) => value.unrealizedGainLoss)),
-      ),
-      children: children.sort(
-        (a, b) =>
-          a.label.localeCompare(b.label, "en") ||
-          a.id.localeCompare(b.id, "en"),
-      ),
-    });
-  }
-  const total = totals(
-    moneySum(args.contributions.map((value) => value.realizedGainLoss)),
-    moneySum(args.contributions.map((value) => value.unrealizedGainLoss)),
-  );
-  if (args.grouping !== "accountStructure") return { hierarchy, ...total };
+        children: matching.map((account) => account.node).sort(compareNodes),
+      },
+    ];
+  });
+}
 
+type StructureAccumulator = {
+  roots: PeriodGainsLossesBreakdownNode[];
+  groups: Map<
+    string,
+    {
+      node: PeriodGainsLossesBreakdownNode;
+      contributions: PeriodGainsLossesContribution[];
+    }
+  >;
+};
+
+function appendStructureAccount(
+  account: AccountProjection,
+  path: PeriodGroupNode[],
+  state: StructureAccumulator,
+) {
+  let children = state.roots;
+  for (const group of path) {
+    const entry = state.groups.getOrInsertComputed(group.id, () => {
+      const node = {
+        id: `group:${group.id}`,
+        label: group.name,
+        ...totals(toMoney(0), toMoney(0)),
+        children: [],
+      };
+      children.push(node);
+      return { node, contributions: [] };
+    });
+    entry.contributions.push(...account.contributions);
+    children = entry.node.children;
+  }
+  children.push({ ...account.node, id: `account:${account.node.account.id}` });
+}
+
+function sortStructure(nodes: PeriodGainsLossesBreakdownNode[]) {
+  nodes.sort(compareNodes);
+  for (const node of nodes) sortStructure(node.children);
+}
+
+function buildAccountStructureHierarchy(
+  projections: AccountProjection[],
+  structure: GainLossStructure,
+): PeriodGainsLossesBreakdownNode[] {
   const accounts = new Map(
-    args.accounts?.map((account) => [account.id, account]),
+    structure.accounts?.map((account) => [account.id, account]),
   );
-  const groups = new Map(args.groupById);
-  groups.set(UNATTRIBUTED_GROUP_ID, {
+  const groups = new Map(structure.groupById);
+  const unattributedGroup = {
     id: UNATTRIBUTED_GROUP_ID,
     name: "Unattributed",
     parentGroupId: null,
-  });
-  const roots: PeriodGainsLossesBreakdownNode[] = [];
-  const groupNodes = new Map<string, PeriodGainsLossesBreakdownNode>();
-  // Group totals use the original contributions, never rounded child values.
-  const rawByGroup = new Map<string, PeriodGainsLossesContribution[]>();
-  for (const leaf of hierarchy.flatMap((node) => node.children)) {
-    const accountId = leaf.account!.id;
-    const account = accounts.get(accountId);
+  };
+  const state: StructureAccumulator = { roots: [], groups: new Map() };
+  for (const projection of projections) {
+    const account = accounts.get(projection.node.account.id);
     const path =
-      account && (!account.groupId || groups.has(account.groupId))
-        ? account.groupId
+      !account || (account.groupId && !groups.has(account.groupId))
+        ? [unattributedGroup]
+        : account.groupId
           ? resolveGroupPathToRoot({
               groupId: account.groupId,
               groupById: groups,
             }).reverse()
-          : []
-        : [groups.get(UNATTRIBUTED_GROUP_ID)!];
-    let children = roots;
-    for (const group of path) {
-      let node = groupNodes.get(group.id);
-      if (!node) {
-        node = {
-          id: `group:${group.id}`,
-          label: group.name,
-          ...totals(toMoney(0), toMoney(0)),
-          children: [],
-        };
-        groupNodes.set(group.id, node);
-        children.push(node);
-      }
-      rawByGroup
-        .getOrInsertComputed(group.id, () => [])
-        .push(...byAccount.get(accountId)!);
-      children = node.children;
-    }
-    children.push({ ...leaf, id: `account:${accountId}` });
+          : [];
+    appendStructureAccount(projection, path, state);
   }
-  for (const [id, node] of groupNodes) {
-    const values = rawByGroup.get(id)!;
-    Object.assign(
-      node,
-      totals(
-        moneySum(values.map((value) => value.realizedGainLoss)),
-        moneySum(values.map((value) => value.unrealizedGainLoss)),
-      ),
-    );
+  // Sum original contributions, never the rounded child values.
+  for (const { node, contributions } of state.groups.values()) {
+    Object.assign(node, contributionTotals(contributions));
   }
-  const sort = (nodes: PeriodGainsLossesBreakdownNode[]) => {
-    nodes.sort(
-      (a, b) =>
-        a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id, "en"),
-    );
-    for (const node of nodes) sort(node.children);
-  };
-  sort(roots);
-  return { hierarchy: roots, ...total };
+  sortStructure(state.roots);
+  return state.roots;
+}
+
+export function buildGainsLossesBreakdown(
+  args: GainLossStructure & {
+    contributions: PeriodGainsLossesContribution[];
+    referenceCurrency: string;
+    accountAttributionById?: ReadonlyMap<string, GainLossAccountAttribution>;
+    grouping?: ReportingGrouping;
+  },
+) {
+  const accounts = buildAccountProjections(
+    args.contributions,
+    args.accountAttributionById,
+  );
+  const hierarchy =
+    args.grouping === "accountStructure"
+      ? buildAccountStructureHierarchy(accounts, args)
+      : buildAssetClassHierarchy(accounts);
+  return { hierarchy, ...contributionTotals(args.contributions) };
 }
