@@ -74,7 +74,7 @@ it("preserves deployed cache key formats and versions", () => {
       scopeKey: "cashFlow:account:asset-1",
     }),
   ).toBe(
-    "period:history:metrics:v12:local:book-1:revision-1:2026-01:cashFlow:account:asset-1",
+    "period:history:metrics:v13:local:book-1:revision-1:2026-01:cashFlow:account:asset-1",
   );
 });
 
@@ -104,7 +104,7 @@ describe("cleanup namespace ownership", () => {
       expect(isBookScopedPeriodCacheKey(key, "book-1")).toBe(false);
     expect(
       isBookScopedPeriodCacheKey(
-        "period:history:metrics:v12:local:book-2:revision:2026-01:scope:book-1:child",
+        "period:history:metrics:v13:local:book-2:revision:2026-01:scope:book-1:child",
         "book-1",
       ),
     ).toBe(false);

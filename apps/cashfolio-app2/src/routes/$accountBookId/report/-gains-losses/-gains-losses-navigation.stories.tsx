@@ -60,7 +60,13 @@ function NavigationHarness({
   ];
   const model = usePeriodGainsLossesViewModel({
     accountBookId: "navigation-regression",
-    gainsLossesBreakdownHierarchy: hierarchy,
+    grouping: "assetClass",
+    gainsLossesBreakdown: {
+      hierarchy,
+      realizedGainLoss: accountCount * 10,
+      unrealizedGainLoss: 0,
+      totalGainLoss: accountCount * 10,
+    },
     selectedGainsLossesChartType: "waterfall",
     drillPathByGainsLosses: path,
     setDrillPathByGainsLosses: setPath,
@@ -80,6 +86,7 @@ function NavigationHarness({
     <div style={{ width: 640 }}>
       <output data-testid="navigation-depth">{path.length}</output>
       <GainsLossesCard
+        grouping="assetClass"
         selectedChartType="waterfall"
         displayDecimals={2}
         tableExpandedGroupsStorageKey="navigation-regression"

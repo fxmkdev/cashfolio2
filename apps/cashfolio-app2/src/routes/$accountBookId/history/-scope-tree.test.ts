@@ -476,7 +476,10 @@ test("History exposes selectable investment groups between classes and accounts"
   const root = buildHistoryViewTreeData(mutable).find(
     (node) => node.value === "gainsLosses:total",
   )!;
-  const group = root.children![0]!.children![0]!;
+  const assetClassBranch = root.children!.find(
+    (node) => node.value === "gainsLosses:grouping:assetClass",
+  )!;
+  const group = assetClassBranch.children![0]!.children![0]!;
   expect(group.label).toBe("Managed Portfolios");
   expect(group.children![0]!.label).toBe("Portfolio");
   expect(getHistoryViewTreeSelection(group.value, mutable)).toEqual({

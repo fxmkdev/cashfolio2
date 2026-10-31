@@ -353,10 +353,10 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class → Investment Group → Account; recorded adjustments use their counterpart
-financial account's class and group. Changing classification does not change
-amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
-Equities asset class.
+or Asset Class → Investment Group → Account; recorded adjustments use their
+counterpart financial account's class and group. Changing classification does
+not change amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to
+the Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -498,9 +498,9 @@ submit UX and prevent duplicate requests.
   shortcut.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Investment Group → Account. Account
-  metadata drives navigation from chart and table leaves to the unified
-  explanation, including calculated holdings, recorded adjustments, and
+- Gains/Losses supports Account Structure and Asset Class → Investment Group →
+  Account. Account metadata drives navigation from chart and table leaves to the
+  unified explanation, including calculated holdings, recorded adjustments, and
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
@@ -780,8 +780,8 @@ Asset Class view, Total Portfolio Value groups the entire account return under
 performance and calculated FX gains/losses when its currency differs from the
 book's reference currency. Account Structure retains the account's physical
 group hierarchy. Existing accounts default to Individual Units; explicitly
-update managed portfolios. Tracking Method remains editable after bookings
-exist and applies to all historical Report/History periods. It changes reporting
+update managed portfolios. Tracking Method remains editable after bookings exist
+and applies to all historical Report/History periods. It changes reporting
 placement without changing valuation, cash-flow eligibility, or gain/loss
 calculations. Only currency-denominated balance accounts support Total Portfolio
 Value.

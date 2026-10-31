@@ -250,7 +250,9 @@ describe("Decimal monetary pipelines", () => {
       accountBookId: "book-1",
       baseData: scenario,
     });
-    const assetClassHierarchy = overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy;
+    const assetClassHierarchy =
+      overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy;
     expect(
       assetClassHierarchy
         .find((node) => node.id === "asset-class:EQUITIES")

@@ -109,6 +109,7 @@ test("USD investment grouping combines two active currency accounts", async ({
 }) => {
   const household = seededBook("household");
   await page.goto(`/${household.id}/report?period=2026-10`);
+  await selectReportGrouping(page, "Asset Class");
   await selectSegmentedControlOption(
     page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
     "Table",

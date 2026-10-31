@@ -714,10 +714,12 @@ const structureGainLossHierarchy = gainsLossesBreakdown.hierarchy.map(
     ...node,
     id: `group:${["cash", "investments", "crypto"][i]}`,
     label: ["Cash", "Investments", "Crypto"][i],
-    children: node.children.map((child) => ({
-      ...child,
-      id: `account:${child.account!.id}`,
-    })),
+    children: node.children
+      .flatMap((group) => group.children)
+      .map((child) => ({
+        ...child,
+        id: `account:${child.account!.id}`,
+      })),
   }),
 );
 const classAllocation = (

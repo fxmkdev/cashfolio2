@@ -544,14 +544,14 @@ are split into dedicated modules under `src/server/period/`:
 ## Asset-Class Gain/Loss Reporting
 
 Period overview and History share the contribution pipeline and support Account
-Structure and `Asset Class → Investment Group → Account` breakdowns. Overview returns
-`accountBreakdownsByGrouping`, keyed by `accountStructure` and `assetClass`,
-with `assetBreakdown`, `liabilityBreakdown`, and `gainsLossesBreakdown` per
-lens. Both variants reuse one valuation pass. G/L breakdowns carry aggregate
-realized, unrealized, and total amounts, computed from exact contributions
-before rounding. Current `Account.assetClass` applies to every period, including
-archived assets and liabilities. Unit and instrument identity continue to
-control valuation and FIFO independently of classification.
+Structure and `Asset Class → Investment Group → Account` breakdowns. Overview
+returns `accountBreakdownsByGrouping`, keyed by `accountStructure` and
+`assetClass`, with `assetBreakdown`, `liabilityBreakdown`, and
+`gainsLossesBreakdown` per lens. Both variants reuse one valuation pass. G/L
+breakdowns carry aggregate realized, unrealized, and total amounts, computed
+from exact contributions before rounding. Current `Account.assetClass` applies
+to every period, including archived assets and liabilities. Unit and instrument
+identity continue to control valuation and FIFO independently of classification.
 
 Investment groups use currency codes, cryptocurrency codes, or security symbols
 across trade currencies. Accounts marked `TOTAL_PORTFOLIO_VALUE` group under
@@ -575,12 +575,12 @@ contributions remain visible even when a group's net G/L is zero.
 
 History G/L options carry `grouping` metadata. Account Structure uses
 `group:<id>` and `account:<id>`; Asset Class retains `asset-class:<class>` and
-`gain-loss-account:<id>`, with `gain-loss-investment:<class>:<unit>` intermediate
-scopes. Both leaves carry account metadata for reconciliation.
-The grouping headings exist only in the client selector. Scopes are unioned
-across periods; an absent contribution at a point evaluates to zero. History
-metrics cache v13 includes both grouping lenses and investment scopes; base-data
-v11 includes tracking methods. Valuation cache versions remain compatible.
+`gain-loss-account:<id>`, with `gain-loss-investment:<class>:<unit>`
+intermediate scopes. Both leaves carry account metadata for reconciliation. The
+grouping headings exist only in the client selector. Scopes are unioned across
+periods; an absent contribution at a point evaluates to zero. History metrics
+cache v13 includes both grouping lenses and investment scopes; base-data v11
+includes tracking methods. Valuation cache versions remain compatible.
 
 Execution residual amounts retain their existing allocation weights. Only
 contributing residual portions carry originating-account metadata; fully
@@ -614,8 +614,8 @@ the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v11 includes account tracking methods alongside originating-account
 IDs and recorded booking descriptions. History metrics v13 carries both grouping
-lenses, investment scopes, and explicit account metadata; older hierarchy payloads
-are not reused. Classification and tracking-method edits advance
+lenses, investment scopes, and explicit account metadata; older hierarchy
+payloads are not reused. Classification and tracking-method edits advance
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
 
