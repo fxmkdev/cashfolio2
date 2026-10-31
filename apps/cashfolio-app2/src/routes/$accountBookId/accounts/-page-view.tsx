@@ -1,4 +1,5 @@
 import { AssetClassAssignmentDialog } from "./-asset-class-assignment";
+import { TrackingMethodAssignmentDialog } from "./-tracking-method-assignment";
 import { BulkAccountToolbar } from "./-bulk-account-toolbar";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
 import {
@@ -300,6 +301,14 @@ export function AccountsPageView({
           target={bulkAccountActions.assetClassTarget}
           onClose={bulkAccountActions.close}
           onSubmit={bulkAccountActions.applyAssetClass}
+          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+        />
+      )}
+      {bulkAccountActions?.trackingMethodTarget && (
+        <TrackingMethodAssignmentDialog
+          target={bulkAccountActions.trackingMethodTarget}
+          onClose={bulkAccountActions.close}
+          onSubmit={bulkAccountActions.applyTrackingMethod}
           onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
         />
       )}

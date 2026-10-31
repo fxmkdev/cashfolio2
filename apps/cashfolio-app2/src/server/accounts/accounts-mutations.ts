@@ -3,6 +3,7 @@ import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import {
   validateSetAccountsAssetClassInput,
+  validateSetAccountsTrackingMethodInput,
   validateAccountMutationInput,
   validateAccountUpdateInput,
   validateAccountGroupMutationInput,
@@ -15,6 +16,7 @@ import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
 import {
   setAccountsAssetClassOperation,
+  setAccountsTrackingMethodOperation,
   archiveAccountGroupOperation,
   archiveAccountOperation,
   createAccountGroupOperation,
@@ -138,5 +140,13 @@ export const setAccountsAssetClass = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, (tx) =>
       setAccountsAssetClassOperation(data, tx),
+    ),
+  );
+
+export const setAccountsTrackingMethod = createServerFn({ method: "POST" })
+  .validator(validateSetAccountsTrackingMethodInput)
+  .handler(async ({ data }) =>
+    runAccountMutation(data.accountBookId, (tx) =>
+      setAccountsTrackingMethodOperation(data, tx),
     ),
   );
