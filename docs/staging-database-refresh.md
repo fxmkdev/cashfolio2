@@ -304,6 +304,12 @@ mismatched metadata fails closed. The seed URL must be direct, port 5432, with
 `sslmode=require`, but preflight still verifies its TLS certificate. Routing
 options, duplicate query parameters and `PGOPTIONS` are forbidden.
 
+The release runner gives Prisma's migration subprocess a copy of the approved
+URL with `sslmode=require&sslaccept=strict`. Prisma's migration engine uses
+different TLS settings from the `pg` preflight client, so both connections must
+explicitly verify certificates. The parent environment and application URL are
+unchanged.
+
 Keep the old `STAGING_SEED_*` secrets until the first new staging release
 succeeds, then remove them and the obsolete `STAGING_SEED_ENABLED` GitHub
 variable. New code reads only `SEED_*`. Do not place staging seed credentials on
