@@ -13,6 +13,10 @@ migration-only.
    and `FLY_API_TOKEN`. It uploads `preview-image.json` with the PR number, full
    head SHA and immutable image digest. PR tags include the head SHA, run ID and
    attempt, separately from release tags. Forks cannot publish preview images.
+   Docker registry authentication uses `flyctl auth docker`. Digest recording
+   retries registry reads with bounded delays while a new Depot image becomes
+   available; missing or invalid digests fail the build without publishing
+   deployment metadata.
 2. `Deploy preview` runs after Build finishes. It validates the GitHub run,
    successful image-build job, open same-repository PR and current head SHA.
    Other CI failures do not override a successful image build; their checks

@@ -87,21 +87,15 @@ jobs:
 
       - name: Authenticate to preview image registry
         if: github.event_name == 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: registry.fly.io
-          username: x
-          password: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl auth docker
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Record immutable preview image
         if: github.event_name == 'pull_request'
-        run: |
-          set -euo pipefail
-          docker pull "$IMAGE"
-          DIGEST_IMAGE="$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')"
-          jq -n --argjson pr "$PR_NUMBER" --arg sha "$PR_SHA" --arg image "$DIGEST_IMAGE" \
-            '{pr: $pr, sha: $sha, image: $image}' > "$RUNNER_TEMP/preview-image.json"
+        run: node apps/cashfolio-app2/scripts/preview/record-image.ts
         env:
           IMAGE: ${{ steps.image-name.outputs.image }}
+          FLY_CASHFOLIO_APP_STAGING_APP: ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
       - name: Upload preview image metadata
