@@ -578,7 +578,6 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 },
               },
             ],
-
           },
         ],
       },
@@ -617,7 +616,6 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 },
               },
             ],
-
           },
           {
             id: "gain-loss-investment:EQUITIES:managed-portfolios",
@@ -647,7 +645,6 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 },
               },
             ],
-
           },
         ],
       },
@@ -686,7 +683,6 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 },
               },
             ],
-
           },
         ],
       },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AssetClass, Unit } from "../../../.prisma-client/enums";
+import { defaultAssetClassIds } from "../../../shared/asset-class";
+import { Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 import { buildGainLossAccountAttribution } from "./period-gain-loss-attribution";
@@ -25,7 +26,7 @@ const account = (
   name: id,
   groupId: null,
   type: "BALANCE",
-  assetClass: AssetClass.EQUITIES,
+  assetClassId: defaultAssetClassIds.EQUITIES,
   trackingMethod: "INDIVIDUAL_UNITS",
   unit: Unit.CURRENCY,
   currency: "USD",
@@ -72,7 +73,9 @@ describe("gain/loss investment grouping", () => {
     const accounts = [
       account("usd-a"),
       account("usd-b"),
-      account("other-class", { assetClass: AssetClass.OTHER_ASSETS }),
+      account("other-class", {
+        assetClassId: defaultAssetClassIds.OTHER_ASSETS,
+      }),
       ...["USD", "EUR"].map((tradeCurrency) =>
         account(`aapl-${tradeCurrency}`, {
           unit: Unit.SECURITY,

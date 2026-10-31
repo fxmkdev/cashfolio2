@@ -265,7 +265,6 @@ function LedgerPageStoryHarness({
           isActive: accountActive,
           assetClassId,
           trackingMethod: "INDIVIDUAL_UNITS" as const,
-
         };
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {

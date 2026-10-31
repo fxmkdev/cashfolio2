@@ -264,7 +264,6 @@ describe("staging seed against disposable PostgreSQL", () => {
             isActive: account.isActive,
             assetClassId: account.assetClassId,
             trackingMethod: account.trackingMethod ?? "INDIVIDUAL_UNITS",
-
           }),
         );
       }

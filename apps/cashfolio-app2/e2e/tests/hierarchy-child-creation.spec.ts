@@ -48,6 +48,13 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       }),
     ).toHaveValue(parentName);
     if (!isCategory) {
+      await expect(dialog.getByLabel("Tracking Method")).toHaveValue(
+        "Individual Units",
+      );
+      await dialog.getByLabel("Tracking Method").click();
+      await page
+        .getByRole("option", { name: "Total Portfolio Value", exact: true })
+        .click();
       await dialog.getByRole("combobox", { name: "Currency" }).click();
       await page.getByRole("option", { name: /CHF/ }).first().click();
       await expect(
@@ -65,6 +72,9 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
     });
     expect(child.groupId).toBe(parentId);
     expect(child.isCashAccount).toBe(!isCategory);
+    expect(child.trackingMethod).toBe(
+      isCategory ? "INDIVIDUAL_UNITS" : "TOTAL_PORTFOLIO_VALUE",
+    );
     expect(child.equityAccountSubtype).toBe(isCategory ? scope : null);
     // Successful contextual creation must not leak its parent into toolbar creation.
     await page.getByRole("button", { name: createLabel, exact: true }).click();
@@ -77,6 +87,10 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
         exact: true,
       }),
     ).toHaveValue("");
+    if (!isCategory)
+      await expect(dialog.getByLabel("Tracking Method")).toHaveValue(
+        "Individual Units",
+      );
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await clickPinnedRowAction({

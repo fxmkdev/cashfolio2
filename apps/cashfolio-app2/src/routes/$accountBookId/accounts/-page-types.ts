@@ -1,7 +1,7 @@
 import {
   AccountType,
   EquityAccountSubtype,
-    type AccountTrackingMethod,
+  type AccountTrackingMethod,
 } from "@/.prisma-client/enums";
 
 import type { getAccountTreeData } from "@/server/accounts";

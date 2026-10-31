@@ -134,7 +134,6 @@ export function householdAccounts(target: SeedBook) {
       groupKey: "investments",
       assetClassId: defaultAssetClassIds.OTHER_ASSETS,
       trackingMethod: "TOTAL_PORTFOLIO_VALUE",
-
     },
   );
   for (const [key, name] of [

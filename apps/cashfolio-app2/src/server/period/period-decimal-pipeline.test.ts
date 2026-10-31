@@ -194,7 +194,6 @@ describe("Decimal monetary pipelines", () => {
       name: "USD Bank",
       trackingMethod: "INDIVIDUAL_UNITS" as const,
       assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-
     };
     const chf = {
       ...portfolio,

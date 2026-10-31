@@ -183,12 +183,11 @@ leaves all rows unchanged. No schema change is required for sibling reordering.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
-trigger, post-commit cleanup, and router invalidation. Base-data cache v11
-includes classification assignments, the class tree, and tracking method. Classification drives the
+trigger, post-commit cleanup, and router invalidation. Base-data cache v12
+includes classification assignments, the class tree, and tracking method.
+Classification drives the
 [Asset Class → Subclass → Investment Group → Account reporting hierarchy](#asset-class-gainloss-reporting)
 in Period overview and History; Unit and instrument identity continue to control
-
-
 valuation and FIFO calculations independently of classification.
 
 `src/server/accounts/accounts-mutation-operations.ts` keeps the existing
@@ -362,15 +361,14 @@ namespaces and preserves global valuation caches.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v12:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v12:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v13:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v11 and History metrics v13 store monetary values as tagged exact
-
+  `period:history:metrics:v14:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v12 and History metrics v14 store monetary values as tagged exact
 
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
@@ -378,6 +376,7 @@ namespaces and preserves global valuation caches.
   `MoneyDecimal` values; invalid decimal/date payloads are cache misses. Older
   snapshots are not reused; their entries and indexes expire after 24 hours.
   Account-book deletion cleans up both old and current cache versions.
+
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
@@ -576,14 +575,20 @@ are split into dedicated modules under `src/server/period/`:
 ## Asset-Class Gain/Loss Reporting
 
 Period overview and History share the contribution pipeline and support Account
-Structure and `Asset Class → Subclass → Investment Group → Account` breakdowns. Overview
-returns `accountBreakdownsByGrouping`, keyed by `accountStructure` and
+Structure and `Asset Class → Subclass → Investment Group → Account` breakdowns.
+Overview returns `accountBreakdownsByGrouping`, keyed by `accountStructure` and
 `assetClass`, with `assetBreakdown`, `liabilityBreakdown`, and
 `gainsLossesBreakdown` per lens. Both variants reuse one valuation pass. G/L
 breakdowns carry aggregate realized, unrealized, and total amounts, computed
-from exact contributions before rounding. Current `account classification` applies
+from exact contributions before rounding. Current account classification applies
 to every period, including archived assets and liabilities. Unit and instrument
 identity continue to control valuation and FIFO independently of classification.
+
+Each class lists its ordered subclasses first, then investment groups for
+accounts assigned directly to that class. Unclassified uses the same investment
+grouping. Descendant accounts contribute to each ancestor total exactly once.
+Stable class and investment-group IDs survive class rename and reparent
+operations.
 
 Investment groups use currency codes, cryptocurrency codes, or security symbols
 across trade currencies. Accounts marked `TOTAL_PORTFOLIO_VALUE` group under
@@ -591,8 +596,6 @@ Managed Portfolios, keeping recorded performance and calculated FX together.
 Account identity metadata determines grouping, so an adjustment booking's
 currency cannot move an investment to a different unit. Synthetic accounts use
 their clearing-bucket or unique contribution unit, otherwise Unknown Unit.
-
-
 
 Calculated holdings G/L uses the owning account's classification. Recorded
 Gain/Loss equity bookings use their resolved asset/liability counterpart.
@@ -613,8 +616,9 @@ History G/L options carry `grouping` metadata. Account Structure uses
 intermediate scopes. Both leaves carry account metadata for reconciliation. The
 grouping headings exist only in the client selector. Scopes are unioned across
 periods; an absent contribution at a point evaluates to zero. History metrics
-cache v13 includes both grouping lenses and investment scopes; base-data v11
-includes tracking methods. Valuation cache versions remain compatible.
+cache v14 includes both grouping lenses and investment scopes; base-data v12
+includes tracking methods and the classification tree. Valuation cache versions
+remain compatible.
 
 Execution residual amounts retain their existing allocation weights. Only
 contributing residual portions carry originating-account metadata; fully
@@ -646,11 +650,10 @@ booking ensures inclusion even when the financial-account booking falls in a
 different month or year. Calculated-event and execution-residual links retain
 the real account's ledger and period, or Transactions for virtual accounts.
 
-Base-data v11 includes account tracking methods alongside originating-account
-IDs and recorded booking descriptions. History metrics v13 carries both grouping
+Base-data v12 includes account tracking methods alongside originating-account
+IDs and recorded booking descriptions. History metrics v14 carries both grouping
 lenses, investment scopes, and explicit account metadata; older hierarchy
 payloads are not reused. Classification and tracking-method edits advance
-
 
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -982,11 +985,11 @@ accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
 Allocation charts and tables support either the original account/group hierarchy
-or flat Asset Class → Subclass → Account grouping on each side, even when a
-structural group's accounts have mixed signs. Classification by balance sign
-precedes either grouping; total amounts use the same exact balances. Unavailable
-valuations are omitted; both allocation views report the same overall
-missing-balance count. Amounts on the liability side are positive debt
+or hierarchical Asset Class → Subclass → Account grouping on each side, even
+when a structural group's accounts have mixed signs. Classification by balance
+sign precedes either grouping; total amounts use the same exact balances.
+Unavailable valuations are omitted; both allocation views report the same
+overall missing-balance count. Amounts on the liability side are positive debt
 magnitudes. Existing allocation rounding and hidden-small-balance discrepancy
 indicators remain applicable.
 
@@ -998,11 +1001,9 @@ rounding. The complete real Balance Account hierarchy is loaded once per
 request, including archived accounts, zero balances, and empty Balance Account
 groups. Virtual transfer-clearing scopes are merged across period points.
 Unavailable valuations remain omitted from amounts without removing real scope
-options. History metrics v13 includes Net Worth scopes, both Gain/Loss grouping
-lenses, and investment groups; base-data v11 includes tracking methods.
+options. History metrics v14 includes Net Worth scopes, both Gain/Loss grouping
+lenses, and investment groups; base-data v12 includes tracking methods.
 Valuation caches remain compatible.
-
-
 
 ### Unified account management queries
 

@@ -2,7 +2,6 @@ import type { ClassificationNode } from "../../../shared/asset-class";
 import { type Money } from "../../../shared/money";
 import type {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,

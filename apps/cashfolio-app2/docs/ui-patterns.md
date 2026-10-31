@@ -385,12 +385,10 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class → Subclass → Investment Group → Account; recorded adjustments use their
-counterpart financial account's class and group. Changing classification does
-not change amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to
-the Equities asset class.
-
-
+or Asset Class → Subclass → Investment Group → Account; recorded adjustments use
+their counterpart financial account's class and group. Changing classification
+does not change amounts or valuation. Accounting `AccountType.EQUITY` is
+unrelated to the Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -567,12 +565,13 @@ waiting, retry, uncertain-outcome, and refresh feedback.
   shortcut.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Subclass → Investment Group →
-  Account. Account metadata drives navigation from chart and table leaves to the
-  unified explanation, including calculated holdings, recorded adjustments, and
-
+- Gains/Losses supports Account Structure and Asset Class → Subclass →
+  Investment Group → Account. Account metadata drives navigation from chart and
+  table leaves to the unified explanation, including calculated holdings,
+  recorded adjustments, and
 
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
+
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
 - Keep drill state local to the page and scoped per card/type, preserving each

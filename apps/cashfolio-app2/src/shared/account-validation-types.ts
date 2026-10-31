@@ -1,6 +1,5 @@
 import type {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -9,7 +8,7 @@ import type { StatementImportCsvFormat } from "./statement-import-csv-format";
 
 export type AccountInput = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass?: string | null;
+  assetClassId?: string | null;
 
   accountBookId: string;
   name: string;

@@ -198,8 +198,10 @@ function buildInvestmentGroups(
   })).sort(compareNodes);
 }
 
-function buildAssetClassHierarchy(accounts: AccountProjection[], nodes: readonly ClassificationNode[] = defaultAssetClassNodes): PeriodGainsLossesBreakdownNode[] {
-
+function buildAssetClassHierarchy(
+  accounts: AccountProjection[],
+  nodes: readonly ClassificationNode[] = defaultAssetClassNodes,
+): PeriodGainsLossesBreakdownNode[] {
   const byClass = new Map<string, AccountProjection[]>();
   const ids = new Set(nodes.map((n) => n.id));
   for (const account of accounts) {
@@ -232,15 +234,39 @@ function buildAssetClassHierarchy(accounts: AccountProjection[], nodes: readonly
       .filter((n) => n !== undefined);
     const direct = byClass.get(descriptor.id) ?? [];
     if (!children.length && !direct.length) return;
-    const contributions = [...direct.flatMap(a => a.contributions), ...children.flatMap(c => c.contributions)];
-    return { contributions, node: { id: 'asset-class:' + descriptor.id, label: descriptor.name, sortOrder: descriptor.sortOrder, ...contributionTotals(contributions), children: [...children.map(c => c.node), ...buildInvestmentGroups(descriptor.id, direct)] } };
+    const contributions = [
+      ...direct.flatMap((a) => a.contributions),
+      ...children.flatMap((c) => c.contributions),
+    ];
+    return {
+      contributions,
+      node: {
+        id: "asset-class:" + descriptor.id,
+        label: descriptor.name,
+        sortOrder: descriptor.sortOrder,
+        ...contributionTotals(contributions),
+        children: [
+          ...children.map((c) => c.node),
+          ...buildInvestmentGroups(descriptor.id, direct),
+        ],
+      },
+    };
   };
-  const roots = childrenOf(null).map(assemble).filter(n => n !== undefined).map(n => n.node);
-  const unclassified = byClass.get('unclassified') ?? [];
-  if (unclassified.length) roots.push({ id: 'asset-class:unclassified', label: 'Unclassified', sortOrder: Number.MAX_SAFE_INTEGER, ...contributionTotals(unclassified.flatMap(a => a.contributions)), children: buildInvestmentGroups("unclassified", unclassified) });
+  const roots = childrenOf(null)
+    .map(assemble)
+    .filter((n) => n !== undefined)
+    .map((n) => n.node);
+  const unclassified = byClass.get("unclassified") ?? [];
+  if (unclassified.length)
+    roots.push({
+      id: "asset-class:unclassified",
+      label: "Unclassified",
+      sortOrder: Number.MAX_SAFE_INTEGER,
+      ...contributionTotals(unclassified.flatMap((a) => a.contributions)),
+      children: buildInvestmentGroups("unclassified", unclassified),
+    });
 
   return roots;
-
 }
 
 type StructureAccumulator = {

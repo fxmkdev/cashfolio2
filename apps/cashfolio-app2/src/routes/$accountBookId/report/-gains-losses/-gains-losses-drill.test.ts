@@ -76,7 +76,41 @@ describe("asset-class drill paths", () => {
         rootLabel: "All",
       }).currentNodes,
     ).toEqual(hierarchy[0]!.children);
-
+  });
+  test("preserves an investment selection across a class rename and reparent", () => {
+    const investment = {
+      ...hierarchy[0]!,
+      id: "gain-loss-investment:EQUITIES:managed-portfolios",
+      label: "Managed Portfolios",
+    };
+    const moved = [
+      {
+        ...hierarchy[0]!,
+        id: "asset-class:parent",
+        label: "Parent",
+        children: [
+          {
+            ...hierarchy[0]!,
+            label: "Renamed Equities",
+            children: [investment],
+          },
+        ],
+      },
+    ];
+    const previousPath = ["asset-class:EQUITIES", investment.id];
+    expect(
+      clampGainsLossesPath({ hierarchy: moved, path: previousPath }),
+    ).toEqual(["asset-class:parent", ...previousPath]);
+    expect(
+      getGainsLossesDrillState({
+        hierarchy: moved,
+        path: previousPath,
+        rootLabel: "All",
+      }).breadcrumbs.map((crumb) => crumb.label),
+    ).toEqual(["All", "Parent", "Renamed Equities", "Managed Portfolios"]);
+    expect(clampGainsLossesPath({ hierarchy: [], path: previousPath })).toEqual(
+      [],
+    );
   });
   test("retains classes and drops non-drillable account segments", () => {
     expect(

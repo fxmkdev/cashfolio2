@@ -1,6 +1,5 @@
 import {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -63,7 +62,6 @@ export function validateAccountMutationInput(data: unknown): AccountInput {
       data,
       "assetClassId",
       requireStringField,
-
     ),
     groupId: nullableOptionalField(data, "groupId", requireStringField),
     unit: optionalField(data, "unit", (record, field) =>

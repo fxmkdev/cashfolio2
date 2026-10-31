@@ -164,13 +164,13 @@ describe("staging gain/loss grouping demo", () => {
                   totalGainLoss: -10,
                   account: {
                     id: "travel",
-                    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+                    assetClassId:
+                      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
                     explanation:
                       "Grouped under Cash & Cash Equivalents based on the originating account: Everyday account CHF.",
                   },
                 },
               ],
-
             },
           ],
         },

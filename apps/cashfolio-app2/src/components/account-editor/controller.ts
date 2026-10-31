@@ -63,7 +63,8 @@ export function useEditAccountModalController({
       ? toFormValues(initialValues)
       : {
           assetClassId: null,
-          trackingMethod: "INDIVIDUAL_UNITS" as const,          unit: Unit.CURRENCY,
+          trackingMethod: "INDIVIDUAL_UNITS" as const,
+          unit: Unit.CURRENCY,
           typeDescriptor,
           groupId: defaultGroupId,
         },
@@ -156,12 +157,12 @@ export function useEditAccountModalController({
         ? toFormValues(initialValues)
         : {
             assetClassId: null,
-            trackingMethod: "INDIVIDUAL_UNITS" as const,            unit: Unit.CURRENCY,
+            trackingMethod: "INDIVIDUAL_UNITS" as const,
+            unit: Unit.CURRENCY,
             typeDescriptor,
             groupId: defaultGroupId,
           },
     [initialValues, typeDescriptor, defaultGroupId],
-
   );
 
   const initializedSession = useRef<string | null>(null);

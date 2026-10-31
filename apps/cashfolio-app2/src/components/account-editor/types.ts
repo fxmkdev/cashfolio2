@@ -1,6 +1,5 @@
 import {
   type AccountTrackingMethod,
-
   EquityAccountSubtype,
   Unit,
   AccountType,
@@ -17,7 +16,7 @@ export type AccountTypeDescriptor =
 
 export type FormValues = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass?: string | "" | null;
+  assetClassId?: string | "" | null;
 
   name?: string;
   typeDescriptor?: AccountTypeDescriptor;
@@ -59,7 +58,7 @@ export type TransformedFormValues = Omit<
 
 export type AccountInitialValues = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass?: string | null;
+  assetClassId?: string | null;
 
   name: string;
   type: AccountType;
@@ -79,9 +78,8 @@ export type AccountInitialValues = {
 export type AccountInitialValuesSource = Pick<
   AccountInitialValues,
   | "name"
-  | "assetClass"
+  | "assetClassId"
   | "trackingMethod"
-
   | "type"
   | "equityAccountSubtype"
   | "groupId"

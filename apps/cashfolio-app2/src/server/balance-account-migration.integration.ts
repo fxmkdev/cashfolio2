@@ -280,7 +280,6 @@ describe("unified balance account migration against disposable PostgreSQL", () =
             equityAccountSubtype: subtype,
           },
         }),
-
       ).rejects.toThrow();
     }
     await expect(
@@ -318,7 +317,6 @@ describe("unified balance account migration against disposable PostgreSQL", () =
       WHERE "id" = 'liability' AND "accountBookId" = 'book'
     `,
     ).toBe(1);
-
   });
 
   it("keeps cache triggers active and their revisions transactional", async () => {

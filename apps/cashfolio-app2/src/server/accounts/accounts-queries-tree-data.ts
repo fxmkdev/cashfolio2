@@ -10,7 +10,6 @@ import {
 
 import type {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,

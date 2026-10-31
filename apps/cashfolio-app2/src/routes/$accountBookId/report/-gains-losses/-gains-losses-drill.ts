@@ -12,17 +12,18 @@ export function clampGainsLossesPath(args: {
   hierarchy: GainsLossesBreakdownNode[];
   path: string[];
 }): string[] {
-  const selectedClass = args.path.findLast((id) =>
-    id.startsWith("asset-class:"),
+  const selectedScope = args.path.findLast(
+    (id) =>
+      id.startsWith("asset-class:") || id.startsWith("gain-loss-investment:"),
   );
-  if (selectedClass) {
+  if (selectedScope) {
     const findPath = (
       nodes: GainsLossesBreakdownNode[],
       path: string[],
     ): string[] | undefined => {
       for (const node of nodes) {
         const next = [...path, node.id];
-        if (node.id === selectedClass) return next;
+        if (node.id === selectedScope) return next;
         const found = findPath(node.children, next);
         if (found) return found;
       }

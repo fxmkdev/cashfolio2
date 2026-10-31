@@ -1,7 +1,6 @@
 import Decimal from "decimal.js";
 import {
   type AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,

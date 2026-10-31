@@ -453,7 +453,7 @@ describe("updateAccount opening balance management", () => {
         tradeCurrency: null,
         statementImportCsvFormat: null,
         isCashAccount: false,
-        assetClass: AssetClass.EQUITIES,
+        classifications: [{ nodeId: defaultAssetClassIds.EQUITIES }],
         trackingMethod: "TOTAL_PORTFOLIO_VALUE",
       });
       await updateAccount({

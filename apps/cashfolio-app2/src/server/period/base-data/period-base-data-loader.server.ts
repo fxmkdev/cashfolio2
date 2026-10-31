@@ -115,7 +115,6 @@ async function loadPeriodBaseDataFromClient(
           isCashAccount: true,
           classifications: assetClassSelection,
           trackingMethod: true,
-
         },
       }),
       db.account.findMany({

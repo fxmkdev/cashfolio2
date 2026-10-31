@@ -2243,6 +2243,9 @@ export const ContextualAccountCreation: Story = {
       await body.findByRole("dialog", { name: "New Account" }),
     );
     expect(dialog.getByLabelText("Group")).toHaveValue("Cash");
+    expect(dialog.getByLabelText("Tracking Method")).toHaveValue(
+      "Individual Units",
+    );
     expect(dialog.getByLabelText("Group")).toBeEnabled();
     expect(
       dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
@@ -2257,6 +2260,9 @@ export const ContextualAccountCreation: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Add Account" }));
     dialog = within(await body.findByRole("dialog", { name: "New Account" }));
     expect(dialog.getByLabelText("Group")).toHaveValue("");
+    expect(dialog.getByLabelText("Tracking Method")).toHaveValue(
+      "Individual Units",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),

@@ -939,6 +939,7 @@ describe("getPeriodHistory", () => {
   test.each([
     ["asset-class:child", "asset-class:child"],
     ["asset-class:deleted", "total"],
+    ["gain-loss-investment:deleted:managed-portfolios", "total"],
   ] as const)(
     "uses current hierarchy metadata to normalize %s",
     async (requested, expected) => {
@@ -990,6 +991,10 @@ describe("getPeriodHistory", () => {
         },
       });
       expect(result.scopeSelection.gainsLosses).toBe(expected);
+      if (expected === "total")
+        expect(result.points.every((point) => point.gainsLosses === 11)).toBe(
+          true,
+        );
       expect(
         result.scopeOptions.gainsLosses
           .filter((o) => o.value.startsWith("asset-class:"))
@@ -998,7 +1003,7 @@ describe("getPeriodHistory", () => {
       expect(
         loadPeriodHistoryPoint.mock.calls[0]?.[0].metricScopeFilter,
       ).toEqual(
-        expected === "total"
+        requested === "asset-class:deleted"
           ? undefined
           : { metric: "gainsLosses", scope: requested },
       );

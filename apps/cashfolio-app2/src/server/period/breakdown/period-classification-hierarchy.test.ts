@@ -1,3 +1,7 @@
+import { buildGainLossAccountAttribution } from "./period-gain-loss-attribution";
+import type { PeriodBaseAssetLiabilityAccount } from "../base-data/period-base-data-types";
+import { toNumericMoney } from "../../money-boundary";
+import { normalizeGainLossScope } from "../../../shared/history-scope";
 import { describe, expect, it } from "vitest";
 import { Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
@@ -74,6 +78,9 @@ describe("hierarchical gain/loss classification", () => {
     expect(hierarchy[0]!.children.map((n) => n.id)).toEqual([
       "asset-class:global",
       "asset-class:swiss",
+      "gain-loss-investment:equities:unknown",
+    ]);
+    expect(hierarchy[0]!.children[2]!.children.map((node) => node.id)).toEqual([
       "gain-loss-account:direct",
     ]);
     expect(hierarchy[1]!.totalGainLoss.toString()).toBe("2");
@@ -145,4 +152,145 @@ describe("hierarchical gain/loss classification", () => {
     }).hierarchy;
     expect(hierarchy[0]!.totalGainLoss.toString()).toBe("0.01");
   });
+});
+
+it("combines subclass ordering and investment roll-ups without duplicating direct or archived accounts", () => {
+  const account = (
+    id: string,
+    assetClassId: string | null,
+    managed = false,
+  ): PeriodBaseAssetLiabilityAccount => ({
+    id,
+    name: id,
+    assetClassId,
+    groupId: null,
+    type: "BALANCE",
+    isCashAccount: false,
+    unit: Unit.CURRENCY,
+    currency: "USD",
+    cryptocurrency: null,
+    symbol: null,
+    tradeCurrency: null,
+    trackingMethod: managed ? "TOTAL_PORTFOLIO_VALUE" : "INDIVIDUAL_UNITS",
+  });
+  const accounts = [
+    account("direct", "equities"),
+    account("global", "global"),
+    account("managed", "swiss", true),
+    { ...account("archived", "swiss", true), isActive: false },
+    account("unclassified", null),
+  ];
+  const contributions = [
+    contribution("direct", "3"),
+    contribution("global", "4"),
+    contribution("managed", "10"),
+    contribution("archived", "-10"),
+    contribution("unclassified", "2"),
+  ];
+  const calculate = (assetClasses: ClassificationNode[]) =>
+    buildGainsLossesBreakdown({
+      referenceCurrency: "CHF",
+      contributions,
+      assetClasses,
+      accountAttributionById: buildGainLossAccountAttribution({
+        baseAssetLiabilityAccounts: accounts,
+        assetClasses,
+        transferClearingUnitBuckets: [],
+        executionResidualTransactions: [],
+      }),
+    });
+  const result = calculate(classes),
+    hierarchy = toNumericMoney(result.hierarchy);
+  expect(result.totalGainLoss.toString()).toBe("9");
+  expect(hierarchy.map((node) => node.id)).toEqual([
+    "asset-class:equities",
+    "asset-class:unclassified",
+  ]);
+  expect(hierarchy[0]).toMatchObject({
+    totalGainLoss: 7,
+    children: [
+      {
+        id: "asset-class:global",
+        totalGainLoss: 4,
+        children: [{ id: "gain-loss-investment:global:CURRENCY:USD" }],
+      },
+      {
+        id: "asset-class:swiss",
+        totalGainLoss: 0,
+        children: [
+          {
+            id: "gain-loss-investment:swiss:managed-portfolios",
+            totalGainLoss: 0,
+            children: [
+              { id: "gain-loss-account:archived", totalGainLoss: -10 },
+              { id: "gain-loss-account:managed", totalGainLoss: 10 },
+            ],
+          },
+        ],
+      },
+      {
+        id: "gain-loss-investment:equities:CURRENCY:USD",
+        totalGainLoss: 3,
+        children: [{ id: "gain-loss-account:direct" }],
+      },
+    ],
+  });
+  expect(hierarchy[1]).toMatchObject({
+    totalGainLoss: 2,
+    children: [
+      {
+        id: "gain-loss-investment:unclassified:CURRENCY:USD",
+        children: [{ id: "gain-loss-account:unclassified" }],
+      },
+    ],
+  });
+  const collectAccounts = (nodes: typeof hierarchy): string[] =>
+    nodes.flatMap((node) =>
+      node.account ? [node.account.id] : collectAccounts(node.children),
+    );
+  expect(collectAccounts(hierarchy).sort()).toEqual(
+    accounts.map((account) => account.id).sort(),
+  );
+  const investmentScope = "gain-loss-investment:swiss:managed-portfolios";
+  const moved = calculate(
+    classes.map((node) =>
+      node.id === "swiss"
+        ? { ...node, name: "Domestic", parentId: "cash" }
+        : node,
+    ),
+  );
+  expect(moved.totalGainLoss.toString()).toBe(result.totalGainLoss.toString());
+  const scopes = buildHistoryGainLossScopeOptions({
+    hierarchy: moved.hierarchy,
+  });
+  expect(scopes.find((scope) => scope.value === investmentScope)).toMatchObject(
+    {
+      label: "Cash / Domestic / Managed Portfolios",
+      parentValue: "asset-class:swiss",
+    },
+  );
+  expect(normalizeGainLossScope(investmentScope, scopes)).toBe(investmentScope);
+  expect(
+    resolveScopedMetricValue({
+      metricScopeFilter: { metric: "gainsLosses", scope: investmentScope },
+      amountByMetric: {},
+      allAccountGroups: [],
+      gainsLossesHierarchy: moved.hierarchy,
+    })?.toString(),
+  ).toBe("0");
+  const deleted = calculate(classes.filter((node) => node.id !== "swiss"));
+  expect(deleted.totalGainLoss.toString()).toBe("9");
+  expect(
+    buildHistoryGainLossScopeOptions({ hierarchy: deleted.hierarchy }).some(
+      (option) => option.value === investmentScope,
+    ),
+  ).toBe(false);
+  expect(
+    resolveScopedMetricValue({
+      metricScopeFilter: { metric: "gainsLosses", scope: investmentScope },
+      amountByMetric: {},
+      allAccountGroups: [],
+      gainsLossesHierarchy: deleted.hierarchy,
+    })?.toString(),
+  ).toBe("0");
 });

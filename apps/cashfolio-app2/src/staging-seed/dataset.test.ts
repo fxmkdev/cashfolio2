@@ -71,7 +71,7 @@ it("funds two active USD accounts within the same investment group", () => {
       unit: Unit.CURRENCY,
       currency: "USD",
       isCashAccount: true,
-      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
     });
     expect(account.trackingMethod ?? "INDIVIDUAL_UNITS").toBe(
       "INDIVIDUAL_UNITS",
@@ -118,7 +118,7 @@ it("marks the curated managed portfolio for total-value tracking", () => {
     key: "managed-portfolio",
     unit: Unit.CURRENCY,
     currency: "CHF",
-    assetClass: AssetClass.OTHER_ASSETS,
+    assetClassId: defaultAssetClassIds.OTHER_ASSETS,
   });
 });
 
@@ -157,7 +157,6 @@ it("uses curated asset classes for active and archived demo balance accounts", (
     "closed-cs-aapl": defaultAssetClassIds.EQUITIES,
     "closed-cs-msft": defaultAssetClassIds.EQUITIES,
     "closed-car-loan": defaultAssetClassIds.OTHER_ASSETS,
-
   });
   expect(classifications("edge-cases")).toEqual({
     current: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,

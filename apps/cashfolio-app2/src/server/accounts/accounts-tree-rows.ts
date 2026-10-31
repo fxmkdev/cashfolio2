@@ -6,7 +6,6 @@ import { toMoney, type Money } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
 import type {
   AccountTrackingMethod,
-
   AccountType,
   EquityAccountSubtype,
   Unit,
