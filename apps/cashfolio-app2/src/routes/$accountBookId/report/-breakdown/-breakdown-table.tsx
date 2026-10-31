@@ -1,5 +1,6 @@
 import type { ColDef } from "ag-grid-enterprise";
 import { useMemo } from "react";
+import { getReportRowLabel, ReportNameCell } from "./-account-label";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { DataGrid } from "@/components/grid/data-grid";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
@@ -82,10 +83,14 @@ export function BreakdownTable({
         field: "name",
         flex: 1,
         filter: "agTextColumnFilter",
+        wrapText: true,
+        autoHeight: true,
         valueGetter: ({ data }: { data: BreakdownGridRow | undefined }) =>
-          data?.name,
+          getReportRowLabel(data),
+        tooltipValueGetter: ({ data }) => getReportRowLabel(data),
         cellRendererParams: {
           suppressCount: true,
+          innerRenderer: ReportNameCell,
         },
       }}
       treeData={true}

@@ -7,6 +7,7 @@ export type BreakdownTableRow = {
   id: string;
   parentId: string | undefined;
   name: string;
+  accountGroupPath?: string[];
   kind: BreakdownNodeKind;
   value: number;
 };
@@ -40,6 +41,9 @@ export function flattenBreakdownHierarchyRows(
         id: node.id,
         parentId,
         name: node.label,
+        ...(node.accountGroupPath
+          ? { accountGroupPath: node.accountGroupPath }
+          : {}),
         kind: node.kind,
         value: node.amount,
       });

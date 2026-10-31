@@ -37,6 +37,7 @@ export type PeriodGainsLossesContribution = {
 export type PeriodGainsLossesBreakdownNode = {
   id: string;
   label: string;
+  accountGroupPath?: string[];
   sortOrder?: number;
   realizedGainLoss: Money;
   unrealizedGainLoss: Money;
@@ -356,6 +357,21 @@ export function buildGainsLossesBreakdown(
     args.contributions,
     args.accountAttributionById,
   );
+  if (args.grouping !== "accountStructure" && args.groupById) {
+    const groupByAccountId = new Map(
+      args.accounts?.map((account) => [account.id, account.groupId]),
+    );
+    for (const { node } of accounts) {
+      if (node.account.kind !== "account") continue;
+      const groupId = groupByAccountId.get(node.account.id);
+      if (groupId === undefined) continue;
+      node.accountGroupPath = groupId
+        ? resolveGroupPathToRoot({ groupId, groupById: args.groupById })
+            .reverse()
+            .map((group) => group.name)
+        : [];
+    }
+  }
   const hierarchy =
     args.grouping === "accountStructure"
       ? buildAccountStructureHierarchy(accounts, args)

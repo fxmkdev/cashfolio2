@@ -14,7 +14,12 @@ import { buildAssetClassGroups } from "./period-reporting-groups";
 import {
   type PeriodGroupNode,
   type BreakdownHierarchyAccumulatorItem,
+  resolveGroupPathToRoot,
 } from "./period-breakdown-state";
+import {
+  UNKNOWN_GAIN_LOSS_UNIT,
+  type GainLossInvestmentGroup,
+} from "./period-gain-loss-investment-group";
 import { type BreakdownHierarchyNode } from "../../../shared/breakdown-hierarchy";
 import { type AccountType } from "../../../.prisma-client/enums";
 import { buildBreakdownHierarchyWithMeta } from "./period-breakdown-hierarchy";
@@ -36,6 +41,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
     groupId: string | null;
     accountType: AccountType;
     assetClassId?: string | null;
+    investmentGroup?: GainLossInvestmentGroup;
     convertedBalanceInReferenceCurrency: Money | null;
   }>;
   groupById: Map<string, PeriodGroupNode>;
@@ -55,6 +61,8 @@ export function buildPeriodEndAllocationBreakdown(args: {
 } {
   const breakdownItems: BreakdownHierarchyAccumulatorItem[] = [];
   const assetClassGroups = buildAssetClassGroups(args.assetClasses);
+  const allocationGroups = new Map(assetClassGroups);
+  const accountGroupPaths = new Map<string, string[]>();
   let skippedMissingReferenceBalanceCount = 0;
 
   for (const item of args.items) {
@@ -70,13 +78,38 @@ export function buildPeriodEndAllocationBreakdown(args: {
     );
     if (classified?.side !== args.side) continue;
 
+    let groupId = item.groupId;
+    if (args.grouping === "assetClass") {
+      const classId =
+        item.assetClassId && assetClassGroups.has(item.assetClassId)
+          ? item.assetClassId
+          : "unclassified";
+      const investment = item.investmentGroup ?? UNKNOWN_GAIN_LOSS_UNIT;
+      groupId = `allocation-investment:${classId}:${investment.key}`;
+      allocationGroups.set(groupId, {
+        id: groupId,
+        name: investment.label,
+        parentGroupId: classId,
+      });
+      if (!item.accountId.startsWith("virtual:")) {
+        accountGroupPaths.set(
+          `account:${item.accountId}`,
+          item.groupId
+            ? resolveGroupPathToRoot({
+                groupId: item.groupId,
+                groupById: args.groupById,
+              })
+                .reverse()
+                .map((group) => group.name)
+            : [],
+        );
+      }
+    }
+
     breakdownItems.push({
       accountId: item.accountId,
       accountName: item.accountName,
-      groupId:
-        args.grouping === "assetClass"
-          ? (item.assetClassId ?? "unclassified")
-          : item.groupId,
+      groupId,
       amount: classified.amount,
     });
   }
@@ -88,7 +121,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
   } = buildBreakdownHierarchyWithMeta({
     items: breakdownItems,
     groupById:
-      args.grouping === "assetClass" ? assetClassGroups : args.groupById,
+      args.grouping === "assetClass" ? allocationGroups : args.groupById,
   });
   if (args.grouping === "assetClass") {
     const classes = [
@@ -97,27 +130,31 @@ export function buildPeriodEndAllocationBreakdown(args: {
       ),
       "unclassified",
     ];
+    const classOrder = new Map(
+      classes.map((id, index) => [`group:${id}`, index]),
+    );
+    const reportNodeId = (id: string) =>
+      id.startsWith("group:allocation-investment:")
+        ? id.slice(6)
+        : id.replace(/^group:/, "asset-class:");
     const updateNodes = (nodes: typeof hierarchy) => {
       nodes.sort(
         (a, b) =>
-          (a.kind === "group"
-            ? classes.indexOf(a.id.slice(6))
-            : Number.MAX_SAFE_INTEGER) -
-          (b.kind === "group"
-            ? classes.indexOf(b.id.slice(6))
-            : Number.MAX_SAFE_INTEGER),
+          (classOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+          (classOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER),
       );
       for (const node of nodes) {
-        if (node.kind === "group")
-          node.id = node.id.replace(/^group:/, "asset-class:");
+        if (node.kind === "group") node.id = reportNodeId(node.id);
+        const accountGroupPath = accountGroupPaths.get(node.id);
+        if (accountGroupPath) node.accountGroupPath = accountGroupPath;
         updateNodes(node.children);
       }
     };
     updateNodes(hierarchy);
     for (let i = 0; i < hiddenAmountDiscrepancyNodeIds.length; i++)
-      hiddenAmountDiscrepancyNodeIds[i] = hiddenAmountDiscrepancyNodeIds[
-        i
-      ]!.replace(/^group:/, "asset-class:");
+      hiddenAmountDiscrepancyNodeIds[i] = reportNodeId(
+        hiddenAmountDiscrepancyNodeIds[i]!,
+      );
   }
   const topLevelBreakdown = buildBreakdownItems(
     hierarchy.map((node) => ({

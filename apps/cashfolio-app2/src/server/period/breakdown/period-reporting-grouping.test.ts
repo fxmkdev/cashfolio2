@@ -84,7 +84,7 @@ describe("reporting grouping", () => {
     });
     expect(before.hierarchy[0].children.map((node) => node.id)).toEqual([
       "asset-class:pension",
-      "account:direct",
+      "allocation-investment:equities:unknown",
     ]);
     const after = toNumericMoney(
       buildPeriodEndAllocationBreakdown({
@@ -177,10 +177,12 @@ describe("reporting grouping", () => {
       expect(structure.skippedMissingReferenceBalanceCount).toBe(1);
       expect(classes.hierarchy[0].id).toBe("asset-class:EQUITIES");
       if (side === "asset") {
-        expect(classes.hierarchy[0].children.map((node) => node.id)).toEqual([
-          "account:pension",
-          "account:broker",
-        ]);
+        expect(classes.hierarchy[0].children[0].id).toBe(
+          "allocation-investment:EQUITIES:unknown",
+        );
+        expect(
+          classes.hierarchy[0].children[0].children.map((node) => node.id),
+        ).toEqual(["account:pension", "account:broker"]);
         expect(classes.hierarchy[1].id).toBe("asset-class:unclassified");
         expect(
           structure.hierarchy.find((node) => node.id === "group:investments")

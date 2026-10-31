@@ -991,13 +991,23 @@ accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
 Allocation charts and tables support either the original account/group hierarchy
-or hierarchical Asset Class → Subclass → Account grouping on each side, even
-when a structural group's accounts have mixed signs. Classification by balance
-sign precedes either grouping; total amounts use the same exact balances.
-Unavailable valuations are omitted; both allocation views report the same
-overall missing-balance count. Amounts on the liability side are positive debt
-magnitudes. Existing allocation rounding and hidden-small-balance discrepancy
-indicators remain applicable.
+or hierarchical Asset Class → Subclass → Investment Group → Account grouping on
+each side, even when a structural group's accounts have mixed signs.
+Classification by balance sign precedes either grouping; total amounts use the
+same exact balances. Unavailable valuations are omitted; both allocation views
+report the same overall missing-balance count. Amounts on the liability side are
+positive debt magnitudes. Existing allocation rounding and hidden-small-balance
+discrepancy indicators remain applicable.
+
+Allocation reuses G/L investment descriptors from account attribution: currency
+and cryptocurrency codes, security symbols across trade currencies, and Managed
+Portfolios for Total Portfolio Value tracking. Investment IDs are
+`allocation-investment:<classId>:<groupKey>`; class/account IDs stay stable.
+Discrepancy metadata includes affected investment groups and class ancestors.
+Report Asset Class account leaves include optional `accountGroupPath` metadata
+in root-to-parent order, resolved from the current financial account hierarchy.
+Names and navigation IDs remain separate from these display paths. Synthetic G/L
+entries retain their source labels.
 
 History applies classification independently at every month/year endpoint and
 its opening baseline. Assets and Liabilities expose aggregate totals only. Net

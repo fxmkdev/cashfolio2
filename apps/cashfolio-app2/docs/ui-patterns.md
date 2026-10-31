@@ -565,15 +565,27 @@ waiting, retry, uncertain-outcome, and refresh feedback.
   shortcut.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Subclass →
-  Investment Group → Account. Account metadata drives navigation from chart and
-  table leaves to the unified explanation, including calculated holdings,
-  recorded adjustments, and
+- Allocation and Gains/Losses support Account Structure and Asset Class →
+  Subclass → Investment Group → Account. Investment groups use currency or
+  cryptocurrency codes, security symbols (combining trade currencies), or
+  Managed Portfolios for Total Portfolio Value tracking. Retain the investment
+  level even when it contains one account. Account metadata drives G/L
+  navigation from chart and table leaves to the unified explanation, including
+  calculated holdings, recorded adjustments, and
 
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
 
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
+- In Report's Asset Class view, account leaves show their full current account
+  group path. Chart labels and tooltips use `Parent / Child / Account`; table
+  cells show the account name above a smaller, dimmed, wrapping parent path.
+  Table filtering and tooltips include the full path. Account Structure already
+  supplies the group context and keeps account names alone. Ungrouped accounts
+  and synthetic G/L entries retain their names without an invented path.
+- Allocation processes each native double-click once across chart node and
+  single-item container handlers, so opening an account requires a separate
+  double-click after entering its investment group.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Report's **Group Accounts By** selector sits beside the period control and

@@ -119,6 +119,8 @@ export function buildPeriodOverviewResponse(args: {
       assetClassId:
         args.gainLossAccountAttributionById?.get(account.id)?.assetClassId ??
         null,
+      investmentGroup: args.gainLossAccountAttributionById?.get(account.id)
+        ?.investmentGroup,
       convertedBalanceInReferenceCurrency:
         args.endOfPeriodBalanceStats.convertedBalanceByAccountId.get(
           account.id,
