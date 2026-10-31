@@ -32,12 +32,12 @@ accounts inherit cash-flow inclusion from their parent group.
 Report offers Account Structure and Asset Class grouping for Assets,
 Liabilities, and Gain/Loss. History offers the same two lenses within its
 Gain/Loss View selector. Both use the current account structure/classification
-for all periods, including archived accounts. Asset classes form an editable tree, with
-Unclassified for accounts without a class. Changing classification moves
-contributions between reporting classes without changing valuation, balances, or
-total gains/losses. Calculated and recorded contributions are combined per
-account, including reference-currency recorded adjustments; their provenance
-remains available in reconciliation.
+for all periods, including archived accounts. Asset classes form an editable
+tree, with Unclassified for accounts without a class. Changing classification
+moves contributions between reporting classes without changing valuation,
+balances, or total gains/losses. Calculated and recorded contributions are
+combined per account, including reference-currency recorded adjustments; their
+provenance remains available in reconciliation.
 
 Investment groups below asset class use currency/cryptocurrency codes or
 security symbols, combining trade currencies for the same symbol. Currency

@@ -215,7 +215,9 @@ export const EditAndReorder: Story = {
     const reorder = within(
       await body.findByRole("dialog", { name: "Reorder Siblings" }),
     );
-    await expect(reorder.getByText("Siblings of Equities")).toBeVisible();
+    await waitFor(() =>
+      expect(reorder.getByText("Siblings of Equities")).toBeVisible(),
+    );
     await expect(
       await reorder.findByText("Cash", { exact: true }),
     ).toBeVisible();

@@ -3,7 +3,10 @@ import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
 import type { Unit } from "../../../.prisma-client/enums";
 
 import { round2 } from "../period-helpers";
-import { defaultAssetClassNodes, type ClassificationNode } from "../../../shared/asset-class";
+import {
+  defaultAssetClassNodes,
+  type ClassificationNode,
+} from "../../../shared/asset-class";
 import type { GainLossAccountAttribution } from "./period-gain-loss-attribution";
 import type { ReportingGrouping } from "../../../shared/reporting-grouping";
 import {
@@ -196,19 +199,37 @@ function buildInvestmentGroups(
 }
 
 function buildAssetClassHierarchy(accounts: AccountProjection[], nodes: readonly ClassificationNode[] = defaultAssetClassNodes): PeriodGainsLossesBreakdownNode[] {
+
   const byClass = new Map<string, AccountProjection[]>();
-  const ids = new Set(nodes.map(n => n.id));
+  const ids = new Set(nodes.map((n) => n.id));
   for (const account of accounts) {
     const id = account.node.account.assetClassId;
-    const key = id && ids.has(id) ? id : 'unclassified';
+    const key = id && ids.has(id) ? id : "unclassified";
     byClass.getOrInsertComputed(key, () => []).push(account);
   }
   const visited = new Set<string>();
-  const childrenOf = (parentId: string | null) => nodes.filter(n => n.parentId === parentId).toSorted((a,b) => a.sortOrder-b.sortOrder || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
-  const assemble = (descriptor: ClassificationNode): { node: PeriodGainsLossesBreakdownNode; contributions: PeriodGainsLossesContribution[] } | undefined => {
+  const childrenOf = (parentId: string | null) =>
+    nodes
+      .filter((n) => n.parentId === parentId)
+      .toSorted(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          a.name.localeCompare(b.name) ||
+          a.id.localeCompare(b.id),
+      );
+  const assemble = (
+    descriptor: ClassificationNode,
+  ):
+    | {
+        node: PeriodGainsLossesBreakdownNode;
+        contributions: PeriodGainsLossesContribution[];
+      }
+    | undefined => {
     if (visited.has(descriptor.id)) return;
     visited.add(descriptor.id);
-    const children = childrenOf(descriptor.id).map(assemble).filter(n => n !== undefined);
+    const children = childrenOf(descriptor.id)
+      .map(assemble)
+      .filter((n) => n !== undefined);
     const direct = byClass.get(descriptor.id) ?? [];
     if (!children.length && !direct.length) return;
     const contributions = [...direct.flatMap(a => a.contributions), ...children.flatMap(c => c.contributions)];
@@ -217,6 +238,7 @@ function buildAssetClassHierarchy(accounts: AccountProjection[], nodes: readonly
   const roots = childrenOf(null).map(assemble).filter(n => n !== undefined).map(n => n.node);
   const unclassified = byClass.get('unclassified') ?? [];
   if (unclassified.length) roots.push({ id: 'asset-class:unclassified', label: 'Unclassified', sortOrder: Number.MAX_SAFE_INTEGER, ...contributionTotals(unclassified.flatMap(a => a.contributions)), children: buildInvestmentGroups("unclassified", unclassified) });
+
   return roots;
 
 }
