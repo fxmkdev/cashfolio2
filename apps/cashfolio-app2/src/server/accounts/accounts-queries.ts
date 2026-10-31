@@ -1,3 +1,4 @@
+import { startReadBudget } from "../resource-context.server";
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
@@ -82,6 +83,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
   .validator((data: AccountTreeDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     return queryAccountTreeData(data);
   });
 
@@ -89,6 +91,7 @@ export const getAccountsPageData = createServerFn({ method: "GET" })
   .validator((data: AccountsPageDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     return queryAccountsPageData(data);
   });
 
@@ -96,6 +99,7 @@ export const getLedgerAccountActionData = createServerFn({ method: "GET" })
   .validator((data: LedgerAccountActionDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     return queryLedgerAccountActionData(data);
   });
 
@@ -103,6 +107,7 @@ export const getAccountReferenceBalances = createServerFn({ method: "GET" })
   .validator((data: AccountReferenceBalancesInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     return queryAccountReferenceBalances(data);
   });
 

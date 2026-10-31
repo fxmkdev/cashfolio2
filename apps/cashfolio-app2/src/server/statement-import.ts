@@ -1,3 +1,4 @@
+import { startReadBudget } from "./resource-context.server";
 import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedForAccountBookId } from "@/account-books/functions.server";
 import { prisma } from "@/prisma.server";
@@ -25,6 +26,7 @@ export const getStatementImportExistingBookings = createServerFn({
   })
   .handler(async ({ data }): Promise<StatementImportExistingBooking[]> => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     const account = await prisma.account.findUniqueOrThrow({
       where: {
         id_accountBookId: {

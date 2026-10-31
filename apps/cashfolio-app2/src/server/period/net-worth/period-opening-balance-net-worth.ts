@@ -1,3 +1,4 @@
+import { startReadBudget } from "../../resource-context.server";
 import { toNumericMoney } from "../../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import { normalizePeriodValue } from "../../../shared/period";
@@ -20,6 +21,7 @@ export const getOpeningBalanceNetWorthForPeriod = createServerFn({
     ]);
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
 
     return toNumericMoney(await loadOpeningBalanceNetWorthForPeriod(data));
   });

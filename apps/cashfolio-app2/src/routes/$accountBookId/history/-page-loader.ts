@@ -1,33 +1,15 @@
-import {
-  getPeriodHistory,
-  type PeriodHistoryResponse,
-} from "@/server/period-history";
-import type { HistoryPeriodMode } from "./-page-types";
-import type {
-  HistoryScopeSelection,
-  HistoryScopedMetric,
-} from "@/shared/history-scope";
-import type { UserLocale } from "@/user-locale";
-import { DEFAULT_USER_LOCALE } from "@/user-locale";
+import { getPeriodHistory } from "@/server/period-history";
+import { fetchWithResourceErrors } from "@/shared/resource-fetch";
+import type { HistoryBatchRequest } from "./-history-loading";
 
-export type HistoryPageLoaderData = {
-  history: PeriodHistoryResponse;
-};
-
-export async function loadHistoryPageData(args: {
-  accountBookId: string;
-  mode: HistoryPeriodMode;
-  scopedMetric?: HistoryScopedMetric;
-  cashFlowScope: HistoryScopeSelection;
-  incomeScope: HistoryScopeSelection;
-  expenseScope: HistoryScopeSelection;
-  gainLossScope: HistoryScopeSelection;
-  netWorthScope: HistoryScopeSelection;
-  locale?: UserLocale;
-}): Promise<HistoryPageLoaderData> {
-  const history = await getPeriodHistory({
+export async function loadHistoryBatch(args: HistoryBatchRequest) {
+  return getPeriodHistory({
+    signal: args.signal,
+    fetch: fetchWithResourceErrors,
     data: {
       accountBookId: args.accountBookId,
+      before: args.before,
+      pageSize: args.pageSize,
       granularity: args.mode,
       scopedMetric: args.scopedMetric,
       cashFlowScope: args.cashFlowScope,
@@ -35,11 +17,7 @@ export async function loadHistoryPageData(args: {
       expenseScope: args.expenseScope,
       gainLossScope: args.gainLossScope,
       netWorthScope: args.netWorthScope,
-      locale: args.locale ?? DEFAULT_USER_LOCALE,
+      locale: args.locale,
     },
   });
-
-  return {
-    history,
-  };
 }

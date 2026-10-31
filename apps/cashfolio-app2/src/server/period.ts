@@ -1,3 +1,4 @@
+import { startReadBudget } from "./resource-context.server";
 import { toNumericMoney } from "./money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import {
@@ -64,6 +65,7 @@ export const getPeriodOverview = createServerFn({
       await import("./period/overview/period-overview.server");
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     return loadPeriodOverview(data);
   });
 

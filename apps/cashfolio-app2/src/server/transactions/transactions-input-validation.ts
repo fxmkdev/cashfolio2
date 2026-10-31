@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS, assertLength } from "../../shared/resource-limits";
 import { Unit } from "../../.prisma-client/enums";
 import { parseUtcDayDate } from "../../shared/date";
 import {
@@ -96,12 +97,19 @@ function readTransaction(
   data: unknown,
 ): Omit<CreateTransactionInput, "accountBookId"> {
   assertRecord(data, "Transaction must be an object.");
+  const bookings = requireArrayField(
+    data,
+    "bookings",
+    "Bookings are required.",
+  );
+  assertLength(
+    bookings,
+    RESOURCE_LIMITS.bookingsPerTransaction,
+    "Transaction bookings",
+  );
   return {
     description: requireTextField(data, "description"),
-    bookings: Array.from(
-      requireArrayField(data, "bookings", "Bookings are required."),
-      readBooking,
-    ),
+    bookings: Array.from(bookings, readBooking),
   };
 }
 
@@ -121,16 +129,30 @@ export function validateCreateTransactionsInput(
   data: unknown,
 ): CreateTransactionsInput {
   assertRecord(data);
+  const transactions = requireArrayField(
+    data,
+    "transactions",
+    "Transactions are required.",
+  );
+  let count = 0;
+  // Check aggregate work before parsing any booking payload.
+  for (const transaction of transactions) {
+    assertRecord(transaction);
+    const bookings = requireArrayField(transaction, "bookings");
+    assertLength(
+      bookings,
+      RESOURCE_LIMITS.bookingsPerTransaction,
+      "Transaction bookings",
+    );
+    count += bookings.length;
+    if (count > RESOURCE_LIMITS.totalBookings)
+      throw new Error(
+        "An import cannot exceed 5’000 bookings. Split the statement and try again. No changes were saved.",
+      );
+  }
   return {
-    accountBookId: requireStringField(
-      data,
-      "accountBookId",
-      "Account book id is required.",
-    ),
-    transactions: Array.from(
-      requireArrayField(data, "transactions", "Transactions are required."),
-      readTransaction,
-    ),
+    accountBookId: requireStringField(data, "accountBookId"),
+    transactions: Array.from(transactions, readTransaction),
   };
 }
 

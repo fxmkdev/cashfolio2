@@ -9,6 +9,7 @@ import { filterConvertibleHoldingAccounts } from "../period-helpers";
 import { buildNetWorthHistoryScopeOptions } from "./period-history-scopes.server";
 
 export type PeriodHistoryPointContext = {
+  revision: string;
   referenceCurrency: string;
   accountBookStartDate: Date;
   holdingAccountsResolved: ReturnType<typeof filterConvertibleHoldingAccounts>;
@@ -23,6 +24,7 @@ export async function loadPeriodHistoryPointContext(args: {
   const accountBook = await prisma.accountBook.findUniqueOrThrow({
     where: { id: args.accountBookId },
     select: {
+      periodCacheRevision: true,
       referenceCurrency: true,
       startDate: true,
     },
@@ -56,6 +58,7 @@ export async function loadPeriodHistoryPointContext(args: {
   ]);
 
   return {
+    revision: accountBook.periodCacheRevision,
     referenceCurrency,
     netWorthScopes: buildNetWorthHistoryScopeOptions({
       accounts: baseAssetLiabilityAccounts,

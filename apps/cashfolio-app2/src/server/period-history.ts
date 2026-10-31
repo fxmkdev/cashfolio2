@@ -1,5 +1,6 @@
 export { getPeriodHistory } from "./period/history/period-history";
 export type {
+  PeriodHistoryBatchResponse,
   PeriodHistoryGranularity,
   PeriodHistoryOpeningBalancePoint,
   PeriodHistoryPoint,

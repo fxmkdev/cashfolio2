@@ -3,6 +3,10 @@ import {
   DEFAULT_HISTORY_METRIC,
   DEFAULT_HISTORY_MODE,
   parseHistorySearch,
+  getHistoryMetric,
+  getHistoryMode,
+  getHistoryScopeForMetric,
+  type HistorySearch,
   type HistoryMetric,
   type HistoryPeriodMode,
   type HistoryViewSelection,
@@ -14,6 +18,29 @@ import {
 } from "@/shared/history-scope";
 
 type HistoryNavigationSearch = Record<string, unknown>;
+
+export function buildHistoryScopeNormalization(args: {
+  search: HistorySearch;
+  scopeSelection: Record<HistoryScopedMetric, HistoryScopeSelection>;
+}) {
+  const { search, scopeSelection } = args;
+  if (
+    (Object.keys(scopeSelection) as HistoryScopedMetric[]).every(
+      (metric) =>
+        getHistoryScopeForMetric({ search, metric }) === scopeSelection[metric],
+    )
+  )
+    return undefined;
+  return buildHistorySearchNavigation({
+    mode: getHistoryMode(search),
+    metric: getHistoryMetric(search),
+    cashFlowScope: scopeSelection.cashFlow,
+    incomeScope: scopeSelection.income,
+    expenseScope: scopeSelection.expenses,
+    gainLossScope: scopeSelection.gainsLosses,
+    netWorthScope: scopeSelection.netWorth,
+  });
+}
 
 export function buildHistoryLegacySearchNavigation(
   search: HistoryNavigationSearch,

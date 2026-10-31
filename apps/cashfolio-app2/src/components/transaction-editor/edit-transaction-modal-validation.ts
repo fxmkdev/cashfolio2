@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS } from "../../shared/resource-limits";
 import { Unit } from "../../.prisma-client/enums";
 import {
   getUnitIdentifier,
@@ -20,7 +21,11 @@ export function validateEditTransactionBookingsRoot(args: {
 }): string | null {
   const { bookings, accounts, thousandSeparator, decimalSeparator } = args;
 
+  if (bookings.length > RESOURCE_LIMITS.bookingsPerTransaction)
+    return "A transaction cannot exceed 100 bookings.";
   for (const booking of bookings) {
+    if ((booking.description?.length ?? 0) > RESOURCE_LIMITS.description)
+      return "Booking descriptions cannot exceed 4’000 characters.";
     if (!booking.account) continue;
 
     const account = accounts.find(

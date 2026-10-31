@@ -60,6 +60,26 @@ from their owning folder; do not add root-level compatibility shims or general
 component barrel files. Keep route-specific UI beside its owning route, and keep
 existing Storybook titles and story export names stable when moving files.
 
+## Page Loading
+
+Use the global top progress bar for page-level loading, including client-side
+work that continues after router navigation settles. Wrap the application in
+`GlobalLoadingProvider` and call `useGlobalLoading(active)` from
+`src/components/navigation/global-loading.tsx` with the page's pending state.
+Keep it active across automatic retries and waits; set it false on success or an
+actionable error. The hook releases its registration on unmount. Do not call
+`nprogress.start()` or `complete()` directly from pages: one task finishing must
+not hide another task's progress.
+
+Avoid separate page-level spinners and pending status text. Preserve a page
+heading during initial loading and existing complete content during refreshes
+where appropriate. Keep actionable errors and retry controls in the page; these
+are recovery UI, not loading indicators. Local action controls may still show
+their own pending state to prevent duplicate submissions.
+
+See [Global Navigation Progress](routing.md#global-navigation-progress) for
+router behavior, timing, and overlapping task handling.
+
 ## Mantine
 
 - **Mantine 9** for all UI components, forms (`@mantine/form`), and theming

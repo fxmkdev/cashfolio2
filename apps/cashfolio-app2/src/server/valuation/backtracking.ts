@@ -1,4 +1,9 @@
 import {
+  checkResourceBudget,
+  reuseResourceRequestWork,
+} from "../resource-context.server";
+import { rethrowResourceError } from "../resource-error";
+import {
   BACKTRACKED_FALLBACK_TTL_SECONDS,
   BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
   MAX_BACKTRACK_DAYS,
@@ -190,6 +195,7 @@ export async function getRateWithBacktrackingDetails(
       : deps.toUtcDay(args.date);
   let hasAttemptedProviderFetch = false;
   for (let i = 0; i <= deps.maxBacktrackDays; i++) {
+    checkResourceBudget();
     const currentTimestamp = deps.toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
       await deps.storeBacktrackedFallbackInCache(
@@ -219,13 +225,17 @@ export async function getRateWithBacktrackingDetails(
       ? VALUATION_PROVIDER_REQUEST_REASONS.BACKTRACK_PROBE
       : VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE;
     hasAttemptedProviderFetch = true;
-    const fetchedRate = await fetchRateWithInFlightDedup({
-      seriesKey: key,
-      timestamp: currentTimestamp,
-      date: requestedDate,
-      requestReason,
-      fetchRate: args.fetchRate,
-    });
+    const fetchedRate = await reuseResourceRequestWork(
+      `provider:${getInFlightProviderFetchKey(key, currentTimestamp)}`,
+      () =>
+        fetchRateWithInFlightDedup({
+          seriesKey: key,
+          timestamp: currentTimestamp,
+          date: requestedDate,
+          requestReason,
+          fetchRate: args.fetchRate,
+        }),
+    );
     if (fetchedRate === NO_DATA_FETCH_RESULT) {
       await deps.storeMissedAttemptForSeriesTimestamp({
         seriesKey: key,
@@ -252,6 +262,7 @@ export async function getRateWithBacktrackingDetails(
           fetchedRate,
         );
       } catch (error) {
+        rethrowResourceError(error);
         console.error(
           "Failed to cache valuation rate",
           { key, requestedDate: requestedDate.toISOString() },

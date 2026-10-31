@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS } from "../../shared/resource-limits";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import type { RowDragEndEvent } from "ag-grid-enterprise";
 import type { AgGridReact } from "ag-grid-react";
@@ -131,6 +132,10 @@ export function EditTransactionModal({
       }
     },
     validate: {
+      description: (value) =>
+        value && value.length > RESOURCE_LIMITS.description
+          ? "Description cannot exceed 4’000 characters."
+          : null,
       date: (value) => {
         const date = normalizeDateInputValueToUtcDay(value, userLocale);
         if (!date) {

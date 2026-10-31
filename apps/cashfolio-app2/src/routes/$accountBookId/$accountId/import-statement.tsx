@@ -1,3 +1,4 @@
+import { assertTransactionLimits } from "@/shared/resource-limits";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { notifications } from "@mantine/notifications";
@@ -94,6 +95,7 @@ function StatementImportAccountPage() {
       return;
     }
 
+    assertTransactionLimits(transactions);
     const createdTransactions = await createTransactions({
       data: {
         accountBookId,

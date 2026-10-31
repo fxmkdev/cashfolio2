@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, within } from "storybook/test";
-import { HistoryPageView } from "./-page-view";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { Button, Group } from "@mantine/core";
+import { useState } from "react";
+import { HistoryPageView, type HistoryPageViewProps } from "./-page-view";
+import type { HistoryMetric } from "./-page-types";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import { netWorthScopeOptions } from "./-story-fixtures";
 
@@ -75,6 +78,50 @@ export const SignedAccountHistory: Story = {
     await expect(
       canvas.queryByRole("list", { name: "Legend" }),
     ).not.toBeInTheDocument();
+  },
+};
+
+function EmptyViewTransition(props: HistoryPageViewProps) {
+  const [metric, setMetric] = useState<HistoryMetric>("income");
+  return (
+    <>
+      <Group>
+        <Button onClick={() => setMetric("cashFlow")}>
+          Show Empty Cash Flow
+        </Button>
+        <Button onClick={() => setMetric("income")}>Show Income</Button>
+      </Group>
+      <HistoryPageView {...props} selectedMetric={metric} />
+    </>
+  );
+}
+
+export const PreservesLegendAcrossEmptyView: Story = {
+  args: {
+    history: {
+      ...history,
+      hasCashAccounts: false,
+      points: history.points.map((point) => ({ ...point, income: 100 })),
+    },
+  },
+  render: (args) => <EmptyViewTransition {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const cumulative = () =>
+      canvas.getByRole("switch", { name: /^Cumulative Income,/ });
+    await waitFor(() => expect(cumulative()).not.toBeChecked());
+    await userEvent.click(cumulative());
+    await waitFor(() => expect(cumulative()).toBeChecked());
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show Empty Cash Flow" }),
+    );
+    await expect(
+      canvas.getByText(
+        "No accounts are included in cash flow for this account book.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Show Income" }));
+    await waitFor(() => expect(cumulative()).toBeChecked());
   },
 };
 

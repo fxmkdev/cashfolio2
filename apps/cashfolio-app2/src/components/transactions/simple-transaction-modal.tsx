@@ -32,6 +32,7 @@ import type { AccountOption } from "@/shared/account-options";
 import { AccountTreeSelect } from "../account-tree/account-tree-select";
 import { FormattedNumberInput } from "../controls/formatted-number-input";
 import { useUserLocale } from "@/user-locale-context";
+import { RESOURCE_LIMITS } from "../../shared/resource-limits";
 
 export type SimpleTransactionDirection = "DEBIT" | "CREDIT";
 
@@ -140,6 +141,10 @@ export function SimpleTransactionModal({
       today,
     }),
     validate: {
+      description: (value) =>
+        value.length > RESOURCE_LIMITS.description
+          ? "Description cannot exceed 4’000 characters."
+          : null,
       date: (value) => {
         const date = normalizeDateInputValueToUtcDay(value, userLocale);
         if (!date) {

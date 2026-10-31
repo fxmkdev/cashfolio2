@@ -1,3 +1,9 @@
+import { rethrowResourceError } from "../../resource-error";
+import {
+  checkResourceBudget,
+  consumeProviderAttempt,
+  getResourceSignal,
+} from "../../resource-context.server";
 import {
   logProviderWarn,
   toSafeProviderErrorMessage,
@@ -18,13 +24,22 @@ export async function fetchProviderResponse(args: {
   requestContext: ProviderLogContext;
   recordUsage: RecordProviderAttempt;
 }): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), args.timeoutMs);
+  consumeProviderAttempt();
+  const requestSignal = getResourceSignal();
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(args.timeoutMs),
+    ...(requestSignal ? [requestSignal] : []),
+  ]);
 
   try {
-    return await fetch(args.url, { signal: controller.signal });
+    return await fetch(args.url, { signal });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    rethrowResourceError(error);
+    checkResourceBudget();
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.name === "TimeoutError")
+    ) {
       const timeoutError = new Error(args.timeoutMessage);
       await args.recordUsage({
         outcome: "TIMEOUT",
@@ -47,7 +62,5 @@ export async function fetchProviderResponse(args: {
       error: toSafeProviderErrorMessage(error),
     });
     throw error;
-  } finally {
-    clearTimeout(timeout);
   }
 }

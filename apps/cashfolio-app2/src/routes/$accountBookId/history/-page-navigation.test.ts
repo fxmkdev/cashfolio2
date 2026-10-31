@@ -9,6 +9,7 @@ import {
   buildHistoryLegacySearchNavigation,
   buildHistorySearchNavigation,
   buildHistoryViewNavigation,
+  buildHistoryScopeNormalization,
 } from "./-page-navigation";
 import { parseHistorySearch } from "./-page-types";
 
@@ -69,6 +70,30 @@ describe("legacy History URL canonicalization", () => {
 });
 
 describe("history page navigation", () => {
+  test("normalizes merged scopes before making History interactive", () => {
+    const search = {
+      metric: "gainsLosses" as const,
+      gainLossScope: "explicit-account:cash" as const,
+    };
+    const scopeSelection = {
+      cashFlow: "total" as const,
+      income: "total" as const,
+      expenses: "total" as const,
+      gainsLosses: "gain-loss-account:cash" as const,
+      netWorth: "total" as const,
+    };
+    const navigation = buildHistoryScopeNormalization({
+      search,
+      scopeSelection,
+    });
+    expect(navigation?.replace).toBe(true);
+    const normalized = navigation!.search(search);
+    expect(normalized.gainLossScope).toBe("gain-loss-account:cash");
+    expect(
+      buildHistoryScopeNormalization({ search: normalized, scopeSelection }),
+    ).toBeUndefined();
+  });
+
   test("uses history replace and preserves existing search params", () => {
     const navigation = buildHistorySearchNavigation({
       mode: "year",

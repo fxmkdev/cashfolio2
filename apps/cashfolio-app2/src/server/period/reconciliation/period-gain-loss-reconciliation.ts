@@ -1,3 +1,4 @@
+import { startReadBudget } from "../../resource-context.server";
 import type { Money } from "../../../shared/money";
 import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache";
 import { loadAccountGainLossSources } from "./period-account-gain-loss-sources";
@@ -68,6 +69,7 @@ async function loadPeriodGainLossReconciliationPageData(
   data: ValidatedPeriodGainLossReconciliationInput,
 ): Promise<PeriodGainLossReconciliationPageData> {
   await ensureAuthorizedForAccountBookId(data.accountBookId);
+  startReadBudget();
 
   const baseData = await getOrLoadPeriodBaseData({
     accountBookId: data.accountBookId,
