@@ -32,6 +32,7 @@ import { StatementImportCsvFormatField } from "./statement-import-csv-format-fie
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import { useEditAccountModalController } from "./controller";
 import { AssetClassField } from "./asset-class-field";
+import { TrackingMethodField } from "./tracking-method-field";
 
 export function EditAccountModal(props: EditAccountModalProps) {
   const {
@@ -229,20 +230,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 ) : null}
                 {unit === Unit.CURRENCY && (
                   <Grid.Col span={12}>
-                    <Select
-                      label="Tracking Method"
-                      description="Track individual currency units, or a portfolio’s total statement value with gains/losses recorded as transactions. Portfolio tracking keeps its recorded and FX gains/losses together under Managed Portfolios."
-                      allowDeselect={false}
-                      data={[
-                        {
-                          value: "INDIVIDUAL_UNITS",
-                          label: "Individual Units",
-                        },
-                        {
-                          value: "TOTAL_PORTFOLIO_VALUE",
-                          label: "Total Portfolio Value",
-                        },
-                      ]}
+                    <TrackingMethodField
                       key={form.key("trackingMethod")}
                       {...form.getInputProps("trackingMethod")}
                     />

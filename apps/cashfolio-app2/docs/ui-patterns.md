@@ -297,13 +297,27 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
+### Field Help
+
+Keep essential instructions and validation messages visible beside or below the
+input. Put longer optional explanations in a popover opened by an info icon
+beside the field label, as used for Asset Class and Tracking Method. Give the
+button a descriptive accessible name such as `Show Tracking Method Help` and a
+matching tooltip. Support mouse and keyboard activation, keep the popover within
+the viewport, and return focus to its trigger when closed. Escape dismisses the
+popover without closing its containing dialog.
+
+### Account Editor
+
 The account editor groups identity fields first, followed by unit details and
 the Cash Account flag, then Opening Balance beside Asset Class. Columns stack at
 narrow viewport widths. Opening Balance keeps concise sign guidance below the
-input; the detailed Asset Class explanation is available in a help popover.
-Statement Import Settings is collapsed at the start of each create/edit session.
-Its CSV editor stays mounted so collapsing it preserves drafts, and submitting
-an invalid CSV format opens the section to expose its validation error.
+input; the detailed Asset Class and Tracking Method explanations are available
+in info-icon popovers beside their labels. Tracking Method appears only for
+currency-denominated balance accounts. Statement Import Settings is collapsed at
+the start of each create/edit session. Its CSV editor stays mounted so
+collapsing it preserves drafts, and submitting an invalid CSV format opens the
+section to expose its validation error.
 
 The account editor offers an **Asset Class** selector for assets and
 liabilities, separate from Unit and valuation configuration. It remains editable
@@ -354,6 +368,7 @@ Its implementation lives in `src/components/account-editor/`:
   eligibility, submission, and close guards
 - `view.tsx`: the account modal render tree
 - `asset-class-field.tsx`: classification input and explanatory help
+- `tracking-method-field.tsx`: tracking-method input and explanatory help
 - `statement-import-csv-format-field.tsx`: CSV configuration input and JSON help
 
 The form/controller is created once per modal render, and a constraint refresh
@@ -606,8 +621,8 @@ sign; debt amounts are positive magnitudes in those reports.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
-  `Balance (<referenceCurrency>)`, `Asset Class`, G/L, and row actions in that
-  order.
+  `Balance (<referenceCurrency>)`, `Asset Class`, `Tracking Method`, G/L, and
+  row actions in that order.
 - `Ccy./Symbol` starts at 180px and can be resized and filtered. It shows
   foreign currency codes, cryptocurrency tickers, or security symbols; security
   trade currencies are omitted. Group, virtual Archived, and total rows stay
@@ -623,6 +638,15 @@ sign; debt amounts are positive magnitudes in those reports.
   without descendant accounts and the total row stay blank. Group summaries are
   read-only. The column preserves the existing sibling ordering and grid-only
   horizontal scrolling.
+- `Tracking Method` follows Asset Class, starts at 220px, and can be resized.
+  Its text filter and tooltip use the full display label: `Individual Units` or
+  `Total Portfolio Value`. All balance-account leaves show their method,
+  including archived accounts; securities, cryptocurrencies, and missing
+  metadata show `Individual Units`. Real groups and virtual Archived groups
+  summarize descendant accounts with the same inclusion rules as Asset Class:
+  one distinct method shows its label, differing methods show `Mixed`, and empty
+  groups and the total row stay blank. Group summaries are read-only; category
+  tabs do not show this column.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy./Symbol` and `Balance` blank to avoid duplicating the value already

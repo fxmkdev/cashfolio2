@@ -10,6 +10,7 @@ import {
 } from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
 import { getAssetClassLabel } from "@/shared/asset-class";
+import { getAccountTrackingMethodLabel } from "@/shared/account-tracking-method";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { getCurrencyDecimals } from "@/shared/unit-format";
 import {
@@ -40,6 +41,19 @@ export function getAccountListAssetClassValue(
       : getAssetClassLabel(data.groupAssetClass);
   }
   return getAssetClassLabel(data.assetClass);
+}
+
+export function getAccountListTrackingMethodValue(
+  data: AccountsGridRow | undefined,
+): string | undefined {
+  if (!data || isReferenceCurrencyTotalFooterRow(data)) return undefined;
+  if (data.nodeType === "accountGroup") {
+    if (data.groupTrackingMethod === undefined) return undefined;
+    return data.groupTrackingMethod === "Mixed"
+      ? "Mixed"
+      : getAccountTrackingMethodLabel(data.groupTrackingMethod);
+  }
+  return getAccountTrackingMethodLabel(data.trackingMethod);
 }
 
 export function getAccountListUnitIdentifierDisplayValue(args: {
@@ -243,6 +257,18 @@ export function useAccountTreeColumnDefs(params: {
                 ) : (
                   (value ?? null)
                 ),
+            } satisfies ColDef<AccountsGridRow>,
+            {
+              colId: "trackingMethod",
+              headerName: "Tracking Method",
+              initialWidth: 220,
+              resizable: true,
+              sortable: false,
+              filter: "agTextColumnFilter",
+              valueGetter: ({ data }) =>
+                getAccountListTrackingMethodValue(data),
+              tooltipValueGetter: ({ data }) =>
+                getAccountListTrackingMethodValue(data),
             } satisfies ColDef<AccountsGridRow>,
             buildAccountGainLossColumns({
               referenceCurrency,

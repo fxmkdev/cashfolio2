@@ -39,6 +39,7 @@ import {
 import { type RowTarget, useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountsReferenceBalanceRows } from "./-page-reference-balances";
 import { useAccountTreeColumnDefs } from "./-page-columns";
+import { useRowsWithGroupTrackingMethods } from "./-page-data-tracking-methods";
 import { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
 import {
@@ -352,9 +353,14 @@ export function useAccountsPageController(args: {
     rowsWithAccountReferenceBalances,
     !isEquityTab,
   );
+  const rowsWithGroupTrackingMethods = useRowsWithGroupTrackingMethods(
+    rowsByParentKeyForGroupAggregation,
+    rowsWithGroupAssetClasses,
+    !isEquityTab,
+  );
   const rows = useMemo(
     () =>
-      rowsWithGroupAssetClasses.map((row) => {
+      rowsWithGroupTrackingMethods.map((row) => {
         if (row.nodeType !== "accountGroup") {
           return row;
         }
@@ -378,7 +384,7 @@ export function useAccountsPageController(args: {
           balanceInReferenceCurrency: computedReferenceBalance,
         };
       }),
-    [rowsWithGroupAssetClasses, balanceInReferenceCurrencyByGroupId],
+    [rowsWithGroupTrackingMethods, balanceInReferenceCurrencyByGroupId],
   );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows = useSelectedSiblingRows(
