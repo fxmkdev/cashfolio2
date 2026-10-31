@@ -223,6 +223,15 @@ describe("staging seed against disposable PostgreSQL", () => {
     await fixture.$executeRawUnsafe(
       `GRANT SELECT, INSERT, UPDATE, DELETE ON ${applicationTables.map((table) => `"${table}"`).join(", ")} TO "${roleName}"`,
     );
+    // Match release permissions without relying on PUBLIC function access.
+    const functions =
+      "public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text)";
+    await fixture.$executeRawUnsafe(
+      `REVOKE EXECUTE ON FUNCTION ${functions} FROM PUBLIC`,
+    );
+    await fixture.$executeRawUnsafe(
+      `GRANT EXECUTE ON FUNCTION ${functions} TO "${roleName}"`,
+    );
   });
 
   beforeEach(async () => {
@@ -497,6 +506,19 @@ describe("staging seed against disposable PostgreSQL", () => {
     }
     expect(second.links).toHaveLength(first.links.length);
     expect(second.users).toEqual(first.users);
+    for (const table of ["schemes", "nodes", "assignments"] as const) {
+      expect(second[table].length).toBeGreaterThan(0);
+      expect(second[table]).toHaveLength(first[table].length);
+      const oldBookIds = new Set(first.books.map((book) => book.id));
+      const newBookIds = new Set(second.books.map((book) => book.id));
+      expect(
+        second[table].every(
+          (row) =>
+            newBookIds.has(row.accountBookId) &&
+            !oldBookIds.has(row.accountBookId),
+        ),
+      ).toBe(true);
+    }
     expect(secondSummary.books.map(({ id: _id, ...book }) => book)).toEqual(
       firstSummary.books.map(({ id: _id, ...book }) => book),
     );

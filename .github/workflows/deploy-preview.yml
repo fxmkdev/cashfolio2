@@ -9,7 +9,7 @@ permissions:
   pull-requests: read
 
 env:
-  NODE_VERSION: 24
+  NODE_VERSION: 26
   FLYCTL_VERSION: 0.4.115
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
       - name: Validate triggering build and current PR
         id: resolve
         run: node apps/cashfolio-app2/scripts/preview/resolve-run.ts
@@ -57,7 +57,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
       - name: Install trusted tooling without PR caches
         run:
           pnpm --filter cashfolio-app2 install --frozen-lockfile
