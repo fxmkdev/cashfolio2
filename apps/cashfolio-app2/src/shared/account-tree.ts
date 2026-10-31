@@ -1,4 +1,5 @@
 import type {
+  AccountTrackingMethod,
   AssetClass,
   AccountType,
   EquityAccountSubtype,
@@ -7,6 +8,7 @@ import type {
 import type { StatementImportCsvFormat } from "./statement-import-csv-format";
 
 export type AccountTreeRow = {
+  trackingMethod?: AccountTrackingMethod;
   assetClass?: AssetClass | null;
   isVirtualArchivedGroup?: boolean;
   persistedParentId?: string | null;

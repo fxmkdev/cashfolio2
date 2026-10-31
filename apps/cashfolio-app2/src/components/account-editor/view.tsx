@@ -227,6 +227,27 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     </Grid.Col>
                   </Fragment>
                 ) : null}
+                {unit === Unit.CURRENCY && (
+                  <Grid.Col span={12}>
+                    <Select
+                      label="Tracking Method"
+                      description="Track individual currency units, or a portfolio’s total statement value with gains/losses recorded as transactions. Portfolio tracking keeps its recorded and FX gains/losses together under Managed Portfolios."
+                      allowDeselect={false}
+                      data={[
+                        {
+                          value: "INDIVIDUAL_UNITS",
+                          label: "Individual Units",
+                        },
+                        {
+                          value: "TOTAL_PORTFOLIO_VALUE",
+                          label: "Total Portfolio Value",
+                        },
+                      ]}
+                      key={form.key("trackingMethod")}
+                      {...form.getInputProps("trackingMethod")}
+                    />
+                  </Grid.Col>
+                )}
                 {canMarkAsCashAccount ? (
                   <Grid.Col span={12}>
                     <Tooltip

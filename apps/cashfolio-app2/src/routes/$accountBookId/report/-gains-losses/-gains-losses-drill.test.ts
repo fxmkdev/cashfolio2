@@ -27,6 +27,32 @@ const hierarchy: GainsLossesBreakdownNode[] = [
 ];
 
 describe("asset-class drill paths", () => {
+  test("drills through investment groups to accounts with complete breadcrumbs", () => {
+    const group = {
+      ...hierarchy[0]!,
+      id: "gain-loss-investment:EQUITIES:managed-portfolios",
+      label: "Managed Portfolios",
+    };
+    const nested = [{ ...hierarchy[0]!, children: [group] }];
+    const path = [nested[0]!.id, group.id];
+    expect(
+      clampGainsLossesPath({
+        hierarchy: nested,
+        path: [...path, "gain-loss-account:portfolio"],
+      }),
+    ).toEqual(path);
+    const state = getGainsLossesDrillState({
+      hierarchy: nested,
+      path,
+      rootLabel: "All Gains/Losses",
+    });
+    expect(state.breadcrumbs.map((crumb) => crumb.label)).toEqual([
+      "All Gains/Losses",
+      "Equities",
+      "Managed Portfolios",
+    ]);
+    expect(state.currentNodes).toEqual(hierarchy[0]!.children);
+  });
   test("retains classes and drops non-drillable account segments", () => {
     expect(
       clampGainsLossesPath({

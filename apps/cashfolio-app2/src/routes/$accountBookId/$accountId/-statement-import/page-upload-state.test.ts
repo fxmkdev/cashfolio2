@@ -69,6 +69,7 @@ function setup() {
       account: {
         ...currentAccount,
         assetClass: null,
+        trackingMethod: "INDIVIDUAL_UNITS",
         name: "Cash",
         type: AccountType.BALANCE,
         equityAccountSubtype: null,

@@ -5,6 +5,7 @@ export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-
 import { toMoney, type Money } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
 import type {
+  AccountTrackingMethod,
   AssetClass,
   AccountType,
   EquityAccountSubtype,
@@ -34,6 +35,7 @@ function unavailableActionAvailability(): ActionAvailability {
 }
 
 export type AccountTreeAccount = {
+  trackingMethod?: AccountTrackingMethod;
   assetClass: AssetClass | null;
   id: string;
   name: string;
@@ -161,6 +163,7 @@ export function buildAccountRows(args: {
         id: account.id,
         nodeType: "account",
         name: account.name,
+        trackingMethod: account.trackingMethod,
         assetClass: account.assetClass,
         type: account.type,
         equityAccountSubtype: account.equityAccountSubtype,

@@ -162,6 +162,13 @@ Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 - `MARKETSTACK_API_KEY` from `secrets.MARKETSTACK_API_KEY`
 - `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)
 
+Investment groups below asset class use currency/cryptocurrency codes or
+security symbols, combining trade currencies for the same symbol. Currency
+accounts marked `trackingMethod = TOTAL_PORTFOLIO_VALUE` appear under Managed
+Portfolios instead; their recorded and calculated FX returns stay together.
+Tracking method is current reporting metadata, independent of valuation and FIFO
+identity, and applies to all historical periods.
+
 ## Accumulated Holding Gain/Loss
 
 Account-list native and reference-currency balances retain their signed booking

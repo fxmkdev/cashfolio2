@@ -88,6 +88,35 @@ export const Edit: Story = {
   },
 };
 
+export const ManagedPortfolio: Story = {
+  args: {
+    initialValues: {
+      ...editAccountInitialValues,
+      name: "Managed Portfolio",
+      groupId: undefined,
+      trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+    },
+    editingId: "portfolio",
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
+    const tracking = getFieldControl(dialog, "Tracking Method");
+    await expect(tracking).toHaveValue("Total Portfolio Value");
+    await expect(tracking).not.toBeDisabled();
+    await userEvent.click(tracking);
+    await userEvent.click(
+      await body.findByRole("option", { name: "Individual Units" }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ trackingMethod: "INDIVIDUAL_UNITS" }),
+      ),
+    );
+  },
+};
+
 export const LiabilityOpeningDebt: Story = {
   args: {
     initialValues: {

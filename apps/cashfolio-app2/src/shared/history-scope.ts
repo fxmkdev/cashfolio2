@@ -8,6 +8,7 @@ export type HistoryScopeSelection =
   | "total"
   | `asset-class:${string}`
   | `gain-loss-account:${string}`
+  | `gain-loss-investment:${string}`
   | `group:${string}`
   | `account:${string}`
   | `unit-type:${string}`
@@ -51,7 +52,11 @@ export function parseHistoryScopeSelection(
     return undefined;
   }
 
-  for (const prefix of ["asset-class:", "gain-loss-account:"] as const) {
+  for (const prefix of [
+    "asset-class:",
+    "gain-loss-account:",
+    "gain-loss-investment:",
+  ] as const) {
     if (value.startsWith(prefix)) {
       const id = value.slice(prefix.length).trim();
       return id ? `${prefix}${id}` : undefined;
@@ -157,6 +162,7 @@ export function normalizeGainLossScope(
   }
   return scope === "total" ||
     scope.startsWith("asset-class:") ||
+    scope.startsWith("gain-loss-investment:") ||
     scope.startsWith("gain-loss-account:") ||
     scope.startsWith("group:") ||
     scope.startsWith("account:")

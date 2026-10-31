@@ -1,4 +1,5 @@
 import {
+  AccountTrackingMethod,
   AssetClass,
   AccountType,
   EquityAccountSubtype,
@@ -55,6 +56,9 @@ export function validateAccountMutationInput(data: unknown): AccountInput {
   }
   return {
     ...commonFields,
+    trackingMethod: optionalField(data, "trackingMethod", (record, field) =>
+      requireEnumField(record, field, Object.values(AccountTrackingMethod)),
+    ),
     assetClass: nullableOptionalField(data, "assetClass", (record, field) =>
       requireEnumField(record, field, Object.values(AssetClass)),
     ),

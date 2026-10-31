@@ -78,7 +78,9 @@ describe("asset-class gain/loss attribution", () => {
       "Other Assets",
       "Unclassified",
     ]);
-    expect(toNumericMoney(hierarchy[0]!.children[0])).toMatchObject({
+    expect(
+      toNumericMoney(hierarchy[0]!.children[0]!.children[0]),
+    ).toMatchObject({
       totalGainLoss: 0,
       account: {
         id: "mixed",

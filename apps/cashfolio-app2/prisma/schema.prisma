@@ -25,6 +25,11 @@ enum EquityAccountSubtype {
   EXPENSE
 }
 
+enum AccountTrackingMethod {
+  INDIVIDUAL_UNITS
+  TOTAL_PORTFOLIO_VALUE
+}
+
 enum Unit {
   CURRENCY
   CRYPTOCURRENCY
@@ -185,8 +190,9 @@ model Account {
   cryptocurrency String?
   symbol         String?
   tradeCurrency  String?
-  isCashAccount  Boolean     @default(false)
+  isCashAccount  Boolean               @default(false)
   assetClass     AssetClass?
+  trackingMethod AccountTrackingMethod @default(INDIVIDUAL_UNITS)
 
   statementImportCsvFormat Json?
 
@@ -263,9 +269,9 @@ model ValuationProviderRequest {
   symbol         String?
   tradeCurrency  String?
 
-  httpStatus  Int?
-  durationMs  Int
-  retryCount  Int     @default(0)
+  httpStatus   Int?
+  durationMs   Int
+  retryCount   Int     @default(0)
   errorMessage String?
 
   @@index([requestedAt])

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AssetClass } from "../../.prisma-client/enums";
+import { AccountTrackingMethod, AssetClass } from "../../.prisma-client/enums";
 import {
   validateAccountBookNodeIdInput,
   validateAccountGroupMutationInput,
@@ -291,5 +291,27 @@ describe("account mutation input contracts", () => {
         updates: {},
       }),
     ).toThrow("Updates are required.");
+  });
+});
+
+describe("tracking method input", () => {
+  it.each(Object.values(AccountTrackingMethod))(
+    "accepts %s",
+    (trackingMethod) => {
+      expect(
+        validateAccountMutationInput({ ...account, trackingMethod })
+          .trackingMethod,
+      ).toBe(trackingMethod);
+    },
+  );
+  it("preserves omission and rejects invalid values", () => {
+    expect(
+      validateAccountMutationInput(account).trackingMethod,
+    ).toBeUndefined();
+    for (const trackingMethod of [null, "", "PORTFOLIO", true]) {
+      expect(() =>
+        validateAccountMutationInput({ ...account, trackingMethod }),
+      ).toThrow();
+    }
   });
 });

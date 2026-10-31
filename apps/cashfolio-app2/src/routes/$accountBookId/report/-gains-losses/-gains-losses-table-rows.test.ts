@@ -49,6 +49,21 @@ const hierarchy: GainsLossesBreakdownNode[] = [
 ];
 
 describe("asset-class table rows", () => {
+  test("nests account rows below investment groups without making groups navigable", () => {
+    const group = {
+      ...hierarchy[0]!,
+      id: "gain-loss-investment:EQUITIES:managed-portfolios",
+      label: "Managed Portfolios",
+    };
+    const rows = flattenGainsLossesHierarchyRows([
+      { ...hierarchy[0]!, children: [group] },
+    ]);
+    expect(rows.map((row) => [row.id, row.parentId, row.accountId])).toEqual([
+      ["asset-class:EQUITIES", undefined, undefined],
+      [group.id, "asset-class:EQUITIES", undefined],
+      ["opaque-row", group.id, "portfolio"],
+    ]);
+  });
   test("flattens classes and accounts once, retaining metadata for mixed-source explanations", () => {
     expect(flattenGainsLossesHierarchyRows(hierarchy)).toEqual([
       {

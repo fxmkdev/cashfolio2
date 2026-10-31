@@ -339,7 +339,7 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class then Account; recorded adjustments use their counterpart
+or Asset Class → Investment Group → Account; recorded adjustments use their counterpart
 financial account's class and group. Changing classification does not change
 amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
 Equities asset class.
@@ -478,12 +478,12 @@ submit UX and prevent duplicate requests.
 - Double-clicking a drillable chart node drills into its children.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Account. Account
+- Gains/Losses supports Account Structure and Asset Class → Investment Group → Account. Account
   metadata drives navigation from chart and table leaves to the unified
   explanation, including calculated holdings, recorded adjustments, and
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
-- Asset-class nodes drill into their accounts in charts and expand/collapse in
-  tables; they do not open a ledger.
+- Asset-class nodes drill into investment groups, which drill into accounts.
+  Both group levels expand/collapse in tables and do not open a ledger.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Report's **Group Accounts By** selector sits beside the period control and
@@ -742,6 +742,20 @@ Use the system-managed **Gain/Loss** equity account to record value changes in
 accounts valued manually, such as managed or discretionary portfolios. Represent
 the portfolio as a balance account in its reporting currency, tracking its total
 reported monetary value rather than individual securities.
+
+Set **Tracking Method** to **Total Portfolio Value** in the account editor for
+these portfolios. The default **Individual Units** groups ordinary accounts by
+currency, cryptocurrency, or security symbol (across trade currencies). In the
+Asset Class view, Total Portfolio Value groups the entire account return under
+**Managed Portfolios** within its assigned asset class, combining recorded
+performance and calculated FX gains/losses when its currency differs from the
+book's reference currency. Account Structure retains the account's physical
+group hierarchy. Existing accounts default to Individual Units; explicitly
+update managed portfolios. Tracking Method remains editable after bookings
+exist and applies to all historical Report/History periods. It changes reporting
+placement without changing valuation, cash-flow eligibility, or gain/loss
+calculations. Only currency-denominated balance accounts support Total Portfolio
+Value.
 
 Record contributions and withdrawals as transfers between the portfolio and the
 funding or receiving account. When a new portfolio statement arrives, calculate:

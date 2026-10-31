@@ -446,3 +446,41 @@ describe("unified history view tree", () => {
     ).toBe("Net Worth");
   });
 });
+
+test("History exposes selectable investment groups between classes and accounts", () => {
+  const options = {
+    cashFlow: [],
+    income: [],
+    expenses: [],
+    netWorth: [],
+    gainsLosses: [
+      { value: "asset-class:EQUITIES", label: "Equities", kind: "gainLoss" },
+      {
+        value: "gain-loss-investment:EQUITIES:managed-portfolios",
+        label: "Equities / Managed Portfolios",
+        treeLabel: "Managed Portfolios",
+        kind: "gainLoss",
+        parentValue: "asset-class:EQUITIES",
+      },
+      {
+        value: "gain-loss-account:portfolio",
+        label: "Equities / Managed Portfolios / Portfolio",
+        treeLabel: "Portfolio",
+        kind: "gainLoss",
+        parentValue: "gain-loss-investment:EQUITIES:managed-portfolios",
+        accountId: "portfolio",
+      },
+    ] as const,
+  };
+  const mutable = { ...options, gainsLosses: [...options.gainsLosses] };
+  const root = buildHistoryViewTreeData(mutable).find(
+    (node) => node.value === "gainsLosses:total",
+  )!;
+  const group = root.children![0]!.children![0]!;
+  expect(group.label).toBe("Managed Portfolios");
+  expect(group.children![0]!.label).toBe("Portfolio");
+  expect(getHistoryViewTreeSelection(group.value, mutable)).toEqual({
+    metric: "gainsLosses",
+    scope: "gain-loss-investment:EQUITIES:managed-portfolios",
+  });
+});

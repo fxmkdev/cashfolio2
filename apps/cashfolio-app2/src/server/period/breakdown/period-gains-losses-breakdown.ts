@@ -11,6 +11,11 @@ import {
   type PeriodGroupNode,
 } from "./period-breakdown-state";
 import { UNATTRIBUTED_GROUP_ID } from "./period-reporting-groups";
+import {
+  getGainLossInvestmentGroup,
+  UNKNOWN_GAIN_LOSS_UNIT,
+  type GainLossInvestmentGroup,
+} from "./period-gain-loss-investment-group";
 
 export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";
@@ -147,6 +152,36 @@ function compareNodes(
   return a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id, "en");
 }
 
+function resolveInvestmentGroup(account: AccountProjection): GainLossInvestmentGroup {
+  if (account.node.account.investmentGroup) return account.node.account.investmentGroup;
+  // Legacy recorded accumulators can combine booking units without identifying
+  // a financial account, so they cannot safely establish an investment unit.
+  if (account.contributions.some((value) => value.sourceKind === "EXPLICIT"))
+    return UNKNOWN_GAIN_LOSS_UNIT;
+  const groups = new Map(account.contributions.map((value) => {
+    const group = getGainLossInvestmentGroup(value);
+    return [group.key, group] as const;
+  }));
+  return groups.size === 1 ? groups.values().next().value! : UNKNOWN_GAIN_LOSS_UNIT;
+}
+
+function buildInvestmentGroups(
+  assetClass: string,
+  accounts: AccountProjection[],
+): PeriodGainsLossesBreakdownNode[] {
+  const groups = new Map<string, { descriptor: GainLossInvestmentGroup; accounts: AccountProjection[] }>();
+  for (const account of accounts) {
+    const descriptor = resolveInvestmentGroup(account);
+    groups.getOrInsertComputed(descriptor.key, () => ({ descriptor, accounts: [] })).accounts.push(account);
+  }
+  return Array.from(groups.values(), ({ descriptor, accounts }) => ({
+    id: `gain-loss-investment:${assetClass}:${descriptor.key}`,
+    label: descriptor.label,
+    ...contributionTotals(accounts.flatMap((account) => account.contributions)),
+    children: accounts.map((account) => account.node).sort(compareNodes),
+  })).sort(compareNodes);
+}
+
 function buildAssetClassHierarchy(
   accounts: AccountProjection[],
 ): PeriodGainsLossesBreakdownNode[] {
@@ -167,7 +202,7 @@ function buildAssetClassHierarchy(
         ...contributionTotals(
           matching.flatMap((account) => account.contributions),
         ),
-        children: matching.map((account) => account.node).sort(compareNodes),
+        children: buildInvestmentGroups(descriptor.value, matching),
       },
     ];
   });

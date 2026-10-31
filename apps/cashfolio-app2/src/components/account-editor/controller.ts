@@ -60,7 +60,12 @@ export function useEditAccountModalController({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
-      : { assetClass: null, unit: Unit.CURRENCY, typeDescriptor },
+      : {
+          assetClass: null,
+          trackingMethod: "INDIVIDUAL_UNITS" as const,
+          unit: Unit.CURRENCY,
+          typeDescriptor,
+        },
     validate: {
       name: (value, values) => {
         const siblingNames = existingNodes
@@ -147,7 +152,12 @@ export function useEditAccountModalController({
     () =>
       initialValues
         ? toFormValues(initialValues)
-        : { assetClass: null, unit: Unit.CURRENCY, typeDescriptor },
+        : {
+            assetClass: null,
+            trackingMethod: "INDIVIDUAL_UNITS" as const,
+            unit: Unit.CURRENCY,
+            typeDescriptor,
+          },
     [initialValues, typeDescriptor],
   );
 

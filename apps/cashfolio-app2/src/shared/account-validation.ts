@@ -90,6 +90,17 @@ export function validateAccountAssetClass(
     : "Asset class is only allowed for balance accounts";
 }
 
+export function validateAccountTrackingMethod(
+  trackingMethod: AccountInput["trackingMethod"],
+  unit?: Unit,
+  type?: AccountType,
+): string | null {
+  return trackingMethod !== "TOTAL_PORTFOLIO_VALUE" ||
+    (type === "BALANCE" && unit === "CURRENCY")
+    ? null
+    : "Total portfolio value tracking is only available for currency accounts";
+}
+
 export function validateAccountCurrency(
   currency?: string,
   unit?: Unit,
@@ -204,6 +215,7 @@ export function validateAccountInput(
     validateEquityAccountUnitMetadata(data),
     validateAccountUnit(data.unit, data.type),
     validateAccountAssetClass(data.assetClass, data.type),
+    validateAccountTrackingMethod(data.trackingMethod, data.unit, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
     validateAccountCryptocurrency(data.cryptocurrency, data.unit, data.type),
     validateAccountSymbol(data.symbol, data.unit, data.type),

@@ -144,3 +144,37 @@ it("allows all classes on converted balance accounts and rejects classified equi
     }),
   ).rejects.toThrow();
 });
+
+it("defaults existing and new accounts to individual units without inference", async () => {
+  const accounts = await db.account.findMany();
+  expect(
+    accounts.every((account) => account.trackingMethod === "INDIVIDUAL_UNITS"),
+  ).toBe(true);
+});
+
+it("allows portfolio tracking only on currency balance accounts, including archived accounts", async () => {
+  for (const isActive of [true, false]) {
+    const updated = await db.account.update({
+      where: {
+        id_accountBookId: {
+          id: `ASSET-CURRENCY-${isActive}`,
+          accountBookId: "book",
+        },
+      },
+      data: { trackingMethod: "TOTAL_PORTFOLIO_VALUE" },
+    });
+    expect(updated.trackingMethod).toBe("TOTAL_PORTFOLIO_VALUE");
+  }
+  for (const id of [
+    "ASSET-SECURITY-true",
+    "ASSET-CRYPTOCURRENCY-true",
+    "EQUITY-CURRENCY-true",
+  ]) {
+    await expect(
+      db.account.update({
+        where: { id_accountBookId: { id, accountBookId: "book" } },
+        data: { trackingMethod: "TOTAL_PORTFOLIO_VALUE" },
+      }),
+    ).rejects.toThrow();
+  }
+});

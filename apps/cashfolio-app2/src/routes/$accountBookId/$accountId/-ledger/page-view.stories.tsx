@@ -57,6 +57,7 @@ const statementImportCsvFormat: StatementImportCsvFormat = {
 
 const assetAccount = {
   assetClass: null,
+  trackingMethod: "INDIVIDUAL_UNITS" as const,
   id: "account-checking",
   name: "Checking",
   isActive: true,
@@ -262,6 +263,7 @@ function LedgerPageStoryHarness({
           type: accountType,
           isActive: accountActive,
           assetClass,
+          trackingMethod: "INDIVIDUAL_UNITS" as const,
         };
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {

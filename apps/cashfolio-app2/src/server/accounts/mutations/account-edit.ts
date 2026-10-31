@@ -132,6 +132,7 @@ export async function createAccountOperation(
     data: {
       name: normalizedData.name,
       assetClass: normalizedData.assetClass ?? null,
+      trackingMethod: normalizedData.trackingMethod,
       type: normalizedData.type,
       equityAccountSubtype: normalizedData.equityAccountSubtype,
       groupId: normalizedData.groupId ?? null,
@@ -184,6 +185,7 @@ export async function updateAccountOperation(
     },
     select: {
       assetClass: true,
+      trackingMethod: true,
       type: true,
       equityAccountSubtype: true,
       unit: true,
@@ -207,6 +209,7 @@ export async function updateAccountOperation(
   assertAccountUnitIdentityUnchanged(submittedData, existing);
   const submittedDataWithExistingCashFlag = {
     ...submittedData,
+    trackingMethod: submittedData.trackingMethod ?? existing.trackingMethod,
     assetClass:
       submittedData.assetClass === undefined
         ? existing.assetClass
@@ -247,6 +250,7 @@ export async function updateAccountOperation(
     data: {
       name: normalizedData.name,
       assetClass: normalizedData.assetClass,
+      trackingMethod: normalizedData.trackingMethod,
       groupId: normalizedData.groupId ?? null,
       sortOrder:
         typeof normalizedData.sortOrder === "number"

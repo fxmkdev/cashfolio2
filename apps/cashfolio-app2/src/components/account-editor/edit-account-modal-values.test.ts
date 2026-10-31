@@ -82,6 +82,7 @@ describe("transformAccountValues", () => {
         isCashAccount: true,
       }),
     ).toEqual({
+      trackingMethod: "INDIVIDUAL_UNITS",
       assetClass: null,
       name: "Groceries",
       typeDescriptor: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
@@ -121,6 +122,7 @@ describe("transformAccountValues", () => {
         isCashAccount: true,
       }),
     ).toEqual({
+      trackingMethod: "INDIVIDUAL_UNITS",
       assetClass: null,
       name: "Brokerage",
       typeDescriptor: AccountType.BALANCE,
@@ -212,6 +214,7 @@ describe("createAccountInitialValues", () => {
         openingBalance: 100,
       }),
     ).toEqual({
+      trackingMethod: "INDIVIDUAL_UNITS",
       assetClass: null,
       name: "Checking",
       type: AccountType.BALANCE,
@@ -365,4 +368,28 @@ describe("account cash group helpers", () => {
       ),
     ).toMatchObject({ isCashAccount: false });
   });
+});
+
+describe("tracking method form values", () => {
+  test.each(["INDIVIDUAL_UNITS", "TOTAL_PORTFOLIO_VALUE"] as const)(
+    "round-trips %s",
+    (trackingMethod) => {
+      const initial = createAccountInitialValues({
+        name: "Portfolio",
+        type: AccountType.BALANCE,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        trackingMethod,
+      });
+      const form = toFormValues(initial);
+      expect(transformAccountValues(form).trackingMethod).toBe(trackingMethod);
+      expect(
+        transformAccountValues({ ...form, unit: Unit.SECURITY }).trackingMethod,
+      ).toBe("INDIVIDUAL_UNITS");
+      expect(
+        transformAccountValues({ ...form, typeDescriptor: "EQUITY-EXPENSE" })
+          .trackingMethod,
+      ).toBe("INDIVIDUAL_UNITS");
+    },
+  );
 });

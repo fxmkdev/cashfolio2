@@ -56,6 +56,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
         tradeCurrency: true,
         statementImportCsvFormat: true,
         assetClass: true,
+        trackingMethod: true,
         isCashAccount: true,
         groupId: true,
       },
