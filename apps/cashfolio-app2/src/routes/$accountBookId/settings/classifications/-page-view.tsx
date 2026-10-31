@@ -1,22 +1,8 @@
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Stack,
-  Table,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconEdit,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react";
-import { useState } from "react";
-import { classificationOptions } from "@/shared/asset-class";
+import { Button, Group, Stack, Text } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
+import { useMemo, useState } from "react";
+import { DataGrid } from "@/components/grid/data-grid";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
@@ -24,6 +10,27 @@ import {
   type ManagedClass,
   type ClassDraft,
 } from "./-class-dialog";
+import { AssetClassActionsCell } from "./-actions-cell";
+import { buildAssetClassGridRows, type AssetClassGridRow } from "./-grid-rows";
+
+const EMPTY_MESSAGE =
+  "No asset classes. Create one to start classifying accounts.";
+const GRID_LOCALE_TEXT = { noRowsToShow: EMPTY_MESSAGE };
+const DEFAULT_COL_DEF: ColDef<AssetClassGridRow> = {
+  resizable: true,
+  sortable: false,
+  filter: false,
+  suppressMovable: true,
+};
+const NAME_COLUMN: ColDef<AssetClassGridRow> = {
+  headerName: "Asset Class",
+  field: "name",
+  flex: 1,
+  minWidth: 280,
+  tooltipField: "path",
+  cellRendererParams: { suppressCount: true },
+};
+
 export function ClassificationsPageView(props: {
   nodes: ManagedClass[];
   onSave: (draft: ClassDraft) => Promise<void>;
@@ -39,12 +46,53 @@ export function ClassificationsPageView(props: {
     captureErrors: true,
     onRefreshConstraints: props.onRefresh,
   });
-  const options = classificationOptions(props.nodes);
+  const rows = useMemo(
+    () => buildAssetClassGridRows(props.nodes),
+    [props.nodes],
+  );
+  const { isSubmitting, runSubmit } = state;
+  const { onMove } = props;
+  const columns = useMemo<ColDef<AssetClassGridRow>[]>(
+    () => [
+      {
+        colId: "accounts",
+        headerName: "Accounts",
+        width: 230,
+        minWidth: 210,
+        valueGetter: ({ data }) =>
+          data
+            ? `${data.activeCount} active, ${data.archivedCount} archived`
+            : "",
+      },
+      {
+        colId: "actions",
+        headerName: "Actions",
+        pinned: "right",
+        width: 180,
+        minWidth: 160,
+        cellClass: "actions-cell",
+        cellRenderer: ({ data }: ICellRendererParams<AssetClassGridRow>) =>
+          data ? (
+            <AssetClassActionsCell
+              row={data}
+              isMoving={isSubmitting}
+              onEdit={() => setDialog({ draft: data })}
+              onAddChild={() =>
+                setDialog({ draft: { name: "", parentId: data.id } })
+              }
+              onMove={(direction) => {
+                void runSubmit(() => onMove(data.id, direction));
+              }}
+              onDelete={() => setDialog({ draft: data, deleting: true })}
+            />
+          ) : null,
+      },
+    ],
+    [isSubmitting, runSubmit, onMove],
+  );
   return (
-    <Stack style={{ overflow: "auto" }}>
-      <Title order={2}>Classifications</Title>
-      <Group justify="space-between">
-        <Title order={3}>Asset Class</Title>
+    <Stack flex={1} mih={0}>
+      <Group justify="end">
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => setDialog({ draft: { name: "", parentId: null } })}
@@ -60,111 +108,21 @@ export function ClassificationsPageView(props: {
         state={state}
         onRefreshConstraints={props.onRefresh}
       />
-      <Table.ScrollContainer minWidth={600}>
-        <Table>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Asset Class</Table.Th>
-              <Table.Th>Accounts</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {options.map((option) => {
-              const node = props.nodes.find((n) => n.id === option.value)!;
-              const siblings = options.filter(
-                  (o) =>
-                    props.nodes.find((n) => n.id === o.value)?.parentId ===
-                    node.parentId,
-                ),
-                index = siblings.findIndex((n) => n.value === node.id);
-              const hasChildren = props.nodes.some(
-                (n) => n.parentId === node.id,
-              );
-              return (
-                <Table.Tr key={node.id}>
-                  <Table.Td>
-                    <Text pl={option.depth * 20} title={option.label}>
-                      {node.name}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {node.activeCount} active, {node.archivedCount} archived
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label={`Edit ${node.name}`}
-                        onClick={() => setDialog({ draft: node })}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label={`Add Child to ${node.name}`}
-                        onClick={() =>
-                          setDialog({ draft: { name: "", parentId: node.id } })
-                        }
-                      >
-                        <IconPlus size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label={`Move ${node.name} Up`}
-                        disabled={index === 0 || state.isSubmitting}
-                        onClick={() =>
-                          void state.runSubmit(() =>
-                            props.onMove(node.id, "up"),
-                          )
-                        }
-                      >
-                        <IconArrowUp size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label={`Move ${node.name} Down`}
-                        disabled={
-                          index === siblings.length - 1 || state.isSubmitting
-                        }
-                        onClick={() =>
-                          void state.runSubmit(() =>
-                            props.onMove(node.id, "down"),
-                          )
-                        }
-                      >
-                        <IconArrowDown size={16} />
-                      </ActionIcon>
-                      <Tooltip
-                        label={
-                          hasChildren
-                            ? "Move or delete child classes first"
-                            : "Delete Asset Class"
-                        }
-                      >
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          aria-label={`Delete ${node.name}`}
-                          disabled={hasChildren}
-                          onClick={() =>
-                            setDialog({ draft: node, deleting: true })
-                          }
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
-      {!props.nodes.length && (
-        <Text>No asset classes. Create one to start classifying accounts.</Text>
-      )}
+      <DataGrid
+        containerStyle={{ flex: 1, minHeight: 0 }}
+        rowData={rows}
+        columnDefs={columns}
+        defaultColDef={DEFAULT_COL_DEF}
+        autoGroupColumnDef={NAME_COLUMN}
+        treeData
+        treeDataParentIdField="parentId"
+        groupDefaultExpanded={-1}
+        getRowId={({ data }) => data.id}
+        onGridReady={({ api }) =>
+          api.setGridAriaProperty("label", "Asset Classes")
+        }
+        localeText={GRID_LOCALE_TEXT}
+      />
       <Text size="sm" c="dimmed">
         Accounts without an assignment appear as Unclassified.
       </Text>

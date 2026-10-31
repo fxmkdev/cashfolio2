@@ -12,7 +12,7 @@ export const Route = createFileRoute(
 )({
   loader: ({ params: { accountBookId } }) =>
     getAssetClasses({ data: { accountBookId } }),
-  head: () => createDocumentTitleHead("Classifications"),
+  head: () => createDocumentTitleHead("Asset Classes"),
   component: ClassificationsPage,
 });
 function ClassificationsPage() {

@@ -105,6 +105,9 @@ pnpm lint:workflows                           # actionlint check for GitHub work
   the general capitalization policy to labels. Explicit provider terms and
   documented legacy URLs are exceptions. See
   [Identity and financial-account terminology](apps/cashfolio-app2/docs/ui-patterns.md#identity-and-financial-account-terminology).
+- Use the shared AG Grid `DataGrid` for all tables, including small, read-only,
+  and modal tables. See the
+  [table guidelines](apps/cashfolio-app2/docs/ui-patterns.md#tables).
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).
