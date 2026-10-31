@@ -408,7 +408,9 @@ editors, bulk assignment, Accounts columns, and ledger badges. Assignment counts
 are loaded only by the settings page. Mutation recovery refreshes node choices
 alongside page constraints without remounting drafts. Router invalidation
 refreshes these choices after taxonomy changes. Gain/loss Report drill paths and
-History scopes retain stable class IDs when nodes move or are renamed; removed
-selections fall back to the root or Total. Asset/liability allocation retains
-the Account Structure / Asset Class grouping lens; the latter uses the current
-class hierarchy and sibling order.
+History scopes retain stable class IDs when nodes move or are renamed. Report
+drill paths fall back to the deepest surviving saved ancestor, rebuilding its
+current path after reparenting; only paths with no surviving ancestor reset to
+the root. Invalid History scopes fall back to Total. Asset/liability allocation
+retains the Account Structure / Asset Class grouping lens; the latter uses the
+current class hierarchy and sibling order.

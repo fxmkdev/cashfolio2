@@ -26,7 +26,99 @@ const hierarchy: GainsLossesBreakdownNode[] = [
   },
 ];
 
+function investment(symbol: string): GainsLossesBreakdownNode {
+  return {
+    ...hierarchy[0]!,
+    id: `gain-loss-investment:EQUITIES:SECURITY:${symbol}`,
+    label: symbol,
+    children: [
+      {
+        ...hierarchy[0]!.children[0]!,
+        id: `gain-loss-account:${symbol}`,
+        label: `${symbol} Account`,
+      },
+    ],
+  };
+}
+
 describe("asset-class drill paths", () => {
+  test("retains Equities when the selected AAPL investment disappears in the next period", () => {
+    const aapl = investment("AAPL"),
+      msft = investment("MSFT");
+    const previous = [
+      {
+        ...hierarchy[0]!,
+        realizedGainLoss: 10,
+        unrealizedGainLoss: 4,
+        totalGainLoss: 14,
+        children: [aapl, msft],
+      },
+    ];
+    const next = [{ ...hierarchy[0]!, children: [msft] }];
+    const path = ["asset-class:EQUITIES", aapl.id];
+    expect(clampGainsLossesPath({ hierarchy: previous, path })).toEqual(path);
+    expect(clampGainsLossesPath({ hierarchy: next, path })).toEqual([
+      "asset-class:EQUITIES",
+    ]);
+    const state = getGainsLossesDrillState({
+      hierarchy: next,
+      path,
+      rootLabel: "All Gains/Losses",
+    });
+    expect(state.breadcrumbs.map((crumb) => crumb.label)).toEqual([
+      "All Gains/Losses",
+      "Equities",
+    ]);
+    expect(state.currentNodes).toEqual([msft]);
+  });
+  test("falls back through a missing subclass and investment to their surviving class", () => {
+    const path = [
+      "asset-class:EQUITIES",
+      "asset-class:domestic",
+      "gain-loss-investment:domestic:SECURITY:AAPL",
+    ];
+    expect(clampGainsLossesPath({ hierarchy, path })).toEqual([
+      "asset-class:EQUITIES",
+    ]);
+  });
+  test("reconstructs the current path of a relocated surviving ancestor", () => {
+    const moved = [
+      {
+        ...hierarchy[0]!,
+        id: "asset-class:parent",
+        label: "Parent",
+        children: hierarchy,
+      },
+    ];
+    const path = [
+      "asset-class:EQUITIES",
+      "asset-class:missing",
+      "gain-loss-investment:missing:SECURITY:AAPL",
+    ];
+    expect(clampGainsLossesPath({ hierarchy: moved, path })).toEqual([
+      "asset-class:parent",
+      "asset-class:EQUITIES",
+    ]);
+  });
+  test("retains the deepest surviving nested class", () => {
+    const nested = [
+      {
+        ...hierarchy[0]!,
+        children: [
+          { ...hierarchy[0]!, id: "asset-class:domestic", label: "Domestic" },
+        ],
+      },
+    ];
+    const path = [
+      "asset-class:EQUITIES",
+      "asset-class:domestic",
+      "gain-loss-investment:domestic:SECURITY:AAPL",
+    ];
+    expect(clampGainsLossesPath({ hierarchy: nested, path })).toEqual(
+      path.slice(0, 2),
+    );
+    expect(clampGainsLossesPath({ hierarchy: [], path })).toEqual([]);
+  });
   test("drills through investment groups to accounts with complete breadcrumbs", () => {
     const group = {
       ...hierarchy[0]!,

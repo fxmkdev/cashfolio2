@@ -70,6 +70,37 @@ function getBaseSyncInput() {
 }
 
 describe("getSyncedReportDrillPaths", () => {
+  test("persists the surviving class after a period change and is stable on the next sync", () => {
+    const input = {
+      ...getBaseSyncInput(),
+      drillPathByGainsLosses: [
+        "asset-class:EQUITIES",
+        "gain-loss-investment:EQUITIES:SECURITY:AAPL",
+      ],
+      gainsLossesBreakdownHierarchy: [
+        gainsLossesNode({
+          id: "asset-class:EQUITIES",
+          children: [
+            gainsLossesNode({
+              id: "gain-loss-investment:EQUITIES:SECURITY:MSFT",
+              children: [gainsLossesNode({ id: "gain-loss-account:MSFT" })],
+            }),
+          ],
+        }),
+      ],
+    };
+    const synced = getSyncedReportDrillPaths(input);
+    expect(synced.drillPathByGainsLosses).toEqual(["asset-class:EQUITIES"]);
+    expect(synced.hasGainsLossesChanges).toBe(true);
+    expect(synced.hasBreakdownChanges).toBe(false);
+    expect(synced.hasAllocationBreakdownChanges).toBe(false);
+    const repeated = getSyncedReportDrillPaths({
+      ...input,
+      drillPathByGainsLosses: synced.drillPathByGainsLosses,
+    });
+    expect(repeated.drillPathByGainsLosses).toEqual(["asset-class:EQUITIES"]);
+    expect(repeated.hasGainsLossesChanges).toBe(false);
+  });
   test("reports no changes when every stored path is still valid", () => {
     const synced = getSyncedReportDrillPaths(getBaseSyncInput());
 

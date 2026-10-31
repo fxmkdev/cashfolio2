@@ -610,8 +610,10 @@ waiting, retry, uncertain-outcome, and refresh feedback.
     toggled)
   - `drillPathByGainsLosses` (node-id path for current chart drill level)
 - Keep only the selected period (`period`) in route search params.
-- Clamp stale drill paths to the nearest valid ancestor when refreshed data no
-  longer contains a node.
+- Clamp stale drill paths to the nearest surviving saved ancestor when refreshed
+  data or a different period no longer contains a node. For Asset Class G/L,
+  reconstruct that ancestor’s current stable-ID path after a reparent. Reset to
+  the root only if no saved ancestor survives.
 
 ## Reference Currency Display Principle
 
