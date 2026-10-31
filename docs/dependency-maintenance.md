@@ -15,7 +15,7 @@ The refreshed manifest versions are:
 | TanStack Router / Start                  | 1.170.41 / 1.168.60       |
 | Prisma CLI / client / PostgreSQL adapter | 7.10.0                    |
 | Vite                                     | 8.3.4                     |
-| Storybook                                | 10.6.1                    |
+| Storybook                                | 10.6.2                    |
 | Playwright                               | 1.64.0                    |
 | AG Grid / AG Charts                      | 36.2.0 / 14.2.0           |
 | Vitest / coverage / browser              | 5.0.5                     |
@@ -28,7 +28,7 @@ The refreshed manifest versions are:
 | Node runtime / typings                   | 26.13.0 / 26.6.5          |
 | pnpm / Prettier                          | 12.16.1 / 3.9.9           |
 
-Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.1 with the
+Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.2 with the
 Playwright browser provider 5.0.5. Vitest, coverage, and browser packages are
 upgraded together to stable 5.0.5 alongside MSW 3.0.3. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
@@ -311,6 +311,37 @@ and
 [pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0),
 and
 [pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
+
+## October 31 Storybook security update
+
+Storybook, addon-docs, addon-vitest, and react-vite now require `^10.6.2`. The
+lockfile aligns all seven versioned Storybook packages at 10.6.2 without
+changing unrelated package versions. This patches
+[GHSA-f2ph-cmg5-wxc8](https://github.com/storybookjs/storybook/security/advisories/GHSA-f2ph-cmg5-wxc8)
+and
+[GHSA-px85-f4q5-jh77](https://github.com/storybookjs/storybook/security/advisories/GHSA-px85-f4q5-jh77).
+Affected development servers can allow unauthorized project-file changes from
+malicious websites or local-network clients, potentially leading to code
+execution with the developer's permissions. Built, published Storybooks are not
+affected by these development-server advisories.
+
+The patched release restricts development-server iframe embedding and preview
+messaging across origins. Keep those security defaults; no insecure
+compatibility flags are enabled. The existing local Storybook workflow, Vitest
+5.0.5 integration, and static Chromatic publishing configuration are retained.
+See the
+[10.6.2 release notes](https://github.com/storybookjs/storybook/releases/tag/v10.6.2).
+
+The before/after dependency audits remove both Storybook advisory IDs and their
+four package findings: critical findings fall from two to zero and high findings
+from three to one. The remaining one high, six moderate, and two low findings
+affect unchanged Zod, fast-uri, Seroval, minimatch, and glob packages; this is
+not a clean audit or a production-reachability assessment.
+
+Local verification on Node 26.13.0 / pnpm 12.16.1 passed Prisma generation, the
+app typecheck, changed-file formatting, and frozen-lockfile installation.
+Storybook builds/browser tests, production builds, coverage, database
+integration, and E2E remain assigned to final-revision CI.
 
 ## October 28 tooling follow-up
 
