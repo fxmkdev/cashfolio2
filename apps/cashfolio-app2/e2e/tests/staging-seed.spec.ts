@@ -197,7 +197,12 @@ test("the seeded EUR card purchase explains its gain/loss asset-class grouping",
       accountBookId: household.id,
       description: "Grouping demo: EUR card purchase settled in CHF",
     },
+    include: { bookings: true },
   });
+  expect(purchase.bookings).toHaveLength(2);
+  for (const booking of purchase.bookings) {
+    expect(booking.date.toISOString()).toBe("2026-10-08T00:00:00.000Z");
+  }
   await page.goto(`/${household.id}/report?period=2026-10`);
   await selectSegmentedControlOption(
     page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),

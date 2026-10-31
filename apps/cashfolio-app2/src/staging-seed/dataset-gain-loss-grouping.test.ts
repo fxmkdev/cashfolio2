@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, AssetClass, Unit } from "../.prisma-client/enums";
-import { addUtcDays, startOfUtcMonth } from "../shared/date";
 import { toMoney } from "../shared/money";
 import { toNumericMoney } from "../server/money-boundary";
 import { buildGainLossAccountAttribution } from "../server/period/breakdown/period-gain-loss-attribution";
@@ -10,14 +9,39 @@ import {
   type GainLossContributionAccumulator,
 } from "../server/period/breakdown/period-gains-losses-contributions";
 import { computeExecutionResidualRealization } from "../server/period/holdings/period-execution-residuals";
-import { generateStagingDataset } from "./dataset";
+import {
+  getPeriodEndExclusive,
+  resolvePeriodSelection,
+} from "../server/period/period-selection";
+import { generateStagingDataset, getZurichToday } from "./dataset";
 
 describe("staging gain/loss grouping demo", () => {
-  it.each(["2026-10-10", "2026-01-01", "2024-02-29"])(
-    "groups the seeded card purchase residual by its origin through %s",
-    async (day) => {
-      const today = new Date(`${day}T00:00:00Z`);
-      const household = generateStagingDataset(today).books[0];
+  it.each([
+    ["2026-10-10T12:00:00Z", "2026-10-08", "2026-10"],
+    ["2026-10-31T12:00:00Z", "2026-10-29", "2026-10"],
+    ["2026-10-01T12:00:00Z", "2026-09-29", "2026-09"],
+    ["2026-10-02T12:00:00Z", "2026-09-30", "2026-09"],
+    ["2026-01-01T12:00:00Z", "2025-12-30", "2025-12"],
+    ["2024-02-29T12:00:00Z", "2024-02-27", "2024-02"],
+    ["2024-03-01T12:00:00Z", "2024-02-28", "2024-02"],
+    ["2024-03-02T12:00:00Z", "2024-02-29", "2024-02"],
+    ["2026-10-30T23:30:00Z", "2026-10-29", "2026-10"],
+    ["2026-06-30T22:30:00Z", "2026-06-29", "2026-06"],
+    ["2026-07-01T22:30:00Z", "2026-06-30", "2026-06"],
+    ["2025-12-31T23:30:00Z", "2025-12-30", "2025-12"],
+  ])(
+    "makes the demo reportable at %s with booking day %s in %s",
+    async (instant, bookingDay, periodValue) => {
+      const now = new Date(instant);
+      const household = generateStagingDataset(getZurichToday(now)).books[0];
+      const bookingDate = new Date(`${bookingDay}T00:00:00Z`);
+      const selection = resolvePeriodSelection({
+        periodValue,
+        now,
+        firstBookingDate: household.startDate,
+      });
+      expect(selection.periodValue).toBe(periodValue);
+      const periodEndExclusive = getPeriodEndExclusive(selection.to);
       const transactions = household.transactions.filter(
         ({ description }) =>
           description === "Grouping demo: EUR card purchase settled in CHF",
@@ -27,18 +51,22 @@ describe("staging gain/loss grouping demo", () => {
         expect.objectContaining({
           accountKey: "current",
           value: "-105",
-          date: today,
+          date: bookingDate,
           unit: Unit.CURRENCY,
           currency: "CHF",
         }),
         expect.objectContaining({
           accountKey: "travel",
           value: "100",
-          date: today,
+          date: bookingDate,
           unit: Unit.CURRENCY,
           currency: "EUR",
         }),
       ]);
+      for (const booking of transactions[0]!.bookings) {
+        expect(booking.date >= selection.from).toBe(true);
+        expect(booking.date < periodEndExclusive).toBe(true);
+      }
       const accounts = new Map(
         household.accounts.map((account) => [account.key, account]),
       );
@@ -76,8 +104,8 @@ describe("staging gain/loss grouping demo", () => {
             tradeCurrency: booking.tradeCurrency ?? null,
           })),
         })),
-        periodStart: startOfUtcMonth(today),
-        periodEndExclusive: addUtcDays(today, 1),
+        periodStart: selection.from,
+        periodEndExclusive,
         referenceCurrency: household.referenceCurrency,
         trackedHoldingAccountIdSet: new Set(),
         assetLiabilityAccountIdSet: new Set(
