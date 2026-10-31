@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { NavigationLoadingBar } from "../components/navigation/navigation-loading-bar";
+import { GlobalLoadingProvider } from "../components/navigation/global-loading";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import "../mantine";
 import { theme } from "../theme";
@@ -61,10 +62,12 @@ function RootComponent() {
       <body>
         <MantineProvider theme={theme} defaultColorScheme="auto">
           <Notifications />
-          <NavigationLoadingBar />
-          <AgThemeModeSynchronizer>
-            <Outlet />
-          </AgThemeModeSynchronizer>
+          <GlobalLoadingProvider>
+            <NavigationLoadingBar />
+            <AgThemeModeSynchronizer>
+              <Outlet />
+            </AgThemeModeSynchronizer>
+          </GlobalLoadingProvider>
         </MantineProvider>
         <Scripts />
       </body>

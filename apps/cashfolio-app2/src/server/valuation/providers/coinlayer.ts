@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../../resource-error";
 import { fetchProviderResponse } from "./request";
 import { getProviderApiKey } from "../provider-api-key";
 import {
@@ -115,6 +116,7 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
       parsed = typeof rate === "number" ? rate : null;
     }
   } catch (error) {
+    rethrowResourceError(error);
     const errorMessage =
       providerErrorMessage ?? toSafeProviderErrorMessage(error);
     await recordUsage({

@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+const revisionQuery = vi.hoisted(() => vi.fn());
+vi.mock("../../../prisma.server", () => ({
+  prisma: { accountBook: { findUniqueOrThrow: revisionQuery } },
+}));
+
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
     let validate: ((data: unknown) => unknown) | undefined;
@@ -42,6 +47,7 @@ vi.mock("./period-history-opening-balance.server", () => ({
 }));
 
 import { buildHistoryPeriodValues, getPeriodHistory } from "./period-history";
+import { withResourceRequest } from "../../resource-context.server";
 
 describe("buildHistoryPeriodValues", () => {
   test("builds monthly values from account-book start month to current month", () => {
@@ -76,12 +82,72 @@ describe("buildHistoryPeriodValues", () => {
 });
 
 describe("getPeriodHistory", () => {
+  test("preserves structured revision conflicts when RPC handles the thrown error", async () => {
+    revisionQuery.mockResolvedValue({ periodCacheRevision: "changed" });
+    const response = await withResourceRequest(
+      new AbortController().signal,
+      async () => {
+        try {
+          await getPeriodHistory({
+            data: { accountBookId: "book-1", granularity: "month" },
+          });
+          return new Response("History loaded");
+        } catch {
+          // Start catches handler errors before returning its RPC response.
+          return new Response("Serialized RPC error", { status: 500 });
+        }
+      },
+    );
+    expect(response.status).toBe(409);
+    expect(response.headers.get("X-Cashfolio-Resource-Limit")).toBe(
+      "history_revision_changed",
+    );
+    expect(response.headers.get("Retry-After")).toBe("0");
+    expect(await response.text()).toContain("account book changed");
+  });
+  test("paginates smaller windows and calculates opening balances only at the beginning", async () => {
+    const newest = await getPeriodHistory({
+      data: { accountBookId: "book-1", granularity: "month", pageSize: 1 },
+    });
+    expect(newest.points.map((point) => point.periodValue)).toEqual([
+      "2026-03",
+    ]);
+    expect(newest.nextBefore).toBe("2026-03");
+    expect(newest.openingBalancePoint).toBeNull();
+    expect(loadHistoryOpeningBalancePoint).not.toHaveBeenCalled();
+    const oldest = await getPeriodHistory({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+        pageSize: 2,
+        before: newest.nextBefore,
+      },
+    });
+    expect(oldest.points.map((point) => point.periodValue)).toEqual([
+      "2026-01",
+      "2026-02",
+    ]);
+    expect(oldest.nextBefore).toBeUndefined();
+    expect(oldest.openingBalancePoint).not.toBeNull();
+    expect(loadHistoryOpeningBalancePoint).toHaveBeenCalledOnce();
+  });
+  test("rejects invalid page sizes before authorization or loading", async () => {
+    await expect(
+      getPeriodHistory({
+        data: { accountBookId: "book-1", granularity: "year", pageSize: 101 },
+      }),
+    ).rejects.toThrow("window size");
+    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+    expect(loadPeriodHistoryPoint).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    revisionQuery.mockResolvedValue({ periodCacheRevision: "revision" });
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
 
     loadPeriodHistoryPointContext.mockResolvedValue({
+      revision: "revision",
       referenceCurrency: "CHF",
       accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
       holdingAccountsResolved: [],
@@ -208,7 +274,7 @@ describe("getPeriodHistory", () => {
     });
     expect(result.scopeSelection.netWorth).toBe("account:zero");
     expect(result.points.map((point) => point.netWorth)).toEqual([0, 0, 0]);
-    expect(result.openingBalancePoint.netWorth).toBe(0);
+    expect(result.openingBalancePoint?.netWorth).toBe(0);
     expect(result.scopeOptions.netWorth.map((option) => option.value)).toEqual([
       "total",
       "group:asset-g",
@@ -228,6 +294,7 @@ describe("getPeriodHistory", () => {
         kind: "account",
       };
       loadPeriodHistoryPointContext.mockResolvedValue({
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date(
           granularity === "year"
@@ -305,6 +372,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-1",
       period: "2026-01",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -321,6 +389,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-1",
       period: "2026-02",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -337,6 +406,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-1",
       period: "2026-03",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -365,6 +435,7 @@ describe("getPeriodHistory", () => {
     );
 
     expect(result).toEqual({
+      revision: "revision",
       referenceCurrency: "CHF",
       hasCashAccounts: true,
       openingBalancePoint: {
@@ -496,6 +567,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-2",
       period: "2026",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -643,6 +715,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-assets",
       period: "2026",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -697,6 +770,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-gains",
       period: "2026",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
@@ -742,6 +816,7 @@ describe("getPeriodHistory", () => {
       accountBookId: "book-cash-flow",
       period: "2026",
       context: {
+        revision: "revision",
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],

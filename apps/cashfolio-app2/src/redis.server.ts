@@ -3,7 +3,7 @@ import { createClient, type AnyRedisClientOptions } from "redis";
 const redisClientOptions = {
   RESP: 2,
   commandOptions: {
-    timeout: undefined,
+    timeout: 1_000,
   },
 } satisfies AnyRedisClientOptions;
 
@@ -11,6 +11,7 @@ function createRedisClient(redisUrl: string) {
   return createClient({
     ...redisClientOptions,
     url: redisUrl,
+    socket: { connectTimeout: 1_000, reconnectStrategy: false },
   });
 }
 

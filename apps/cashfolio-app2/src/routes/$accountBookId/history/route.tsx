@@ -5,14 +5,28 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { Suspense, lazy, useEffect } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { createId } from "@paralleldrive/cuid2";
+import { useGlobalLoading } from "@/components/navigation/global-loading";
+import { useUserLocale } from "@/user-locale-context";
+import { useHistoryLoading } from "./-use-history-loading";
+import { HistoryLoadingView, HistoryLoadError } from "./-loading-view";
+import type { PeriodHistoryResponse } from "@/server/period-history";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { loadHistoryPageData } from "./-page-loader";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import {
   buildHistorySearchNavigation,
   buildHistoryLegacySearchNavigation,
   buildHistoryViewNavigation,
+  buildHistoryScopeNormalization,
+  buildHistoryRestoreNavigation,
 } from "./-page-navigation";
 import {
   getHistoryMetric,
@@ -20,6 +34,7 @@ import {
   getHistoryScopeForMetric,
   getHistoryScopedMetric,
   parseHistorySearch,
+  type HistorySearch,
 } from "./-page-types";
 
 const HistoryPageView = lazy(async () => {
@@ -29,6 +44,7 @@ const HistoryPageView = lazy(async () => {
 
 export const Route = createFileRoute("/$accountBookId/history")({
   validateSearch: parseHistorySearch,
+  ssr: false,
   loaderDeps: ({ search }) => ({
     mode: getHistoryMode(search),
     metric: getHistoryMetric(search),
@@ -64,106 +80,117 @@ export const Route = createFileRoute("/$accountBookId/history")({
       });
     }
   },
-  loader: async ({
-    params: { accountBookId },
-    deps: {
-      mode,
-      scopedMetric,
-      cashFlowScope,
-      incomeScope,
-      expenseScope,
-      gainLossScope,
-      netWorthScope,
-    },
-  }) => {
-    const { getAuthenticatedUserLocale } =
-      await import("@/server/user-profile");
-    const userLocale = await getAuthenticatedUserLocale();
-    return loadHistoryPageData({
-      accountBookId,
-      mode,
-      scopedMetric,
-      cashFlowScope,
-      incomeScope,
-      expenseScope,
-      gainLossScope,
-      netWorthScope,
-      locale: userLocale,
-    });
-  },
+  loader: () => ({ reloadKey: createId() }),
   head: () => createDocumentTitleHead("History"),
   component: HistoryPage,
 });
 
 function HistoryPage() {
+  const { accountBookId } = Route.useParams();
+  const search = Route.useSearch();
+  const locale = useUserLocale();
+  const { reloadKey } = Route.useLoaderData();
+  const request = useMemo(
+    () => ({
+      accountBookId,
+      mode: getHistoryMode(search),
+      scopedMetric: getHistoryScopedMetric(getHistoryMetric(search)),
+      cashFlowScope: getHistoryScopeForMetric({ search, metric: "cashFlow" }),
+      incomeScope: getHistoryScopeForMetric({ search, metric: "income" }),
+      expenseScope: getHistoryScopeForMetric({ search, metric: "expenses" }),
+      gainLossScope: getHistoryScopeForMetric({
+        search,
+        metric: "gainsLosses",
+      }),
+      netWorthScope: getHistoryScopeForMetric({ search, metric: "netWorth" }),
+      locale,
+    }),
+    [accountBookId, search, locale],
+  );
+  const loading = useHistoryLoading(request, reloadKey);
+  const navigate = useNavigate({ from: "/$accountBookId/history" });
+  const normalization = useMemo(
+    () =>
+      loading.history &&
+      buildHistoryScopeNormalization({
+        search,
+        scopeSelection: loading.history.scopeSelection,
+      }),
+    [loading.history, search],
+  );
+  useEffect(() => {
+    if (normalization) void navigate(normalization);
+  }, [navigate, normalization]);
+  // Finish URL normalization before publishing an interactive chart. Otherwise
+  // its pending replacement can interrupt the first chart interaction.
+  const readyHistory = normalization ? undefined : loading.history;
+  useGlobalLoading(!readyHistory && !loading.error);
+  const [previous, setPrevious] = useState<{
+    book: string;
+    locale: string;
+    history: PeriodHistoryResponse;
+    search: HistorySearch;
+  }>();
+  useEffect(() => {
+    if (readyHistory)
+      setPrevious({
+        book: accountBookId,
+        locale,
+        history: readyHistory,
+        search,
+      });
+  }, [readyHistory, accountBookId, locale, search]);
+  const shown = readyHistory
+    ? { history: readyHistory, search }
+    : previous?.book === accountBookId && previous.locale === locale
+      ? previous
+      : undefined;
+  if (!shown)
+    return <HistoryLoadingView error={loading.error} onRetry={loading.retry} />;
+  const restoreNavigation = loading.error
+    ? buildHistoryRestoreNavigation({ search, previousSearch: shown.search })
+    : undefined;
+  return (
+    <LoadedHistoryPage
+      history={shown.history}
+      search={shown.search}
+      isRefreshing={!readyHistory && !loading.error}
+      feedback={
+        !readyHistory ? (
+          <HistoryLoadError
+            error={loading.error}
+            onRetry={loading.retry}
+            onRestore={
+              restoreNavigation
+                ? () => void navigate(restoreNavigation)
+                : undefined
+            }
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+function LoadedHistoryPage({
+  history,
+  search,
+  isRefreshing,
+  feedback,
+}: {
+  history: PeriodHistoryResponse;
+  search: HistorySearch;
+  isRefreshing: boolean;
+  feedback?: ReactNode;
+}) {
   const ledgerNavigationState = useLedgerNavigationState();
   const isViewPending = useRouterState({
     select: (state) => state.status === "pending",
   });
   const { accountBookId } = Route.useParams();
-  const search = Route.useSearch();
   const selectedMode = getHistoryMode(search);
   const selectedMetric = getHistoryMetric(search);
-  const selectedCashFlowScope = getHistoryScopeForMetric({
-    search,
-    metric: "cashFlow",
-  });
-  const selectedIncomeScope = getHistoryScopeForMetric({
-    search,
-    metric: "income",
-  });
-  const selectedExpenseScope = getHistoryScopeForMetric({
-    search,
-    metric: "expenses",
-  });
-  const selectedGainLossScope = getHistoryScopeForMetric({
-    search,
-    metric: "gainsLosses",
-  });
-  const selectedNetWorthScope = getHistoryScopeForMetric({
-    search,
-    metric: "netWorth",
-  });
-  const { history } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/history" });
-
-  useEffect(() => {
-    if (
-      selectedCashFlowScope === history.scopeSelection.cashFlow &&
-      selectedIncomeScope === history.scopeSelection.income &&
-      selectedExpenseScope === history.scopeSelection.expenses &&
-      selectedGainLossScope === history.scopeSelection.gainsLosses &&
-      selectedNetWorthScope === history.scopeSelection.netWorth
-    ) {
-      return;
-    }
-
-    navigate(
-      buildHistorySearchNavigation({
-        mode: selectedMode,
-        metric: selectedMetric,
-        cashFlowScope: history.scopeSelection.cashFlow,
-        incomeScope: history.scopeSelection.income,
-        expenseScope: history.scopeSelection.expenses,
-        gainLossScope: history.scopeSelection.gainsLosses,
-        netWorthScope: history.scopeSelection.netWorth,
-      }),
-    );
-  }, [
-    navigate,
-    selectedNetWorthScope,
-    selectedCashFlowScope,
-    selectedExpenseScope,
-    selectedGainLossScope,
-    selectedIncomeScope,
-    selectedMetric,
-    selectedMode,
-    history.scopeSelection.cashFlow,
-    history.scopeSelection.netWorth,
-    history.scopeSelection.expenses,
-    history.scopeSelection.gainsLosses,
-    history.scopeSelection.income,
-  ]);
 
   return (
     <Suspense fallback={null}>
@@ -171,7 +198,8 @@ function HistoryPage() {
         accountBookId={accountBookId}
         selectedMode={selectedMode}
         selectedMetric={selectedMetric}
-        isViewPending={isViewPending}
+        isViewPending={isViewPending || isRefreshing}
+        loadError={feedback}
         history={history}
         onAccountPeriodDoubleClick={(target, periodValue) => {
           const navigation = buildHistoryAccountDrillNavigation({

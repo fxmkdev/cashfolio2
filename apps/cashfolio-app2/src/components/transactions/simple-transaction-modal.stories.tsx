@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { SimpleTransactionModal } from "./simple-transaction-modal";
 import { accountOptions } from "../testing/storybook-fixtures";
+import { RESOURCE_LIMITS } from "../../shared/resource-limits";
 
 const meta = {
   title: "Components/SimpleTransactionModal",
@@ -116,5 +117,40 @@ export const EnterSubmitPendingGuard: Story = {
 
     await waitFor(() => expect(submitButton).not.toBeDisabled());
     await expect(submitButton).not.toHaveAttribute("data-loading");
+  },
+};
+
+export const DescriptionLimitPreservesDraft: Story = {
+  args: {
+    initialValues: {
+      date: new Date("2026-01-15T00:00:00.000Z"),
+      description: "x".repeat(RESOURCE_LIMITS.description + 1),
+      counterAccountId: "account-credit-card",
+      amount: 5.5,
+      direction: "CREDIT",
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const description = body.getByRole("textbox", { name: "Description" });
+
+    await userEvent.click(body.getByRole("button", { name: "Save" }));
+
+    await expect(
+      body.getByText("Description cannot exceed 4’000 characters."),
+    ).toBeVisible();
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+    await expect(description).toHaveValue(args.initialValues!.description);
+
+    await userEvent.click(description);
+    await userEvent.keyboard("{End}{Backspace}");
+    await userEvent.click(body.getByRole("button", { name: "Save" }));
+
+    await expect(args.onSubmit).toHaveBeenCalledTimes(1);
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "x".repeat(RESOURCE_LIMITS.description),
+      }),
+    );
   },
 };

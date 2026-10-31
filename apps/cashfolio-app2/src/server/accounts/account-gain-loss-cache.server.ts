@@ -1,3 +1,5 @@
+import { checkResourceBudget } from "../resource-context.server";
+import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
 import { startOfUtcDay } from "../../shared/date";
 import { getAccountGainLossCacheEntryKey } from "../../shared/book-cache-keys";
@@ -59,6 +61,7 @@ export async function getOrLoadAccountGainLossSummaries(
           return parsed;
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedReadFailure) {
         console.warn(
           "Failed to read account G/L cache; continuing uncached.",
@@ -81,9 +84,12 @@ export async function getOrLoadAccountGainLossSummaries(
 
     try {
       const serialized = JSON.stringify(encodeMoneyCache(data));
-      if (Buffer.byteLength(serialized, "utf8") <= MAX_SERIALIZED_BYTES)
+      if (Buffer.byteLength(serialized, "utf8") <= MAX_SERIALIZED_BYTES) {
+        checkResourceBudget();
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
+      }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedWriteFailure) {
         console.warn(
           "Failed to write account G/L cache; continuing uncached.",

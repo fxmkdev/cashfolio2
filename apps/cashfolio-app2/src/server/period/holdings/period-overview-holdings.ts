@@ -1,3 +1,4 @@
+import { checkResourceBudget } from "../../resource-context.server";
 import { applyPendingHoldingExecutions } from "./holding-executions";
 import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import {
@@ -109,6 +110,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
 }) {
   args.state.convertBookingToReference = args.convertBookingToReference;
   for (const transaction of args.transactions) {
+    checkResourceBudget();
     const context = getHoldingTransactionContext({ ...args, transaction });
     for (const bookings of context.transfers) {
       const inPeriodHoldingBookings = bookings.filter(

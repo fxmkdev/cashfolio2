@@ -1,3 +1,4 @@
+import { checkResourceBudget } from "../resource-context.server";
 import { toMoney, moneyAdd, type Money } from "../../shared/money";
 import {
   EMPTY_GAIN_LOSS_SUMMARY,
@@ -80,6 +81,7 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
   );
   const accountsByBookingId = new Map<string, string[]>();
   for (const transaction of args.transactions) {
+    checkResourceBudget();
     const { transfers, residualBookings } = decomposeHoldingTransaction(
       transaction.bookings,
       new Set(results.keys()),

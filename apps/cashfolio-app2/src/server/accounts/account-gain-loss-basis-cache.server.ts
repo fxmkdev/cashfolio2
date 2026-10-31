@@ -1,3 +1,5 @@
+import { checkResourceBudget } from "../resource-context.server";
+import { rethrowResourceError } from "../resource-error";
 import { prisma } from "../../prisma.server";
 import { getRedisClient } from "../../redis.server";
 import { addUtcDays } from "../../shared/date";
@@ -68,7 +70,8 @@ export async function loadAccountGainLossSummaryRange(args: {
   let scope: Awaited<ReturnType<typeof readScope>>;
   try {
     scope = await readScope(args);
-  } catch {
+  } catch (error) {
+    rethrowResourceError(error);
     return loadAccountGainLossRange(args);
   }
   if (args.asOfDate < scope.startDate) return loadAccountGainLossRange(args);
@@ -103,6 +106,7 @@ export async function loadAccountGainLossSummaryRange(args: {
           cachedBasis = parsed;
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedReadFailure) {
         console.warn(
           "Failed to read account G/L basis cache; continuing uncached.",
@@ -160,9 +164,12 @@ export async function loadAccountGainLossSummaryRange(args: {
           const encoded = JSON.stringify(
             encodeMoneyCache(toAccountGainLossBasisCacheData(range)),
           );
-          if (Buffer.byteLength(encoded, "utf8") <= MAX_SERIALIZED_BYTES)
+          if (Buffer.byteLength(encoded, "utf8") <= MAX_SERIALIZED_BYTES) {
+            checkResourceBudget();
             await redis.setEx(cacheKey, TTL_SECONDS, encoded);
+          }
         } catch (error) {
+          rethrowResourceError(error);
           if (!hasWarnedWriteFailure) {
             console.warn(
               "Failed to write account G/L basis cache; continuing uncached.",

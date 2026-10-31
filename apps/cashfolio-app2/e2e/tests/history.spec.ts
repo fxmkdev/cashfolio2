@@ -8,7 +8,339 @@ import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
-test.beforeAll(async ({ e2eExternalId }) => {
+test("History loads complete data automatically and shrinks batches without manual controls", async ({
+  page,
+}) => {
+  let requests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let ready!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("granularity")) return route.continue();
+    requests++;
+    if (requests === 1)
+      return route.fulfill({
+        status: 429,
+        contentType: "text/plain",
+        headers: {
+          "Retry-After": "1",
+          "X-Cashfolio-Resource-Limit": "provider_request_limit",
+        },
+        body: "Calculation budget reached.",
+      });
+    if (requests === 2) {
+      const response = await route.fetch();
+      ready();
+      await gate;
+      return route.fulfill({ response });
+    }
+    return route.continue();
+  });
+  await page.goto(`/${seeded.accountBookId}/history`);
+  try {
+    await pending;
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    await expect(
+      page.getByText(/Loading History|periods loaded|Waiting to continue/),
+    ).toHaveCount(0);
+    await expect(page.locator("main .mantine-Loader-root")).toHaveCount(0);
+    await expect(page.locator(".ag-charts-wrapper canvas")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Load Older" })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("combobox", { name: "Window Size" }),
+    ).toHaveCount(0);
+  } finally {
+    release();
+  }
+  await expect(page.locator(".ag-charts-wrapper canvas").first()).toBeVisible();
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
+  const all = page
+    .locator(".ag-charts-range-buttons--buttons .ag-charts-toolbar__button")
+    .filter({ hasText: /^All$/ });
+  await expect(all).toBeVisible();
+  await all.click();
+  await expect(all).toHaveClass(/ag-charts-toolbar__button--active/);
+  expect(requests).toBeGreaterThan(2);
+  expect(new URL(page.url()).searchParams.has("pageSize")).toBe(false);
+});
+
+test("History restarts the full load after an explicit retry", async ({
+  page,
+}) => {
+  let requests = 0;
+  let firstUrl = "";
+  let restartedUrl = "";
+  let releaseRetry!: () => void;
+  const retryGate = new Promise<void>((resolve) => {
+    releaseRetry = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("granularity")) return route.continue();
+    requests++;
+    if (requests === 1) firstUrl = route.request().url();
+    if (requests === 2)
+      return route.fulfill({
+        status: 500,
+        contentType: "text/plain",
+        body: "Calculation failed.",
+      });
+    if (requests === 3) {
+      restartedUrl = route.request().url();
+      await retryGate;
+    }
+    return route.continue();
+  });
+  await page.goto(`/${seeded.accountBookId}/history`);
+  await expect(
+    page.getByRole("button", { name: "Retry History" }),
+  ).toBeVisible();
+  expect(requests).toBe(2);
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
+  await expect(page.locator(".ag-charts-wrapper canvas")).toHaveCount(0);
+  await page.getByRole("button", { name: "Retry History" }).click();
+  try {
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+  } finally {
+    releaseRetry();
+  }
+  await expect(page.locator(".ag-charts-wrapper canvas").first()).toBeVisible();
+  expect(restartedUrl).toBe(firstUrl);
+});
+
+test("History cancels loading when leaving the page", async ({ page }) => {
+  let requests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("granularity")) return route.continue();
+    requests++;
+    await gate;
+    await route.abort();
+  });
+  await page.goto(`/${seeded.accountBookId}/history`);
+  try {
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    await expect.poll(() => requests).toBe(1);
+    await page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Accounts", exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+    await expect(
+      page.getByTestId("global-loading-indicator"),
+    ).not.toHaveAttribute("data-mounted");
+    expect(requests).toBe(1);
+  } finally {
+    release();
+  }
+});
+
+test("History retains its chart while the global indicator covers a mode refresh", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/history`);
+  const chart = page.locator(".ag-charts-wrapper canvas").first();
+  await expect(chart).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let ready!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("granularity")) return route.continue();
+    ready();
+    await gate;
+    return route.continue();
+  });
+  await page
+    .getByRole("radiogroup", { name: "History Period Mode" })
+    .getByText("Yearly", { exact: true })
+    .click();
+  try {
+    await pending;
+    await expect(chart).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Monthly" })).toBeDisabled();
+    await expect(page.getByRole("textbox", { name: "View" })).toBeDisabled();
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    await expect(page.locator("main .mantine-Loader-root")).toHaveCount(0);
+  } finally {
+    release();
+  }
+  await expect(page.getByRole("radio", { name: "Yearly" })).toBeChecked();
+  await expect(page.getByRole("textbox", { name: "View" })).toBeEnabled();
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
+});
+
+for (const change of ["mode", "scope"] as const) {
+  test(`History allows another selection after a failed ${change} refresh`, async ({
+    page,
+  }) => {
+    await page.goto(`/${seeded.accountBookId}/history?metric=expenses`);
+    const view = page.getByRole("textbox", { name: "View" });
+    const chart = page.locator(".ag-charts-wrapper canvas").first();
+    await expect(chart).toBeVisible();
+    await expect(view).toBeEnabled();
+    await page.route("**/_serverFn/**", async (route) => {
+      const url = route.request().url();
+      if (!url.includes("granularity")) return route.continue();
+      const failing =
+        change === "mode"
+          ? url.includes("year")
+          : url.includes(seeded.expenseAccount.id);
+      return failing
+        ? route.fulfill({
+            status: 500,
+            contentType: "text/plain",
+            body: "History refresh failed.",
+          })
+        : route.continue();
+    });
+    if (change === "mode")
+      await page
+        .getByRole("radiogroup", { name: "History Period Mode" })
+        .getByText("Yearly", { exact: true })
+        .click();
+    else {
+      await view.click();
+      await view.fill(seeded.expenseAccount.name);
+      await page
+        .getByRole("option", { name: seeded.expenseAccount.name, exact: true })
+        .click();
+    }
+    await expect(
+      page.getByRole("button", { name: "Retry History" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Restore Previous View" }),
+    ).toBeVisible();
+    await expect(chart).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Monthly" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Monthly" })).toBeEnabled();
+    await expect(page.getByRole("radio", { name: "Yearly" })).toBeEnabled();
+    await expect(view).toBeEnabled();
+    await expect(view).toHaveValue("Expenses");
+    await expect(
+      page.getByTestId("global-loading-indicator"),
+    ).not.toHaveAttribute("data-mounted");
+    await view.click();
+    await view.fill("Income");
+    await page
+      .getByRole("option")
+      .filter({ hasText: /^Income$/ })
+      .first()
+      .click();
+    await expect(view).toHaveValue("Income");
+    await expect(view).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Retry History" }),
+    ).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get("metric")).toBe("income");
+    expect(new URL(page.url()).searchParams.get("mode")).toBeNull();
+  });
+}
+
+test("History can restore its previous view after a persistent single-period budget failure", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/history?metric=expenses`);
+  const view = page.getByRole("textbox", { name: "View" });
+  const chart = page.locator(".ag-charts-wrapper canvas").first();
+  await expect(chart).toBeVisible();
+  await expect(view).toBeEnabled();
+  let rejected = 0;
+  let restoring = false;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("granularity")) return route.continue();
+    if (route.request().url().includes("year")) {
+      rejected++;
+      return route.fulfill({
+        status: 429,
+        contentType: "text/plain",
+        headers: {
+          "Retry-After": "1",
+          "X-Cashfolio-Resource-Limit": "provider_request_limit",
+        },
+        body: "Request budget reached.",
+      });
+    }
+    if (restoring) await gate;
+    return route.continue();
+  });
+  await page
+    .getByRole("radiogroup", { name: "History Period Mode" })
+    .getByText("Yearly", { exact: true })
+    .click();
+  const retry = page.getByRole("button", { name: "Retry History" });
+  await expect(retry).toBeVisible();
+  expect(rejected).toBe(3); // Five years, two years, then one year.
+  await expect(chart).toBeVisible();
+  await expect(view).toBeEnabled();
+  await retry.click();
+  await expect.poll(() => rejected).toBe(6);
+  await expect(retry).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("mode")).toBe("year");
+  restoring = true;
+  await page.getByRole("button", { name: "Restore Previous View" }).click();
+  try {
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    await expect(view).toBeDisabled();
+    await expect(page.getByRole("radio", { name: "Yearly" })).toBeDisabled();
+    await expect(chart).toBeVisible();
+  } finally {
+    release();
+  }
+  await expect(view).toBeEnabled();
+  await expect(view).toHaveValue("Expenses");
+  await expect(page.getByRole("radio", { name: "Monthly" })).toBeChecked();
+  await expect(retry).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Restore Previous View" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
+  expect(new URL(page.url()).searchParams.get("mode")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("metric")).toBe("expenses");
+});
+
+test.beforeEach(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
   // Spending without an opening balance leaves Cash overdrawn; Net Worth
   // account history must preserve that negative balance.
@@ -237,11 +569,22 @@ test("history view search waits for a pending scope selection to commit", async 
       .click();
     await responseReady;
     await expect(viewInput).toBeDisabled();
+    await expect(
+      page.locator(".ag-charts-wrapper canvas").first(),
+    ).toBeVisible();
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    await expect(page.locator("main .mantine-Loader-root")).toHaveCount(0);
   } finally {
     releaseResponse();
   }
 
   await expect(viewInput).toBeEnabled();
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
   await expect(viewInput).toHaveValue("E2E Expenses");
   await viewInput.click();
   await viewInput.fill("Expenses / Equity / E2E Expenses / E2E Expense");

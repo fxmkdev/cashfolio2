@@ -34,6 +34,7 @@ function createContext(args: {
 }): PeriodHistoryPointContext {
   return {
     netWorthScopes: [],
+    revision: "revision",
     referenceCurrency: "CHF",
     accountBookStartDate: new Date(args.startDate),
     holdingAccountsResolved: args.holdingAccountsResolved ?? [],
@@ -95,6 +96,7 @@ describe("loadPeriodHistoryPointContext", () => {
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-ctx" },
       select: {
+        periodCacheRevision: true,
         referenceCurrency: true,
         startDate: true,
       },
@@ -349,6 +351,7 @@ describe("loadPeriodHistoryPoint", () => {
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-context" },
       select: {
+        periodCacheRevision: true,
         referenceCurrency: true,
         startDate: true,
       },

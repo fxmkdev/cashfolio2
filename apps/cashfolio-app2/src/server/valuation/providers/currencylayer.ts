@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../../resource-error";
 import { fetchProviderResponse } from "./request";
 import { getProviderApiKey } from "../provider-api-key";
 import {
@@ -118,6 +119,7 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
       parsed = typeof quote === "number" ? quote : null;
     }
   } catch (error) {
+    rethrowResourceError(error);
     const errorMessage =
       providerErrorMessage ?? toSafeProviderErrorMessage(error);
     await recordUsage({

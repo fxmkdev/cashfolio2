@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS } from "@/shared/resource-limits";
 import {
   Button,
   Container,
@@ -143,7 +144,11 @@ function NewAccountBookPageContent({
     },
     validate: {
       name: (value) =>
-        value.trim().length === 0 ? "Account book name is required" : null,
+        value.trim().length === 0
+          ? "Account book name is required"
+          : value.trim().length > RESOURCE_LIMITS.name
+            ? "Name cannot exceed 255 characters."
+            : null,
       referenceCurrency: (value) =>
         value ? null : "Reference currency is required",
       startDate: validateStartDate,

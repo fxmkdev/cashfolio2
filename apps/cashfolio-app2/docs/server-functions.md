@@ -1,5 +1,8 @@
 # Server Functions
 
+Request/input boundaries, request-local calculation budgets, and automatic
+History batching are documented in [Resource limits](resource-limits.md).
+
 Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
 paths are relative to that app directory.
 
@@ -215,6 +218,15 @@ Period implementation modules are grouped by concern under `src/server/period/`:
 - `transfer-clearing/`: virtual transfer-clearing buckets, hierarchy, and
   gain/loss
 - `net-worth/`: end-of-period and opening-balance net-worth loading
+
+Within History, the server-function entry keeps authorization, request-local
+read-budget initialization, revision validation, and response delivery. Batch
+loading owns opening balances and the bounded point scheduler; response assembly
+owns scope merging, scope selection, and numeric boundary mapping. Public
+response types and existing facade exports remain stable. Point-metric loading
+separately prepares base data, runs equity/valuation aggregation, and assembles
+Decimal metrics and scopes. The shared valuation context, concurrency,
+cacheability tracking, and rounding order are preserved across these boundaries.
 
 Cross-concern selection, conversion, balance statistics, unit formatting, and
 calculation-context preparation remain at the period folder root.
@@ -752,10 +764,13 @@ valuation. A concurrent edit may leave the response on the older committed
 snapshot, but cannot mix its totals with newer explanation inputs. Labels are
 formatted for the requested locale from the snapshot's resolved month/year.
 
-This guarantee applies to each period overview or History point independently. A
-multi-period History response may contain points from different committed
-revisions; it does not hold one database transaction across all points or
-external valuation requests.
+This snapshot guarantee applies to each period overview or History point
+independently. History does not hold one database transaction across all points
+or external valuation requests. Its batch endpoint checks the book revision
+before returning a response, and the client loader rejects batches with a
+different revision before merging them. Concurrent edits stop loading with an
+explicit retry action rather than publishing a mixed-revision History chart.
+Retry starts the complete load again; it does not reuse incomplete batches.
 
 ## Admin membership and user deletion
 

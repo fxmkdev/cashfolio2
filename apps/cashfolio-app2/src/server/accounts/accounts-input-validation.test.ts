@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AccountTrackingMethod, AssetClass } from "../../.prisma-client/enums";
+import { RESOURCE_LIMITS } from "../../shared/resource-limits";
 import {
   validateAccountBookNodeIdInput,
   validateAccountGroupMutationInput,
@@ -23,6 +24,35 @@ const csv = {
 };
 
 describe("account mutation input contracts", () => {
+  it.each(Object.values(AccountTrackingMethod))(
+    "retains input limits for %s accounts",
+    (trackingMethod) => {
+      for (const [field, limit] of [
+        ["name", RESOURCE_LIMITS.name],
+        ["accountBookId", RESOURCE_LIMITS.identifier],
+        ["groupId", RESOURCE_LIMITS.identifier],
+        ["currency", RESOURCE_LIMITS.unitCode],
+      ] as const) {
+        const input = {
+          ...account,
+          trackingMethod,
+          [field]: "x".repeat(limit),
+        };
+        expect(validateAccountMutationInput(input)).toMatchObject(input);
+        expect(
+          validateAccountUpdateInput({ ...input, id: "account-1" }),
+        ).toMatchObject(input);
+        const oversized = { ...input, [field]: "x".repeat(limit + 1) };
+        expect(() => validateAccountMutationInput(oversized)).toThrow(
+          "cannot exceed",
+        );
+        expect(() =>
+          validateAccountUpdateInput({ ...oversized, id: "account-1" }),
+        ).toThrow("cannot exceed");
+      }
+    },
+  );
+
   it.each(Object.values(AssetClass))("accepts asset class %s", (assetClass) => {
     expect(
       validateAccountMutationInput({ ...account, assetClass }).assetClass,

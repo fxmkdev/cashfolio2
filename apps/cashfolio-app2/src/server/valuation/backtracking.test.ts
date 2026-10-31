@@ -4,6 +4,7 @@ import {
   getRateWithBacktrackingDetails,
 } from "./backtracking";
 import { NO_DATA_FETCH_RESULT } from "./types";
+import { withResourceRequest } from "../resource-context.server";
 
 function createDeps() {
   return {
@@ -30,6 +31,28 @@ function createDeps() {
 }
 
 describe("getRateWithBacktracking", () => {
+  test("reuses settled probes within a request without an external cache, but not across requests", async () => {
+    const deps = createDeps();
+    const fetchRate = vi.fn().mockResolvedValue(1.23);
+    const lookup = () =>
+      getRateWithBacktracking(
+        {
+          seriesKey: "request-memo",
+          backtrackedFallbackCacheKey: "request-memo-fallback",
+          date: new Date("2026-03-28Z"),
+          fetchRate,
+        },
+        deps,
+      );
+    for (let request = 0; request < 2; request++) {
+      await withResourceRequest(new AbortController().signal, async () => {
+        expect(await lookup()).toBe(1.23);
+        expect(await lookup()).toBe(1.23);
+        return new Response();
+      });
+      expect(fetchRate).toHaveBeenCalledTimes(request + 1);
+    }
+  });
   test("returns exact cached hit and clears stale fallback cache", async () => {
     const deps = createDeps();
     const requestedDate = new Date("2026-03-28T10:00:00.000Z");
