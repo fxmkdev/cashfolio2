@@ -36,6 +36,12 @@ migration-only.
    Machines update. Review the deployment summary for PR, exact commit, URL and
    outcome.
 
+The controller publishes pending and final commit statuses on the resolved PR
+head using the existing required context
+`Deploy to preview / cashfolio-app2: Deploy`. A `workflow_run` job's own check
+belongs to the default-branch commit, so this explicit PR status preserves the
+repository's merge requirement. Failures and cancellations never report success.
+
 No preview deployment creates, copies, resets or deletes a Neon branch. Neon
 still hosts PostgreSQL on its fixed default branch; its project/branch/endpoint
 IDs are used only to verify the configured server identity.
@@ -171,6 +177,13 @@ secrets on staging as described in
 optional staging seed enablement flag.
 
 ## Cutover and operation
+
+The controller must exist on `main` before it can run. This bootstrap PR cannot
+produce a real deployment status through a controller that has not landed yet;
+the repository owner must coordinate that initial rollout with the existing
+required preview check. Complete the protected environment and staging settings
+first. Keep the required context for subsequent PRs, and do not publish a
+successful preview status for a deployment that was not run.
 
 After the controller exists on `main`, push to an open same-repository PR or
 rerun its Build workflow. The new controller switches its Fly app to a new empty
