@@ -51,9 +51,14 @@ export async function runStagingSeed(
     return runSeedRelease({
       verify: () => runStagingSeed(["--check-target"], env),
       migrate: async () => {
+        // Prisma's migration engine has different TLS URL semantics from pg.
+        // Require certificate verification on this new connection as well.
+        const migrationUrl = new URL(requireValue(env, "DATABASE_URL"));
+        migrationUrl.searchParams.set("sslmode", "require");
+        migrationUrl.searchParams.set("sslaccept", "strict");
         try {
           await execute("sh", [migrationScript], {
-            env,
+            env: { ...env, DATABASE_URL: migrationUrl.href },
             maxBuffer: 4 * 1024 * 1024,
           });
         } catch {

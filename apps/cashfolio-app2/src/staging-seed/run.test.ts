@@ -220,7 +220,9 @@ it("release verifies before migrations, grants afterwards, and replaces only aft
   expect(mock.exec).toHaveBeenCalledExactlyOnceWith(
     "sh",
     [expect.stringMatching(/\/scripts\/prisma-migrate-deploy-with-retry\.sh$/)],
-    expect.objectContaining({ env }),
+    expect.objectContaining({
+      env: expect.objectContaining({ APP_ENVIRONMENT: "staging" }),
+    }),
     expect.any(Function),
   );
   expect(mock.verify.mock.invocationCallOrder[1]).toBeLessThan(
@@ -240,6 +242,34 @@ it("release verifies before migrations, grants afterwards, and replaces only aft
     ),
   ).toBe(true);
 });
+
+it.each([
+  env.DATABASE_URL,
+  env.DATABASE_URL.replace("require", "verify-full") +
+    "&channel_binding=require",
+  env.DATABASE_URL.replace("ep-staging.", "ep-staging-pooler."),
+])(
+  "enforces Prisma migration TLS without changing the verified destination or parent environment",
+  async (databaseUrl) => {
+    const sourceEnv = { ...env, DATABASE_URL: databaseUrl };
+    await runStagingSeed(["--release"], sourceEnv);
+    const options = mock.exec.mock.calls[0][2] as { env: NodeJS.ProcessEnv };
+    const migrationUrl = new URL(options.env.DATABASE_URL!);
+    const approvedUrl = new URL(databaseUrl);
+    expect(migrationUrl.protocol).toBe(approvedUrl.protocol);
+    expect(migrationUrl.host).toBe(approvedUrl.host);
+    expect(migrationUrl.pathname).toBe(approvedUrl.pathname);
+    expect(migrationUrl.username).toBe(approvedUrl.username);
+    expect(migrationUrl.password).toBe(approvedUrl.password);
+    expect(migrationUrl.searchParams.get("sslmode")).toBe("require");
+    expect(migrationUrl.searchParams.get("sslaccept")).toBe("strict");
+    expect(migrationUrl.searchParams.get("channel_binding")).toBe(
+      approvedUrl.searchParams.get("channel_binding"),
+    );
+    expect(sourceEnv.DATABASE_URL).toBe(databaseUrl);
+    expect(options.env.SEED_DATABASE_URL).toBe(sourceEnv.SEED_DATABASE_URL);
+  },
+);
 
 it("target failure prevents release migrations and all grants", async () => {
   mock.verify.mockRejectedValueOnce(new Error("wrong server"));

@@ -105,6 +105,7 @@ jobs:
           name: preview-image
           path: ${{ runner.temp }}/preview-image.json
           retention-days: 7
+          overwrite: true
 
   cashfolio-app2-e2e:
     name: "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{ matrix.shard_total }})"

@@ -42,6 +42,10 @@ test("PR builds and preview deployment reuse the shared Fly image settings", () 
     /IMAGE_TAG="pr-\$\{PR_SHA\}-\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}"/,
   );
   assert.match(build, /flyctl deploy[\s\S]*--build-only[\s\S]*--push/);
+  assert.match(
+    build,
+    /name: preview-image path: \$\{\{ runner.temp \}\}\/preview-image.json retention-days: 7 overwrite: true/,
+  );
 });
 test("deploy and cleanup share noncancelling per-PR concurrency and protected environment", () => {
   const deploy = read("workflows/deploy-preview.yml");

@@ -73,11 +73,11 @@ RUN pnpm add --workspace-root --prod \
 
 FROM base
 
-# Install openssl needed to run Prisma
+# Install certificate authorities and OpenSSL for verified Prisma connections.
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
     apt-get update -qq && \
-    apt-get install --no-install-recommends -y openssl
+    apt-get install --no-install-recommends -y ca-certificates openssl
 
 # Copy built application
 COPY --from=build /app/apps/cashfolio-app2/.output .output
