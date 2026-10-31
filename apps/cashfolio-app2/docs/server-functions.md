@@ -170,11 +170,16 @@ the mutation transaction. Reads expose a nullable `assetClassId`; assignments
 are stored separately from accounts.
 
 `getAssetClasses` returns the book-specific tree and direct active/archived
-assignment counts. `saveAssetClass`, `moveAssetClass`, and `deleteAssetClass`
-use the existing same-origin, authorization, retry, and serialized book
-boundaries. Deletion requires an explicit replacement ID or null; children must
-be moved or deleted first. Reassignment and deletion commit atomically.
-Successful mutations invalidate period caches after commit.
+assignment counts. `saveAssetClass`, `reorderAssetClasses`, and
+`deleteAssetClass` use the existing same-origin, authorization, retry, and
+serialized book boundaries. Deletion requires an explicit replacement ID or
+null; children must be moved or deleted first. Reassignment and deletion commit
+atomically. Successful mutations invalidate period caches after commit.
+`reorderAssetClasses({ accountBookId, parentId, orderedIds })` requires an
+explicit nullable parent and a unique, complete permutation of its current
+siblings. Parent and membership checks run inside the serialized transaction;
+only then are sequential sort orders assigned. Invalid or stale membership
+leaves all rows unchanged. No schema change is required for sibling reordering.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
@@ -182,6 +187,7 @@ trigger, post-commit cleanup, and router invalidation. Base-data cache v11
 includes classification assignments, the class tree, and tracking method. Classification drives the
 [Asset Class → Subclass → Investment Group → Account reporting hierarchy](#asset-class-gainloss-reporting)
 in Period overview and History; Unit and instrument identity continue to control
+
 
 valuation and FIFO calculations independently of classification.
 
@@ -364,6 +370,7 @@ namespaces and preserves global valuation caches.
 - History metrics entry:
   `period:history:metrics:v13:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - Base-data v11 and History metrics v13 store monetary values as tagged exact
+
 
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
@@ -586,6 +593,7 @@ currency cannot move an investment to a different unit. Synthetic accounts use
 their clearing-bucket or unique contribution unit, otherwise Unknown Unit.
 
 
+
 Calculated holdings G/L uses the owning account's classification. Recorded
 Gain/Loss equity bookings use their resolved asset/liability counterpart.
 Calculated and recorded amounts are combined once per account, with their
@@ -642,6 +650,7 @@ Base-data v11 includes account tracking methods alongside originating-account
 IDs and recorded booking descriptions. History metrics v13 carries both grouping
 lenses, investment scopes, and explicit account metadata; older hierarchy
 payloads are not reused. Classification and tracking-method edits advance
+
 
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -973,9 +982,9 @@ accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
 Allocation charts and tables support either the original account/group hierarchy
-or flat Asset Class → Subclass → Account grouping on each side, even when a structural
-group's accounts have mixed signs. Classification by balance sign precedes
-either grouping; total amounts use the same exact balances. Unavailable
+or flat Asset Class → Subclass → Account grouping on each side, even when a
+structural group's accounts have mixed signs. Classification by balance sign
+precedes either grouping; total amounts use the same exact balances. Unavailable
 valuations are omitted; both allocation views report the same overall
 missing-balance count. Amounts on the liability side are positive debt
 magnitudes. Existing allocation rounding and hidden-small-balance discrepancy
@@ -992,6 +1001,7 @@ Unavailable valuations remain omitted from amounts without removing real scope
 options. History metrics v13 includes Net Worth scopes, both Gain/Loss grouping
 lenses, and investment groups; base-data v11 includes tracking methods.
 Valuation caches remain compatible.
+
 
 
 ### Unified account management queries

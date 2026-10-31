@@ -95,6 +95,7 @@ export function EditAccountGroupModal({
   onSubmit,
   onRefreshConstraints,
   initialValues,
+  defaultParentGroupId,
   existingNodes,
   editingId,
   typeDescriptor,
@@ -106,6 +107,7 @@ export function EditAccountGroupModal({
   accountGroups: AccountGroupOption[];
   onSubmit: (values: AccountGroupTransformedFormValues) => void | Promise<void>;
   initialValues?: AccountGroupInitialValues;
+  defaultParentGroupId?: string;
   existingNodes?: ExistingNode[];
   editingId?: string;
   typeDescriptor: FormValues["typeDescriptor"];
@@ -148,7 +150,7 @@ export function EditAccountGroupModal({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
-      : { typeDescriptor },
+      : { typeDescriptor, parentGroupId: defaultParentGroupId },
     validate: {
       name: (value, values) => {
         const siblingNames = existingNodes
@@ -208,8 +210,11 @@ export function EditAccountGroupModal({
   const formRef = useRef(form);
   formRef.current = form;
   const resetInitialValues = useMemo(
-    () => (initialValues ? toFormValues(initialValues) : { typeDescriptor }),
-    [initialValues, typeDescriptor],
+    () =>
+      initialValues
+        ? toFormValues(initialValues)
+        : { typeDescriptor, parentGroupId: defaultParentGroupId },
+    [initialValues, typeDescriptor, defaultParentGroupId],
   );
 
   const initializedSession = useRef<string | null>(null);
@@ -218,7 +223,7 @@ export function EditAccountGroupModal({
       initializedSession.current = null;
       return;
     }
-    const session = `${editingId ?? "create"}/${typeDescriptor}`;
+    const session = `${editingId ?? "create"}/${typeDescriptor}/${defaultParentGroupId ?? "root"}`;
     if (initializedSession.current !== session) {
       initializedSession.current = session;
       const currentForm = formRef.current;
@@ -230,6 +235,7 @@ export function EditAccountGroupModal({
   }, [
     opened,
     editingId,
+    defaultParentGroupId,
     typeDescriptor,
     resetInitialValues,
     clearSubmissionError,

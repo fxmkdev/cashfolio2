@@ -1,5 +1,6 @@
+import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { describe, expect, it } from "vitest";
-import { AccountType, AssetClass, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 import { buildPeriodEndAllocationBreakdown } from "./period-allocation-breakdown";
@@ -37,20 +38,92 @@ const contribution = (
 });
 
 describe("reporting grouping", () => {
+  it("preserves allocation totals with nested classes, direct parent accounts, and custom order", () => {
+    const items = [
+      {
+        accountId: "direct",
+        accountName: "Direct",
+        assetClassId: "equities",
+        amount: "3",
+      },
+      {
+        accountId: "child",
+        accountName: "Archived Child",
+        assetClassId: "pension",
+        amount: "7",
+      },
+      {
+        accountId: "other",
+        accountName: "Other",
+        assetClassId: null,
+        amount: "2",
+      },
+    ].map(({ amount, ...item }) => ({
+      ...item,
+      groupId: null,
+      accountType: AccountType.BALANCE,
+      convertedBalanceInReferenceCurrency: toMoney(amount),
+    }));
+    const assetClasses = [
+      { id: "equities", name: "Equities", parentId: null, sortOrder: 0 },
+      { id: "pension", name: "Pension", parentId: "equities", sortOrder: 0 },
+    ];
+    const before = toNumericMoney(
+      buildPeriodEndAllocationBreakdown({
+        side: "asset",
+        grouping: "assetClass",
+        items,
+        groupById,
+        assetClasses,
+      }),
+    );
+    expect(before.totalAmount).toBe(12);
+    expect(before.hierarchy[0]).toMatchObject({
+      id: "asset-class:equities",
+      amount: 10,
+    });
+    expect(before.hierarchy[0].children.map((node) => node.id)).toEqual([
+      "asset-class:pension",
+      "account:direct",
+    ]);
+    const after = toNumericMoney(
+      buildPeriodEndAllocationBreakdown({
+        side: "asset",
+        grouping: "assetClass",
+        items,
+        groupById,
+        assetClasses: assetClasses.map((node) =>
+          node.id === "pension"
+            ? { ...node, parentId: null, name: "Retirement", sortOrder: -1 }
+            : node,
+        ),
+      }),
+    );
+    expect(after.totalAmount).toBe(before.totalAmount);
+    expect(after.hierarchy.map((node) => node.id)).toEqual([
+      "asset-class:pension",
+      "asset-class:equities",
+      "asset-class:unclassified",
+    ]);
+    expect(after.hierarchy[0]).toMatchObject({
+      label: "Retirement",
+      amount: 7,
+    });
+  });
   it("groups classes across nested, ungrouped and archived accounts while preserving signs and raw totals", () => {
     const items = [
       {
         accountId: "broker",
         accountName: "Broker",
         groupId: "investments",
-        assetClass: AssetClass.EQUITIES,
+        assetClassId: defaultAssetClassIds.EQUITIES,
         balance: "0.006",
       },
       {
         accountId: "pension",
         accountName: "Archived Pension",
         groupId: "pension",
-        assetClass: AssetClass.EQUITIES,
+        assetClassId: defaultAssetClassIds.EQUITIES,
         balance: "0.006",
         isActive: false,
       },
@@ -58,21 +131,21 @@ describe("reporting grouping", () => {
         accountId: "cash",
         accountName: "Cash",
         groupId: null,
-        assetClass: null,
+        assetClassId: null,
         balance: "10",
       },
       {
         accountId: "debt",
         accountName: "Debt",
         groupId: "pension",
-        assetClass: AssetClass.EQUITIES,
+        assetClassId: defaultAssetClassIds.EQUITIES,
         balance: "-3",
       },
       {
         accountId: "missing",
         accountName: "Missing",
         groupId: null,
-        assetClass: null,
+        assetClassId: null,
         balance: null,
       },
     ].map(({ balance, ...item }) => ({
@@ -127,7 +200,7 @@ describe("reporting grouping", () => {
       accountName: String(i),
       groupId: "investments",
       accountType: AccountType.BALANCE,
-      assetClass: AssetClass.EQUITIES,
+      assetClassId: defaultAssetClassIds.EQUITIES,
       convertedBalanceInReferenceCurrency: toMoney(amount),
     }));
     for (const grouping of ["accountStructure", "assetClass"] as const) {
@@ -161,7 +234,7 @@ describe("reporting grouping", () => {
       accounts.map(({ id }) => [
         id,
         {
-          assetClass: id === "cash" ? null : AssetClass.EQUITIES,
+          assetClassId: id === "cash" ? null : defaultAssetClassIds.EQUITIES,
           kind: "account" as const,
           explanation: null,
         },

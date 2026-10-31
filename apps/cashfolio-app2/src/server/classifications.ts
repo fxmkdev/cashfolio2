@@ -8,7 +8,7 @@ import { validateClassificationChange } from "../shared/classification-rules";
 import {
   assertRecord,
   requireStringField,
-  requireEnumField,
+  requireArrayField,
   optionalField,
 } from "./input-validation";
 import { ensureAuthorizedAccountBookMutation } from "./mutation-guard.server";
@@ -102,13 +102,18 @@ export const saveAssetClass = createServerFn({ method: "POST" })
         });
     }),
   );
-export const moveAssetClass = createServerFn({ method: "POST" })
+export const reorderAssetClasses = createServerFn({ method: "POST" })
   .validator((value: unknown) => {
     assertRecord(value);
+    const orderedIds = requireArrayField(value, "orderedIds").map((id) =>
+      requireStringField({ id }, "id"),
+    );
+    if (new Set(orderedIds).size !== orderedIds.length)
+      throw new Error("Each asset class must appear exactly once.");
     return {
       ...bookInput(value),
-      id: requireStringField(value, "id"),
-      direction: requireEnumField(value, "direction", ["up", "down"] as const),
+      parentId: nullableId(value, "parentId"),
+      orderedIds,
     };
   })
   .handler(async ({ data }) =>
@@ -117,27 +122,29 @@ export const moveAssetClass = createServerFn({ method: "POST" })
         accountBookId: data.accountBookId,
         schemeId: ASSET_CLASS_SCHEME_ID,
       };
-      const node = await tx.classificationNode.findUnique({
-        where: { id_schemeId_accountBookId: { ...where, id: data.id } },
-      });
-      if (!node)
+      if (
+        data.parentId &&
+        !(await tx.classificationNode.findUnique({
+          where: { id_schemeId_accountBookId: { ...where, id: data.parentId } },
+        }))
+      )
         throw new Error(
-          "This asset class is no longer available. Refresh and try again.",
+          "The selected parent is no longer available. Refresh and try again.",
         );
       const siblings = await tx.classificationNode.findMany({
-        where: { ...where, parentId: node.parentId },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+        where: { ...where, parentId: data.parentId },
       });
-      const index = siblings.findIndex((n) => n.id === node.id),
-        target = index + (data.direction === "up" ? -1 : 1);
-      if (target < 0 || target >= siblings.length) return;
-      [siblings[index], siblings[target]] = [
-        siblings[target]!,
-        siblings[index]!,
-      ];
-      for (const [sortOrder, sibling] of siblings.entries())
+      const ids = new Set(siblings.map((node) => node.id));
+      if (
+        data.orderedIds.length !== siblings.length ||
+        data.orderedIds.some((id) => !ids.has(id))
+      )
+        throw new Error(
+          "The siblings changed. Refresh and reorder the updated list.",
+        );
+      for (const [sortOrder, id] of data.orderedIds.entries())
         await tx.classificationNode.update({
-          where: { id_schemeId_accountBookId: { ...where, id: sibling.id } },
+          where: { id_schemeId_accountBookId: { ...where, id } },
           data: { sortOrder },
         });
     }),

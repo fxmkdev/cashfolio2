@@ -37,6 +37,7 @@ export function useEditAccountModalController({
   onSubmit,
   onRefreshConstraints,
   initialValues,
+  defaultGroupId,
   existingNodes,
   editingId,
   typeDescriptor,
@@ -62,9 +63,9 @@ export function useEditAccountModalController({
       ? toFormValues(initialValues)
       : {
           assetClassId: null,
-          trackingMethod: "INDIVIDUAL_UNITS" as const,
-          unit: Unit.CURRENCY,
+          trackingMethod: "INDIVIDUAL_UNITS" as const,          unit: Unit.CURRENCY,
           typeDescriptor,
+          groupId: defaultGroupId,
         },
 
     validate: {
@@ -155,12 +156,12 @@ export function useEditAccountModalController({
         ? toFormValues(initialValues)
         : {
             assetClassId: null,
-            trackingMethod: "INDIVIDUAL_UNITS" as const,
-            unit: Unit.CURRENCY,
+            trackingMethod: "INDIVIDUAL_UNITS" as const,            unit: Unit.CURRENCY,
             typeDescriptor,
+            groupId: defaultGroupId,
           },
+    [initialValues, typeDescriptor, defaultGroupId],
 
-    [initialValues, typeDescriptor],
   );
 
   const initializedSession = useRef<string | null>(null);
@@ -169,7 +170,7 @@ export function useEditAccountModalController({
       initializedSession.current = null;
       return;
     }
-    const session = `${editingId ?? "create"}/${typeDescriptor}`;
+    const session = `${editingId ?? "create"}/${typeDescriptor}/${defaultGroupId ?? "root"}`;
     if (initializedSession.current !== session) {
       initializedSession.current = session;
       const currentForm = formRef.current;
@@ -182,6 +183,7 @@ export function useEditAccountModalController({
   }, [
     opened,
     editingId,
+    defaultGroupId,
     typeDescriptor,
     resetInitialValues,
     clearSubmissionError,

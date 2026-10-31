@@ -111,7 +111,12 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).
-- Use `@tabler/icons-react` for icons.
+- Use `@tabler/icons-react` for icons. Follow the shared
+  [action icon reference](apps/cashfolio-app2/docs/ui-patterns.md#action-icons),
+  [contextual child creation](apps/cashfolio-app2/docs/ui-patterns.md#contextual-child-creation),
+  and
+  [sibling reorder pattern](apps/cashfolio-app2/docs/ui-patterns.md#sibling-reorder-pattern)
+  for hierarchy management, including row-action order and submission feedback.
 - Use `@paralleldrive/cuid2` for unique IDs.
 - Use Temporal through `src/shared/temporal.ts` for calendar operations on the
   server and browser. Keep `Date`/string adapters at Prisma, form, chart, and

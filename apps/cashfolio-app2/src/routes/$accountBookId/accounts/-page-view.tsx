@@ -93,6 +93,8 @@ export type AccountsPageViewProps = {
   isGroupOpenByDefault: AgGridReactProps<AccountsGridRow>["isGroupOpenByDefault"];
   onRowGroupOpened: AgGridReactProps<AccountsGridRow>["onRowGroupOpened"];
   createModalOpened: boolean;
+  createAccountGroupId?: string;
+  createGroupParentId?: string;
   editModalOpen: boolean;
   createGroupModalOpened: boolean;
   editGroupModalOpen: boolean;
@@ -152,6 +154,8 @@ export function AccountsPageView({
   isGroupOpenByDefault,
   onRowGroupOpened,
   createModalOpened,
+  createAccountGroupId,
+  createGroupParentId,
   editModalOpen,
   createGroupModalOpened,
   editGroupModalOpen,
@@ -346,6 +350,7 @@ export function AccountsPageView({
       <>
         <EditAccountModal
           onRefreshConstraints={onRefreshConstraints}
+          defaultGroupId={createAccountGroupId}
           opened={createModalOpened}
           onClose={onCloseCreateAccount}
           accountGroups={accountGroups}
@@ -371,6 +376,7 @@ export function AccountsPageView({
 
       <EditAccountGroupModal
         onRefreshConstraints={onRefreshConstraints}
+        defaultParentGroupId={createGroupParentId}
         opened={createGroupModalOpened}
         onClose={onCloseCreateGroup}
         accountGroups={accountGroups}

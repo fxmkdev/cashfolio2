@@ -2,7 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import {
   getAssetClasses,
   saveAssetClass,
-  moveAssetClass,
+  reorderAssetClasses,
   deleteAssetClass,
 } from "@/server/classifications";
 import { ClassificationsPageView } from "./-page-view";
@@ -30,8 +30,10 @@ function ClassificationsPage() {
         await saveAssetClass({ data: { ...value, accountBookId } });
         await refresh();
       }}
-      onMove={async (id, direction) => {
-        await moveAssetClass({ data: { accountBookId, id, direction } });
+      onReorder={async (parentId, orderedIds) => {
+        await reorderAssetClasses({
+          data: { accountBookId, parentId, orderedIds },
+        });
         await refresh();
       }}
       onDelete={async (id, replacementId) => {
