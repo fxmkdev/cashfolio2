@@ -492,6 +492,16 @@ export function householdTransactions(target: SeedBook, today: Date) {
     { accountKey: "msft", value: "-1" },
     { accountKey: "usd", value: "420" },
   ]);
+  // Reports stop at yesterday in UTC; allow for Zurich already being a day ahead.
+  post(
+    target,
+    addUtcDays(today, -2),
+    "Grouping demo: EUR card purchase settled in CHF",
+    [
+      { accountKey: "current", value: "-105" },
+      { accountKey: "travel", value: "100", metadata: EUR },
+    ],
+  );
   transfer(target, today, "Cash withdrawal", "current", "wallet", "100");
   transfer(
     target,

@@ -89,6 +89,40 @@ stays empty apart from its system Gain/Loss account. The curated values take
 effect through the normal staging refresh or deployment; editing the fixtures
 does not reset deployed staging immediately.
 
+## Test gain/loss asset-class grouping
+
+In `1. Swiss Household Demo`, the transaction
+`Grouping demo: EUR card purchase settled in CHF` is dated two Zurich calendar
+days before the seed date. Reports stop at yesterday in UTC; the two-day gap
+keeps the demo reportable immediately after a refresh, even shortly after Zurich
+midnight when UTC is still on the previous date. It debits
+`Everyday account CHF` by CHF 105 and books EUR 100 to the `Travel` expense
+category using booking-level currency metadata. Travel remains Unclassified and
+has no account-level currency configuration.
+
+The difference between the converted EUR expense and the CHF settlement creates
+an execution residual on Travel. Its single originating financial account is
+Everyday account CHF, so the gain/loss entry inherits that account's Cash & Cash
+Equivalents classification. This grouping does not change Travel's own asset
+class or move the residual into Everyday account CHF's gain/loss total.
+
+Open **Report** for the month containing the transaction: normally the seed's
+current month, or the previous month when refreshed on the first or second day.
+For example, an October 31 refresh dates the transaction October 29; a January 1
+refresh dates it December 30 of the previous year. Switch **Gains/Losses
+Breakdown** to **Table**, expand **Cash & Cash Equivalents**, and double-click
+**Travel**. The detail page shows an **Execution Residuals** row and this
+explanation:
+
+> Grouped under Cash & Cash Equivalents based on the originating account:
+> Everyday account CHF.
+
+Use **Open Transaction** on the residual row to inspect the card purchase. Live
+staging amounts depend on the historical EUR/CHF rate for the booking date. At
+EUR/CHF 0.95 the residual is CHF −10; the existing fixed E2E rates (EUR/CHF =
+0.5 / 1.1) produce CHF −59.55. Both bookings move together with the seed date,
+including month/year transitions and leap day.
+
 ## Test a manually valued managed portfolio
 
 In `1. Swiss Household Demo`, open `Investments → Managed Portfolio CHF`. This

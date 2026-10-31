@@ -184,6 +184,77 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   }
 });
 
+test("the seeded EUR card purchase explains its gain/loss asset-class grouping", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const household = seededBook("household");
+  const travel = await prisma.account.findFirstOrThrow({
+    where: { accountBookId: household.id, name: "Travel" },
+  });
+  const purchase = await prisma.transaction.findFirstOrThrow({
+    where: {
+      accountBookId: household.id,
+      description: "Grouping demo: EUR card purchase settled in CHF",
+    },
+    include: { bookings: true },
+  });
+  expect(purchase.bookings).toHaveLength(2);
+  for (const booking of purchase.bookings) {
+    expect(booking.date.toISOString()).toBe("2026-10-08T00:00:00.000Z");
+  }
+  await page.goto(`/${household.id}/report?period=2026-10`);
+  await selectSegmentedControlOption(
+    page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
+    "Table",
+  );
+  const table = page.getByTestId("period-gains-losses-breakdown-table");
+  await expect(table).toBeVisible();
+  const classRow = table
+    .locator(".ag-grid-scrolling-container > .ag-row")
+    .filter({ hasText: /^Cash & Cash Equivalents/ });
+  await expect(classRow).toBeVisible();
+  const expander = classRow.locator(".ag-group-contracted");
+  if (await expander.isVisible()) await expander.click();
+  const travelRow = table
+    .locator(".ag-grid-scrolling-container > .ag-row")
+    .filter({ hasText: /^Travel\b/ });
+  await expect(travelRow).toHaveCount(1);
+  // E2E's fixed EUR/CHF rate is 0.5 / 1.1: EUR 100 minus CHF 105.
+  await expect(agGridCellByColId(travelRow, "totalGainLoss")).toHaveText(
+    "-59.55",
+  );
+  await travelRow.dblclick();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/${household.id}/report/gains-losses/${travel.id}\\?period=2026-10$`,
+    ),
+  );
+  await expect(
+    page.getByText(
+      "Grouped under Cash & Cash Equivalents based on the originating account: Everyday account CHF.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Execution Residuals", exact: true }),
+  ).toBeVisible();
+  const residualRow = page.getByRole("row").filter({
+    hasText: "Execution residual allocated by absolute converted amount.",
+  });
+  await expect(residualRow).toHaveCount(1);
+  await expect(residualRow.getByRole("cell").nth(2)).toContainText("-59.55");
+  await residualRow.getByRole("button", { name: "Open Transaction" }).click();
+  await expect(page).toHaveURL(
+    (url) =>
+      url.pathname === `/${household.id}/transactions` &&
+      url.searchParams.get("period") === "2026-10",
+  );
+  await expect(
+    agGridRowByText(page, "Grouping demo: EUR card purchase settled in CHF"),
+  ).toHaveAttribute("row-id", purchase.id);
+});
+
 test("configured testers can switch to empty and valuation edge-case books", async ({
   page,
 }) => {
