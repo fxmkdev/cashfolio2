@@ -236,6 +236,7 @@ describe("getPeriodOverview", () => {
     vi.useFakeTimers();
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-08T00:00:00.000Z"),
     });
@@ -443,6 +444,7 @@ describe("getPeriodOverview", () => {
   it("does not treat legacy currency asset accounts as cash without the cash flag", async () => {
     vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -518,6 +520,7 @@ describe("getPeriodOverview", () => {
   it("tracks converted/skipped counts across equity conversions", async () => {
     vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -630,6 +633,7 @@ describe("getPeriodOverview", () => {
   it("computes FIFO realized/unrealized gains for holding transactions", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -841,6 +845,7 @@ describe("getPeriodOverview", () => {
   it("includes execution residual for FX spending from reference-currency cash", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -986,6 +991,7 @@ describe("getPeriodOverview", () => {
   it("includes execution residual for FX income into reference-currency cash", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1131,6 +1137,7 @@ describe("getPeriodOverview", () => {
   it("excludes synthetic execution residuals for transactions with explicit gain/loss bookings", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1240,6 +1247,7 @@ describe("getPeriodOverview", () => {
   it("skips synthetic execution residual realization when any booking conversion is missing", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1365,6 +1373,7 @@ describe("getPeriodOverview", () => {
   it("keeps total return equal to net-worth delta for explicit gain/loss periods", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1471,6 +1480,7 @@ describe("getPeriodOverview", () => {
   it("keeps total return equal to net-worth delta for FX residual periods", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1614,6 +1624,7 @@ describe("getPeriodOverview", () => {
   it("keeps total return equal to net-worth delta for equity-first cross-period expense completion", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1778,6 +1789,7 @@ describe("getPeriodOverview", () => {
   it("keeps total return equal to net-worth delta for settlement-first cross-period expense completion", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -1942,6 +1954,7 @@ describe("getPeriodOverview", () => {
   it("attributes explicit gain/loss bookings with multiple counterpart accounts to an unattributed bucket", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2030,6 +2043,7 @@ describe("getPeriodOverview", () => {
   it("attributes explicit gain/loss bookings without counterpart accounts to an unattributed bucket", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2103,6 +2117,7 @@ describe("getPeriodOverview", () => {
   it("ignores near-zero explicit gain/loss contributions in the breakdown", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2175,6 +2190,7 @@ describe("getPeriodOverview", () => {
   it("batches explicit counterpart account resolution across explicit transactions in the period", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2300,6 +2316,7 @@ describe("getPeriodOverview", () => {
   it("filters equity bookings via preloaded accountId list when available", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2391,6 +2408,7 @@ describe("getPeriodOverview", () => {
   it("batches explicit counterpart account resolution once across equity pages", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2515,6 +2533,7 @@ describe("getPeriodOverview", () => {
   it("builds grouped virtual transfer clearing hierarchy for mixed units", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2624,6 +2643,7 @@ describe("getPeriodOverview", () => {
   it("routes positive and negative transfer-clearing unit balances into asset and liability totals", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -2714,6 +2734,7 @@ describe("getPeriodOverview", () => {
   it("includes transfer-clearing balances even when qualifying bookings are outside the selected period window", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2025-01-01T00:00:00.000Z"),
     });
@@ -2773,6 +2794,7 @@ describe("getPeriodOverview", () => {
   it("includes non-reference transfer-clearing positions in realized and unrealized gains/losses", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2025-01-01T00:00:00.000Z"),
     });
@@ -2906,6 +2928,7 @@ describe("getPeriodOverview", () => {
   it("tracks skipped counts when transfer-clearing conversions or rates are unavailable", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2025-01-01T00:00:00.000Z"),
     });
@@ -2976,6 +2999,7 @@ describe("getPeriodOverview", () => {
   it("skips near-zero in-period transfer-clearing quantities before conversion", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2025-01-01T00:00:00.000Z"),
     });
@@ -3016,6 +3040,7 @@ describe("getPeriodOverview", () => {
   it("keeps net worth neutral for posted legs by using opposite-sign transfer clearing", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2025-01-01T00:00:00.000Z"),
     });

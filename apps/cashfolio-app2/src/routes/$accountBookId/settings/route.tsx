@@ -18,11 +18,18 @@ function SettingsLayout() {
         `/${accountBookId}/settings/categories`,
       ),
   });
+  const classifications = useRouterState({
+    select: (state) =>
+      state.location.pathname.startsWith(
+        `/${accountBookId}/settings/classifications`,
+      ),
+  });
   return (
     <PageShell>
       <SettingsNavigation
         accountBookId={accountBookId}
         categories={categories}
+        classifications={classifications}
       />
       <Outlet />
     </PageShell>

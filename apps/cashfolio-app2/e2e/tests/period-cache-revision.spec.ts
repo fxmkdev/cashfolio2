@@ -1,7 +1,12 @@
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../src/server/classification-data";
+import { defaultAssetClassIds } from "../../src/shared/asset-class";
 import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "@playwright/test";
 import type { Prisma } from "../../src/.prisma-client/client";
-import { AccountType, AssetClass, Unit } from "../../src/.prisma-client/enums";
+import { AccountType, Unit } from "../../src/.prisma-client/enums";
 import { withDatabaseConflictRetry } from "../../src/server/database-conflict-retry";
 import { prisma } from "../support/db-client";
 
@@ -45,16 +50,19 @@ test.beforeEach(async () => {
       startDate: new Date("2026-01-01T00:00:00Z"),
     })),
   });
-  await prisma.account.create({
-    data: {
-      id: accountId,
-      accountBookId: bookId,
-      name: "Cash",
-      type: AccountType.BALANCE,
-      unit: Unit.CURRENCY,
-      currency: "CHF",
-    },
-  });
+  await prisma.account
+    .create({
+      include: { classifications: assetClassSelection },
+      data: {
+        id: accountId,
+        accountBookId: bookId,
+        name: "Cash",
+        type: AccountType.BALANCE,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+    })
+    .then(withAssetClassId);
   await prisma.transaction.create({
     data: { id: transactionId, accountBookId: bookId, description: "Fixture" },
   });
@@ -69,10 +77,26 @@ test.afterEach(async () => {
 test("classification changes advance only the owning book revision and roll back atomically", async () => {
   const before = await revision();
   const otherBefore = await revision(otherBookId);
-  await prisma.account.update({
-    where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
-    data: { assetClass: AssetClass.EQUITIES },
-  });
+  await prisma.account
+    .update({
+      include: { classifications: assetClassSelection },
+      where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+      data: {
+        classifications: {
+          deleteMany: { schemeId: "assetClass" },
+          create:
+            defaultAssetClassIds.EQUITIES == null
+              ? []
+              : [
+                  {
+                    schemeId: "assetClass",
+                    nodeId: defaultAssetClassIds.EQUITIES,
+                  },
+                ],
+        },
+      },
+    })
+    .then(withAssetClassId);
   const committed = await revision();
   expect(committed).not.toBe(before);
   expect(await revision(otherBookId)).toBe(otherBefore);
@@ -80,7 +104,7 @@ test("classification changes advance only the owning book revision and roll back
     prisma.$transaction(async (tx) => {
       await tx.account.update({
         where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
-        data: { assetClass: null },
+        data: { classifications: { deleteMany: { schemeId: "assetClass" } } },
       });
       expect(await revision(bookId, tx)).not.toBe(committed);
       throw new Error("Rollback classification");
@@ -89,11 +113,14 @@ test("classification changes advance only the owning book revision and roll back
   expect(await revision()).toBe(committed);
   expect(
     (
-      await prisma.account.findUniqueOrThrow({
-        where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
-      })
-    ).assetClass,
-  ).toBe(AssetClass.EQUITIES);
+      await prisma.account
+        .findUniqueOrThrow({
+          include: { classifications: assetClassSelection },
+          where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+        })
+        .then(withAssetClassId)
+    ).assetClassId,
+  ).toBe(defaultAssetClassIds.EQUITIES);
 });
 
 const mutations = [
@@ -121,21 +148,27 @@ const mutations = [
   {
     table: "Account",
     create: (id: string) =>
-      prisma.account.create({
-        data: {
-          id,
-          accountBookId: bookId,
-          name: "Cash",
-          type: AccountType.BALANCE,
-          unit: Unit.CURRENCY,
-          currency: "CHF",
-        },
-      }),
+      prisma.account
+        .create({
+          include: { classifications: assetClassSelection },
+          data: {
+            id,
+            accountBookId: bookId,
+            name: "Cash",
+            type: AccountType.BALANCE,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+          },
+        })
+        .then(withAssetClassId),
     update: (id: string) =>
-      prisma.account.update({
-        where: { id_accountBookId: { id, accountBookId: bookId } },
-        data: { name: "Renamed" },
-      }),
+      prisma.account
+        .update({
+          include: { classifications: assetClassSelection },
+          where: { id_accountBookId: { id, accountBookId: bookId } },
+          data: { name: "Renamed" },
+        })
+        .then(withAssetClassId),
     remove: (id: string) =>
       prisma.account.delete({
         where: { id_accountBookId: { id, accountBookId: bookId } },
@@ -283,15 +316,18 @@ async function waitUntilBlocked(waitingPid: number, blockingPid: number) {
 
 for (const victim of ["multi-row", "single-row"] as const) {
   test(`retries ${victim} mutation after a book/child deadlock without partial writes`, async () => {
-    const secondAccount = await prisma.account.create({
-      data: {
-        accountBookId: bookId,
-        name: "Second account",
-        type: AccountType.BALANCE,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-      },
-    });
+    const secondAccount = await prisma.account
+      .create({
+        include: { classifications: assetClassSelection },
+        data: {
+          accountBookId: bookId,
+          name: "Second account",
+          type: AccountType.BALANCE,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+      })
+      .then(withAssetClassId);
     const originalRevision = await revision();
     const firstWritten = deferred<void>();
     const secondLocked = deferred<void>();
@@ -343,11 +379,14 @@ for (const victim of ["multi-row", "single-row"] as const) {
         );
       } catch (error) {
         if (victim === "multi-row" && attempt === 1) {
-          const account = await prisma.account.findUniqueOrThrow({
-            where: {
-              id_accountBookId: { id: accountId, accountBookId: bookId },
-            },
-          });
+          const account = await prisma.account
+            .findUniqueOrThrow({
+              include: { classifications: assetClassSelection },
+              where: {
+                id_accountBookId: { id: accountId, accountBookId: bookId },
+              },
+            })
+            .then(withAssetClassId);
           rolledBackValue = account.sortOrder;
         }
         throw error;
@@ -394,14 +433,17 @@ for (const victim of ["multi-row", "single-row"] as const) {
           );
         } catch (error) {
           if (victim === "single-row" && attempt === 1) {
-            const account = await prisma.account.findUniqueOrThrow({
-              where: {
-                id_accountBookId: {
-                  id: secondAccount.id,
-                  accountBookId: bookId,
+            const account = await prisma.account
+              .findUniqueOrThrow({
+                include: { classifications: assetClassSelection },
+                where: {
+                  id_accountBookId: {
+                    id: secondAccount.id,
+                    accountBookId: bookId,
+                  },
                 },
-              },
-            });
+              })
+              .then(withAssetClassId);
             rolledBackValue = account.name;
           }
           throw error;
@@ -430,14 +472,22 @@ for (const victim of ["multi-row", "single-row"] as const) {
         victim === "multi-row" ? null : "Second account",
       );
       const [first, second] = await Promise.all([
-        prisma.account.findUniqueOrThrow({
-          where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
-        }),
-        prisma.account.findUniqueOrThrow({
-          where: {
-            id_accountBookId: { id: secondAccount.id, accountBookId: bookId },
-          },
-        }),
+        prisma.account
+          .findUniqueOrThrow({
+            include: { classifications: assetClassSelection },
+            where: {
+              id_accountBookId: { id: accountId, accountBookId: bookId },
+            },
+          })
+          .then(withAssetClassId),
+        prisma.account
+          .findUniqueOrThrow({
+            include: { classifications: assetClassSelection },
+            where: {
+              id_accountBookId: { id: secondAccount.id, accountBookId: bookId },
+            },
+          })
+          .then(withAssetClassId),
       ]);
       expect(first.sortOrder).toBe(11);
       expect(second.sortOrder).toBe(22);

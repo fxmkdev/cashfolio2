@@ -25,7 +25,7 @@ const hierarchy: GainsLossesBreakdownNode[] = [
         children: [],
         account: {
           id: "portfolio",
-          assetClass: "EQUITIES",
+          assetClassId: "EQUITIES",
           kind: "account",
           explanation: null,
           legacyScopes: [],

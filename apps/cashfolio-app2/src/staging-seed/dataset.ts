@@ -1,3 +1,4 @@
+import { defaultAssetClassIds } from "../shared/asset-class";
 import {
   fromUtcPlainDate,
   toTemporalInstant,
@@ -5,7 +6,6 @@ import {
 } from "../shared/temporal-adapters";
 import {
   AccountType,
-  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
@@ -66,13 +66,13 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
     ...CHF,
     groupKey: "cash",
     isCashAccount: true,
-    assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
   });
   addAccount(target, "eur", "Transfer account EUR", AccountType.BALANCE, {
     ...EUR,
     groupKey: "cash",
     isCashAccount: true,
-    assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
   });
   addAccount(target, "opening", "Opening Balances", AccountType.EQUITY, {
     equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
@@ -86,7 +86,7 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
       unit: Unit.SECURITY,
       symbol: "CFDEMO_UNLISTED",
       tradeCurrency: "CHF",
-      assetClass: AssetClass.ALTERNATIVE_INVESTMENTS,
+      assetClassId: defaultAssetClassIds.ALTERNATIVE_INVESTMENTS,
     },
   );
   addAccount(

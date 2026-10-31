@@ -8,541 +8,561 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccountBookIdRouteRouteImport } from './routes/$accountBookId/route'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as UserSettingsRouteImport } from './routes/user-settings'
-import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
-import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accountBookId/$accountId/route'
-import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
-import { Route as AccountBookIdHistoryRouteRouteImport } from './routes/$accountBookId/history/route'
-import { Route as AccountBookIdReportRouteRouteImport } from './routes/$accountBookId/report/route'
-import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
-import { Route as AccountBookIdTransactionsRouteRouteImport } from './routes/$accountBookId/transactions/route'
-import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
-import { Route as AccountDeleteRouteImport } from './routes/account/delete'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminUsersRouteImport } from './routes/admin/users'
-import { Route as AdminValuationCacheRouteRouteImport } from './routes/admin/valuation-cache/route'
-import { Route as AdminValuationProviderUsageRouteRouteImport } from './routes/admin/valuation-provider-usage/route'
-import { Route as UserDeleteRouteImport } from './routes/user/delete'
-import { Route as AccountBookIdAccountIdIndexRouteImport } from './routes/$accountBookId/$accountId/index'
-import { Route as AccountBookIdAccountIdImportStatementRouteImport } from './routes/$accountBookId/$accountId/import-statement'
-import { Route as AccountBookIdReportIndexRouteImport } from './routes/$accountBookId/report/index'
-import { Route as AccountBookIdSettingsIndexRouteImport } from './routes/$accountBookId/settings/index'
-import { Route as AccountBookIdSettingsCategoriesRouteRouteImport } from './routes/$accountBookId/settings/categories/route'
-import { Route as AccountBookIdTransactionsIndexRouteImport } from './routes/$accountBookId/transactions/index'
-import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
-import { Route as AccountBookIdReportGainsLossesAccountIdRouteRouteImport } from './routes/$accountBookId/report/gains-losses/$accountId/route'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as AccountBookIdRouteRouteImport } from "./routes/$accountBookId/route";
+import { Route as AdminRouteRouteImport } from "./routes/admin/route";
+import { Route as UserSettingsRouteImport } from "./routes/user-settings";
+import { Route as AccountBookIdIndexRouteImport } from "./routes/$accountBookId/index";
+import { Route as AccountBookIdAccountIdRouteRouteImport } from "./routes/$accountBookId/$accountId/route";
+import { Route as AccountBookIdAccountsRouteRouteImport } from "./routes/$accountBookId/accounts/route";
+import { Route as AccountBookIdHistoryRouteRouteImport } from "./routes/$accountBookId/history/route";
+import { Route as AccountBookIdReportRouteRouteImport } from "./routes/$accountBookId/report/route";
+import { Route as AccountBookIdSettingsRouteRouteImport } from "./routes/$accountBookId/settings/route";
+import { Route as AccountBookIdTransactionsRouteRouteImport } from "./routes/$accountBookId/transactions/route";
+import { Route as AccountBooksNewRouteImport } from "./routes/account-books/new";
+import { Route as AccountDeleteRouteImport } from "./routes/account/delete";
+import { Route as AdminIndexRouteImport } from "./routes/admin/index";
+import { Route as AdminUsersRouteImport } from "./routes/admin/users";
+import { Route as AdminValuationCacheRouteRouteImport } from "./routes/admin/valuation-cache/route";
+import { Route as AdminValuationProviderUsageRouteRouteImport } from "./routes/admin/valuation-provider-usage/route";
+import { Route as UserDeleteRouteImport } from "./routes/user/delete";
+import { Route as AccountBookIdAccountIdIndexRouteImport } from "./routes/$accountBookId/$accountId/index";
+import { Route as AccountBookIdAccountIdImportStatementRouteImport } from "./routes/$accountBookId/$accountId/import-statement";
+import { Route as AccountBookIdReportIndexRouteImport } from "./routes/$accountBookId/report/index";
+import { Route as AccountBookIdSettingsIndexRouteImport } from "./routes/$accountBookId/settings/index";
+import { Route as AccountBookIdSettingsCategoriesRouteRouteImport } from "./routes/$accountBookId/settings/categories/route";
+import { Route as AccountBookIdSettingsClassificationsRouteRouteImport } from "./routes/$accountBookId/settings/classifications/route";
+import { Route as AccountBookIdTransactionsIndexRouteImport } from "./routes/$accountBookId/transactions/index";
+import { Route as ApiLogtoActionRouteImport } from "./routes/api/logto/$action";
+import { Route as AccountBookIdReportGainsLossesAccountIdRouteRouteImport } from "./routes/$accountBookId/report/gains-losses/$accountId/route";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AccountBookIdRouteRoute = AccountBookIdRouteRouteImport.update({
-  id: '/$accountBookId',
-  path: '/$accountBookId',
+  id: "/$accountBookId",
+  path: "/$accountBookId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+  id: "/admin",
+  path: "/admin",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const UserSettingsRoute = UserSettingsRouteImport.update({
-  id: '/user-settings',
-  path: '/user-settings',
+  id: "/user-settings",
+  path: "/user-settings",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => AccountBookIdRouteRoute,
-} as any)
+} as any);
 const AccountBookIdAccountIdRouteRoute =
   AccountBookIdAccountIdRouteRouteImport.update({
-    id: '/$accountId',
-    path: '/$accountId',
+    id: "/$accountId",
+    path: "/$accountId",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdAccountsRouteRoute =
   AccountBookIdAccountsRouteRouteImport.update({
-    id: '/accounts',
-    path: '/accounts',
+    id: "/accounts",
+    path: "/accounts",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdHistoryRouteRoute =
   AccountBookIdHistoryRouteRouteImport.update({
-    id: '/history',
-    path: '/history',
+    id: "/history",
+    path: "/history",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdReportRouteRoute =
   AccountBookIdReportRouteRouteImport.update({
-    id: '/report',
-    path: '/report',
+    id: "/report",
+    path: "/report",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdSettingsRouteRoute =
   AccountBookIdSettingsRouteRouteImport.update({
-    id: '/settings',
-    path: '/settings',
+    id: "/settings",
+    path: "/settings",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdTransactionsRouteRoute =
   AccountBookIdTransactionsRouteRouteImport.update({
-    id: '/transactions',
-    path: '/transactions',
+    id: "/transactions",
+    path: "/transactions",
     getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
-  id: '/account-books/new',
-  path: '/account-books/new',
+  id: "/account-books/new",
+  path: "/account-books/new",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AccountDeleteRoute = AccountDeleteRouteImport.update({
-  id: '/account/delete',
-  path: '/account/delete',
+  id: "/account/delete",
+  path: "/account/delete",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => AdminRouteRoute,
-} as any)
+} as any);
 const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+  id: "/users",
+  path: "/users",
   getParentRoute: () => AdminRouteRoute,
-} as any)
+} as any);
 const AdminValuationCacheRouteRoute =
   AdminValuationCacheRouteRouteImport.update({
-    id: '/valuation-cache',
-    path: '/valuation-cache',
+    id: "/valuation-cache",
+    path: "/valuation-cache",
     getParentRoute: () => AdminRouteRoute,
-  } as any)
+  } as any);
 const AdminValuationProviderUsageRouteRoute =
   AdminValuationProviderUsageRouteRouteImport.update({
-    id: '/valuation-provider-usage',
-    path: '/valuation-provider-usage',
+    id: "/valuation-provider-usage",
+    path: "/valuation-provider-usage",
     getParentRoute: () => AdminRouteRoute,
-  } as any)
+  } as any);
 const UserDeleteRoute = UserDeleteRouteImport.update({
-  id: '/user/delete',
-  path: '/user/delete',
+  id: "/user/delete",
+  path: "/user/delete",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AccountBookIdAccountIdIndexRoute =
   AccountBookIdAccountIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AccountBookIdAccountIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdAccountIdImportStatementRoute =
   AccountBookIdAccountIdImportStatementRouteImport.update({
-    id: '/import-statement',
-    path: '/import-statement',
+    id: "/import-statement",
+    path: "/import-statement",
     getParentRoute: () => AccountBookIdAccountIdRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdReportIndexRoute =
   AccountBookIdReportIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AccountBookIdReportRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdSettingsIndexRoute =
   AccountBookIdSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AccountBookIdSettingsRouteRoute,
-  } as any)
+  } as any);
 const AccountBookIdSettingsCategoriesRouteRoute =
   AccountBookIdSettingsCategoriesRouteRouteImport.update({
-    id: '/categories',
-    path: '/categories',
+    id: "/categories",
+    path: "/categories",
     getParentRoute: () => AccountBookIdSettingsRouteRoute,
-  } as any)
+  } as any);
+const AccountBookIdSettingsClassificationsRouteRoute =
+  AccountBookIdSettingsClassificationsRouteRouteImport.update({
+    id: "/classifications",
+    path: "/classifications",
+    getParentRoute: () => AccountBookIdSettingsRouteRoute,
+  } as any);
 const AccountBookIdTransactionsIndexRoute =
   AccountBookIdTransactionsIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AccountBookIdTransactionsRouteRoute,
-  } as any)
+  } as any);
 const ApiLogtoActionRoute = ApiLogtoActionRouteImport.update({
-  id: '/api/logto/$action',
-  path: '/api/logto/$action',
+  id: "/api/logto/$action",
+  path: "/api/logto/$action",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AccountBookIdReportGainsLossesAccountIdRouteRoute =
   AccountBookIdReportGainsLossesAccountIdRouteRouteImport.update({
-    id: '/gains-losses/$accountId',
-    path: '/gains-losses/$accountId',
+    id: "/gains-losses/$accountId",
+    path: "/gains-losses/$accountId",
     getParentRoute: () => AccountBookIdReportRouteRoute,
-  } as any)
+  } as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
-  '/admin': typeof AdminRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRoute
-  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
-  '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
-  '/$accountBookId/history': typeof AccountBookIdHistoryRouteRoute
-  '/$accountBookId/report': typeof AccountBookIdReportRouteRouteWithChildren
-  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRouteWithChildren
-  '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
-  '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
-  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
-  '/account-books/new': typeof AccountBooksNewRoute
-  '/account/delete': typeof AccountDeleteRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/user/delete': typeof UserDeleteRoute
-  '/$accountBookId/': typeof AccountBookIdIndexRoute
-  '/admin/': typeof AdminIndexRoute
-  '/$accountBookId/settings/categories': typeof AccountBookIdSettingsCategoriesRouteRoute
-  '/$accountBookId/$accountId/import-statement': typeof AccountBookIdAccountIdImportStatementRoute
-  '/api/logto/$action': typeof ApiLogtoActionRoute
-  '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
-  '/$accountBookId/report/': typeof AccountBookIdReportIndexRoute
-  '/$accountBookId/settings/': typeof AccountBookIdSettingsIndexRoute
-  '/$accountBookId/transactions/': typeof AccountBookIdTransactionsIndexRoute
-  '/$accountBookId/report/gains-losses/$accountId': typeof AccountBookIdReportGainsLossesAccountIdRouteRoute
+  "/": typeof IndexRoute;
+  "/$accountBookId": typeof AccountBookIdRouteRouteWithChildren;
+  "/admin": typeof AdminRouteRouteWithChildren;
+  "/user-settings": typeof UserSettingsRoute;
+  "/$accountBookId/$accountId": typeof AccountBookIdAccountIdRouteRouteWithChildren;
+  "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
+  "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
+  "/$accountBookId/report": typeof AccountBookIdReportRouteRouteWithChildren;
+  "/$accountBookId/settings": typeof AccountBookIdSettingsRouteRouteWithChildren;
+  "/$accountBookId/transactions": typeof AccountBookIdTransactionsRouteRouteWithChildren;
+  "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
+  "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
+  "/account-books/new": typeof AccountBooksNewRoute;
+  "/account/delete": typeof AccountDeleteRoute;
+  "/admin/users": typeof AdminUsersRoute;
+  "/user/delete": typeof UserDeleteRoute;
+  "/$accountBookId/": typeof AccountBookIdIndexRoute;
+  "/admin/": typeof AdminIndexRoute;
+  "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
+  "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
+  "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
+  "/api/logto/$action": typeof ApiLogtoActionRoute;
+  "/$accountBookId/$accountId/": typeof AccountBookIdAccountIdIndexRoute;
+  "/$accountBookId/report/": typeof AccountBookIdReportIndexRoute;
+  "/$accountBookId/settings/": typeof AccountBookIdSettingsIndexRoute;
+  "/$accountBookId/transactions/": typeof AccountBookIdTransactionsIndexRoute;
+  "/$accountBookId/report/gains-losses/$accountId": typeof AccountBookIdReportGainsLossesAccountIdRouteRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/user-settings': typeof UserSettingsRoute
-  '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
-  '/$accountBookId/history': typeof AccountBookIdHistoryRouteRoute
-  '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
-  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
-  '/account-books/new': typeof AccountBooksNewRoute
-  '/account/delete': typeof AccountDeleteRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/user/delete': typeof UserDeleteRoute
-  '/$accountBookId': typeof AccountBookIdIndexRoute
-  '/admin': typeof AdminIndexRoute
-  '/$accountBookId/settings/categories': typeof AccountBookIdSettingsCategoriesRouteRoute
-  '/$accountBookId/$accountId/import-statement': typeof AccountBookIdAccountIdImportStatementRoute
-  '/api/logto/$action': typeof ApiLogtoActionRoute
-  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdIndexRoute
-  '/$accountBookId/report': typeof AccountBookIdReportIndexRoute
-  '/$accountBookId/settings': typeof AccountBookIdSettingsIndexRoute
-  '/$accountBookId/transactions': typeof AccountBookIdTransactionsIndexRoute
-  '/$accountBookId/report/gains-losses/$accountId': typeof AccountBookIdReportGainsLossesAccountIdRouteRoute
+  "/": typeof IndexRoute;
+  "/user-settings": typeof UserSettingsRoute;
+  "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
+  "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
+  "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
+  "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
+  "/account-books/new": typeof AccountBooksNewRoute;
+  "/account/delete": typeof AccountDeleteRoute;
+  "/admin/users": typeof AdminUsersRoute;
+  "/user/delete": typeof UserDeleteRoute;
+  "/$accountBookId": typeof AccountBookIdIndexRoute;
+  "/admin": typeof AdminIndexRoute;
+  "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
+  "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
+  "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
+  "/api/logto/$action": typeof ApiLogtoActionRoute;
+  "/$accountBookId/$accountId": typeof AccountBookIdAccountIdIndexRoute;
+  "/$accountBookId/report": typeof AccountBookIdReportIndexRoute;
+  "/$accountBookId/settings": typeof AccountBookIdSettingsIndexRoute;
+  "/$accountBookId/transactions": typeof AccountBookIdTransactionsIndexRoute;
+  "/$accountBookId/report/gains-losses/$accountId": typeof AccountBookIdReportGainsLossesAccountIdRouteRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
-  '/admin': typeof AdminRouteRouteWithChildren
-  '/user-settings': typeof UserSettingsRoute
-  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
-  '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
-  '/$accountBookId/history': typeof AccountBookIdHistoryRouteRoute
-  '/$accountBookId/report': typeof AccountBookIdReportRouteRouteWithChildren
-  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRouteWithChildren
-  '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
-  '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
-  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
-  '/account-books/new': typeof AccountBooksNewRoute
-  '/account/delete': typeof AccountDeleteRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/user/delete': typeof UserDeleteRoute
-  '/$accountBookId/': typeof AccountBookIdIndexRoute
-  '/admin/': typeof AdminIndexRoute
-  '/$accountBookId/settings/categories': typeof AccountBookIdSettingsCategoriesRouteRoute
-  '/$accountBookId/$accountId/import-statement': typeof AccountBookIdAccountIdImportStatementRoute
-  '/api/logto/$action': typeof ApiLogtoActionRoute
-  '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
-  '/$accountBookId/report/': typeof AccountBookIdReportIndexRoute
-  '/$accountBookId/settings/': typeof AccountBookIdSettingsIndexRoute
-  '/$accountBookId/transactions/': typeof AccountBookIdTransactionsIndexRoute
-  '/$accountBookId/report/gains-losses/$accountId': typeof AccountBookIdReportGainsLossesAccountIdRouteRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/$accountBookId": typeof AccountBookIdRouteRouteWithChildren;
+  "/admin": typeof AdminRouteRouteWithChildren;
+  "/user-settings": typeof UserSettingsRoute;
+  "/$accountBookId/$accountId": typeof AccountBookIdAccountIdRouteRouteWithChildren;
+  "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
+  "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
+  "/$accountBookId/report": typeof AccountBookIdReportRouteRouteWithChildren;
+  "/$accountBookId/settings": typeof AccountBookIdSettingsRouteRouteWithChildren;
+  "/$accountBookId/transactions": typeof AccountBookIdTransactionsRouteRouteWithChildren;
+  "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
+  "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
+  "/account-books/new": typeof AccountBooksNewRoute;
+  "/account/delete": typeof AccountDeleteRoute;
+  "/admin/users": typeof AdminUsersRoute;
+  "/user/delete": typeof UserDeleteRoute;
+  "/$accountBookId/": typeof AccountBookIdIndexRoute;
+  "/admin/": typeof AdminIndexRoute;
+  "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
+  "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
+  "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
+  "/api/logto/$action": typeof ApiLogtoActionRoute;
+  "/$accountBookId/$accountId/": typeof AccountBookIdAccountIdIndexRoute;
+  "/$accountBookId/report/": typeof AccountBookIdReportIndexRoute;
+  "/$accountBookId/settings/": typeof AccountBookIdSettingsIndexRoute;
+  "/$accountBookId/transactions/": typeof AccountBookIdTransactionsIndexRoute;
+  "/$accountBookId/report/gains-losses/$accountId": typeof AccountBookIdReportGainsLossesAccountIdRouteRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/$accountBookId'
-    | '/admin'
-    | '/user-settings'
-    | '/$accountBookId/$accountId'
-    | '/$accountBookId/accounts'
-    | '/$accountBookId/history'
-    | '/$accountBookId/report'
-    | '/$accountBookId/settings'
-    | '/$accountBookId/transactions'
-    | '/admin/valuation-cache'
-    | '/admin/valuation-provider-usage'
-    | '/account-books/new'
-    | '/account/delete'
-    | '/admin/users'
-    | '/user/delete'
-    | '/$accountBookId/'
-    | '/admin/'
-    | '/$accountBookId/settings/categories'
-    | '/$accountBookId/$accountId/import-statement'
-    | '/api/logto/$action'
-    | '/$accountBookId/$accountId/'
-    | '/$accountBookId/report/'
-    | '/$accountBookId/settings/'
-    | '/$accountBookId/transactions/'
-    | '/$accountBookId/report/gains-losses/$accountId'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/$accountBookId"
+    | "/admin"
+    | "/user-settings"
+    | "/$accountBookId/$accountId"
+    | "/$accountBookId/accounts"
+    | "/$accountBookId/history"
+    | "/$accountBookId/report"
+    | "/$accountBookId/settings"
+    | "/$accountBookId/transactions"
+    | "/admin/valuation-cache"
+    | "/admin/valuation-provider-usage"
+    | "/account-books/new"
+    | "/account/delete"
+    | "/admin/users"
+    | "/user/delete"
+    | "/$accountBookId/"
+    | "/admin/"
+    | "/$accountBookId/settings/categories"
+    | "/$accountBookId/settings/classifications"
+    | "/$accountBookId/$accountId/import-statement"
+    | "/api/logto/$action"
+    | "/$accountBookId/$accountId/"
+    | "/$accountBookId/report/"
+    | "/$accountBookId/settings/"
+    | "/$accountBookId/transactions/"
+    | "/$accountBookId/report/gains-losses/$accountId";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/user-settings'
-    | '/$accountBookId/accounts'
-    | '/$accountBookId/history'
-    | '/admin/valuation-cache'
-    | '/admin/valuation-provider-usage'
-    | '/account-books/new'
-    | '/account/delete'
-    | '/admin/users'
-    | '/user/delete'
-    | '/$accountBookId'
-    | '/admin'
-    | '/$accountBookId/settings/categories'
-    | '/$accountBookId/$accountId/import-statement'
-    | '/api/logto/$action'
-    | '/$accountBookId/$accountId'
-    | '/$accountBookId/report'
-    | '/$accountBookId/settings'
-    | '/$accountBookId/transactions'
-    | '/$accountBookId/report/gains-losses/$accountId'
+    | "/"
+    | "/user-settings"
+    | "/$accountBookId/accounts"
+    | "/$accountBookId/history"
+    | "/admin/valuation-cache"
+    | "/admin/valuation-provider-usage"
+    | "/account-books/new"
+    | "/account/delete"
+    | "/admin/users"
+    | "/user/delete"
+    | "/$accountBookId"
+    | "/admin"
+    | "/$accountBookId/settings/categories"
+    | "/$accountBookId/settings/classifications"
+    | "/$accountBookId/$accountId/import-statement"
+    | "/api/logto/$action"
+    | "/$accountBookId/$accountId"
+    | "/$accountBookId/report"
+    | "/$accountBookId/settings"
+    | "/$accountBookId/transactions"
+    | "/$accountBookId/report/gains-losses/$accountId";
   id:
-    | '__root__'
-    | '/'
-    | '/$accountBookId'
-    | '/admin'
-    | '/user-settings'
-    | '/$accountBookId/$accountId'
-    | '/$accountBookId/accounts'
-    | '/$accountBookId/history'
-    | '/$accountBookId/report'
-    | '/$accountBookId/settings'
-    | '/$accountBookId/transactions'
-    | '/admin/valuation-cache'
-    | '/admin/valuation-provider-usage'
-    | '/account-books/new'
-    | '/account/delete'
-    | '/admin/users'
-    | '/user/delete'
-    | '/$accountBookId/'
-    | '/admin/'
-    | '/$accountBookId/settings/categories'
-    | '/$accountBookId/$accountId/import-statement'
-    | '/api/logto/$action'
-    | '/$accountBookId/$accountId/'
-    | '/$accountBookId/report/'
-    | '/$accountBookId/settings/'
-    | '/$accountBookId/transactions/'
-    | '/$accountBookId/report/gains-losses/$accountId'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/$accountBookId"
+    | "/admin"
+    | "/user-settings"
+    | "/$accountBookId/$accountId"
+    | "/$accountBookId/accounts"
+    | "/$accountBookId/history"
+    | "/$accountBookId/report"
+    | "/$accountBookId/settings"
+    | "/$accountBookId/transactions"
+    | "/admin/valuation-cache"
+    | "/admin/valuation-provider-usage"
+    | "/account-books/new"
+    | "/account/delete"
+    | "/admin/users"
+    | "/user/delete"
+    | "/$accountBookId/"
+    | "/admin/"
+    | "/$accountBookId/settings/categories"
+    | "/$accountBookId/settings/classifications"
+    | "/$accountBookId/$accountId/import-statement"
+    | "/api/logto/$action"
+    | "/$accountBookId/$accountId/"
+    | "/$accountBookId/report/"
+    | "/$accountBookId/settings/"
+    | "/$accountBookId/transactions/"
+    | "/$accountBookId/report/gains-losses/$accountId";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AccountBookIdRouteRoute: typeof AccountBookIdRouteRouteWithChildren
-  AdminRouteRoute: typeof AdminRouteRouteWithChildren
-  UserSettingsRoute: typeof UserSettingsRoute
-  AccountBooksNewRoute: typeof AccountBooksNewRoute
-  AccountDeleteRoute: typeof AccountDeleteRoute
-  UserDeleteRoute: typeof UserDeleteRoute
-  ApiLogtoActionRoute: typeof ApiLogtoActionRoute
+  IndexRoute: typeof IndexRoute;
+  AccountBookIdRouteRoute: typeof AccountBookIdRouteRouteWithChildren;
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren;
+  UserSettingsRoute: typeof UserSettingsRoute;
+  AccountBooksNewRoute: typeof AccountBooksNewRoute;
+  AccountDeleteRoute: typeof AccountDeleteRoute;
+  UserDeleteRoute: typeof UserDeleteRoute;
+  ApiLogtoActionRoute: typeof ApiLogtoActionRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$accountBookId': {
-      id: '/$accountBookId'
-      path: '/$accountBookId'
-      fullPath: '/$accountBookId'
-      preLoaderRoute: typeof AccountBookIdRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/user-settings': {
-      id: '/user-settings'
-      path: '/user-settings'
-      fullPath: '/user-settings'
-      preLoaderRoute: typeof UserSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$accountBookId/': {
-      id: '/$accountBookId/'
-      path: '/'
-      fullPath: '/$accountBookId/'
-      preLoaderRoute: typeof AccountBookIdIndexRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/$accountId': {
-      id: '/$accountBookId/$accountId'
-      path: '/$accountId'
-      fullPath: '/$accountBookId/$accountId'
-      preLoaderRoute: typeof AccountBookIdAccountIdRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/accounts': {
-      id: '/$accountBookId/accounts'
-      path: '/accounts'
-      fullPath: '/$accountBookId/accounts'
-      preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/history': {
-      id: '/$accountBookId/history'
-      path: '/history'
-      fullPath: '/$accountBookId/history'
-      preLoaderRoute: typeof AccountBookIdHistoryRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/report': {
-      id: '/$accountBookId/report'
-      path: '/report'
-      fullPath: '/$accountBookId/report'
-      preLoaderRoute: typeof AccountBookIdReportRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/settings': {
-      id: '/$accountBookId/settings'
-      path: '/settings'
-      fullPath: '/$accountBookId/settings'
-      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/transactions': {
-      id: '/$accountBookId/transactions'
-      path: '/transactions'
-      fullPath: '/$accountBookId/transactions'
-      preLoaderRoute: typeof AccountBookIdTransactionsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/account-books/new': {
-      id: '/account-books/new'
-      path: '/account-books/new'
-      fullPath: '/account-books/new'
-      preLoaderRoute: typeof AccountBooksNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account/delete': {
-      id: '/account/delete'
-      path: '/account/delete'
-      fullPath: '/account/delete'
-      preLoaderRoute: typeof AccountDeleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/valuation-cache': {
-      id: '/admin/valuation-cache'
-      path: '/valuation-cache'
-      fullPath: '/admin/valuation-cache'
-      preLoaderRoute: typeof AdminValuationCacheRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/valuation-provider-usage': {
-      id: '/admin/valuation-provider-usage'
-      path: '/valuation-provider-usage'
-      fullPath: '/admin/valuation-provider-usage'
-      preLoaderRoute: typeof AdminValuationProviderUsageRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/user/delete': {
-      id: '/user/delete'
-      path: '/user/delete'
-      fullPath: '/user/delete'
-      preLoaderRoute: typeof UserDeleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$accountBookId/$accountId/': {
-      id: '/$accountBookId/$accountId/'
-      path: '/'
-      fullPath: '/$accountBookId/$accountId/'
-      preLoaderRoute: typeof AccountBookIdAccountIdIndexRouteImport
-      parentRoute: typeof AccountBookIdAccountIdRouteRoute
-    }
-    '/$accountBookId/$accountId/import-statement': {
-      id: '/$accountBookId/$accountId/import-statement'
-      path: '/import-statement'
-      fullPath: '/$accountBookId/$accountId/import-statement'
-      preLoaderRoute: typeof AccountBookIdAccountIdImportStatementRouteImport
-      parentRoute: typeof AccountBookIdAccountIdRouteRoute
-    }
-    '/$accountBookId/report/': {
-      id: '/$accountBookId/report/'
-      path: '/'
-      fullPath: '/$accountBookId/report/'
-      preLoaderRoute: typeof AccountBookIdReportIndexRouteImport
-      parentRoute: typeof AccountBookIdReportRouteRoute
-    }
-    '/$accountBookId/settings/': {
-      id: '/$accountBookId/settings/'
-      path: '/'
-      fullPath: '/$accountBookId/settings/'
-      preLoaderRoute: typeof AccountBookIdSettingsIndexRouteImport
-      parentRoute: typeof AccountBookIdSettingsRouteRoute
-    }
-    '/$accountBookId/settings/categories': {
-      id: '/$accountBookId/settings/categories'
-      path: '/categories'
-      fullPath: '/$accountBookId/settings/categories'
-      preLoaderRoute: typeof AccountBookIdSettingsCategoriesRouteRouteImport
-      parentRoute: typeof AccountBookIdSettingsRouteRoute
-    }
-    '/$accountBookId/transactions/': {
-      id: '/$accountBookId/transactions/'
-      path: '/'
-      fullPath: '/$accountBookId/transactions/'
-      preLoaderRoute: typeof AccountBookIdTransactionsIndexRouteImport
-      parentRoute: typeof AccountBookIdTransactionsRouteRoute
-    }
-    '/api/logto/$action': {
-      id: '/api/logto/$action'
-      path: '/api/logto/$action'
-      fullPath: '/api/logto/$action'
-      preLoaderRoute: typeof ApiLogtoActionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$accountBookId/report/gains-losses/$accountId': {
-      id: '/$accountBookId/report/gains-losses/$accountId'
-      path: '/gains-losses/$accountId'
-      fullPath: '/$accountBookId/report/gains-losses/$accountId'
-      preLoaderRoute: typeof AccountBookIdReportGainsLossesAccountIdRouteRouteImport
-      parentRoute: typeof AccountBookIdReportRouteRoute
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$accountBookId": {
+      id: "/$accountBookId";
+      path: "/$accountBookId";
+      fullPath: "/$accountBookId";
+      preLoaderRoute: typeof AccountBookIdRouteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin": {
+      id: "/admin";
+      path: "/admin";
+      fullPath: "/admin";
+      preLoaderRoute: typeof AdminRouteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/user-settings": {
+      id: "/user-settings";
+      path: "/user-settings";
+      fullPath: "/user-settings";
+      preLoaderRoute: typeof UserSettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$accountBookId/": {
+      id: "/$accountBookId/";
+      path: "/";
+      fullPath: "/$accountBookId/";
+      preLoaderRoute: typeof AccountBookIdIndexRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/$accountId": {
+      id: "/$accountBookId/$accountId";
+      path: "/$accountId";
+      fullPath: "/$accountBookId/$accountId";
+      preLoaderRoute: typeof AccountBookIdAccountIdRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/accounts": {
+      id: "/$accountBookId/accounts";
+      path: "/accounts";
+      fullPath: "/$accountBookId/accounts";
+      preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/history": {
+      id: "/$accountBookId/history";
+      path: "/history";
+      fullPath: "/$accountBookId/history";
+      preLoaderRoute: typeof AccountBookIdHistoryRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/report": {
+      id: "/$accountBookId/report";
+      path: "/report";
+      fullPath: "/$accountBookId/report";
+      preLoaderRoute: typeof AccountBookIdReportRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/settings": {
+      id: "/$accountBookId/settings";
+      path: "/settings";
+      fullPath: "/$accountBookId/settings";
+      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/transactions": {
+      id: "/$accountBookId/transactions";
+      path: "/transactions";
+      fullPath: "/$accountBookId/transactions";
+      preLoaderRoute: typeof AccountBookIdTransactionsRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/account-books/new": {
+      id: "/account-books/new";
+      path: "/account-books/new";
+      fullPath: "/account-books/new";
+      preLoaderRoute: typeof AccountBooksNewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/account/delete": {
+      id: "/account/delete";
+      path: "/account/delete";
+      fullPath: "/account/delete";
+      preLoaderRoute: typeof AccountDeleteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin/": {
+      id: "/admin/";
+      path: "/";
+      fullPath: "/admin/";
+      preLoaderRoute: typeof AdminIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/users": {
+      id: "/admin/users";
+      path: "/users";
+      fullPath: "/admin/users";
+      preLoaderRoute: typeof AdminUsersRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/valuation-cache": {
+      id: "/admin/valuation-cache";
+      path: "/valuation-cache";
+      fullPath: "/admin/valuation-cache";
+      preLoaderRoute: typeof AdminValuationCacheRouteRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/valuation-provider-usage": {
+      id: "/admin/valuation-provider-usage";
+      path: "/valuation-provider-usage";
+      fullPath: "/admin/valuation-provider-usage";
+      preLoaderRoute: typeof AdminValuationProviderUsageRouteRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/user/delete": {
+      id: "/user/delete";
+      path: "/user/delete";
+      fullPath: "/user/delete";
+      preLoaderRoute: typeof UserDeleteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$accountBookId/$accountId/": {
+      id: "/$accountBookId/$accountId/";
+      path: "/";
+      fullPath: "/$accountBookId/$accountId/";
+      preLoaderRoute: typeof AccountBookIdAccountIdIndexRouteImport;
+      parentRoute: typeof AccountBookIdAccountIdRouteRoute;
+    };
+    "/$accountBookId/$accountId/import-statement": {
+      id: "/$accountBookId/$accountId/import-statement";
+      path: "/import-statement";
+      fullPath: "/$accountBookId/$accountId/import-statement";
+      preLoaderRoute: typeof AccountBookIdAccountIdImportStatementRouteImport;
+      parentRoute: typeof AccountBookIdAccountIdRouteRoute;
+    };
+    "/$accountBookId/report/": {
+      id: "/$accountBookId/report/";
+      path: "/";
+      fullPath: "/$accountBookId/report/";
+      preLoaderRoute: typeof AccountBookIdReportIndexRouteImport;
+      parentRoute: typeof AccountBookIdReportRouteRoute;
+    };
+    "/$accountBookId/settings/": {
+      id: "/$accountBookId/settings/";
+      path: "/";
+      fullPath: "/$accountBookId/settings/";
+      preLoaderRoute: typeof AccountBookIdSettingsIndexRouteImport;
+      parentRoute: typeof AccountBookIdSettingsRouteRoute;
+    };
+    "/$accountBookId/settings/categories": {
+      id: "/$accountBookId/settings/categories";
+      path: "/categories";
+      fullPath: "/$accountBookId/settings/categories";
+      preLoaderRoute: typeof AccountBookIdSettingsCategoriesRouteRouteImport;
+      parentRoute: typeof AccountBookIdSettingsRouteRoute;
+    };
+    "/$accountBookId/settings/classifications": {
+      id: "/$accountBookId/settings/classifications";
+      path: "/classifications";
+      fullPath: "/$accountBookId/settings/classifications";
+      preLoaderRoute: typeof AccountBookIdSettingsClassificationsRouteRouteImport;
+      parentRoute: typeof AccountBookIdSettingsRouteRoute;
+    };
+    "/$accountBookId/transactions/": {
+      id: "/$accountBookId/transactions/";
+      path: "/";
+      fullPath: "/$accountBookId/transactions/";
+      preLoaderRoute: typeof AccountBookIdTransactionsIndexRouteImport;
+      parentRoute: typeof AccountBookIdTransactionsRouteRoute;
+    };
+    "/api/logto/$action": {
+      id: "/api/logto/$action";
+      path: "/api/logto/$action";
+      fullPath: "/api/logto/$action";
+      preLoaderRoute: typeof ApiLogtoActionRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$accountBookId/report/gains-losses/$accountId": {
+      id: "/$accountBookId/report/gains-losses/$accountId";
+      path: "/gains-losses/$accountId";
+      fullPath: "/$accountBookId/report/gains-losses/$accountId";
+      preLoaderRoute: typeof AccountBookIdReportGainsLossesAccountIdRouteRouteImport;
+      parentRoute: typeof AccountBookIdReportRouteRoute;
+    };
   }
 }
 
 interface AccountBookIdAccountIdRouteRouteChildren {
-  AccountBookIdAccountIdImportStatementRoute: typeof AccountBookIdAccountIdImportStatementRoute
-  AccountBookIdAccountIdIndexRoute: typeof AccountBookIdAccountIdIndexRoute
+  AccountBookIdAccountIdImportStatementRoute: typeof AccountBookIdAccountIdImportStatementRoute;
+  AccountBookIdAccountIdIndexRoute: typeof AccountBookIdAccountIdIndexRoute;
 }
 
 const AccountBookIdAccountIdRouteRouteChildren: AccountBookIdAccountIdRouteRouteChildren =
@@ -550,16 +570,16 @@ const AccountBookIdAccountIdRouteRouteChildren: AccountBookIdAccountIdRouteRoute
     AccountBookIdAccountIdImportStatementRoute:
       AccountBookIdAccountIdImportStatementRoute,
     AccountBookIdAccountIdIndexRoute: AccountBookIdAccountIdIndexRoute,
-  }
+  };
 
 const AccountBookIdAccountIdRouteRouteWithChildren =
   AccountBookIdAccountIdRouteRoute._addFileChildren(
     AccountBookIdAccountIdRouteRouteChildren,
-  )
+  );
 
 interface AccountBookIdReportRouteRouteChildren {
-  AccountBookIdReportIndexRoute: typeof AccountBookIdReportIndexRoute
-  AccountBookIdReportGainsLossesAccountIdRouteRoute: typeof AccountBookIdReportGainsLossesAccountIdRouteRoute
+  AccountBookIdReportIndexRoute: typeof AccountBookIdReportIndexRoute;
+  AccountBookIdReportGainsLossesAccountIdRouteRoute: typeof AccountBookIdReportGainsLossesAccountIdRouteRoute;
 }
 
 const AccountBookIdReportRouteRouteChildren: AccountBookIdReportRouteRouteChildren =
@@ -567,52 +587,55 @@ const AccountBookIdReportRouteRouteChildren: AccountBookIdReportRouteRouteChildr
     AccountBookIdReportIndexRoute: AccountBookIdReportIndexRoute,
     AccountBookIdReportGainsLossesAccountIdRouteRoute:
       AccountBookIdReportGainsLossesAccountIdRouteRoute,
-  }
+  };
 
 const AccountBookIdReportRouteRouteWithChildren =
   AccountBookIdReportRouteRoute._addFileChildren(
     AccountBookIdReportRouteRouteChildren,
-  )
+  );
 
 interface AccountBookIdSettingsRouteRouteChildren {
-  AccountBookIdSettingsCategoriesRouteRoute: typeof AccountBookIdSettingsCategoriesRouteRoute
-  AccountBookIdSettingsIndexRoute: typeof AccountBookIdSettingsIndexRoute
+  AccountBookIdSettingsCategoriesRouteRoute: typeof AccountBookIdSettingsCategoriesRouteRoute;
+  AccountBookIdSettingsClassificationsRouteRoute: typeof AccountBookIdSettingsClassificationsRouteRoute;
+  AccountBookIdSettingsIndexRoute: typeof AccountBookIdSettingsIndexRoute;
 }
 
 const AccountBookIdSettingsRouteRouteChildren: AccountBookIdSettingsRouteRouteChildren =
   {
     AccountBookIdSettingsCategoriesRouteRoute:
       AccountBookIdSettingsCategoriesRouteRoute,
+    AccountBookIdSettingsClassificationsRouteRoute:
+      AccountBookIdSettingsClassificationsRouteRoute,
     AccountBookIdSettingsIndexRoute: AccountBookIdSettingsIndexRoute,
-  }
+  };
 
 const AccountBookIdSettingsRouteRouteWithChildren =
   AccountBookIdSettingsRouteRoute._addFileChildren(
     AccountBookIdSettingsRouteRouteChildren,
-  )
+  );
 
 interface AccountBookIdTransactionsRouteRouteChildren {
-  AccountBookIdTransactionsIndexRoute: typeof AccountBookIdTransactionsIndexRoute
+  AccountBookIdTransactionsIndexRoute: typeof AccountBookIdTransactionsIndexRoute;
 }
 
 const AccountBookIdTransactionsRouteRouteChildren: AccountBookIdTransactionsRouteRouteChildren =
   {
     AccountBookIdTransactionsIndexRoute: AccountBookIdTransactionsIndexRoute,
-  }
+  };
 
 const AccountBookIdTransactionsRouteRouteWithChildren =
   AccountBookIdTransactionsRouteRoute._addFileChildren(
     AccountBookIdTransactionsRouteRouteChildren,
-  )
+  );
 
 interface AccountBookIdRouteRouteChildren {
-  AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
-  AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
-  AccountBookIdHistoryRouteRoute: typeof AccountBookIdHistoryRouteRoute
-  AccountBookIdReportRouteRoute: typeof AccountBookIdReportRouteRouteWithChildren
-  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRouteWithChildren
-  AccountBookIdTransactionsRouteRoute: typeof AccountBookIdTransactionsRouteRouteWithChildren
-  AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
+  AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren;
+  AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute;
+  AccountBookIdHistoryRouteRoute: typeof AccountBookIdHistoryRouteRoute;
+  AccountBookIdReportRouteRoute: typeof AccountBookIdReportRouteRouteWithChildren;
+  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRouteWithChildren;
+  AccountBookIdTransactionsRouteRoute: typeof AccountBookIdTransactionsRouteRouteWithChildren;
+  AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute;
 }
 
 const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
@@ -625,16 +648,16 @@ const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
   AccountBookIdTransactionsRouteRoute:
     AccountBookIdTransactionsRouteRouteWithChildren,
   AccountBookIdIndexRoute: AccountBookIdIndexRoute,
-}
+};
 
 const AccountBookIdRouteRouteWithChildren =
-  AccountBookIdRouteRoute._addFileChildren(AccountBookIdRouteRouteChildren)
+  AccountBookIdRouteRoute._addFileChildren(AccountBookIdRouteRouteChildren);
 
 interface AdminRouteRouteChildren {
-  AdminValuationCacheRouteRoute: typeof AdminValuationCacheRouteRoute
-  AdminValuationProviderUsageRouteRoute: typeof AdminValuationProviderUsageRouteRoute
-  AdminUsersRoute: typeof AdminUsersRoute
-  AdminIndexRoute: typeof AdminIndexRoute
+  AdminValuationCacheRouteRoute: typeof AdminValuationCacheRouteRoute;
+  AdminValuationProviderUsageRouteRoute: typeof AdminValuationProviderUsageRouteRoute;
+  AdminUsersRoute: typeof AdminUsersRoute;
+  AdminIndexRoute: typeof AdminIndexRoute;
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
@@ -642,11 +665,11 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminValuationProviderUsageRouteRoute: AdminValuationProviderUsageRouteRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
-}
+};
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
-)
+);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -657,16 +680,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountDeleteRoute: AccountDeleteRoute,
   UserDeleteRoute: UserDeleteRoute,
   ApiLogtoActionRoute: ApiLogtoActionRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
+  ._addFileTypes<FileRouteTypes>();

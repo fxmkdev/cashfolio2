@@ -1,4 +1,9 @@
-import { AssetClass } from "../../src/.prisma-client/enums";
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../src/server/classification-data";
+import { defaultAssetClassIds } from "../../src/shared/asset-class";
+
 import { defaultStringifySearch } from "@tanstack/react-router";
 import { prisma } from "../support/db-client";
 import {
@@ -441,20 +446,35 @@ test("archived manual portfolio reclassification moves historical G/L without ch
     userExternalId: e2eExternalId,
     accountBookStartDate: new Date("2026-01-01T00:00:00Z"),
   });
-  await prisma.account.update({
-    where: {
-      id_accountBookId: {
-        id: book.cashAccount.id,
-        accountBookId: book.accountBookId,
+  await prisma.account
+    .update({
+      include: { classifications: assetClassSelection },
+      where: {
+        id_accountBookId: {
+          id: book.cashAccount.id,
+          accountBookId: book.accountBookId,
+        },
       },
-    },
-    data: {
-      name: "Archived CHF Equity Portfolio",
-      isActive: false,
-      assetClass: AssetClass.EQUITIES,
-      trackingMethod: "TOTAL_PORTFOLIO_VALUE",
-    },
-  });
+      data: {
+        name: "Archived CHF Equity Portfolio",
+        isActive: false,
+        trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+        classifications: {
+          deleteMany: { schemeId: "assetClass" },
+          create:
+            defaultAssetClassIds.EQUITIES == null
+              ? []
+              : [
+                  {
+                    schemeId: "assetClass",
+                    nodeId: defaultAssetClassIds.EQUITIES,
+                  },
+                ],
+        },
+      },
+    })
+    .then(withAssetClassId);
+
   await seedExplicitGainLossDrilldownScenario({
     accountBookId: book.accountBookId,
     counterAccountId: book.cashAccount.id,
@@ -481,15 +501,31 @@ test("archived manual portfolio reclassification moves historical G/L without ch
   const footer = await table
     .locator(".ag-grid-pinned-bottom-rows .ag-row-pinned")
     .innerText();
-  await prisma.account.update({
-    where: {
-      id_accountBookId: {
-        id: book.cashAccount.id,
-        accountBookId: book.accountBookId,
+  await prisma.account
+    .update({
+      include: { classifications: assetClassSelection },
+      where: {
+        id_accountBookId: {
+          id: book.cashAccount.id,
+          accountBookId: book.accountBookId,
+        },
       },
-    },
-    data: { assetClass: AssetClass.OTHER_ASSETS },
-  });
+      data: {
+        classifications: {
+          deleteMany: { schemeId: "assetClass" },
+          create:
+            defaultAssetClassIds.OTHER_ASSETS == null
+              ? []
+              : [
+                  {
+                    schemeId: "assetClass",
+                    nodeId: defaultAssetClassIds.OTHER_ASSETS,
+                  },
+                ],
+        },
+      },
+    })
+    .then(withAssetClassId);
   await page.reload();
   await expect(
     page.getByRole("combobox", { name: "Group Accounts By" }),

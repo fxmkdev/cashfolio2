@@ -30,7 +30,7 @@ function NavigationHarness({
       children: [],
       account: {
         id: `usd-${index}`,
-        assetClass: "CASH_AND_CASH_EQUIVALENTS",
+        assetClassId: "CASH_AND_CASH_EQUIVALENTS",
         kind: "account",
         explanation: null,
         legacyScopes: [],

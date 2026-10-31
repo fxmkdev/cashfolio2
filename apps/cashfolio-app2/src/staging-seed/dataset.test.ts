@@ -1,8 +1,8 @@
+import { defaultAssetClassIds } from "../shared/asset-class";
 import Decimal from "decimal.js";
 import { describe, expect, it, vi } from "vitest";
 import {
   AccountType,
-  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
@@ -71,7 +71,7 @@ it("funds two active USD accounts within the same investment group", () => {
       unit: Unit.CURRENCY,
       currency: "USD",
       isCashAccount: true,
-      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
     });
     expect(account.trackingMethod ?? "INDIVIDUAL_UNITS").toBe(
       "INDIVIDUAL_UNITS",
@@ -118,7 +118,7 @@ it("marks the curated managed portfolio for total-value tracking", () => {
     key: "managed-portfolio",
     unit: Unit.CURRENCY,
     currency: "CHF",
-    assetClass: AssetClass.OTHER_ASSETS,
+    assetClassId: defaultAssetClassIds.OTHER_ASSETS,
   });
 });
 
@@ -128,56 +128,56 @@ it("uses curated asset classes for active and archived demo balance accounts", (
       dataset.books
         .find((book) => book.key === bookKey)!
         .accounts.filter((account) => account.type !== AccountType.EQUITY)
-        .map((account) => [account.key, account.assetClass]),
+        .map((account) => [account.key, account.assetClassId]),
     );
   expect(classifications("household")).toEqual({
-    current: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    savings: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    wallet: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    eur: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    usd: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "usd-savings": AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    spare: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    pension: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    aapl: AssetClass.EQUITIES,
-    msft: AssetClass.EQUITIES,
-    btc: AssetClass.DIGITAL_ASSETS,
-    "btc-transfer-source": AssetClass.DIGITAL_ASSETS,
-    "btc-transfer-destination": AssetClass.DIGITAL_ASSETS,
-    eth: AssetClass.DIGITAL_ASSETS,
-    "managed-portfolio": AssetClass.OTHER_ASSETS,
-    card: AssetClass.OTHER_ASSETS,
-    loan: AssetClass.OTHER_ASSETS,
-    archived: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "closed-postfinance-eur": AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "closed-ubs-chf": AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "closed-ubs-usd": AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "closed-cs-usd": AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    "closed-aapl": AssetClass.EQUITIES,
-    "closed-cs-aapl": AssetClass.EQUITIES,
-    "closed-cs-msft": AssetClass.EQUITIES,
-    "closed-car-loan": AssetClass.OTHER_ASSETS,
+    current: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    savings: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    wallet: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    eur: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    usd: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "usd-savings": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    spare: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    pension: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    aapl: defaultAssetClassIds.EQUITIES,
+    msft: defaultAssetClassIds.EQUITIES,
+    btc: defaultAssetClassIds.DIGITAL_ASSETS,
+    "btc-transfer-source": defaultAssetClassIds.DIGITAL_ASSETS,
+    "btc-transfer-destination": defaultAssetClassIds.DIGITAL_ASSETS,
+    eth: defaultAssetClassIds.DIGITAL_ASSETS,
+    "managed-portfolio": defaultAssetClassIds.OTHER_ASSETS,
+    card: defaultAssetClassIds.OTHER_ASSETS,
+    loan: defaultAssetClassIds.OTHER_ASSETS,
+    archived: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "closed-postfinance-eur": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "closed-ubs-chf": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "closed-ubs-usd": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "closed-cs-usd": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    "closed-aapl": defaultAssetClassIds.EQUITIES,
+    "closed-cs-aapl": defaultAssetClassIds.EQUITIES,
+    "closed-cs-msft": defaultAssetClassIds.EQUITIES,
+    "closed-car-loan": defaultAssetClassIds.OTHER_ASSETS,
   });
   expect(classifications("edge-cases")).toEqual({
-    current: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    eur: AssetClass.CASH_AND_CASH_EQUIVALENTS,
-    unlisted: AssetClass.ALTERNATIVE_INVESTMENTS,
+    current: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    eur: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    unlisted: defaultAssetClassIds.ALTERNATIVE_INVESTMENTS,
   });
 });
 
 it("keeps seed equity accounts and unspecified classifications Unclassified", () => {
   for (const account of dataset.books.flatMap((book) => book.accounts)) {
     if (account.type === AccountType.EQUITY) {
-      expect(account.assetClass).toBeNull();
+      expect(account.assetClassId).toBeNull();
     }
   }
   const target = book("defaults", "Default classifications", today);
   for (const type of Object.values(AccountType)) {
     addAccount(target, type, type, type);
   }
-  expect(target.accounts.every((account) => account.assetClass === null)).toBe(
-    true,
-  );
+  expect(
+    target.accounts.every((account) => account.assetClassId === null),
+  ).toBe(true);
 });
 const allBookings = (book = household) =>
   book.transactions.flatMap((transaction) => transaction.bookings);

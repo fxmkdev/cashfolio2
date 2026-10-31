@@ -11,10 +11,12 @@ Related docs:
 
 ## Overview
 
-`Account.assetClass` is manually selected reporting metadata. Unclassified is
-the default for both existing and new accounts. Classification does not select
-valuation providers or change balances, cash-flow eligibility, FIFO, execution
-pricing, or realized/unrealized gain/loss calculations. `Unit` and the existing
+Asset Class is manually selected reporting metadata stored as a book-scoped
+classification assignment. Its editable hierarchy is managed under Settings →
+Classifications. Unclassified is the default for both existing and new accounts.
+Classification does not select valuation providers or change balances, cash-flow
+eligibility, FIFO, execution pricing, or realized/unrealized gain/loss
+calculations. `Unit` and the existing
 currency/cryptocurrency/symbol/trade-currency fields continue to determine
 conversion and pricing. A currency-denominated equity portfolio can therefore
 use the Equities asset class while retaining automatic FX conversion. Manual
@@ -30,12 +32,12 @@ accounts inherit cash-flow inclusion from their parent group.
 Report offers Account Structure and Asset Class grouping for Assets,
 Liabilities, and Gain/Loss. History offers the same two lenses within its
 Gain/Loss View selector. Both use the current account structure/classification
-for all periods, including archived accounts. Asset classes remain flat, with
-Unclassified for accounts without a class. Changing classification moves
-contributions between reporting classes without changing valuation, balances, or
-total gains/losses. Calculated and recorded contributions are combined per
-account, including reference-currency recorded adjustments; their provenance
-remains available in reconciliation.
+for all periods, including archived accounts. Asset classes form an editable
+tree, with Unclassified for accounts without a class. Changing classification
+moves contributions between reporting classes without changing valuation,
+balances, or total gains/losses. Calculated and recorded contributions are
+combined per account, including reference-currency recorded adjustments; their
+provenance remains available in reconciliation.
 
 Investment groups below asset class use currency/cryptocurrency codes or
 security symbols, combining trade currencies for the same symbol. Currency

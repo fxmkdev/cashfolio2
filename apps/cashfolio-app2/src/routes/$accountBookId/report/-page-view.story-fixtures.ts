@@ -546,7 +546,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 children: [],
                 account: {
                   id: "account-cash-usd-1",
-                  assetClass: "CASH_AND_CASH_EQUIVALENTS",
+                  assetClassId: "CASH_AND_CASH_EQUIVALENTS",
                   kind: "account",
                   explanation: null,
                   legacyScopes: [],
@@ -566,7 +566,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 children: [],
                 account: {
                   id: "account-cash-usd-2",
-                  assetClass: "CASH_AND_CASH_EQUIVALENTS",
+                  assetClassId: "CASH_AND_CASH_EQUIVALENTS",
                   kind: "account",
                   explanation: null,
                   legacyScopes: [],
@@ -604,7 +604,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 children: [],
                 account: {
                   id: "account-aapl-trading",
-                  assetClass: "EQUITIES",
+                  assetClassId: "EQUITIES",
                   kind: "account",
                   explanation: null,
                   legacyScopes: [],
@@ -633,7 +633,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 children: [],
                 account: {
                   id: "account-fees",
-                  assetClass: "EQUITIES",
+                  assetClassId: "EQUITIES",
                   kind: "account",
                   explanation: null,
                   legacyScopes: [],
@@ -671,7 +671,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
                 children: [],
                 account: {
                   id: "account-btc-wallet",
-                  assetClass: "DIGITAL_ASSETS",
+                  assetClassId: "DIGITAL_ASSETS",
                   kind: "account",
                   explanation: null,
                   legacyScopes: [],

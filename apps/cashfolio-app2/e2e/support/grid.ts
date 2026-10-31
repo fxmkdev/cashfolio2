@@ -60,7 +60,9 @@ export async function clickRowAction(
     | "Reorder Siblings",
 ) {
   const stableRow = await revealRowActions(row);
-  await stableRow.getByRole("button", { name: actionLabel }).click();
+  await stableRow
+    .getByRole("button", { name: actionLabel, exact: true })
+    .click();
   await row
     .page()
     .locator(".ag-grid-viewport")

@@ -396,3 +396,21 @@ controllers.
 
 - Use `Promise.all()` to fetch multiple server functions in parallel within
   loaders
+
+### Classification Settings
+
+`/$accountBookId/settings/classifications` loads the Asset Class tree and direct
+assignment counts. The Settings navigation and document title use Asset Classes.
+The page uses a native AG Grid tree without additional headings; its generic URL
+and data model remain unchanged. The book layout loads node-only class metadata
+through `getAssetClassNodes` and supplies a refreshable provider to account
+editors, bulk assignment, Accounts columns, and ledger badges. Assignment counts
+are loaded only by the settings page. Mutation recovery refreshes node choices
+alongside page constraints without remounting drafts. Router invalidation
+refreshes these choices after taxonomy changes. Gain/loss Report drill paths and
+History scopes retain stable class IDs when nodes move or are renamed. Report
+drill paths fall back to the deepest surviving saved ancestor, rebuilding its
+current path after reparenting; only paths with no surviving ancestor reset to
+the root. Invalid History scopes fall back to Total. Asset/liability allocation
+retains the Account Structure / Asset Class grouping lens; the latter uses the
+current class hierarchy and sibling order.

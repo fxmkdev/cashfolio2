@@ -1,6 +1,5 @@
 import {
   type AccountTrackingMethod,
-  type AssetClass,
   EquityAccountSubtype,
   Unit,
   AccountType,
@@ -17,7 +16,8 @@ export type AccountTypeDescriptor =
 
 export type FormValues = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass?: AssetClass | "" | null;
+  assetClassId?: string | "" | null;
+
   name?: string;
   typeDescriptor?: AccountTypeDescriptor;
   groupId?: string;
@@ -34,7 +34,7 @@ export type FormValues = {
 
 export type TransformedFormValues = Omit<
   FormValues,
-  | "assetClass"
+  | "assetClassId"
   | "openingBalance"
   | "unit"
   | "currency"
@@ -43,7 +43,7 @@ export type TransformedFormValues = Omit<
   | "tradeCurrency"
   | "statementImportCsvFormat"
 > & {
-  assetClass?: AssetClass | null;
+  assetClassId?: string | null;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   unit?: Unit;
@@ -58,7 +58,8 @@ export type TransformedFormValues = Omit<
 
 export type AccountInitialValues = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass?: AssetClass | null;
+  assetClassId?: string | null;
+
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype | null;
@@ -77,7 +78,7 @@ export type AccountInitialValues = {
 export type AccountInitialValuesSource = Pick<
   AccountInitialValues,
   | "name"
-  | "assetClass"
+  | "assetClassId"
   | "trackingMethod"
   | "type"
   | "equityAccountSubtype"
@@ -94,6 +95,7 @@ export type AccountInitialValuesSource = Pick<
 >;
 
 export type EditAccountModalProps = {
+  defaultGroupId?: string;
   opened: boolean;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;

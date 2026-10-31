@@ -50,6 +50,14 @@ export const getPeriodHistory = createServerFn({ method: "GET" })
       context.gainLossAccountScopes ?? [],
     );
 
+    if (
+      context.assetClassScopes &&
+      data.gainLossScope.startsWith("asset-class:") &&
+      !context.assetClassScopes.some(
+        (option) => option.value === data.gainLossScope,
+      )
+    )
+      data.gainLossScope = "total";
     const activeMetricScopeFilter = getHistoryMetricScopeFilter(data);
     const window = getHistoryWindow({
       granularity: data.granularity,

@@ -1,6 +1,8 @@
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { describe, expect, it } from "vitest";
-import { AccountTrackingMethod, AssetClass } from "../../.prisma-client/enums";
+import { AccountTrackingMethod } from "../../.prisma-client/enums";
 import { RESOURCE_LIMITS } from "../../shared/resource-limits";
+
 import {
   validateAccountBookNodeIdInput,
   validateAccountGroupMutationInput,
@@ -53,17 +55,20 @@ describe("account mutation input contracts", () => {
     },
   );
 
-  it.each(Object.values(AssetClass))("accepts asset class %s", (assetClass) => {
-    expect(
-      validateAccountMutationInput({ ...account, assetClass }).assetClass,
-    ).toBe(assetClass);
-  });
+  it.each(Object.values(defaultAssetClassIds))(
+    "accepts asset class %s",
+    (assetClassId) => {
+      expect(
+        validateAccountMutationInput({ ...account, assetClassId }).assetClassId,
+      ).toBe(assetClassId);
+    },
+  );
 
   it("preserves omitted classification and explicit clearing", () => {
-    expect(validateAccountMutationInput(account).assetClass).toBeUndefined();
+    expect(validateAccountMutationInput(account).assetClassId).toBeUndefined();
     expect(
-      validateAccountUpdateInput({ ...account, id: "a", assetClass: null })
-        .assetClass,
+      validateAccountUpdateInput({ ...account, id: "a", assetClassId: null })
+        .assetClassId,
     ).toBeNull();
   });
   it.each(["ASSET", "LIABILITY"])(
@@ -128,9 +133,8 @@ describe("account mutation input contracts", () => {
     ["type", "EXPENSE"],
     ["equityAccountSubtype", "OTHER"],
     ["unit", "STOCK"],
-    ["assetClass", "UNCLASSIFIED"],
-    ["assetClass", ""],
-    ["assetClass", 1],
+    ["assetClassId", ""],
+    ["assetClassId", 1],
     ["groupId", ""],
     ["currency", 1],
     ["cryptocurrency", false],

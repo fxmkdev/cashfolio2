@@ -237,8 +237,9 @@ export function createLedgerAccountMutationActions(args: {
           id: args.accountId,
           accountBookId: args.accountBookId,
           name: values.name,
-          assetClass: values.assetClass,
+          assetClassId: values.assetClassId,
           trackingMethod: values.trackingMethod,
+
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,

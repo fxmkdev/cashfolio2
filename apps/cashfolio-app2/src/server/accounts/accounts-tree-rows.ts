@@ -6,7 +6,6 @@ import { toMoney, type Money } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
 import type {
   AccountTrackingMethod,
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -36,7 +35,8 @@ function unavailableActionAvailability(): ActionAvailability {
 
 export type AccountTreeAccount = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass: AssetClass | null;
+  assetClassId: string | null;
+
   id: string;
   name: string;
   type: AccountType;
@@ -164,7 +164,8 @@ export function buildAccountRows(args: {
         nodeType: "account",
         name: account.name,
         trackingMethod: account.trackingMethod,
-        assetClass: account.assetClass,
+        assetClassId: account.assetClassId,
+
         type: account.type,
         equityAccountSubtype: account.equityAccountSubtype,
         unit: account.unit,

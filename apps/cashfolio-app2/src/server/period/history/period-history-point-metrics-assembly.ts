@@ -106,6 +106,7 @@ export function assembleHistoryPointMetrics(args: {
     groups: allAccountGroups.filter((group) => group.id.startsWith("virtual:")),
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
+    assetClasses: baseData.assetClasses,
     contributions: Array.from(gainsLossesContributionByKey.values()),
     accountAttributionById: buildGainLossAccountAttribution(baseData, [
       ...gainsLossesContributionByKey.values(),

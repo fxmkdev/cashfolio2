@@ -1,4 +1,8 @@
 import {
+  classificationOptions,
+  type ClassificationNode,
+} from "../../../shared/asset-class";
+import {
   getLegacyHoldingGainLossScope,
   type HistoryScopeOption,
 } from "../../../shared/history-scope";
@@ -10,6 +14,8 @@ import { buildNetWorthHistoryScopeOptions } from "./period-history-scopes.server
 
 export type PeriodHistoryPointContext = {
   revision: string;
+  assetClassScopes?: HistoryScopeOption[];
+
   referenceCurrency: string;
   accountBookStartDate: Date;
   holdingAccountsResolved: ReturnType<typeof filterConvertibleHoldingAccounts>;
@@ -27,6 +33,14 @@ export async function loadPeriodHistoryPointContext(args: {
       periodCacheRevision: true,
       referenceCurrency: true,
       startDate: true,
+      classificationSchemes: {
+        where: { id: "assetClass" },
+        select: {
+          nodes: {
+            select: { id: true, name: true, parentId: true, sortOrder: true },
+          },
+        },
+      },
     },
   });
 
@@ -57,8 +71,33 @@ export async function loadPeriodHistoryPointContext(args: {
     }),
   ]);
 
+  const classes: ClassificationNode[] =
+    accountBook.classificationSchemes.flatMap((s) => s.nodes);
   return {
     revision: accountBook.periodCacheRevision,
+    assetClassScopes: [
+      ...classificationOptions(classes).map((option) => {
+        const node = classes.find((n) => n.id === option.value)!;
+        return {
+          value: `asset-class:${node.id}` as const,
+          label: option.label,
+          treeLabel: node.name,
+          kind: "gainLoss" as const,
+          sortOrder: node.sortOrder,
+          ...(node.parentId
+            ? { parentValue: `asset-class:${node.parentId}` as const }
+            : {}),
+        };
+      }),
+      {
+        value: "asset-class:unclassified",
+        label: "Unclassified",
+        treeLabel: "Unclassified",
+        kind: "gainLoss",
+        sortOrder: Number.MAX_SAFE_INTEGER,
+      },
+    ],
+
     referenceCurrency,
     netWorthScopes: buildNetWorthHistoryScopeOptions({
       accounts: baseAssetLiabilityAccounts,

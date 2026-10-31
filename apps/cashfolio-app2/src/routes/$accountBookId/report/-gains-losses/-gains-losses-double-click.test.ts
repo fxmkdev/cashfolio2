@@ -11,7 +11,7 @@ const account: GainsLossesBreakdownNode = {
   children: [],
   account: {
     id: "usd",
-    assetClass: "EQUITIES",
+    assetClassId: "EQUITIES",
     kind: "account",
     explanation: null,
     legacyScopes: [],

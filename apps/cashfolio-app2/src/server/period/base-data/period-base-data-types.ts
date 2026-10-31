@@ -1,7 +1,7 @@
+import type { ClassificationNode } from "../../../shared/asset-class";
 import { type Money } from "../../../shared/money";
 import type {
   AccountTrackingMethod,
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -26,7 +26,8 @@ type PeriodBaseSelectionData = {
 
 export type PeriodBaseAssetLiabilityAccount = {
   trackingMethod?: AccountTrackingMethod;
-  assetClass: AssetClass | null;
+  assetClassId: string | null;
+
   id: string;
   name: string;
   groupId: string | null;
@@ -148,6 +149,7 @@ type PeriodBaseInitialHoldingBalance = {
 };
 
 export type PeriodBaseData = {
+  assetClasses?: ClassificationNode[];
   accountBookId: string;
   periodValue: string;
   referenceCurrency: string;

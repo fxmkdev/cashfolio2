@@ -1,5 +1,7 @@
+import { assetClassSelection } from "./classification-data";
+import { defaultAssetClassIds } from "../shared/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType, AssetClass, Unit } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { toMoney } from "../shared/money";
 import { isNotFound, rootRouteId } from "@tanstack/react-router";
 
@@ -44,25 +46,27 @@ import { getLedgerData, getAccountForLedger } from "./ledger";
 describe("ledger account classification", () => {
   beforeEach(() => vi.resetAllMocks());
 
-  it.each([null, AssetClass.OTHER_ASSETS])(
+  it.each([null, defaultAssetClassIds.OTHER_ASSETS])(
     "returns classification %s for the header",
-    async (assetClass) => {
+    async (assetClassId) => {
       mocks.prisma.account.findUnique.mockResolvedValue({
         id: "account-1",
         groupId: null,
-        assetClass,
+        classifications: assetClassId ? [{ nodeId: assetClassId }] : [],
       });
       mocks.prisma.accountGroup.findMany.mockResolvedValue([]);
       const account = await getAccountForLedger({
         data: { accountId: "account-1", accountBookId: "book-1" },
       });
-      expect(account.assetClass).toBe(assetClass);
+      expect(account.assetClassId).toBe(assetClassId);
       expect(mocks.prisma.account.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             id_accountBookId: { id: "account-1", accountBookId: "book-1" },
           },
-          select: expect.objectContaining({ assetClass: true }),
+          select: expect.objectContaining({
+            classifications: assetClassSelection,
+          }),
         }),
       );
       expect(mocks.ensureAuthorizedForAccountBookId).toHaveBeenCalledWith(

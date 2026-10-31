@@ -1,9 +1,10 @@
-import { ActionIcon, Group, Tooltip } from "@mantine/core";
+import { ActionIcon, Group, Menu, Tooltip } from "@mantine/core";
 import {
   IconArrowsSort,
   IconArchive,
   IconArchiveOff,
   IconPencil,
+  IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
 
@@ -101,6 +102,10 @@ export function ArchivedAccountTreeActionsCell({
 }
 
 export function ActiveAccountTreeActionsCell({
+  addChildLabel,
+  addAccountLabel,
+  onAddAccount,
+  onAddGroup,
   archiveLabel,
   deleteLabel,
   archivable,
@@ -112,6 +117,10 @@ export function ActiveAccountTreeActionsCell({
   onDelete,
   onReorder,
 }: {
+  addChildLabel?: string;
+  addAccountLabel?: string;
+  onAddAccount?: () => void;
+  onAddGroup?: () => void;
   archiveLabel: string;
   deleteLabel: string;
   archivable: boolean;
@@ -157,6 +166,31 @@ export function ActiveAccountTreeActionsCell({
           <IconPencil size={16} />
         </ActionIcon>
       </Tooltip>
+      {onAddAccount && onAddGroup && (
+        <Menu position="bottom-end" shadow="md" width={220}>
+          <Menu.Target>
+            <Tooltip label={addChildLabel}>
+              <ActionIcon variant="subtle" size="sm" aria-label={addChildLabel}>
+                <IconPlus size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<IconPlus size={16} />}
+              onClick={onAddAccount}
+            >
+              {addAccountLabel ?? "Add Account"}
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconPlus size={16} />}
+              onClick={onAddGroup}
+            >
+              Add Group
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      )}
       <Tooltip label={archiveLabel}>
         <span style={TOOLTIP_TRIGGER_STYLE}>
           <ActionIcon

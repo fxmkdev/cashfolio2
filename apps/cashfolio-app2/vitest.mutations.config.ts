@@ -11,6 +11,7 @@ export default defineConfig({
     include: [
       "src/auth/session.integration.ts",
       "src/server/accounts/account-asset-class-migration.integration.ts",
+      "src/server/classification-migration.integration.ts",
       "src/server/balance-account-migration.integration.ts",
       "src/server/account-book-mutation.integration.ts",
       "src/server/admin-mutation.integration.ts",
