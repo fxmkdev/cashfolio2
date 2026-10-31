@@ -1,5 +1,5 @@
 import { Flex, SegmentedControl, Text } from "@mantine/core";
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEventHandler } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
 import { BreakdownTable } from "./-breakdown-table";
 import {
@@ -35,7 +35,7 @@ type PeriodAllocationBreakdownCardProps = {
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
-  onChartContainerDoubleClick?: (() => void) | null;
+  onChartContainerDoubleClick?: MouseEventHandler<HTMLDivElement> | null;
   footer?: ReactNode;
 };
 

@@ -1,6 +1,10 @@
 import type { ColDef } from "ag-grid-enterprise";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useMemo } from "react";
+import {
+  getReportRowLabel,
+  ReportNameCell,
+} from "../-breakdown/-account-label";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { DataGrid } from "@/components/grid/data-grid";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
@@ -96,10 +100,14 @@ export function GainsLossesTable({
         width: 475,
         suppressSizeToFit: true,
         filter: "agTextColumnFilter",
+        wrapText: true,
+        autoHeight: true,
         valueGetter: ({ data }: { data: GainsLossesGridRow | undefined }) =>
-          data?.name,
+          getReportRowLabel(data),
+        tooltip: ({ data }) => getReportRowLabel(data),
         cellRendererParams: {
           suppressCount: true,
+          innerRenderer: ReportNameCell,
         },
       }}
       treeData={true}

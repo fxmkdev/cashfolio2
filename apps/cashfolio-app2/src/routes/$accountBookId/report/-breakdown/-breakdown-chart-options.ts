@@ -63,7 +63,7 @@ export function usePeriodBreakdownChartOptions(args: {
   colorBySign?: boolean;
   colors: DashboardChartThemeColors;
   totalBreakdownAmountLabel: string;
-  onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
+  onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum, event: Event) => void;
 }): PeriodBreakdownChartOptions {
   const {
     chartData,
@@ -74,6 +74,10 @@ export function usePeriodBreakdownChartOptions(args: {
     totalBreakdownAmountLabel,
   } = args;
   const userLocale = useUserLocale();
+  const labelById = useMemo(
+    () => new Map(chartData.map((datum) => [datum.id, datum.label])),
+    [chartData],
+  );
   const amountCompactFormatter = useMemo(
     () =>
       new Intl.NumberFormat(userLocale, {
@@ -110,8 +114,8 @@ export function usePeriodBreakdownChartOptions(args: {
             buildBreakdownTooltipData(datum as PeriodBreakdownChartDatum),
         },
         listeners: {
-          seriesNodeDoubleClick: ({ datum }) => {
-            onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+          seriesNodeDoubleClick: ({ datum, event }) => {
+            onNodeDoubleClick(datum as PeriodBreakdownChartDatum, event);
           },
         },
       },
@@ -175,7 +179,7 @@ export function usePeriodBreakdownChartOptions(args: {
               }
             : {}),
           widthRatio: 0.72,
-          xKey: "label" as const,
+          xKey: "id" as const,
           yKey: "amount" as const,
           yName: datum.label,
           showInLegend: !colorBySign,
@@ -184,8 +188,8 @@ export function usePeriodBreakdownChartOptions(args: {
               buildBreakdownTooltipData(datum),
           },
           listeners: {
-            seriesNodeDoubleClick: ({ datum }) => {
-              onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+            seriesNodeDoubleClick: ({ datum, event }) => {
+              onNodeDoubleClick(datum as PeriodBreakdownChartDatum, event);
             },
           },
         }),
@@ -194,6 +198,8 @@ export function usePeriodBreakdownChartOptions(args: {
         x: {
           type: "category",
           label: {
+            formatter: ({ value }) =>
+              labelById.get(String(value)) ?? String(value),
             rotation: -25,
           },
         },
@@ -214,7 +220,14 @@ export function usePeriodBreakdownChartOptions(args: {
         },
       },
     }),
-    [amountCompactFormatter, chartData, colorBySign, colors, onNodeDoubleClick],
+    [
+      amountCompactFormatter,
+      chartData,
+      colorBySign,
+      colors,
+      labelById,
+      onNodeDoubleClick,
+    ],
   );
 
   return selectedChartType === "bar" ? barChartOptions : donutChartOptions;

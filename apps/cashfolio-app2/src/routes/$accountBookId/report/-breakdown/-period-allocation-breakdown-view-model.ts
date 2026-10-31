@@ -1,5 +1,12 @@
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import { useCallback, useMemo } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  type MouseEventHandler,
+  type MouseEvent,
+} from "react";
+import { getReportNodeLabel } from "./-account-label";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import {
@@ -43,7 +50,7 @@ export type PeriodAllocationBreakdownViewModel = {
   emptyAllocationBreakdownMessage: string;
   allocationChartOptions: ReturnType<typeof usePeriodBreakdownChartOptions>;
   updateSelectedAllocationBreakdownPath: (nextPath: string[]) => void;
-  handleAllocationChartContainerDoubleClick: (() => void) | null;
+  handleAllocationChartContainerDoubleClick: MouseEventHandler<HTMLDivElement> | null;
   hasAllocationPartialData: boolean;
   allocationPartialDataNotes: string;
 };
@@ -136,7 +143,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
 
         return {
           id: item.id,
-          label: item.label,
+          label: getReportNodeLabel(item),
           kind: item.kind,
           amount: item.amount,
           percentage,
@@ -190,8 +197,11 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     [selectedAllocationBreakdown, setDrillPathByAllocationBreakdown],
   );
 
+  const handledDoubleClicks = useRef(new WeakSet<Event>());
   const handleAllocationNodeDoubleClick = useCallback(
-    (datum: PeriodBreakdownNodeDatum) => {
+    (datum: PeriodBreakdownNodeDatum, event: Event) => {
+      if (handledDoubleClicks.current.has(event)) return;
+      handledDoubleClicks.current.add(event);
       if (datum.kind === "group") {
         if (
           !datum.isDrillable ||
@@ -233,10 +243,10 @@ export function usePeriodAllocationBreakdownViewModel(args: {
       return null;
     }
 
-    return () => {
+    return (event: MouseEvent<HTMLDivElement>) => {
       const onlyNode = allocationChartData[0];
       if (onlyNode) {
-        handleAllocationNodeDoubleClick(onlyNode);
+        handleAllocationNodeDoubleClick(onlyNode, event.nativeEvent);
       }
     };
   }, [allocationChartData, handleAllocationNodeDoubleClick]);

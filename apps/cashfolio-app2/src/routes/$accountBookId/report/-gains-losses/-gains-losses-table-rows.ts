@@ -6,6 +6,7 @@ export type GainsLossesTableRow = {
   id: string;
   parentId: string | undefined;
   name: string;
+  accountGroupPath?: string[];
   accountId?: string;
   realizedGainLoss: number;
   unrealizedGainLoss: number;
@@ -38,6 +39,9 @@ export function flattenGainsLossesHierarchyRows(
         id: node.id,
         parentId,
         name: node.label,
+        ...(node.accountGroupPath
+          ? { accountGroupPath: node.accountGroupPath }
+          : {}),
         ...(node.account ? { accountId: node.account.id } : {}),
         realizedGainLoss: node.realizedGainLoss,
         unrealizedGainLoss: node.unrealizedGainLoss,

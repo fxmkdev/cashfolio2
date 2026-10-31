@@ -739,11 +739,33 @@ const classAllocation = (
       id: `asset-class:${classes[i]}`,
       label: labels[i],
     })),
-    hierarchy: breakdown.hierarchy.map((node, i) => ({
-      ...node,
-      id: `asset-class:${classes[i]}`,
-      label: labels[i],
-    })),
+    hierarchy: breakdown.hierarchy.map((node, i) => {
+      const investments = new Map<string, (typeof node.children)[number]>();
+      for (const account of node.children) {
+        const [key, label] =
+          account.id === "account:account-etf"
+            ? ["managed-portfolios", "Managed Portfolios"]
+            : account.id === "account:account-stocks"
+              ? ["SECURITY:AAPL", "AAPL"]
+              : ["CURRENCY:CHF", "CHF"];
+        const id = `allocation-investment:${classes[i]}:${key}`;
+        const group = investments.getOrInsertComputed(id, () => ({
+          id,
+          label,
+          kind: "group",
+          amount: 0,
+          children: [],
+        }));
+        group.amount += account.amount;
+        group.children.push({ ...account, accountGroupPath: [node.label] });
+      }
+      return {
+        ...node,
+        id: `asset-class:${classes[i]}`,
+        label: labels[i],
+        children: [...investments.values()].sort((a, b) => b.amount - a.amount),
+      };
+    }),
   };
 };
 export const baseOverview: Overview = {

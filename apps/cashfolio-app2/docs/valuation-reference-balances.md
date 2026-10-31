@@ -39,12 +39,18 @@ balances, or total gains/losses. Calculated and recorded contributions are
 combined per account, including reference-currency recorded adjustments; their
 provenance remains available in reconciliation.
 
-Investment groups below asset class use currency/cryptocurrency codes or
-security symbols, combining trade currencies for the same symbol. Currency
-accounts marked `trackingMethod = TOTAL_PORTFOLIO_VALUE` appear under Managed
-Portfolios instead; their recorded and calculated FX returns stay together.
-Tracking method is current reporting metadata, independent of valuation and FIFO
-identity, and applies to all historical periods.
+Allocation and G/L investment groups below asset class use
+currency/cryptocurrency codes or security symbols, combining trade currencies
+for the same symbol. Currency accounts marked
+`trackingMethod = TOTAL_PORTFOLIO_VALUE` appear under Managed Portfolios
+instead; their recorded and calculated FX returns stay together. Tracking method
+is current reporting metadata, independent of valuation and FIFO identity, and
+applies to all historical periods.
+
+In Report's Asset Class view, account leaves include their current account-group
+path for context. Tables display it beneath the account name; chart labels and
+tooltips include the full path. Account groups do not add drill-down levels to
+this view.
 
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.

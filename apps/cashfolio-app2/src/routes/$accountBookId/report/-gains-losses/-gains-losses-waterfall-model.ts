@@ -1,5 +1,6 @@
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import { isGainsLossesNodeDrillable } from "./-gains-losses-drill";
+import { getReportNodeLabel } from "../-breakdown/-account-label";
 
 export type GainsLossesWaterfallDatum = {
   id: string;
@@ -69,7 +70,7 @@ export function buildGainsLossesWaterfallModel(args: {
   const totalAxisLabel = args.totalAxisLabel ?? DEFAULT_TOTAL_AXIS_LABEL;
   const data = args.nodes.map((node) => ({
     id: node.id,
-    label: node.label,
+    label: getReportNodeLabel(node),
     totalGainLoss: resolveNodeTotalGainLoss(node),
     isDrillable: isGainsLossesNodeDrillable(node),
   }));

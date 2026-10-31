@@ -151,6 +151,29 @@ describe("period overview response", () => {
       minPeriodDate: new Date("2025-01-01T00:00:00.000Z"),
       currentDay: new Date("2026-02-01T00:00:00.000Z"),
       referenceCurrency: "CHF",
+      gainLossAccountAttributionById: new Map([
+        [
+          "asset-1",
+          {
+            assetClassId: null,
+            kind: "account",
+            explanation: null,
+            investmentGroup: {
+              key: "managed-portfolios",
+              label: "Managed Portfolios",
+            },
+          },
+        ],
+        [
+          "liability-1",
+          {
+            assetClassId: null,
+            kind: "account",
+            explanation: null,
+            investmentGroup: { key: "CURRENCY:CHF", label: "CHF" },
+          },
+        ],
+      ]),
       groupById: new Map(),
       assetLiabilityAccounts: [
         {
@@ -302,6 +325,21 @@ describe("period overview response", () => {
         .totalAmount,
     ).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
+    expect(
+      response.accountBreakdownsByGrouping.assetClass.assetBreakdown
+        .hierarchy[0].children[0],
+    ).toMatchObject({
+      id: "allocation-investment:unclassified:managed-portfolios",
+      label: "Managed Portfolios",
+      children: [{ id: "account:asset-1", accountGroupPath: [] }],
+    });
+    expect(
+      response.accountBreakdownsByGrouping.assetClass.liabilityBreakdown
+        .hierarchy[0].children[0],
+    ).toMatchObject({
+      id: "allocation-investment:unclassified:CURRENCY:CHF",
+      label: "CHF",
+    });
     expect(response.expenseBreakdown.totalAmount).toBe(20);
     expect(response.cashFlowBreakdown).toMatchObject({
       totalAmount: 75,
