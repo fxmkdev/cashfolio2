@@ -6,7 +6,11 @@ import {
   Unit,
 } from "../../.prisma-client/enums";
 import { isBeforeDate } from "../../shared/date";
-import { getUnitIdentifier } from "../../shared/account-utils";
+import {
+  getAccountUnitIdentifier,
+  getUnitIdentifier,
+  isBookingUnitCompatibleWithAccount,
+} from "../../shared/account-utils";
 import { validateGainLossSimpleTransactionInvariant } from "../../shared/gain-loss-transaction-invariant";
 import {
   formatUtcDate,
@@ -15,6 +19,7 @@ import {
 } from "../../shared/date";
 import {
   getBookingUnitFields,
+  type BookingUnitFields,
   type BookingUnitFieldsSource,
 } from "../../shared/booking-unit-fields";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
@@ -95,12 +100,14 @@ export function validateCreateTransaction(
   };
 }
 
+type AccountBookingInput = BookingUnitFields & {
+  accountId: string;
+  value: MoneyInput;
+  date: string | Date;
+};
+
 export async function validateAccountTypeBookings(
-  bookings: {
-    accountId: string;
-    value: MoneyInput;
-    date: string | Date;
-  }[],
+  bookings: AccountBookingInput[],
   accountBookId: string,
   db: Pick<Prisma.TransactionClient, "account" | "accountBook"> = prisma,
 ) {
@@ -110,7 +117,16 @@ export async function validateAccountTypeBookings(
   const [accounts, accountBook] = await Promise.all([
     db.account.findMany({
       where: { id: { in: accountIds }, accountBookId },
-      select: { id: true, type: true, equityAccountSubtype: true },
+      select: {
+        id: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
     }),
     db.accountBook.findUniqueOrThrow({
       where: { id: accountBookId },
@@ -125,30 +141,27 @@ export async function validateAccountTypeBookings(
   });
 }
 
-export type AccountTypeMeta = {
+export type AccountTypeMeta = BookingUnitFieldsSource & {
   id: string;
   type: AccountType;
   equityAccountSubtype: EquityAccountSubtype | null;
 };
 
-export function accountTypeMeta(account: {
-  id: string;
-  type: AccountType;
-  equityAccountSubtype: EquityAccountSubtype | null;
-}): AccountTypeMeta {
+export function accountTypeMeta(account: AccountTypeMeta): AccountTypeMeta {
   return {
     id: account.id,
     type: account.type,
     equityAccountSubtype: account.equityAccountSubtype,
+    unit: account.unit,
+    currency: account.currency,
+    cryptocurrency: account.cryptocurrency,
+    symbol: account.symbol,
+    tradeCurrency: account.tradeCurrency,
   };
 }
 
 export function validateAccountTypeBookingsWithAccounts(
-  bookings: {
-    accountId: string;
-    value: MoneyInput;
-    date: string | Date;
-  }[],
+  bookings: AccountBookingInput[],
   accountMap: Map<string, AccountTypeMeta>,
   options?: {
     accountBookStartDate?: Date;
@@ -177,6 +190,16 @@ export function validateAccountTypeBookingsWithAccounts(
     const b = bookings[i];
     const account = accountMap.get(b.accountId);
     if (!account) continue;
+
+    if (
+      account.type === AccountType.BALANCE &&
+      (!getAccountUnitIdentifier(account) ||
+        !isBookingUnitCompatibleWithAccount(b, account))
+    ) {
+      errors.push(
+        `Booking ${i}: Account must use the same unit as the booking.`,
+      );
+    }
 
     if (
       account.type === AccountType.EQUITY &&

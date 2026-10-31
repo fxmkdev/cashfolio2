@@ -517,6 +517,63 @@ describe("transactions mutations", () => {
     );
   });
 
+  it.each(["create", "update", "import"] as const)(
+    "rejects incompatible account units before any %s writes",
+    async (operation) => {
+      const valid = createTransactionInput();
+      const invalid = createTransactionInput({
+        bookings: valid.bookings.map((booking) => ({
+          ...booking,
+          currency: "USD",
+        })),
+      });
+      const mutation =
+        operation === "create"
+          ? createTransaction({ data: invalid })
+          : operation === "update"
+            ? updateTransaction({
+                data: { ...invalid, transactionId: "tx-regular" },
+              })
+            : createTransactions({
+                data: {
+                  accountBookId: "book-1",
+                  transactions: [valid, invalid].map(
+                    ({ accountBookId: _accountBookId, ...transaction }) =>
+                      transaction,
+                  ),
+                },
+              });
+
+      await expect(mutation).rejects.toThrow(
+        "Booking 0: Account must use the same unit as the booking.",
+      );
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+      expect(prisma.transaction.update).not.toHaveBeenCalled();
+      expect(prisma.booking.deleteMany).not.toHaveBeenCalled();
+      expect(
+        invalidatePeriodBaseDataCacheForAccountBook,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  it("allows mixed-unit transfers when each booking matches its balance account", async () => {
+    prisma.account.findMany.mockResolvedValueOnce([
+      createAssetAccount("asset-1"),
+      { ...createAssetAccount("asset-2"), currency: "EUR" },
+    ]);
+    const input = createTransactionInput();
+    input.bookings[1] = {
+      ...input.bookings[1],
+      accountId: "asset-2",
+      currency: "EUR",
+      value: -90,
+    };
+    await expect(createTransaction({ data: input })).resolves.toEqual({
+      id: "tx-created",
+    });
+    expect(prisma.transaction.create).toHaveBeenCalledOnce();
+  });
+
   it("creates statement-import transactions in a single batch", async () => {
     const created = [{ id: "tx-1" }, { id: "tx-2" }];
     prisma.$transaction.mockImplementationOnce(async (callback) =>

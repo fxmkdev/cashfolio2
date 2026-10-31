@@ -18,6 +18,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import type { AccountInput } from "./accounts/accounts-types";
+import type { CreateTransactionInput } from "./transactions/transactions-types";
 
 // Exercise the public mutation handlers and real DB transactions, with request
 // authentication and Redis replaced independently of the accounting operations.
@@ -216,6 +217,68 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
       );
     await admin.$disconnect();
   });
+
+  it.each(["update", "import"] as const)(
+    "preserves persisted transactions and cache revision after an incompatible-unit %s",
+    async (operation) => {
+      const source = await mutations.createAccount({ data: account("Source") });
+      const target = await mutations.createAccount({ data: account("Target") });
+      const valid: CreateTransactionInput = {
+        accountBookId: bookId,
+        description: "Original transfer",
+        bookings: [source.id, target.id].map((accountId, index) => ({
+          accountId,
+          date: "2026-01-12",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          value: index === 0 ? 100 : -100,
+        })),
+      };
+      const original = await transactions.createTransaction({ data: valid });
+      const snapshot = () =>
+        db.transaction.findMany({
+          where: { accountBookId: bookId },
+          orderBy: { id: "asc" },
+          include: { bookings: { orderBy: { sortOrder: "asc" } } },
+        });
+      const before = await snapshot();
+      const revision = await db.accountBook.findUniqueOrThrow({
+        where: { id: bookId },
+      });
+      const invalid = {
+        ...valid,
+        description: "Invalid transfer",
+        bookings: valid.bookings.map((booking) => ({
+          ...booking,
+          currency: "USD",
+        })),
+      };
+      const mutation =
+        operation === "update"
+          ? transactions.updateTransaction({
+              data: { ...invalid, transactionId: original.id },
+            })
+          : transactions.createTransactions({
+              data: {
+                accountBookId: bookId,
+                transactions: [valid, invalid].map(
+                  ({ accountBookId: _accountBookId, ...transaction }) =>
+                    transaction,
+                ),
+              },
+            });
+
+      await expect(mutation).rejects.toThrow(
+        "Booking 0: Account must use the same unit as the booking.",
+      );
+      expect(await snapshot()).toEqual(before);
+      expect(
+        (await db.accountBook.findUniqueOrThrow({ where: { id: bookId } }))
+          .periodCacheRevision,
+      ).toBe(revision.periodCacheRevision);
+    },
+  );
 
   it("rolls back a 25-second lock wait and allows an explicit retry", async () => {
     let acquired!: () => void;
