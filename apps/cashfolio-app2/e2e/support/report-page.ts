@@ -1,5 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 
+export async function selectReportGrouping(
+  page: Page,
+  label: "Account Structure" | "Asset Class",
+): Promise<void> {
+  const grouping = page.getByRole("combobox", { name: "Group Accounts By" });
+  await grouping.click();
+  await page.getByRole("option", { name: label, exact: true }).click();
+  await expect(grouping).toHaveValue(label);
+}
+
 export function isIgnorableAgChartsError(message: string): boolean {
   const normalizedMessage = message.replace(/\s+/g, " ").trim();
   const ignorableAgChartsErrorPatterns = [
