@@ -15,6 +15,16 @@ These rules apply to all contributors and coding agents.
 - If the rebase encounters conflicts, resolve them, stage the resolved files
   with `git add -- <paths>`, and run `git rebase --continue`. Repeat until the
   rebase completes; do not switch to a merge to avoid resolving rebase conflicts.
+- Preserve individual commits during rebases by default. If replaying intermediate
+  commits would cause avoidable or repeated conflict resolution, consider
+  proposing a squash. Explain why it would help, identify the commits to combine,
+  and describe the loss of individual commit history. Obtain explicit user
+  confirmation of that proposal before squashing; permission to rebase, resolve
+  conflicts, or force-push does not imply permission to squash.
+- Without that confirmation, preserve the commits. After confirmation, combine
+  only the approved commits, preserve their combined changes, and rebase onto
+  freshly fetched `origin/main`. This approval requirement applies to rewriting
+  feature-branch history; completed PRs retain the existing squash-merge policy.
 - After rebasing a published feature branch, push the rewritten history with
   `git push --force-with-lease origin <feature-branch>`. Use the same remote branch
   so its open PR updates in place. If the lease fails, fetch and inspect the
