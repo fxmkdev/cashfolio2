@@ -50,6 +50,7 @@ vi.mock("./period/cache/period-base-data-cache", () => ({
 }));
 import {
   getAssetClasses,
+  getAssetClassNodes,
   saveAssetClass,
   reorderAssetClasses,
   deleteAssetClass,
@@ -65,6 +66,23 @@ beforeEach(() => {
   mocks.tx.classificationNode.findUnique.mockResolvedValue(nodes[0]);
 });
 describe("classification endpoints", () => {
+  it("loads only book-scoped node metadata for shared selectors", async () => {
+    await expect(
+      getAssetClassNodes({ data: { accountBookId: "book" } }),
+    ).resolves.toEqual(nodes);
+    expect(mocks.authorize).toHaveBeenCalledWith("book");
+    expect(mocks.tx.classificationNode.findMany).toHaveBeenCalledWith({
+      where: { accountBookId: "book", schemeId: "assetClass" },
+      select: { id: true, name: true, parentId: true, sortOrder: true },
+    });
+  });
+  it("rejects unauthorized metadata reads before querying nodes", async () => {
+    mocks.authorize.mockRejectedValueOnce(new Error("Denied"));
+    await expect(
+      getAssetClassNodes({ data: { accountBookId: "foreign" } }),
+    ).rejects.toThrow("Denied");
+    expect(mocks.tx.classificationNode.findMany).not.toHaveBeenCalled();
+  });
   it("applies shared name, identifier, and bulk limits before mutation", () => {
     expect(() =>
       saveAssetClass({

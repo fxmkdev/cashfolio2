@@ -1,5 +1,5 @@
-import { AssetClassContext } from "@/classification-context";
-import { getAssetClasses } from "@/server/classifications";
+import { AssetClassProvider } from "@/classification-context";
+import { getAssetClassNodes } from "@/server/classifications";
 import {
   createFileRoute,
   Outlet,
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/$accountBookId")({
       getCurrentUserCanAccessAdmin(),
     ]);
 
-    const assetClasses = await getAssetClasses({ data: { accountBookId } });
+    const assetClasses = await getAssetClassNodes({ data: { accountBookId } });
     return {
       assetClasses,
       accountBooks,
@@ -88,7 +88,10 @@ function AccountBookLayout() {
   });
 
   return (
-    <AssetClassContext.Provider value={assetClasses}>
+    <AssetClassProvider
+      nodes={assetClasses}
+      loadNodes={() => getAssetClassNodes({ data: { accountBookId } })}
+    >
       <UserLocaleProvider locale={userLocale}>
         <AccountBookShell
           accountBookId={accountBookId}
@@ -109,6 +112,6 @@ function AccountBookLayout() {
           <Outlet />
         </AccountBookShell>
       </UserLocaleProvider>
-    </AssetClassContext.Provider>
+    </AssetClassProvider>
   );
 }

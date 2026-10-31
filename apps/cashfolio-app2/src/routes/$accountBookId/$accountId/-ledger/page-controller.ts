@@ -1,3 +1,4 @@
+import { useRefreshAssetClasses } from "@/classification-context";
 import {
   getAccountConstraintMessage,
   getAccountManagementContext,
@@ -68,7 +69,8 @@ export function useLedgerPageController(args: {
   }) => void | Promise<void>;
   onOpenImportPage: () => void;
 }): Omit<LedgerPageViewProps, "onRowDataUpdated"> {
-  const { data: loaderData, refresh: onRefreshConstraints } =
+  const refreshAssetClasses = useRefreshAssetClasses();
+  const { data: loaderData, refresh: refreshPageConstraints } =
     useRefreshedMutationData(args.loaderData, () =>
       loadLedgerPageData({
         accountBookId: args.accountBookId,
@@ -76,6 +78,9 @@ export function useLedgerPageController(args: {
         period: args.selectedPeriodValue,
       }),
     );
+  const onRefreshConstraints = useCallback(async () => {
+    await Promise.all([refreshPageConstraints(), refreshAssetClasses()]);
+  }, [refreshPageConstraints, refreshAssetClasses]);
   const { account, accounts, accountGroups, accountTreeRow, existingNodes } =
     loaderData;
   const unitUsage = useMemo(

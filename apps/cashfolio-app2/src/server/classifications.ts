@@ -24,6 +24,27 @@ function bookInput(value: unknown) {
 function nullableId(value: Record<string, unknown>, field: string) {
   return value[field] === null ? null : requireStringField(value, field);
 }
+const nodeSelection = {
+  id: true,
+  name: true,
+  parentId: true,
+  sortOrder: true,
+} as const;
+
+/** Shared editor metadata; assignment counts are only needed by Settings. */
+export const getAssetClassNodes = createServerFn({ method: "GET" })
+  .validator(bookInput)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    return prisma.classificationNode.findMany({
+      where: {
+        accountBookId: data.accountBookId,
+        schemeId: ASSET_CLASS_SCHEME_ID,
+      },
+      select: nodeSelection,
+    });
+  });
+
 export const getAssetClasses = createServerFn({ method: "GET" })
   .validator(bookInput)
   .handler(async ({ data }) => {
@@ -34,10 +55,7 @@ export const getAssetClasses = createServerFn({ method: "GET" })
         schemeId: ASSET_CLASS_SCHEME_ID,
       },
       select: {
-        id: true,
-        name: true,
-        parentId: true,
-        sortOrder: true,
+        ...nodeSelection,
         assignments: { select: { account: { select: { isActive: true } } } },
       },
     });

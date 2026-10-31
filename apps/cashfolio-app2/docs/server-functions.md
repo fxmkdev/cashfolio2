@@ -169,6 +169,12 @@ Asset-class IDs are validated against the account book’s protected scheme insi
 the mutation transaction. Reads expose a nullable `assetClassId`; assignments
 are stored separately from accounts.
 
+`getAssetClassNodes` returns only book-scoped node metadata for the shared
+selectors and labels; it does not load account assignments. The account-book
+provider can refresh that metadata independently. Account list, bulk assignment,
+and ledger mutation recovery refresh both page constraints and class choices
+without remounting open drafts.
+
 `getAssetClasses` returns the book-specific tree and direct active/archived
 assignment counts. `saveAssetClass`, `reorderAssetClasses`, and
 `deleteAssetClass` use the existing same-origin, authorization, retry, and

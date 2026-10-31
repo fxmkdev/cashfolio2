@@ -1,3 +1,4 @@
+import { useRefreshAssetClasses } from "@/classification-context";
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
@@ -278,7 +279,8 @@ export function useAccountsPageController(args: {
   const mode = args.mode ?? "active";
   const showArchived = args.showArchived ?? false;
   const scopeKey = `${args.accountBookId}:${args.tab}:${mode}:${showArchived}`;
-  const { data: loaderData, refresh: onRefreshConstraints } =
+  const refreshAssetClasses = useRefreshAssetClasses();
+  const { data: loaderData, refresh: refreshPageConstraints } =
     useRefreshedMutationData(args.loaderData, () =>
       loadAccountsPageData({
         accountBookId: args.accountBookId,
@@ -286,6 +288,9 @@ export function useAccountsPageController(args: {
         showArchived,
       }),
     );
+  const onRefreshConstraints = useCallback(async () => {
+    await Promise.all([refreshPageConstraints(), refreshAssetClasses()]);
+  }, [refreshPageConstraints, refreshAssetClasses]);
   const {
     accountGroups,
     archivedAccountGroups,
