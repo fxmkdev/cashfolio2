@@ -1,3 +1,4 @@
+import { assetClassSelection, withAssetClassId } from "./classification-data";
 import { toNumericMoney } from "./money-boundary";
 import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
@@ -55,7 +56,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
         symbol: true,
         tradeCurrency: true,
         statementImportCsvFormat: true,
-        assetClass: true,
+        classifications: assetClassSelection,
         isCashAccount: true,
         groupId: true,
       },
@@ -71,7 +72,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
     });
     const resolveGroupPathSegments = createGroupPathSegmentsResolver(allGroups);
 
-    const { groupId, ...rest } = account;
+    const { groupId, ...rest } = withAssetClassId(account);
     return {
       ...rest,
       statementImportCsvFormat:

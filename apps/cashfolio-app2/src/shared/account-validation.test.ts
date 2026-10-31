@@ -1,6 +1,6 @@
+import { defaultAssetClassIds } from "./asset-class";
 import { describe, expect, test } from "vitest";
 import {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -47,9 +47,9 @@ describe("equity account unit metadata", () => {
 });
 
 describe("asset class eligibility", () => {
-  test.each(Object.values(AssetClass))(
+  test.each(Object.values(defaultAssetClassIds))(
     "allows %s independently of unit",
-    (assetClass) => {
+    (assetClassId) => {
       for (const type of [AccountType.BALANCE]) {
         for (const unit of Object.values(Unit)) {
           expect(() =>
@@ -58,7 +58,7 @@ describe("asset class eligibility", () => {
               name: "Account",
               type,
               unit,
-              assetClass,
+              assetClassId,
               currency: "USD",
               cryptocurrency: "BTC",
               symbol: "AAPL",
@@ -80,10 +80,13 @@ describe("asset class eligibility", () => {
         equityAccountSubtype,
       };
       expect(() =>
-        validateAccountInput({ ...input, assetClass: AssetClass.EQUITIES }),
+        validateAccountInput({
+          ...input,
+          assetClassId: defaultAssetClassIds.EQUITIES,
+        }),
       ).toThrow("Asset class is only allowed for balance accounts");
       expect(() =>
-        validateAccountInput({ ...input, assetClass: null }),
+        validateAccountInput({ ...input, assetClassId: null }),
       ).not.toThrow();
       expect(() => validateAccountInput(input)).not.toThrow();
     },

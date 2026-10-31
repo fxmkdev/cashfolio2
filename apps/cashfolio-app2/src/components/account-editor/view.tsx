@@ -265,8 +265,8 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <AssetClassField
-                    key={form.key("assetClass")}
-                    {...form.getInputProps("assetClass")}
+                    key={form.key("assetClassId")}
+                    {...form.getInputProps("assetClassId")}
                   />
                 </Grid.Col>
               </>

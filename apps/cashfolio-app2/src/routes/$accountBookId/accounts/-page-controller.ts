@@ -108,7 +108,7 @@ export function createAccountsMutationActions(args: {
         data: {
           accountBookId: args.accountBookId,
           name: values.name!,
-          assetClass: values.assetClass,
+          assetClassId: values.assetClassId,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,
@@ -136,7 +136,7 @@ export function createAccountsMutationActions(args: {
           id: editingAccount.id,
           accountBookId: args.accountBookId,
           name: values.name!,
-          assetClass: values.assetClass,
+          assetClassId: values.assetClassId,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,
@@ -451,9 +451,9 @@ export function useAccountsPageController(args: {
     scopeKey,
     enabled: !isEquityTab,
     rows,
-    submitAssetClass: (accountIds, assetClass) =>
+    submitAssetClass: (accountIds, assetClassId) =>
       setAccountsAssetClass({
-        data: { accountBookId: args.accountBookId, accountIds, assetClass },
+        data: { accountBookId: args.accountBookId, accountIds, assetClassId },
       }),
     invalidate: args.invalidate,
     onRefreshConstraints,

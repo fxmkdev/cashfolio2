@@ -82,10 +82,10 @@ function validateEquityAccountUnitMetadata(data: AccountInput): string | null {
 }
 
 export function validateAccountAssetClass(
-  assetClass: AccountInput["assetClass"],
+  assetClassId: AccountInput["assetClassId"],
   type?: AccountType,
 ): string | null {
-  return assetClass == null || isBalanceAccountType(type)
+  return assetClassId == null || isBalanceAccountType(type)
     ? null
     : "Asset class is only allowed for balance accounts";
 }
@@ -203,7 +203,7 @@ export function validateAccountInput(
     validateEquitySubtypeTypeCombination(data.type, data.equityAccountSubtype),
     validateEquityAccountUnitMetadata(data),
     validateAccountUnit(data.unit, data.type),
-    validateAccountAssetClass(data.assetClass, data.type),
+    validateAccountAssetClass(data.assetClassId, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
     validateAccountCryptocurrency(data.cryptocurrency, data.unit, data.type),
     validateAccountSymbol(data.symbol, data.unit, data.type),

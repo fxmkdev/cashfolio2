@@ -1,3 +1,4 @@
+import { assetClassSelection, withAssetClassId } from "./classification-data";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cp, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
@@ -268,15 +269,18 @@ describe("unified balance account migration against disposable PostgreSQL", () =
     ).toBe(1);
     for (const subtype of ["GAIN_LOSS", "OPENING_BALANCES"] as const) {
       await expect(
-        db.account.create({
-          data: {
-            id: `duplicate-${subtype}`,
-            accountBookId: "book",
-            name: "Duplicate",
-            type: "EQUITY",
-            equityAccountSubtype: subtype,
-          },
-        }),
+        db.account
+          .create({
+            include: { classifications: assetClassSelection },
+            data: {
+              id: `duplicate-${subtype}`,
+              accountBookId: "book",
+              name: "Duplicate",
+              type: "EQUITY",
+              equityAccountSubtype: subtype,
+            },
+          })
+          .then(withAssetClassId),
       ).rejects.toThrow();
     }
     await expect(
@@ -294,23 +298,41 @@ describe("unified balance account migration against disposable PostgreSQL", () =
 
   it("preserves asset classification and enforces its balance-account constraint", async () => {
     expect(
-      await db.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: { id: "archived-asset", accountBookId: "book" },
-        },
-        select: { type: true, assetClass: true },
-      }),
-    ).toEqual({ type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" });
+      await db.account
+        .findUniqueOrThrow({
+          where: {
+            id_accountBookId: { id: "archived-asset", accountBookId: "book" },
+          },
+          select: { classifications: assetClassSelection, type: true },
+        })
+        .then(withAssetClassId),
+    ).toEqual({ type: "BALANCE", assetClassId: "CASH_AND_CASH_EQUIVALENTS" });
     await expect(
-      db.account.update({
-        where: { id_accountBookId: { id: "expense", accountBookId: "book" } },
-        data: { assetClass: "EQUITIES" },
-      }),
+      db.account
+        .update({
+          include: { classifications: assetClassSelection },
+          where: { id_accountBookId: { id: "expense", accountBookId: "book" } },
+          data: {
+            classifications: {
+              deleteMany: { schemeId: "assetClass" },
+              create: [{ schemeId: "assetClass", nodeId: "EQUITIES" }],
+            },
+          },
+        })
+        .then(withAssetClassId),
     ).rejects.toThrow();
-    await db.account.update({
-      where: { id_accountBookId: { id: "liability", accountBookId: "book" } },
-      data: { assetClass: "FIXED_INCOME" },
-    });
+    await db.account
+      .update({
+        include: { classifications: assetClassSelection },
+        where: { id_accountBookId: { id: "liability", accountBookId: "book" } },
+        data: {
+          classifications: {
+            deleteMany: { schemeId: "assetClass" },
+            create: [{ schemeId: "assetClass", nodeId: "FIXED_INCOME" }],
+          },
+        },
+      })
+      .then(withAssetClassId);
   });
 
   it("keeps cache triggers active and their revisions transactional", async () => {

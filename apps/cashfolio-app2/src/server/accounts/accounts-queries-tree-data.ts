@@ -1,3 +1,4 @@
+import { assetClassSelection, withAssetClassId } from "../classification-data";
 import { toMoney } from "../../shared/money";
 import { prisma } from "../../prisma.server";
 import {
@@ -8,7 +9,6 @@ import {
 } from "../../shared/date";
 
 import type {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -18,7 +18,7 @@ import type { AccountState } from "./accounts-queries-reference-balances";
 import { getAccountsWhereClause } from "./accounts-queries-reference-balances";
 
 export type AccountTreeQueryAccount = {
-  assetClass: AssetClass | null;
+  assetClassId: string | null;
   id: string;
   name: string;
   type: AccountType;
@@ -70,7 +70,7 @@ export async function fetchAccountTreeQueryData(args: {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: {
           id: true,
-          assetClass: true,
+          classifications: assetClassSelection,
           name: true,
           type: true,
           equityAccountSubtype: true,
@@ -88,7 +88,7 @@ export async function fetchAccountTreeQueryData(args: {
       })
       .then((accounts) =>
         accounts.map((account) => ({
-          ...account,
+          ...withAssetClassId(account),
           statementImportCsvFormat:
             account.statementImportCsvFormat as StatementImportCsvFormat | null,
         })),

@@ -46,6 +46,7 @@ describe("loadPeriodHistoryPointContext", () => {
     vi.resetAllMocks();
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "chf",
       startDate: new Date("2026-02-12T18:45:00.000Z"),
     });
@@ -95,6 +96,14 @@ describe("loadPeriodHistoryPointContext", () => {
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-ctx" },
       select: {
+        classificationSchemes: {
+          where: { id: "assetClass" },
+          select: {
+            nodes: {
+              select: { id: true, name: true, parentId: true, sortOrder: true },
+            },
+          },
+        },
         referenceCurrency: true,
         startDate: true,
       },
@@ -216,6 +225,7 @@ describe("loadPeriodHistoryPoint", () => {
     vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -349,6 +359,14 @@ describe("loadPeriodHistoryPoint", () => {
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-context" },
       select: {
+        classificationSchemes: {
+          where: { id: "assetClass" },
+          select: {
+            nodes: {
+              select: { id: true, name: true, parentId: true, sortOrder: true },
+            },
+          },
+        },
         referenceCurrency: true,
         startDate: true,
       },

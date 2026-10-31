@@ -163,6 +163,7 @@ export async function loadPeriodOverview(args: {
   skippedBookingsCount += endOfPeriodBalanceStats.skippedCount;
 
   return buildPeriodOverviewResponse({
+    assetClasses: baseData.assetClasses,
     selection,
     minPeriodDate,
     currentDay,

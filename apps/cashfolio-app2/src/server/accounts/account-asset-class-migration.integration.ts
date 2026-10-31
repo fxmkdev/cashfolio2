@@ -1,3 +1,5 @@
+import { assetClassSelection, withAssetClassId } from "../classification-data";
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cp, mkdtemp, rm } from "node:fs/promises";
@@ -7,7 +9,7 @@ import { promisify } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { PrismaClient } from "../../.prisma-client/client";
-import { AccountType, AssetClass, Unit } from "../../.prisma-client/enums";
+import { AccountType, Unit } from "../../.prisma-client/enums";
 
 const run = promisify(execFile);
 const migrationName = "20261024120000_add_account_asset_class";
@@ -101,46 +103,81 @@ afterAll(async () => {
 });
 
 it("leaves all existing accounts Unclassified without inferring from metadata", async () => {
-  const accounts = await db.account.findMany();
+  const accounts = await db.account
+    .findMany({ include: { classifications: assetClassSelection } })
+    .then((accounts) => accounts.map(withAssetClassId));
   expect(accounts).toHaveLength(19);
-  expect(accounts.every((account) => account.assetClass === null)).toBe(true);
+  expect(accounts.every((account) => account.assetClassId === null)).toBe(true);
 });
 
 it("defaults newly created accounts to Unclassified", async () => {
-  const account = await db.account.create({
-    data: {
-      id: "new",
-      accountBookId: "book",
-      name: "New cryptocurrency",
-      type: AccountType.BALANCE,
-      unit: Unit.CRYPTOCURRENCY,
-      cryptocurrency: "BTC",
-    },
-  });
-  expect(account.assetClass).toBeNull();
+  const account = await db.account
+    .create({
+      include: { classifications: assetClassSelection },
+      data: {
+        id: "new",
+        accountBookId: "book",
+        name: "New cryptocurrency",
+        type: AccountType.BALANCE,
+        unit: Unit.CRYPTOCURRENCY,
+        cryptocurrency: "BTC",
+      },
+    })
+    .then(withAssetClassId);
+  expect(account.assetClassId).toBeNull();
 });
 
 it("allows all classes on converted balance accounts and rejects classified equity", async () => {
   for (const legacyType of ["ASSET", "LIABILITY"]) {
-    for (const assetClass of Object.values(AssetClass)) {
-      const updated = await db.account.update({
-        where: {
-          id_accountBookId: {
-            id: `${legacyType}-CURRENCY-true`,
-            accountBookId: "book",
+    for (const assetClassId of Object.values(defaultAssetClassIds)) {
+      const updated = await db.account
+        .update({
+          include: { classifications: assetClassSelection },
+          where: {
+            id_accountBookId: {
+              id: `${legacyType}-CURRENCY-true`,
+              accountBookId: "book",
+            },
           },
-        },
-        data: { assetClass },
-      });
-      expect(updated.assetClass).toBe(assetClass);
+          data: {
+            classifications: {
+              deleteMany: { schemeId: "assetClass" },
+              create:
+                assetClassId == null
+                  ? []
+                  : [{ schemeId: "assetClass", nodeId: assetClassId }],
+            },
+          },
+        })
+        .then(withAssetClassId);
+      expect(updated.assetClassId).toBe(assetClassId);
     }
   }
   await expect(
-    db.account.update({
-      where: {
-        id_accountBookId: { id: "EQUITY-CURRENCY-true", accountBookId: "book" },
-      },
-      data: { assetClass: AssetClass.EQUITIES },
-    }),
+    db.account
+      .update({
+        include: { classifications: assetClassSelection },
+        where: {
+          id_accountBookId: {
+            id: "EQUITY-CURRENCY-true",
+            accountBookId: "book",
+          },
+        },
+        data: {
+          classifications: {
+            deleteMany: { schemeId: "assetClass" },
+            create:
+              defaultAssetClassIds.EQUITIES == null
+                ? []
+                : [
+                    {
+                      schemeId: "assetClass",
+                      nodeId: defaultAssetClassIds.EQUITIES,
+                    },
+                  ],
+          },
+        },
+      })
+      .then(withAssetClassId),
   ).rejects.toThrow();
 });

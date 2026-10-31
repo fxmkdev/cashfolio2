@@ -4,12 +4,23 @@ import { LinkTab } from "@/components/navigation/link-tab";
 export function SettingsNavigation({
   accountBookId,
   categories,
+  classifications = false,
 }: {
   accountBookId: string;
   categories: boolean;
+  classifications?: boolean;
 }) {
   return (
-    <Tabs value={categories ? "categories" : "general"} mb="md">
+    <Tabs
+      value={
+        classifications
+          ? "classifications"
+          : categories
+            ? "categories"
+            : "general"
+      }
+      mb="md"
+    >
       <Tabs.List aria-label="Account Book Settings">
         <LinkTab
           value="general"
@@ -25,6 +36,13 @@ export function SettingsNavigation({
           search={{ tab: "EQUITY-INCOME", showArchived: false }}
         >
           Categories
+        </LinkTab>
+        <LinkTab
+          value="classifications"
+          to="/$accountBookId/settings/classifications"
+          params={{ accountBookId }}
+        >
+          Classifications
         </LinkTab>
       </Tabs.List>
     </Tabs>

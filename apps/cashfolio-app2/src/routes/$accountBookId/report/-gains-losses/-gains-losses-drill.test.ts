@@ -27,6 +27,29 @@ const hierarchy: GainsLossesBreakdownNode[] = [
 ];
 
 describe("asset-class drill paths", () => {
+  test("preserves a selected class when it moves under a new parent", () => {
+    const moved = [
+      {
+        ...hierarchy[0]!,
+        id: "asset-class:parent",
+        label: "Parent",
+        children: hierarchy,
+      },
+    ];
+    expect(
+      clampGainsLossesPath({
+        hierarchy: moved,
+        path: ["asset-class:EQUITIES"],
+      }),
+    ).toEqual(["asset-class:parent", "asset-class:EQUITIES"]);
+    expect(
+      getGainsLossesDrillState({
+        hierarchy: moved,
+        path: ["asset-class:EQUITIES"],
+        rootLabel: "All",
+      }).currentNodes,
+    ).toEqual(hierarchy[0]!.children);
+  });
   test("retains classes and drops non-drillable account segments", () => {
     expect(
       clampGainsLossesPath({

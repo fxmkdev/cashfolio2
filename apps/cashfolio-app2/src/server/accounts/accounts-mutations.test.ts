@@ -1,8 +1,8 @@
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "../../.prisma-client/client";
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../shared/mutation-errors";
 import {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -36,6 +36,13 @@ const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 const tx = vi.hoisted(() => ({
   $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
+  classificationNode: {
+    findUnique: vi.fn().mockResolvedValue({ id: "class" }),
+  },
+  accountClassification: {
+    deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    createMany: vi.fn().mockResolvedValue({ count: 1 }),
+  },
   account: {
     findUniqueOrThrow: vi.fn(),
     update: vi.fn(),
@@ -182,6 +189,9 @@ describe("account mutation boundary validation", () => {
 describe("updateAccount opening balance management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.classificationNode.findUnique.mockResolvedValue({ id: "class" });
+    tx.accountClassification.deleteMany.mockResolvedValue({ count: 0 });
+    tx.accountClassification.createMany.mockResolvedValue({ count: 1 });
     tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
 
     tx.account.findMany.mockResolvedValue([]);
@@ -358,9 +368,9 @@ describe("updateAccount opening balance management", () => {
     });
   });
 
-  it.each([undefined, null, ...Object.values(AssetClass)])(
+  it.each([undefined, null, ...Object.values(defaultAssetClassIds)])(
     "creates accounts with explicit classification %s",
-    async (assetClass) => {
+    async (assetClassId) => {
       await createAccount({
         data: {
           accountBookId: "book-1",
@@ -368,18 +378,23 @@ describe("updateAccount opening balance management", () => {
           type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
-          assetClass,
+          assetClassId,
         },
       });
       expect(tx.account.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ assetClass: assetClass ?? null }),
+        data: expect.not.objectContaining({ assetClassId: expect.anything() }),
       });
+      if (assetClassId)
+        expect(tx.accountClassification.createMany).toHaveBeenCalledWith({
+          data: [expect.objectContaining({ nodeId: assetClassId })],
+        });
+      else expect(tx.accountClassification.createMany).not.toHaveBeenCalled();
     },
   );
 
-  it.each([undefined, null, AssetClass.OTHER_ASSETS])(
+  it.each([undefined, null, defaultAssetClassIds.OTHER_ASSETS])(
     "updates classification %s without rewriting valuation or bookings",
-    async (assetClass) => {
+    async (assetClassId) => {
       tx.account.findUniqueOrThrow.mockResolvedValueOnce({
         type: AccountType.BALANCE,
         equityAccountSubtype: null,
@@ -390,7 +405,7 @@ describe("updateAccount opening balance management", () => {
         tradeCurrency: null,
         statementImportCsvFormat: null,
         isCashAccount: false,
-        assetClass: AssetClass.EQUITIES,
+        classifications: [{ nodeId: defaultAssetClassIds.EQUITIES }],
       });
       await updateAccount({
         data: {
@@ -398,13 +413,20 @@ describe("updateAccount opening balance management", () => {
           accountBookId: "book-1",
           name: "Portfolio",
           type: AccountType.BALANCE,
-          assetClass,
+          assetClassId,
         },
       });
       const written = tx.account.update.mock.calls[0]![0].data;
-      expect(written.assetClass).toBe(
-        assetClass === undefined ? AssetClass.EQUITIES : assetClass,
-      );
+      const expectedClass =
+        assetClassId === undefined
+          ? defaultAssetClassIds.EQUITIES
+          : assetClassId;
+      if (expectedClass)
+        expect(tx.accountClassification.createMany).toHaveBeenCalledWith({
+          data: [expect.objectContaining({ nodeId: expectedClass })],
+        });
+      else expect(tx.accountClassification.createMany).not.toHaveBeenCalled();
+      expect(written).not.toHaveProperty("assetClassId");
       expect(written).not.toHaveProperty("unit");
       expect(written).not.toHaveProperty("currency");
       expect(written.isCashAccount).toBe(false);
@@ -1048,6 +1070,9 @@ describe("updateAccount opening balance management", () => {
 describe("createAccountGroup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.classificationNode.findUnique.mockResolvedValue({ id: "class" });
+    tx.accountClassification.deleteMany.mockResolvedValue({ count: 0 });
+    tx.accountClassification.createMany.mockResolvedValue({ count: 1 });
     tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
 
     tx.accountGroup.findMany.mockResolvedValue([]);
@@ -1344,6 +1369,9 @@ describe("createAccountGroup", () => {
 describe("reorderAccountTreeItems conflict recovery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.classificationNode.findUnique.mockResolvedValue({ id: "class" });
+    tx.accountClassification.deleteMany.mockResolvedValue({ count: 0 });
+    tx.accountClassification.createMany.mockResolvedValue({ count: 1 });
     tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.account.update.mockResolvedValue({ id: "account" });
@@ -1409,10 +1437,13 @@ describe("setAccountsAssetClass", () => {
   const input = {
     accountBookId: "book-1",
     accountIds: ["active", "archived"],
-    assetClass: AssetClass.EQUITIES,
+    assetClassId: defaultAssetClassIds.EQUITIES,
   };
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.classificationNode.findUnique.mockResolvedValue({ id: "class" });
+    tx.accountClassification.deleteMany.mockResolvedValue({ count: 0 });
+    tx.accountClassification.createMany.mockResolvedValue({ count: 1 });
     ensureAuthorizedForAccountBookId.mockReset().mockResolvedValue(undefined);
     ensureSameOriginRequestFromServerContext.mockReset();
     prisma.$transaction
@@ -1426,11 +1457,11 @@ describe("setAccountsAssetClass", () => {
     tx.account.updateMany.mockResolvedValue({ count: 2 });
   });
 
-  it.each([...Object.values(AssetClass), null])(
+  it.each([...Object.values(defaultAssetClassIds), null])(
     "sets %s on active and archived accounts in one book mutation",
-    async (assetClass) => {
+    async (assetClassId) => {
       await expect(
-        setAccountsAssetClass({ data: { ...input, assetClass } }),
+        setAccountsAssetClass({ data: { ...input, assetClassId } }),
       ).resolves.toEqual({ count: 2 });
       expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
       expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
@@ -1439,14 +1470,25 @@ describe("setAccountsAssetClass", () => {
         where: { accountBookId: "book-1", id: { in: input.accountIds } },
         select: { id: true, type: true },
       });
-      expect(tx.account.updateMany).toHaveBeenCalledExactlyOnceWith({
+      expect(
+        tx.accountClassification.deleteMany,
+      ).toHaveBeenCalledExactlyOnceWith({
         where: {
           accountBookId: "book-1",
-          id: { in: input.accountIds },
-          type: AccountType.BALANCE,
+          schemeId: "assetClass",
+          accountId: { in: input.accountIds },
         },
-        data: { assetClass },
       });
+      if (assetClassId)
+        expect(tx.accountClassification.createMany).toHaveBeenCalledWith({
+          data: input.accountIds.map((accountId) => ({
+            accountId,
+            accountBookId: "book-1",
+            schemeId: "assetClass",
+            nodeId: assetClassId,
+          })),
+        });
+      else expect(tx.accountClassification.createMany).not.toHaveBeenCalled();
       expect(
         invalidatePeriodBaseDataCacheForAccountBook,
       ).toHaveBeenCalledExactlyOnceWith("book-1");
@@ -1457,9 +1499,9 @@ describe("setAccountsAssetClass", () => {
     await setAccountsAssetClass({
       data: { ...input, accountIds: ["active", "archived", "active"] },
     });
-    expect(tx.account.updateMany).toHaveBeenCalledWith(
+    expect(tx.accountClassification.deleteMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: { in: input.accountIds } }),
+        where: expect.objectContaining({ accountId: { in: input.accountIds } }),
       }),
     );
   });
@@ -1497,7 +1539,9 @@ describe("setAccountsAssetClass", () => {
   });
 
   it("does not invalidate caches after a failed transaction", async () => {
-    tx.account.updateMany.mockRejectedValueOnce(new Error("Write failed"));
+    tx.accountClassification.deleteMany.mockRejectedValueOnce(
+      new Error("Write failed"),
+    );
     await expect(setAccountsAssetClass({ data: input })).rejects.toThrow(
       "Write failed",
     );
@@ -1509,10 +1553,9 @@ describe("setAccountsAssetClass", () => {
     { accountIds: [""] },
     { accountIds: [1] },
     { accountIds: "active" },
-    { assetClass: undefined },
-    { assetClass: "UNCLASSIFIED" },
-    { assetClass: "" },
-    { assetClass: 1 },
+    { assetClassId: undefined },
+    { assetClassId: "" },
+    { assetClassId: 1 },
     { accountBookId: "" },
   ])(
     "rejects malformed input %j before opening a transaction",

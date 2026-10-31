@@ -9,7 +9,7 @@ function account(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
     nodeType: "account",
     name: id,
     type: "BALANCE",
-    assetClass: "EQUITIES",
+    assetClassId: "EQUITIES",
     equityAccountSubtype: null,
     unit: "CURRENCY",
     currency: "CHF",
@@ -36,7 +36,7 @@ function account(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
 function group(id: string, parentId?: string): TreeRow {
   return account(id, {
     nodeType: "accountGroup",
-    assetClass: undefined,
+    assetClassId: undefined,
     unit: null,
     currency: null,
     parentId,
@@ -79,7 +79,7 @@ describe("account group asset class summaries", () => {
   });
 
   it.each<{
-    classes: TreeRow["assetClass"][];
+    classes: TreeRow["assetClassId"][];
     expected: GroupAssetClassSummary;
   }>([
     { classes: ["EQUITIES", "FIXED_INCOME"], expected: "Mixed" },
@@ -93,10 +93,10 @@ describe("account group asset class summaries", () => {
         groupSummaries([
           group("root"),
           group("nested", "root"),
-          ...classes.map((assetClass, index) =>
+          ...classes.map((assetClassId, index) =>
             account(`a${index}`, {
               parentId: "nested",
-              assetClass,
+              assetClassId,
             }),
           ),
         ]),
@@ -128,13 +128,13 @@ describe("account group asset class summaries", () => {
       account("archived", {
         parentId: "root",
         isActive: false,
-        assetClass: "FIXED_INCOME",
+        assetClassId: "FIXED_INCOME",
       }),
       { ...group("archived-group", "root"), isActive: false },
       account("archived-nested", {
         parentId: "archived-group",
         isActive: false,
-        assetClass: "FIXED_INCOME",
+        assetClassId: "FIXED_INCOME",
       }),
     ]);
     expect(groupSummaries(rows)).toEqual({
@@ -149,14 +149,14 @@ describe("account group asset class summaries", () => {
       group("source"),
       group("destination"),
       account("a", { parentId: "source" }),
-      account("b", { parentId: "source", assetClass: "FIXED_INCOME" }),
+      account("b", { parentId: "source", assetClassId: "FIXED_INCOME" }),
     ]);
     expect(groupSummaries(original)).toEqual({
       source: "Mixed",
       destination: undefined,
     });
     const reclassified = original.map((row) =>
-      row.id === "b" ? { ...row, assetClass: "EQUITIES" as const } : row,
+      row.id === "b" ? { ...row, assetClassId: "EQUITIES" as const } : row,
     );
     expect(groupSummaries(reclassified)).toEqual({
       source: "EQUITIES",

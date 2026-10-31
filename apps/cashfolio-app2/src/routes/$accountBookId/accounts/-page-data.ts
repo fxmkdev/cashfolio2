@@ -55,7 +55,7 @@ export function addGroupAssetClassSummaries(
     for (const child of rowsByParentKey.get(groupId) ?? []) {
       const childSummary =
         child.nodeType === "account"
-          ? (child.assetClass ?? null)
+          ? (child.assetClassId ?? null)
           : summarizeGroup(child.id);
       if (childSummary === undefined) continue;
       summary =

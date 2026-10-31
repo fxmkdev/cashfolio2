@@ -1,7 +1,8 @@
+import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AccountType, AssetClass, Unit } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   getAccountListBalanceValue,
@@ -76,25 +77,25 @@ const footerRow: AccountsGridRow = {
 
 describe("account list column value getters", () => {
   it.each([
-    [AssetClass.CASH_AND_CASH_EQUIVALENTS, "Cash & Cash Equivalents"],
-    [AssetClass.EQUITIES, "Equities"],
-    [AssetClass.FIXED_INCOME, "Fixed Income"],
-    [AssetClass.REAL_ESTATE, "Real Estate"],
+    [defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS, "Cash & Cash Equivalents"],
+    [defaultAssetClassIds.EQUITIES, "Equities"],
+    [defaultAssetClassIds.FIXED_INCOME, "Fixed Income"],
+    [defaultAssetClassIds.REAL_ESTATE, "Real Estate"],
     [
-      AssetClass.COMMODITIES_AND_PRECIOUS_METALS,
+      defaultAssetClassIds.COMMODITIES_AND_PRECIOUS_METALS,
       "Commodities & Precious Metals",
     ],
-    [AssetClass.DIGITAL_ASSETS, "Digital Assets"],
-    [AssetClass.ALTERNATIVE_INVESTMENTS, "Alternative Investments"],
-    [AssetClass.OTHER_ASSETS, "Other Assets"],
+    [defaultAssetClassIds.DIGITAL_ASSETS, "Digital Assets"],
+    [defaultAssetClassIds.ALTERNATIVE_INVESTMENTS, "Alternative Investments"],
+    [defaultAssetClassIds.OTHER_ASSETS, "Other Assets"],
     [null, "Unclassified"],
     [undefined, "Unclassified"],
-  ] as const)("displays %s using its shared label", (assetClass, label) => {
+  ] as const)("displays %s using its shared label", (assetClassId, label) => {
     for (const type of [AccountType.BALANCE]) {
       for (const isActive of [true, false]) {
         expect(
           getAccountListAssetClassValue(
-            createAccountRow({ assetClass, type, isActive }),
+            createAccountRow({ assetClassId, type, isActive }),
           ),
         ).toBe(label);
       }
@@ -102,7 +103,7 @@ describe("account list column value getters", () => {
   });
 
   it.each([
-    [AssetClass.EQUITIES, "Equities"],
+    [defaultAssetClassIds.EQUITIES, "Equities"],
     [null, "Unclassified"],
     ["Mixed", "Mixed"],
   ] as const)("displays group summary %s as %s", (groupAssetClass, label) => {
@@ -368,7 +369,7 @@ describe("asset class column", () => {
   });
 
   it.each([
-    [AssetClass.EQUITIES, "Equities"],
+    [defaultAssetClassIds.EQUITIES, "Equities"],
     [null, "Unclassified"],
     ["Mixed", "Mixed"],
     [undefined, undefined],

@@ -1,7 +1,7 @@
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
-import type { AssetClass } from "@/.prisma-client/enums";
+
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
@@ -354,7 +354,7 @@ function AccountsPageStoryHarness({
   const bulkApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const hasFailed = useRef(false);
   const [assetClasses, setAssetClasses] = useState<
-    Record<string, AssetClass | null>
+    Record<string, string | null>
   >({});
   const [submittedAccountIds, setSubmittedAccountIds] = useState<string[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -421,7 +421,7 @@ function AccountsPageStoryHarness({
     ).map((row) => ({
       ...row,
       ...(Object.hasOwn(assetClasses, row.id)
-        ? { assetClass: assetClasses[row.id] }
+        ? { assetClassId: assetClasses[row.id] }
         : {}),
     }));
     return tab.startsWith("EQUITY-") && !showArchived
@@ -490,7 +490,7 @@ function AccountsPageStoryHarness({
     scopeKey: `${assignmentScope}:${tab}:${mode}`,
     enabled: bulkAssignment && !isEquityTab,
     rows,
-    submitAssetClass: async (accountIds, assetClass) => {
+    submitAssetClass: async (accountIds, assetClassId) => {
       if (assignmentFailsOnce && !hasFailed.current) {
         hasFailed.current = true;
         throw new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
@@ -498,7 +498,7 @@ function AccountsPageStoryHarness({
       setSubmittedAccountIds(accountIds);
       setAssetClasses((current) => ({
         ...current,
-        ...Object.fromEntries(accountIds.map((id) => [id, assetClass])),
+        ...Object.fromEntries(accountIds.map((id) => [id, assetClassId])),
       }));
     },
     invalidate: () => setInvalidationCount((count) => count + 1),
@@ -1717,7 +1717,7 @@ const bulkRows: TreeRow[] = [
     ...activeAssetRows.find((row) => row.id === "account-checking")!,
     groupId: "portfolio",
     parentId: "portfolio",
-    assetClass: "FIXED_INCOME",
+    assetClassId: "FIXED_INCOME",
   },
   {
     ...activeAssetRows.find((row) => row.nodeType === "account")!,
@@ -1726,7 +1726,7 @@ const bulkRows: TreeRow[] = [
     groupId: "nested",
     parentId: "nested",
     isActive: false,
-    assetClass: "DIGITAL_ASSETS",
+    assetClassId: "DIGITAL_ASSETS",
   },
 ];
 
@@ -1739,7 +1739,9 @@ async function selectAssignmentAccount(canvasElement: HTMLElement, id: string) {
 }
 
 function assetClassCell(canvasElement: HTMLElement, id: string) {
-  return canvasElement.querySelector(`[row-id="${id}"] [col-id="assetClass"]`);
+  return canvasElement.querySelector(
+    `[row-id="${id}"] [col-id="assetClassId"]`,
+  );
 }
 
 export const BulkAssetClassSelection: Story = {
@@ -1794,7 +1796,7 @@ export const BulkAssetClassSelection: Story = {
     );
     await expect(
       canvasElement.querySelector(
-        '[row-id="account-checking"] [col-id="assetClass"]',
+        '[row-id="account-checking"] [col-id="assetClassId"]',
       ),
     ).toHaveTextContent("Equities");
   },
@@ -2165,7 +2167,7 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
       ),
     );
     await expect(
-      canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
+      canvasElement.querySelector('[row-id="old"] [col-id="assetClassId"]'),
     ).toHaveTextContent("Digital Assets");
   },
 };

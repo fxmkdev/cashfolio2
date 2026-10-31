@@ -34,6 +34,7 @@ describe("period database snapshot boundary", () => {
     prisma.$transaction.mockImplementation(async (read) => read(tx));
     tx.$executeRaw.mockResolvedValue(0);
     tx.accountBook.findUniqueOrThrow.mockResolvedValue({
+      classificationSchemes: [],
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00Z"),
       periodCacheRevision: "snapshot-revision",
@@ -124,6 +125,19 @@ describe("period database snapshot boundary", () => {
     expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledWith(
       expect.objectContaining({
         select: {
+          classificationSchemes: {
+            where: { id: "assetClass" },
+            select: {
+              nodes: {
+                select: {
+                  id: true,
+                  name: true,
+                  parentId: true,
+                  sortOrder: true,
+                },
+              },
+            },
+          },
           referenceCurrency: true,
           startDate: true,
           periodCacheRevision: true,

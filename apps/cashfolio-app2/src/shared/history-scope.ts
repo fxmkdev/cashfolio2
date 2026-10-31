@@ -18,6 +18,7 @@ export type HistoryScopeSelection =
 export type HistoryScopeKind = "total" | "group" | "account" | "gainLoss";
 
 export type HistoryScopeOption = {
+  sortOrder?: number;
   value: HistoryScopeSelection;
   label: string;
   kind: HistoryScopeKind;

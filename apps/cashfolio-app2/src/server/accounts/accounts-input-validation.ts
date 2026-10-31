@@ -1,5 +1,4 @@
 import {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -55,8 +54,10 @@ export function validateAccountMutationInput(data: unknown): AccountInput {
   }
   return {
     ...commonFields,
-    assetClass: nullableOptionalField(data, "assetClass", (record, field) =>
-      requireEnumField(record, field, Object.values(AssetClass)),
+    assetClassId: nullableOptionalField(
+      data,
+      "assetClassId",
+      requireStringField,
     ),
     groupId: nullableOptionalField(data, "groupId", requireStringField),
     unit: optionalField(data, "unit", (record, field) =>
@@ -146,16 +147,16 @@ export function validateReorderAccountTreeItemsInput(data: unknown) {
 export function validateSetAccountsAssetClassInput(data: unknown): {
   accountBookId: string;
   accountIds: string[];
-  assetClass: AssetClass | null;
+  assetClassId: string | null;
 } {
   assertRecord(data);
   return {
     accountBookId: requireStringField(data, "accountBookId"),
     accountIds: readAccountIds(data, "accountIds"),
-    assetClass:
-      data.assetClass === null
+    assetClassId:
+      data.assetClassId === null
         ? null
-        : requireEnumField(data, "assetClass", Object.values(AssetClass)),
+        : requireStringField(data, "assetClassId"),
   };
 }
 

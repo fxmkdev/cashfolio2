@@ -339,7 +339,7 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class then Account; recorded adjustments use their counterpart
+or the Asset Class hierarchy then Account; recorded adjustments use their counterpart
 financial account's class and group. Changing classification does not change
 amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
 Equities asset class.
@@ -478,7 +478,7 @@ submit UX and prevent duplicate requests.
 - Double-clicking a drillable chart node drills into its children.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Account. Account
+- Gains/Losses supports Account Structure and Asset Class → Subclass → Account. Account
   metadata drives navigation from chart and table leaves to the unified
   explanation, including calculated holdings, recorded adjustments, and
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
@@ -1429,3 +1429,18 @@ than local calendar days.
 
 The app no longer directly depends on date-fns. Date validation, comparison,
 formatting, and arithmetic use the shared Temporal-backed helpers.
+
+## Classification Management
+
+Settings → Classifications exposes the Asset Class tree. Users can create roots
+and children, rename, change parents, and reorder siblings with Move Up/Move
+Down. The scheme is protected; all default nodes remain editable. Parent
+selectors exclude the edited class and descendants, with the same checks
+repeated on the server. Names follow existing sibling-name validation.
+
+Parents cannot be deleted until their children are moved or deleted. Leaf
+deletion shows direct active/archived assignment counts and requires choosing a
+replacement class or Unclassified. Submission uses shared waiting, error, and
+refresh feedback, retaining drafts on failure. All classification changes apply
+to historical reports. Additional classification schemes and percentage splits
+are deferred.

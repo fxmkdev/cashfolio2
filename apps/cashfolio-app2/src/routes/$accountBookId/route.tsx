@@ -1,3 +1,5 @@
+import { AssetClassContext } from "@/classification-context";
+import { getAssetClasses } from "@/server/classifications";
 import {
   createFileRoute,
   Outlet,
@@ -13,7 +15,7 @@ import {
 } from "./-route-helpers";
 
 export const Route = createFileRoute("/$accountBookId")({
-  loader: async () => {
+  loader: async ({ params: { accountBookId } }) => {
     const [
       { loadUserAccountBooksForAccountBookRoute },
       { getRuntimeAppVersion },
@@ -46,7 +48,9 @@ export const Route = createFileRoute("/$accountBookId")({
       getCurrentUserCanAccessAdmin(),
     ]);
 
+    const assetClasses = await getAssetClasses({ data: { accountBookId } });
     return {
+      assetClasses,
       accountBooks,
       appVersion,
       userProfile,
@@ -60,6 +64,7 @@ export const Route = createFileRoute("/$accountBookId")({
 
 function AccountBookLayout() {
   const {
+    assetClasses,
     accountBooks,
     appVersion,
     userProfile,
@@ -83,25 +88,27 @@ function AccountBookLayout() {
   });
 
   return (
-    <UserLocaleProvider locale={userLocale}>
-      <AccountBookShell
-        accountBookId={accountBookId}
-        canAccessAdmin={canAccessAdmin}
-        currentHref={href}
-        pathname={pathname}
-        activeSection={getActiveSection({ pathname, accountBookId, matches })}
-        accountBooks={accountBooks}
-        appVersion={appVersion}
-        userProfile={userProfile}
-        userSecurityUrl={userSecurityUrl}
-        accountsLinkSearch={getAccountsLinkSearch({
-          locationSearch,
-          matches,
-        })}
-        periodLinkSearch={getPeriodLinkSearch(locationSearch)}
-      >
-        <Outlet />
-      </AccountBookShell>
-    </UserLocaleProvider>
+    <AssetClassContext.Provider value={assetClasses}>
+      <UserLocaleProvider locale={userLocale}>
+        <AccountBookShell
+          accountBookId={accountBookId}
+          canAccessAdmin={canAccessAdmin}
+          currentHref={href}
+          pathname={pathname}
+          activeSection={getActiveSection({ pathname, accountBookId, matches })}
+          accountBooks={accountBooks}
+          appVersion={appVersion}
+          userProfile={userProfile}
+          userSecurityUrl={userSecurityUrl}
+          accountsLinkSearch={getAccountsLinkSearch({
+            locationSearch,
+            matches,
+          })}
+          periodLinkSearch={getPeriodLinkSearch(locationSearch)}
+        >
+          <Outlet />
+        </AccountBookShell>
+      </UserLocaleProvider>
+    </AssetClassContext.Provider>
   );
 }

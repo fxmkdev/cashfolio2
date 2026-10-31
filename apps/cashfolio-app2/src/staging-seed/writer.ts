@@ -122,7 +122,13 @@ export async function insertSeedBooks(
     if (book.accounts.length) {
       await tx.account.createMany({
         data: book.accounts.map(
-          ({ key, groupKey, statementImportCsvFormat, ...account }) => ({
+          ({
+            key,
+            groupKey,
+            statementImportCsvFormat,
+            assetClassId: _assetClassId,
+            ...account
+          }) => ({
             ...account,
             id: getId(accounts, key),
             groupId: groupKey ? getId(groups, groupKey) : null,
@@ -137,6 +143,16 @@ export async function insertSeedBooks(
         ),
       });
     }
+    const assignments = book.accounts
+      .filter((a) => a.assetClassId != null)
+      .map((a) => ({
+        accountId: getId(accounts, a.key),
+        accountBookId,
+        schemeId: "assetClass",
+        nodeId: a.assetClassId!,
+      }));
+    if (assignments.length)
+      await tx.accountClassification.createMany({ data: assignments });
     let bookingCount = 0;
     for (
       let offset = 0;

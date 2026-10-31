@@ -1,9 +1,6 @@
+import { defaultAssetClassIds } from "../shared/asset-class";
 import Decimal from "decimal.js";
-import {
-  AccountType,
-  AssetClass,
-  EquityAccountSubtype,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
 import {
   AAPL,
@@ -62,44 +59,44 @@ export function archivedHouseholdAccounts(target: SeedBook) {
       groupKey,
       isActive: false,
       isCashAccount: true,
-      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
     });
   }
-  for (const [key, name, groupKey, unit, assetClass] of [
+  for (const [key, name, groupKey, unit, assetClassId] of [
     [
       "closed-aapl",
       "Closed Apple position",
       "securities",
       AAPL,
-      AssetClass.EQUITIES,
+      defaultAssetClassIds.EQUITIES,
     ],
     [
       "closed-cs-aapl",
       "Apple shares",
       "credit-suisse-equities",
       AAPL,
-      AssetClass.EQUITIES,
+      defaultAssetClassIds.EQUITIES,
     ],
     [
       "closed-cs-msft",
       "Microsoft shares",
       "credit-suisse-equities",
       MSFT,
-      AssetClass.EQUITIES,
+      defaultAssetClassIds.EQUITIES,
     ],
     [
       "closed-cs-usd",
       "Settlement account USD",
       "credit-suisse",
       USD,
-      AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
     ],
   ] as const) {
     addAccount(target, key, name, AccountType.BALANCE, {
       ...unit,
       groupKey,
       isActive: false,
-      assetClass,
+      assetClassId,
     });
   }
   addAccount(
@@ -107,7 +104,11 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     "closed-car-loan",
     "Repaid car loan CHF",
     AccountType.BALANCE,
-    { ...CHF, isActive: false, assetClass: AssetClass.OTHER_ASSETS },
+    {
+      ...CHF,
+      isActive: false,
+      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
+    },
   );
   addAccount(target, "closed-project", "One-off project", AccountType.EQUITY, {
     groupKey: "consulting",
