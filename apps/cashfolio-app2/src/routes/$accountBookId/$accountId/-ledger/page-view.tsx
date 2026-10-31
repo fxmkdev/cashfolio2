@@ -1,3 +1,4 @@
+import { useAssetClasses } from "@/classification-context";
 import type { LedgerReturnTarget } from "@/shared/ledger-navigation";
 import { Anchor } from "@mantine/core";
 import {
@@ -305,7 +306,10 @@ export function LedgerPageView({
   const formatErrorMessage = (message: string) =>
     getAccountConstraintMessage(message, context) ?? message;
   const accountKindBadge = getLedgerAccountKindBadgeProps(account);
-  const assetClassLabel = getAssetClassLabel(account.assetClass);
+  const assetClassLabel = getAssetClassLabel(
+    account.assetClassId,
+    useAssetClasses(),
+  );
   const simpleCreateDialogText = getTransactionCreateDialogText(
     !!createSimpleInitialValues,
   );
@@ -358,7 +362,7 @@ export function LedgerPageView({
               <Badge
                 size="lg"
                 color="gray"
-                variant={account.assetClass == null ? "outline" : "light"}
+                variant={account.assetClassId == null ? "outline" : "light"}
                 title={`Asset Class: ${assetClassLabel}`}
               >
                 {assetClassLabel}

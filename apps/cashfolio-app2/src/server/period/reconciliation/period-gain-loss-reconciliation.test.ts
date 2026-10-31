@@ -25,7 +25,7 @@ function setAccounts(
     name: "AAPL Trading",
     type: AccountType.BALANCE,
     groupId: null,
-    assetClass: null,
+    assetClassId: null,
     isCashAccount: false,
     unit: null,
     currency: null,

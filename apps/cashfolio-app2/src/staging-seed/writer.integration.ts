@@ -1,3 +1,7 @@
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../server/classification-data";
 import Decimal from "decimal.js";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -20,6 +24,9 @@ import { replaceStagingData } from "./writer";
 
 const run = promisify(execFile);
 const applicationTables = [
+  "AccountClassification",
+  "ClassificationNode",
+  "ClassificationScheme",
   "Booking",
   "Transaction",
   "Account",
@@ -91,7 +98,12 @@ async function snapshot() {
         orderBy: [{ userId: "asc" }, { accountBookId: "asc" }],
       }),
       fixture.accountGroup.findMany({ orderBy: { id: "asc" } }),
-      fixture.account.findMany({ orderBy: { id: "asc" } }),
+      fixture.account
+        .findMany({
+          include: { classifications: assetClassSelection },
+          orderBy: { id: "asc" },
+        })
+        .then((accounts) => accounts.map(withAssetClassId)),
       fixture.transaction.findMany({ orderBy: { id: "asc" } }),
       fixture.booking.findMany({ orderBy: { id: "asc" } }),
     ]);
@@ -238,7 +250,7 @@ describe("staging seed against disposable PostgreSQL", () => {
           (account) =>
             account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS,
         )
-        .every((account) => account.assetClass === null),
+        .every((account) => account.assetClassId === null),
     ).toBe(true);
     for (const book of dataset.books) {
       const persistedBook = current.books.find(
@@ -250,7 +262,7 @@ describe("staging seed against disposable PostgreSQL", () => {
             accountBookId: persistedBook.id,
             name: account.name,
             isActive: account.isActive,
-            assetClass: account.assetClass,
+            assetClassId: account.assetClassId,
           }),
         );
       }

@@ -1,9 +1,10 @@
+import { defaultAssetClassIds } from "../../../shared/asset-class";
 import {
   accumulateGainLossContribution,
   type GainLossContributionAccumulator,
 } from "./period-gains-losses-contributions";
 import { describe, expect, it } from "vitest";
-import { AccountType, AssetClass, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 import { toMoney, moneySum } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 import { buildGainLossAccountAttribution } from "./period-gain-loss-attribution";
@@ -17,10 +18,10 @@ import {
 } from "../../../shared/history-scope";
 import { buildHistoryGainLossScopeOptions } from "../history/period-history-scopes.server";
 
-const account = (id: string, assetClass: AssetClass | null) => ({
+const account = (id: string, assetClassId: string | null) => ({
   id,
   name: id,
-  assetClass,
+  assetClassId,
   type: AccountType.BALANCE,
   groupId: null,
   unit: Unit.CURRENCY,
@@ -51,8 +52,8 @@ describe("asset-class gain/loss attribution", () => {
   it("retains recorded reference-currency amounts, mixed cancellation, balance accounts and unattributed amounts", () => {
     const metadata = buildGainLossAccountAttribution({
       baseAssetLiabilityAccounts: [
-        account("mixed", AssetClass.EQUITIES),
-        account("other", AssetClass.OTHER_ASSETS),
+        account("mixed", defaultAssetClassIds.EQUITIES),
+        account("other", defaultAssetClassIds.OTHER_ASSETS),
         account("missing", null),
       ],
       transferClearingUnitBuckets: [],
@@ -146,15 +147,15 @@ describe("asset-class gain/loss attribution", () => {
     const result = buildGainLossAccountAttribution(
       {
         baseAssetLiabilityAccounts: [
-          account("first", AssetClass.EQUITIES),
-          account("second", AssetClass.OTHER_ASSETS),
+          account("first", defaultAssetClassIds.EQUITIES),
+          account("second", defaultAssetClassIds.OTHER_ASSETS),
         ],
         transferClearingUnitBuckets: [],
         executionResidualTransactions: [],
       },
       [...byKey.values()],
     );
-    expect(result.get("expense")).toMatchObject({ assetClass: null });
+    expect(result.get("expense")).toMatchObject({ assetClassId: null });
   });
 
   it("uses a unique origin for virtual clearing and residuals, retaining pooled amounts as Unclassified", () => {
@@ -182,8 +183,8 @@ describe("asset-class gain/loss attribution", () => {
     };
     const inputs = {
       baseAssetLiabilityAccounts: [
-        account("origin", AssetClass.EQUITIES),
-        account("second", AssetClass.EQUITIES),
+        account("origin", defaultAssetClassIds.EQUITIES),
+        account("second", defaultAssetClassIds.EQUITIES),
       ],
       transferClearingUnitBuckets: [
         {
@@ -207,11 +208,11 @@ describe("asset-class gain/loss attribution", () => {
     expect(
       unique.get("virtual:transfer-clearing:account:currency:USD"),
     ).toMatchObject({
-      assetClass: AssetClass.EQUITIES,
+      assetClassId: defaultAssetClassIds.EQUITIES,
       kind: "transferClearing",
     });
     expect(unique.get("expense")).toMatchObject({
-      assetClass: AssetClass.EQUITIES,
+      assetClassId: defaultAssetClassIds.EQUITIES,
       kind: "unattributed",
     });
     inputs.transferClearingUnitBuckets[0]!.bookings.push({
@@ -226,16 +227,16 @@ describe("asset-class gain/loss attribution", () => {
     expect(
       buildGainLossAccountAttribution(inputs, [
         { accountId: "expense", originatingAccountIds: ["origin"] },
-      ]).get("expense")?.assetClass,
-    ).toBe(AssetClass.EQUITIES);
+      ]).get("expense")?.assetClassId,
+    ).toBe(defaultAssetClassIds.EQUITIES);
     const pooled = buildGainLossAccountAttribution(inputs, [
       { accountId: "expense", originatingAccountIds: ["origin", "second"] },
     ]);
-    expect(pooled.get("expense")).toMatchObject({ assetClass: null });
+    expect(pooled.get("expense")).toMatchObject({ assetClassId: null });
     expect(
       pooled.get("virtual:transfer-clearing:account:currency:USD"),
     ).toMatchObject({
-      assetClass: null,
+      assetClassId: null,
       explanation: expect.stringContaining("Unclassified"),
     });
     const hierarchy = buildGainsLossesBreakdown({

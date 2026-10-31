@@ -5,11 +5,11 @@ import { DataGrid } from "../grid/data-grid";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import {
   useReorderGroupChildren,
-  type ReorderGroupChildRow,
+  type ReorderSiblingRow,
 } from "../../hooks/use-reorder-group-children";
 export type { ReorderGroupChildRow } from "../../hooks/use-reorder-group-children";
 
-export function ReorderGroupChildrenModal({
+export function ReorderGroupChildrenModal<T extends ReorderSiblingRow>({
   opened,
   onClose,
   rowName,
@@ -20,8 +20,8 @@ export function ReorderGroupChildrenModal({
   opened: boolean;
   onClose: () => void;
   rowName: string;
-  initialRows: ReorderGroupChildRow[];
-  onReorder: (rows: ReorderGroupChildRow[]) => Promise<void>;
+  initialRows: T[];
+  onReorder: (rows: T[]) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const { rows, gridVersion, reorder, retry, membershipChanged, submitState } =
@@ -38,11 +38,12 @@ export function ReorderGroupChildrenModal({
     onClose();
   };
 
-  const columnDefs = useMemo<ColDef<ReorderGroupChildRow>[]>(
+  const columnDefs = useMemo<ColDef<T>[]>(
     () => [
       {
         headerName: "Name",
-        field: "name",
+        colId: "name",
+        valueGetter: ({ data }) => data?.name,
         flex: 1,
         rowDrag: true,
         sortable: false,
@@ -54,10 +55,8 @@ export function ReorderGroupChildrenModal({
     [],
   );
 
-  const handleRowDragEnd = async (
-    event: RowDragEndEvent<ReorderGroupChildRow>,
-  ) => {
-    const reorderedRows: ReorderGroupChildRow[] = [];
+  const handleRowDragEnd = async (event: RowDragEndEvent<T>) => {
+    const reorderedRows: T[] = [];
     event.api.forEachNodeAfterFilterAndSort((node) => {
       if (node.data) reorderedRows.push(node.data);
     });

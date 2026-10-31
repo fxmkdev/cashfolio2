@@ -1,8 +1,4 @@
-import {
-  AccountType,
-  EquityAccountSubtype,
-  type AssetClass,
-} from "@/.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
 import type { AccountManagementContext } from "@/shared/account-presentation";
@@ -66,7 +62,7 @@ export function getTabDefinition(tabValue: TabValue) {
   return tabs.find((tab) => tab.value === tabValue) ?? tabs[0];
 }
 
-export type GroupAssetClassSummary = AssetClass | null | "Mixed";
+export type GroupAssetClassSummary = string | null | "Mixed";
 
 export type TreeRow = Awaited<
   ReturnType<typeof getAccountTreeData>

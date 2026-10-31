@@ -1,3 +1,4 @@
+import type { ClassificationNode } from "../../../shared/asset-class";
 import type { GainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toNumericMoney } from "../../money-boundary";
 import {
@@ -49,6 +50,7 @@ type PeriodOverviewEndOfPeriodStats = {
 };
 
 export function buildPeriodOverviewResponse(args: {
+  assetClasses?: readonly ClassificationNode[];
   selection: NormalizedPeriodSelection;
   minPeriodDate: Date;
   currentDay: Date;
@@ -114,8 +116,8 @@ export function buildPeriodOverviewResponse(args: {
       accountName: account.name,
       groupId: account.groupId,
       accountType: account.type,
-      assetClass:
-        args.gainLossAccountAttributionById?.get(account.id)?.assetClass ??
+      assetClassId:
+        args.gainLossAccountAttributionById?.get(account.id)?.assetClassId ??
         null,
       convertedBalanceInReferenceCurrency:
         args.endOfPeriodBalanceStats.convertedBalanceByAccountId.get(
@@ -203,17 +205,20 @@ export function buildPeriodOverviewResponse(args: {
   const buildAccountBreakdowns = (grouping: ReportingGrouping) => ({
     assetBreakdown: buildPeriodEndAllocationBreakdown({
       side: "asset",
+      assetClasses: args.assetClasses,
       grouping,
       items: convertedPeriodEndBalances,
       groupById: args.groupById,
     }),
     liabilityBreakdown: buildPeriodEndAllocationBreakdown({
       side: "liability",
+      assetClasses: args.assetClasses,
       grouping,
       items: convertedPeriodEndBalances,
       groupById: args.groupById,
     }),
     gainsLossesBreakdown: buildGainsLossesBreakdown({
+      assetClasses: args.assetClasses,
       contributions: args.gainsLossesContributions ?? [],
       accountAttributionById: args.gainLossAccountAttributionById,
       referenceCurrency: args.referenceCurrency,

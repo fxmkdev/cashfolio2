@@ -1,7 +1,7 @@
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
-import type { AssetClass } from "@/.prisma-client/enums";
+
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
@@ -10,7 +10,7 @@ import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Button, Text } from "@mantine/core";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
@@ -19,6 +19,7 @@ import type {
   TransformedFormValues,
 } from "@/components/account-editor/edit-account-modal";
 import type { ReorderGroupChildRow } from "@/components/account-tree/reorder-group-children-modal";
+import { useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import {
   useBalanceInReferenceCurrencyByGroupId,
@@ -354,7 +355,7 @@ function AccountsPageStoryHarness({
   const bulkApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const hasFailed = useRef(false);
   const [assetClasses, setAssetClasses] = useState<
-    Record<string, AssetClass | null>
+    Record<string, string | null>
   >({});
   const [submittedAccountIds, setSubmittedAccountIds] = useState<string[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -362,9 +363,17 @@ function AccountsPageStoryHarness({
   const [gainLossState, setGainLossState] = useState(initialGainLossState);
   const [tabState] = useState<TabValue>(initialTab);
   const [modeState, setModeState] = useState<AccountsMode>(initialMode);
-  const [createModalOpened, setCreateModalOpened] =
-    useState(startWithCreateModal);
-  const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
+  const creation = useAccountsPageModalState(initialTab);
+  const {
+    openCreateAccount,
+    createModalOpened,
+    setCreateModalOpened,
+    createGroupModalOpened,
+    setCreateGroupModalOpened,
+  } = creation;
+  useEffect(() => {
+    if (startWithCreateModal) openCreateAccount();
+  }, [startWithCreateModal, openCreateAccount]);
   const [editModalOpen, setEditModalOpen] = useState(startWithEditModal);
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
@@ -421,7 +430,7 @@ function AccountsPageStoryHarness({
     ).map((row) => ({
       ...row,
       ...(Object.hasOwn(assetClasses, row.id)
-        ? { assetClass: assetClasses[row.id] }
+        ? { assetClassId: assetClasses[row.id] }
         : {}),
     }));
     return tab.startsWith("EQUITY-") && !showArchived
@@ -490,7 +499,7 @@ function AccountsPageStoryHarness({
     scopeKey: `${assignmentScope}:${tab}:${mode}`,
     enabled: bulkAssignment && !isEquityTab,
     rows,
-    submitAssetClass: async (accountIds, assetClass) => {
+    submitAssetClass: async (accountIds, assetClassId) => {
       if (assignmentFailsOnce && !hasFailed.current) {
         hasFailed.current = true;
         throw new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
@@ -498,7 +507,7 @@ function AccountsPageStoryHarness({
       setSubmittedAccountIds(accountIds);
       setAssetClasses((current) => ({
         ...current,
-        ...Object.fromEntries(accountIds.map((id) => [id, assetClass])),
+        ...Object.fromEntries(accountIds.map((id) => [id, assetClassId])),
       }));
     },
     invalidate: () => setInvalidationCount((count) => count + 1),
@@ -513,10 +522,15 @@ function AccountsPageStoryHarness({
         : gainLossData,
     isGainLossLoading: gainLossState === "loading",
     isEquityTab,
+    categoryType: tab === "EQUITY-INCOME" ? "INCOME" : "EXPENSE",
     rowsByParentKey,
     referenceCurrency: "CHF",
     isReferenceBalancesLoading: false,
     balanceInReferenceCurrencyByGroupId,
+    onAddChild: (row, kind) =>
+      kind === "account"
+        ? creation.openCreateAccount(row.id)
+        : creation.openCreateGroup(row.id),
     onEditRow: (row) => {
       if (row.nodeType === "account") {
         setEditingAccount({
@@ -678,6 +692,8 @@ function AccountsPageStoryHarness({
             : expandGroups || initialMode === "archived"
         }
         onRowGroupOpened={() => undefined}
+        createAccountGroupId={creation.createAccountGroupId}
+        createGroupParentId={creation.createGroupParentId}
         createModalOpened={createModalOpened}
         editModalOpen={editModalOpen}
         createGroupModalOpened={createGroupModalOpened}
@@ -688,8 +704,8 @@ function AccountsPageStoryHarness({
         archivingRow={archivingRow}
         reorderingRow={reorderingRow}
         selectedSiblingRows={selectedSiblingRows}
-        onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
-        onOpenCreateAccount={() => setCreateModalOpened(true)}
+        onOpenCreateGroup={() => creation.openCreateGroup()}
+        onOpenCreateAccount={() => creation.openCreateAccount()}
         onOpenLedger={(nextAccountId) => {
           if (routeSmoke) {
             navigate({
@@ -1717,7 +1733,7 @@ const bulkRows: TreeRow[] = [
     ...activeAssetRows.find((row) => row.id === "account-checking")!,
     groupId: "portfolio",
     parentId: "portfolio",
-    assetClass: "FIXED_INCOME",
+    assetClassId: "FIXED_INCOME",
   },
   {
     ...activeAssetRows.find((row) => row.nodeType === "account")!,
@@ -1726,7 +1742,7 @@ const bulkRows: TreeRow[] = [
     groupId: "nested",
     parentId: "nested",
     isActive: false,
-    assetClass: "DIGITAL_ASSETS",
+    assetClassId: "DIGITAL_ASSETS",
   },
 ];
 
@@ -2167,5 +2183,177 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
     await expect(
       canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
     ).toHaveTextContent("Digital Assets");
+  },
+};
+
+export const ContextualAccountCreation: Story = {
+  render: () => <AccountsPageStoryHarness initialMode="active" expandGroups />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement),
+      body = within(canvasElement.ownerDocument.body);
+    const cash = await canvas.findByText("Cash", { exact: true });
+    await userEvent.hover(cash.closest<HTMLElement>(".ag-row")!);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Child to Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Add Account" }),
+    );
+    let dialog = within(
+      await body.findByRole("dialog", { name: "New Account" }),
+    );
+    expect(dialog.getByLabelText("Group")).toHaveValue("Cash");
+    expect(dialog.getByLabelText("Group")).toBeEnabled();
+    expect(
+      dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
+    ).toBeChecked();
+    expect(
+      dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
+    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Add Account" }));
+    dialog = within(await body.findByRole("dialog", { name: "New Account" }));
+    expect(dialog.getByLabelText("Group")).toHaveValue("");
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    await userEvent.hover(cash.closest<HTMLElement>(".ag-row")!);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Child to Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Add Group" }),
+    );
+    dialog = within(await body.findByRole("dialog", { name: "New Group" }));
+    expect(dialog.getByLabelText("Parent Group")).toHaveValue("Cash");
+    expect(
+      dialog.getByRole("checkbox", { name: "Include in Cash Flow" }),
+    ).toBeChecked();
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /^Name/ }),
+      "New Cash Group",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Add Group" }));
+    dialog = within(await body.findByRole("dialog", { name: "New Group" }));
+    expect(dialog.getByLabelText("Parent Group")).toHaveValue("");
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    const leaf = (
+      await canvas.findByText("Checking", { exact: true })
+    ).closest<HTMLElement>(".ag-row")!;
+    expect(
+      within(leaf).queryByRole("button", { name: /^Add Child/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      canvasElement.querySelector('.ag-row-pinned [aria-label^="Add Child"]'),
+    ).toBeNull();
+  },
+};
+
+export const ContextualIncomeCategoryCreation: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="EQUITY-INCOME"
+      expandGroups
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement),
+      body = within(canvasElement.ownerDocument.body);
+    const row = (
+      await canvas.findByText("Housing", { exact: true })
+    ).closest<HTMLElement>(".ag-row")!;
+    await userEvent.hover(row);
+    await userEvent.click(
+      within(row).getByRole("button", { name: "Add Child to Housing" }),
+    );
+    await waitFor(() =>
+      expect(
+        body.getByRole("menuitem", { name: "Add Income Category" }),
+      ).toBeVisible(),
+    );
+    expect(
+      body.queryByRole("menuitem", { name: "Add Expense Category" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      body.getByRole("menuitem", { name: "Add Income Category" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "New Category" }),
+    );
+    expect(dialog.getByLabelText("Category Group")).toHaveValue("Housing");
+    expect(dialog.getByLabelText("Category Group")).toBeEnabled();
+  },
+};
+
+export const ArchivedGroupsHaveNoChildCreation: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="archived" expandGroups />
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("treegrid");
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelectorAll(".ag-row:not(.ag-opacity-zero)"),
+      ).not.toHaveLength(0),
+    );
+    expect(
+      within(canvasElement).queryByRole("button", { name: /^Add Child/ }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+function CreationScopeHarness() {
+  const [scope, setScope] = useState("book-one:INCOME");
+  const state = useAccountsPageModalState(scope);
+  return (
+    <>
+      <Button
+        onClick={() => {
+          state.openCreateAccount("parent");
+          state.openCreateGroup("parent");
+        }}
+      >
+        Open Contextual Creation
+      </Button>
+      <Button onClick={() => setScope("book-one:EXPENSE")}>Change Tab</Button>
+      <Button onClick={() => setScope("book-two:EXPENSE")}>Change Book</Button>
+      <Text data-testid="creation-state">
+        {JSON.stringify([
+          state.createModalOpened,
+          state.createAccountGroupId,
+          state.createGroupModalOpened,
+          state.createGroupParentId,
+        ])}
+      </Text>
+    </>
+  );
+}
+export const CreationDefaultsResetOnBookAndTabChanges: Story = {
+  render: () => <CreationScopeHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const action of ["Change Tab", "Change Book"]) {
+      await userEvent.click(
+        canvas.getByRole("button", { name: "Open Contextual Creation" }),
+      );
+      expect(canvas.getByTestId("creation-state")).toHaveTextContent(
+        '[true,"parent",true,"parent"]',
+      );
+      await userEvent.click(canvas.getByRole("button", { name: action }));
+      await waitFor(() =>
+        expect(canvas.getByTestId("creation-state")).toHaveTextContent(
+          "[false,null,false,null]",
+        ),
+      );
+    }
   },
 };

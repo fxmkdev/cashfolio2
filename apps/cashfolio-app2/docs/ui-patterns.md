@@ -62,7 +62,7 @@ existing Storybook titles and story export names stable when moving files.
 
 ## Mantine
 
-- **Mantine 9** for all UI components, forms (`@mantine/form`), and theming
+- **Mantine 9** for general UI components, forms (`@mantine/form`), and theming
 - **AG Grid Enterprise** wrapped in `src/components/grid/data-grid.tsx` with
   tree data support
 - Use `LinkAnchor` from `src/components/navigation/link-anchor.tsx` for in-app
@@ -72,6 +72,18 @@ existing Storybook titles and story export names stable when moving files.
   navigation control should look like a Mantine button.
 - Use `LinkTab` from `src/components/navigation/link-tab.tsx` for tab-like
   navigation that changes route/search state.
+
+## Tables
+
+Use **AG Grid Enterprise** through the shared `DataGrid` wrapper
+(`src/components/grid/data-grid.tsx`) for all tabular UI, including small,
+read-only, and modal tables. This keeps theme, locale, scrolling, resizing, and
+row actions consistent. Apply this guideline when adding or changing tables;
+existing tables elsewhere can be migrated in focused follow-ups.
+
+Use native tree data for hierarchical records, with stable row IDs. Keep stored
+manual ordering authoritative when rows have explicit reorder actions. Follow
+the shared column and actions-cell conventions below.
 
 ## UI Copy
 
@@ -339,10 +351,10 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class then Account; recorded adjustments use their counterpart
-financial account's class and group. Changing classification does not change
-amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
-Equities asset class.
+or the Asset Class hierarchy then Account; recorded adjustments use their
+counterpart financial account's class and group. Changing classification does
+not change amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to
+the Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -404,6 +416,41 @@ submit UX and prevent duplicate requests.
   special-impact actions such as archive.
 - Tooltip `openDelay` is configured globally in `src/theme.ts` (default 500ms) —
   do not override per-instance unless necessary
+
+Use the following shared icon reference for hierarchy actions:
+
+| Action             | Tabler Icon      | Color  |
+| ------------------ | ---------------- | ------ |
+| Create / Add Child | `IconPlus`       | Blue   |
+| Edit               | `IconPencil`     | Blue   |
+| Reorder Siblings   | `IconArrowsSort` | Blue   |
+| Archive            | `IconArchive`    | Yellow |
+| Unarchive          | `IconArchiveOff` | Blue   |
+| Delete             | `IconTrash`      | Red    |
+
+Keep row actions in **Reorder → Edit → Add Child → Archive/Delete** order,
+showing only applicable actions. Use the shared grid action-cell styles so
+actions appear on row hover and keyboard focus. Disabled actions retain a
+tooltip explaining why they are unavailable; pending mutations prevent duplicate
+submission.
+
+## Contextual Child Creation
+
+Active, real account/category groups expose an `IconPlus` menu labelled **Add
+Child to {name}**. Financial groups offer **Add Account** and **Add Group**;
+category groups offer the current tab's **Add Income Category** or **Add Expense
+Category**, plus **Add Group**. Leaf accounts/categories, archived groups,
+virtual Archived rows, and totals have no child-creation action. Asset classes
+can contain children at any level, so their Add Child action opens the class
+editor directly.
+
+Reuse the normal creation dialog with an editable parent prefilled through
+creation-only `defaultGroupId` / `defaultParentGroupId` props. Keep edit-mode
+`initialValues` separate: a prefilled parent must still create a new entity.
+Preserve the editor's type compatibility, validation, and cash-flow inheritance.
+Clear contextual defaults on cancellation, successful creation, book/tab
+changes, and toolbar creation. Retain drafts on failed submission and use shared
+waiting, retry, uncertain-outcome, and refresh feedback.
 
 ## Top Page Header Pattern
 
@@ -478,8 +525,8 @@ submit UX and prevent duplicate requests.
 - Double-clicking a drillable chart node drills into its children.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Account. Account
-  metadata drives navigation from chart and table leaves to the unified
+- Gains/Losses supports Account Structure and Asset Class → Subclass → Account.
+  Account metadata drives navigation from chart and table leaves to the unified
   explanation, including calculated holdings, recorded adjustments, and
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
 - Asset-class nodes drill into their accounts in charts and expand/collapse in
@@ -592,7 +639,7 @@ sign; debt amounts are positive magnitudes in those reports.
 ## Accounts List Columns
 
 - The `Name` column is frozen on the left, starts at 320px, and can be resized
-  with a 320px minimum width. Row actions are frozen on the right at 145px. When
+  with a 320px minimum width. Row actions are frozen on the right at 170px. When
   columns no longer fit, scroll horizontally inside the grid to reach the middle
   columns. In both category tabs, `Name` is unpinned and flexes to fill the
   space beside the row actions, retaining its 320px minimum width. These layouts
@@ -1208,20 +1255,27 @@ dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 
 ## Sibling Reorder Pattern
 
-- The main accounts tree does not use row dragging.
+- Main hierarchy grids do not use row dragging. Accounts, categories, and asset
+  classes share this pattern.
 - Reorder action availability follows the generic `Action Availability Pattern`.
 - Availability is based on sibling count under the same parent.
 - Clicking the action opens `ReorderGroupChildrenModal`
   (`src/components/account-tree/reorder-group-children-modal.tsx`) and shows all
-  siblings (accounts and groups) of the clicked row.
+  siblings of the clicked row, including that row, independent of main-grid
+  expansion. Accounts and categories include both leaves and groups.
 - The modal uses a compact AG Grid with:
   - no header (`headerHeight={0}`)
   - one draggable name column
   - `rowDragManaged` for in-modal reordering
 - This also supports root-level rows (no parent group), so root groups can be
   reordered.
-- On row drag end, the modal sends updated sibling `sortOrder` values to
-  `reorderAccountTreeItems`; the route then invalidates loader data.
+- Save on each drop through the existing authorized, serialized mutation.
+  Validate a unique complete permutation of the current same-parent membership
+  before any writes. Reject stale, foreign, or missing IDs atomically.
+- Reordering changes order only; reparenting belongs in the edit dialog.
+- Reuse the shared hook's confirmed-order restoration and option refresh after
+  failure, busy retries, and uncertain-outcome feedback. Refresh the tree and
+  invalidate affected reporting caches after a successful save.
 
 ## Node Type Mixing in Tree Data
 
@@ -1429,3 +1483,26 @@ than local calendar days.
 
 The app no longer directly depends on date-fns. Date validation, comparison,
 formatting, and arithmetic use the shared Temporal-backed helpers.
+
+## Classification Management
+
+Settings → Asset Classes exposes the Asset Class tree through the shared
+`DataGrid` with native tree data. The tab and document title are Asset Classes;
+the page has no additional visible headings. Class identities and the generic
+classification model remain unchanged. Users can create roots and children,
+rename, change parents, and reorder siblings through the shared sibling dialog.
+The grid starts fully expanded and retains expansion state across data refreshes
+using stable class IDs. Siblings retain their configured order; sorting and
+filtering are disabled. The flexible name column and direct active/archived
+assignment counts are resizable, and row actions are pinned on the right using
+the shared row-hover styling. The grid handles scrolling and its empty state.
+The scheme is protected; all default nodes remain editable. Parent selectors
+exclude the edited class and descendants, with the same checks repeated on the
+server. Names follow existing sibling-name validation.
+
+Parents cannot be deleted until their children are moved or deleted. Leaf
+deletion shows direct active/archived assignment counts and requires choosing a
+replacement class or Unclassified. Submission uses shared waiting, error, and
+refresh feedback, retaining drafts on failure. All classification changes apply
+to historical reports. Additional classification schemes and percentage splits
+are deferred.

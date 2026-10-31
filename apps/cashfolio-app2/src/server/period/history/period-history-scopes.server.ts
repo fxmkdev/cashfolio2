@@ -256,6 +256,7 @@ export function buildHistoryGainLossScopeOptions(args: {
         label,
         kind: "gainLoss",
         grouping: args.grouping ?? "assetClass",
+        ...(node.sortOrder !== undefined ? { sortOrder: node.sortOrder } : {}),
         treeLabel: node.label,
         ...(node.account
           ? {

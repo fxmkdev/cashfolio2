@@ -144,7 +144,7 @@ must continue to respect the supported browser baseline.
 
 ### Account Mutation Operations
 
-Account mutations accept optional nullable `assetClass`. Creation stores null
+Account mutations accept optional nullable `assetClassId`. Creation stores null
 when omitted; updates preserve an omitted value and clear it when explicitly
 null. Non-null classification is restricted to assets and liabilities, but is
 independent of Unit and cash-flow eligibility. It remains editable independently
@@ -152,22 +152,40 @@ of immutable instrument identity. Statement imports preserve classification;
 system-created equity accounts remain null.
 
 `setAccountsAssetClass` accepts an account book ID, a nonempty list of account
-IDs, and an explicit nullable asset class. IDs are deduplicated. Authorization
-and the serialized account-book mutation boundary apply; every target must exist
-in that book and be a balance account before any write. Active and archived
-accounts are eligible. The transaction updates only asset class and invalidates
-period base-data caches after commit. It returns the target count. The selection
-toolbar submits explicit account IDs frozen when the dialog opens. Group
-checkboxes select filtered descendant accounts in the grid; group IDs and newly
-added group members are excluded from the submitted snapshot. There is no
+IDs, and an explicit nullable asset-class node ID. IDs are deduplicated.
+Authorization and the serialized account-book mutation boundary apply; every
+target must exist in that book and be a balance account before any write. Active
+and archived accounts are eligible. The transaction updates only asset class and
+invalidates period base-data caches after commit. It returns the target count.
+The selection toolbar submits explicit account IDs frozen when the dialog opens.
+Group checkboxes select filtered descendant accounts in the grid; group IDs and
+newly added group members are excluded from the submitted snapshot. There is no
 group-level value or ongoing inheritance.
+
+Asset-class IDs are validated against the account book’s protected scheme inside
+the mutation transaction. Reads expose a nullable `assetClassId`; assignments
+are stored separately from accounts.
+
+`getAssetClasses` returns the book-specific tree and direct active/archived
+assignment counts. `saveAssetClass`, `reorderAssetClasses`, and
+`deleteAssetClass` use the existing same-origin, authorization, retry, and
+serialized book boundaries. Deletion requires an explicit replacement ID or
+null; children must be moved or deleted first. Reassignment and deletion commit
+atomically. Successful mutations invalidate period caches after commit.
+`reorderAssetClasses({ accountBookId, parentId, orderedIds })` requires an
+explicit nullable parent and a unique, complete permutation of its current
+siblings. Parent and membership checks run inside the serialized transaction;
+only then are sequential sort orders assigned. Invalid or stale membership
+leaves all rows unchanged. No schema change is required for sibling reordering.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
-trigger, post-commit cleanup, and router invalidation. Base-data cache v10
-includes the field. Classification drives the
-[Asset Class → Account reporting hierarchy](#asset-class-gainloss-reporting) in
-Period overview and History; Unit and instrument identity continue to control
+trigger, post-commit cleanup, and router invalidation. Base-data cache v11
+includes the assignment ID and the tree in the same RepeatableRead snapshot.
+History metrics v13 includes hierarchical scopes and ordering. Classification
+drives the
+[Asset Class → Subclass → Account reporting hierarchy](#asset-class-gainloss-reporting)
+in Period overview and History; Unit and instrument identity continue to control
 valuation and FIFO calculations independently of classification.
 
 `src/server/accounts/accounts-mutation-operations.ts` keeps the existing
@@ -332,14 +350,14 @@ namespaces and preserves global valuation caches.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v10 and History metrics v11 store monetary values as tagged exact
+  `period:history:metrics:v13:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v11 and History metrics v13 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -544,14 +562,14 @@ are split into dedicated modules under `src/server/period/`:
 ## Asset-Class Gain/Loss Reporting
 
 Period overview and History share the contribution pipeline and support Account
-Structure and `Asset Class → Account` breakdowns. Overview returns
+Structure and `Asset Class → Subclass → Account` breakdowns. Overview returns
 `accountBreakdownsByGrouping`, keyed by `accountStructure` and `assetClass`,
 with `assetBreakdown`, `liabilityBreakdown`, and `gainsLossesBreakdown` per
 lens. Both variants reuse one valuation pass. G/L breakdowns carry aggregate
 realized, unrealized, and total amounts, computed from exact contributions
-before rounding. Current `Account.assetClass` applies to every period, including
-archived assets and liabilities. Unit and instrument identity continue to
-control valuation and FIFO independently of classification.
+before rounding. Current account classification applies to every period,
+including archived assets and liabilities. Unit and instrument identity continue
+to control valuation and FIFO independently of classification.
 
 Calculated holdings G/L uses the owning account's classification. Recorded
 Gain/Loss equity bookings use their resolved asset/liability counterpart.
@@ -605,7 +623,7 @@ different month or year. Calculated-event and execution-residual links retain
 the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v10 adds originating-account IDs and recorded booking descriptions.
-History metrics v11 carries class/account scopes and explicit account metadata;
+History metrics v13 carries class/account scopes and explicit account metadata;
 older hierarchy payloads are not reused. Classification edits already advance
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -934,9 +952,9 @@ accounts follow the same rule. Net worth remains Assets minus Liabilities and is
 unchanged by this classification.
 
 Allocation charts and tables support either the original account/group hierarchy
-or flat Asset Class → Account grouping on each side, even when a structural
-group's accounts have mixed signs. Classification by balance sign precedes
-either grouping; total amounts use the same exact balances. Unavailable
+or flat Asset Class → Subclass → Account grouping on each side, even when a
+structural group's accounts have mixed signs. Classification by balance sign
+precedes either grouping; total amounts use the same exact balances. Unavailable
 valuations are omitted; both allocation views report the same overall
 missing-balance count. Amounts on the liability side are positive debt
 magnitudes. Existing allocation rounding and hidden-small-balance discrepancy
@@ -950,8 +968,9 @@ rounding. The complete real Balance Account hierarchy is loaded once per
 request, including archived accounts, zero balances, and empty Balance Account
 groups. Virtual transfer-clearing scopes are merged across period points.
 Unavailable valuations remain omitted from amounts without removing real scope
-options. History metrics v11 replaces asset/liability scope metadata with Net
-Worth scope metadata; base-data v10 and valuation caches remain compatible.
+options. History metrics v13 replaces asset/liability scope metadata with Net
+Worth scope metadata; base-data v11 includes the classification tree; valuation
+caches remain compatible.
 
 ### Unified account management queries
 

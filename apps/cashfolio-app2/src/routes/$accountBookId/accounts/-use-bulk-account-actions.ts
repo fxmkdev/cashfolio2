@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { GridApi } from "ag-grid-enterprise";
-import type { AssetClass } from "@/.prisma-client/enums";
+
 import { notifications } from "@mantine/notifications";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
@@ -17,7 +17,7 @@ export function useBulkAccountActions(args: {
   rows: TreeRow[];
   submitAssetClass: (
     accountIds: string[],
-    assetClass: AssetClass | null,
+    assetClassId: string | null,
   ) => Promise<unknown>;
   invalidate: () => void;
   onRefreshConstraints?: () => Promise<void>;
@@ -107,9 +107,9 @@ export function useBulkAccountActions(args: {
       setAssetClassTarget(undefined);
     },
     onRefreshConstraints: args.onRefreshConstraints,
-    applyAssetClass: async (assetClass: AssetClass | null) => {
+    applyAssetClass: async (assetClassId: string | null) => {
       if (!assetClassTarget) return;
-      await args.submitAssetClass(assetClassTarget.accountIds, assetClass);
+      await args.submitAssetClass(assetClassTarget.accountIds, assetClassId);
       setAssetClassTarget(undefined);
       clearSelection();
       args.invalidate();

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   createAccountInitialValues,
   type AccountInitialValues,
@@ -12,13 +12,35 @@ export type RowTarget = {
   name: string;
 };
 
-export function useAccountsPageModalState() {
-  const [createModalOpened, setCreateModalOpened] = useState(false);
+export function useAccountsPageModalState(scopeKey?: string) {
+  const [createModalOpened, setCreateAccountOpened] = useState(false);
+  const [createGroupModalOpened, setCreateGroupOpened] = useState(false);
+  const [createAccountGroupId, setCreateAccountGroupId] = useState<string>();
+  const [createGroupParentId, setCreateGroupParentId] = useState<string>();
+  const setCreateModalOpened = useCallback((opened: boolean) => {
+    setCreateAccountOpened(opened);
+    if (!opened) setCreateAccountGroupId(undefined);
+  }, []);
+  const setCreateGroupModalOpened = useCallback((opened: boolean) => {
+    setCreateGroupOpened(opened);
+    if (!opened) setCreateGroupParentId(undefined);
+  }, []);
+  const openCreateAccount = useCallback((groupId?: string) => {
+    setCreateAccountGroupId(groupId);
+    setCreateAccountOpened(true);
+  }, []);
+  const openCreateGroup = useCallback((parentId?: string) => {
+    setCreateGroupParentId(parentId);
+    setCreateGroupOpened(true);
+  }, []);
+  useEffect(() => {
+    setCreateModalOpened(false);
+    setCreateGroupModalOpened(false);
+  }, [scopeKey, setCreateModalOpened, setCreateGroupModalOpened]);
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
   >();
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
   const [editingGroup, setEditingGroup] = useState<
     { id: string; initialValues: AccountGroupInitialValues } | undefined
   >();
@@ -58,6 +80,10 @@ export function useAccountsPageModalState() {
   }, []);
 
   return {
+    createAccountGroupId,
+    createGroupParentId,
+    openCreateAccount,
+    openCreateGroup,
     createModalOpened,
     setCreateModalOpened,
     editingAccount,

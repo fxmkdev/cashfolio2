@@ -293,24 +293,27 @@ describe("unified balance account migration against disposable PostgreSQL", () =
   });
 
   it("preserves asset classification and enforces its balance-account constraint", async () => {
+    // This suite deliberately stops at the balance-account migration. Query its
+    // historical column directly rather than using today's classification model.
+    const rows = await db.$queryRaw<
+      Array<{ type: string; assetClass: string }>
+    >`
+      SELECT "type"::text AS "type", "assetClass"::text AS "assetClass"
+      FROM "Account" WHERE "id" = 'archived-asset' AND "accountBookId" = 'book'
+    `;
+    expect(rows).toEqual([
+      { type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" },
+    ]);
+    await expect(db.$executeRaw`
+      UPDATE "Account" SET "assetClass" = 'EQUITIES'
+      WHERE "id" = 'expense' AND "accountBookId" = 'book'
+    `).rejects.toThrow();
     expect(
-      await db.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: { id: "archived-asset", accountBookId: "book" },
-        },
-        select: { type: true, assetClass: true },
-      }),
-    ).toEqual({ type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" });
-    await expect(
-      db.account.update({
-        where: { id_accountBookId: { id: "expense", accountBookId: "book" } },
-        data: { assetClass: "EQUITIES" },
-      }),
-    ).rejects.toThrow();
-    await db.account.update({
-      where: { id_accountBookId: { id: "liability", accountBookId: "book" } },
-      data: { assetClass: "FIXED_INCOME" },
-    });
+      await db.$executeRaw`
+      UPDATE "Account" SET "assetClass" = 'FIXED_INCOME'
+      WHERE "id" = 'liability' AND "accountBookId" = 'book'
+    `,
+    ).toBe(1);
   });
 
   it("keeps cache triggers active and their revisions transactional", async () => {

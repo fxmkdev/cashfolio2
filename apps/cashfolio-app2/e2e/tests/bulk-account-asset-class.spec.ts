@@ -1,5 +1,11 @@
+import { createClassifiedAccounts } from "../support/classifications";
+import {
+  assetClassSelection,
+  withAssetClassId,
+} from "../../src/server/classification-data";
+import { defaultAssetClassIds } from "../../src/shared/asset-class";
 import { createId } from "@paralleldrive/cuid2";
-import { AssetClass, AccountType, Unit } from "../../src/.prisma-client/enums";
+import { AccountType, Unit } from "../../src/.prisma-client/enums";
 import { prisma } from "../support/db-client";
 import { seedDatabase } from "../support/db";
 import {
@@ -26,8 +32,9 @@ test("assigns selected active and archived accounts, replaces existing classes, 
 }) => {
   const book = await seedDatabase({ userExternalId: e2eExternalId });
   const ids = [createId(), createId()];
-  await prisma.account.createMany({
-    data: ids.map((id, index) => ({
+  await createClassifiedAccounts(
+    prisma,
+    ids.map((id, index) => ({
       id,
       accountBookId: book.accountBookId,
       name: `Bulk Selection ${index}`,
@@ -35,9 +42,9 @@ test("assigns selected active and archived accounts, replaces existing classes, 
       unit: Unit.CURRENCY,
       currency: "CHF",
       isActive: index === 0,
-      assetClass: AssetClass.FIXED_INCOME,
+      assetClassId: defaultAssetClassIds.FIXED_INCOME,
     })),
-  });
+  );
   await page.goto(`/${book.accountBookId}/accounts`);
   // The grid loads lazily; wait for its Archived wrapper before counting expanders.
   await expect(page.locator('[row-id="__archived__:root"]')).toBeVisible();
@@ -83,11 +90,16 @@ test("assigns selected active and archived accounts, replaces existing classes, 
   ).toHaveCount(0);
   await expect
     .poll(async () =>
-      (await prisma.account.findMany({ where: { id: { in: ids } } })).map(
-        (account) => account.assetClass,
-      ),
+      (
+        await prisma.account
+          .findMany({
+            include: { classifications: assetClassSelection },
+            where: { id: { in: ids } },
+          })
+          .then((accounts) => accounts.map(withAssetClassId))
+      ).map((account) => account.assetClassId),
     )
-    .toEqual([AssetClass.EQUITIES, AssetClass.EQUITIES]);
+    .toEqual([defaultAssetClassIds.EQUITIES, defaultAssetClassIds.EQUITIES]);
   for (const id of ids) {
     const row = page.locator(`.ag-row[row-id="${id}"]`).first();
     await expect(row.locator('[col-id="assetClass"]')).toHaveText("Equities");
@@ -99,22 +111,30 @@ test("assigns selected active and archived accounts, replaces existing classes, 
   await applyClass(page, "Unclassified");
   await expect
     .poll(async () =>
-      (await prisma.account.findMany({ where: { id: { in: ids } } })).map(
-        (account) => account.assetClass,
-      ),
+      (
+        await prisma.account
+          .findMany({
+            include: { classifications: assetClassSelection },
+            where: { id: { in: ids } },
+          })
+          .then((accounts) => accounts.map(withAssetClassId))
+      ).map((account) => account.assetClassId),
     )
     .toEqual([null, null]);
   expect(
     (
-      await prisma.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: {
-            id: book.cashAccount.id,
-            accountBookId: book.accountBookId,
+      await prisma.account
+        .findUniqueOrThrow({
+          include: { classifications: assetClassSelection },
+          where: {
+            id_accountBookId: {
+              id: book.cashAccount.id,
+              accountBookId: book.accountBookId,
+            },
           },
-        },
-      })
-    ).assetClass,
+        })
+        .then(withAssetClassId)
+    ).assetClassId,
   ).toBeNull();
 });
 
@@ -140,8 +160,9 @@ test("group checkbox selects collapsed and archived descendants while allowing i
     },
   });
   const ids = [createId(), createId(), createId()];
-  await prisma.account.createMany({
-    data: ids.map((id, index) => ({
+  await createClassifiedAccounts(
+    prisma,
+    ids.map((id, index) => ({
       ...common,
       id,
       name: `Portfolio Holding ${index}`,
@@ -149,9 +170,9 @@ test("group checkbox selects collapsed and archived descendants while allowing i
       currency: "CHF",
       groupId: index === 2 ? nested.id : group.id,
       isActive: index === 0,
-      assetClass: AssetClass.DIGITAL_ASSETS,
+      assetClassId: defaultAssetClassIds.DIGITAL_ASSETS,
     })),
-  });
+  );
   await page.goto(`/${book.accountBookId}/accounts`);
   const row = page.locator(`.ag-row[row-id="${group.id}"]`).first();
   await expect(row).toBeVisible();
@@ -179,29 +200,43 @@ test("group checkbox selects collapsed and archived descendants while allowing i
     .poll(
       async () =>
         await prisma.account.count({
-          where: { id: { in: ids.slice(1) }, assetClass: AssetClass.EQUITIES },
+          where: {
+            id: { in: ids.slice(1) },
+            classifications: {
+              some: {
+                schemeId: "assetClass",
+                nodeId: defaultAssetClassIds.EQUITIES,
+              },
+            },
+          },
         }),
     )
     .toBe(2);
   expect(
     (
-      await prisma.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: { id: ids[0], accountBookId: book.accountBookId },
-        },
-      })
-    ).assetClass,
-  ).toBe(AssetClass.DIGITAL_ASSETS);
+      await prisma.account
+        .findUniqueOrThrow({
+          include: { classifications: assetClassSelection },
+          where: {
+            id_accountBookId: { id: ids[0], accountBookId: book.accountBookId },
+          },
+        })
+        .then(withAssetClassId)
+    ).assetClassId,
+  ).toBe(defaultAssetClassIds.DIGITAL_ASSETS);
   expect(
     (
-      await prisma.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: {
-            id: book.cashAccount.id,
-            accountBookId: book.accountBookId,
+      await prisma.account
+        .findUniqueOrThrow({
+          include: { classifications: assetClassSelection },
+          where: {
+            id_accountBookId: {
+              id: book.cashAccount.id,
+              accountBookId: book.accountBookId,
+            },
           },
-        },
-      })
-    ).assetClass,
+        })
+        .then(withAssetClassId)
+    ).assetClassId,
   ).toBeNull();
 });

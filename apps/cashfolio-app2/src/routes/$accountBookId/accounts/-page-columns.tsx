@@ -1,3 +1,5 @@
+import { useAssetClasses } from "@/classification-context";
+import type { ClassificationNode } from "@/shared/asset-class";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { buildAccountGainLossColumns } from "./-gain-loss-columns";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
@@ -29,6 +31,7 @@ import { shouldShowReferenceBalanceLoadingIndicator } from "./-reference-balance
 
 export function getAccountListAssetClassValue(
   data: AccountsGridRow | undefined,
+  assetClasses?: readonly ClassificationNode[],
 ): string | undefined {
   if (!data || isReferenceCurrencyTotalFooterRow(data)) {
     return undefined;
@@ -37,9 +40,9 @@ export function getAccountListAssetClassValue(
     if (data.groupAssetClass === undefined) return undefined;
     return data.groupAssetClass === "Mixed"
       ? "Mixed"
-      : getAssetClassLabel(data.groupAssetClass);
+      : getAssetClassLabel(data.groupAssetClass, assetClasses);
   }
-  return getAssetClassLabel(data.assetClass);
+  return getAssetClassLabel(data.assetClassId, assetClasses);
 }
 
 export function getAccountListUnitIdentifierDisplayValue(args: {
@@ -87,26 +90,31 @@ export function useAccountTreeColumnDefs(params: {
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;
+  categoryType?: "INCOME" | "EXPENSE";
   rowsByParentKey: Map<string, TreeRow[]>;
   referenceCurrency: string;
   isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
   onEditRow: (row: TreeRow) => void;
+  onAddChild?: (row: TreeRow, kind: "account" | "accountGroup") => void;
   onUnarchiveRow: (row: TreeRow) => Promise<void>;
   unarchivePending?: boolean;
   onArchiveRow: (row: RowTarget) => void;
   onDeleteRow: (row: RowTarget) => void;
   onReorderRow: (value: { name: string; parentKey: string }) => void;
 }): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
+  const assetClasses = useAssetClasses();
   const {
     gainLossData,
     isGainLossLoading,
     isEquityTab,
+    categoryType,
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow,
+    onAddChild,
     onUnarchiveRow,
     unarchivePending,
     onArchiveRow,
@@ -230,9 +238,10 @@ export function useAccountTreeColumnDefs(params: {
               resizable: true,
               sortable: false,
               filter: "agTextColumnFilter",
-              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
+              valueGetter: ({ data }) =>
+                getAccountListAssetClassValue(data, assetClasses),
               tooltipValueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data),
+                getAccountListAssetClassValue(data, assetClasses),
               cellRenderer: ({
                 value,
               }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
@@ -254,7 +263,7 @@ export function useAccountTreeColumnDefs(params: {
       {
         colId: "actions",
         headerName: "",
-        width: 145,
+        width: 170,
         pinned: "right",
         sortable: false,
         filter: false,
@@ -311,6 +320,24 @@ export function useAccountTreeColumnDefs(params: {
 
           return (
             <ActiveAccountTreeActionsCell
+              addChildLabel={`Add Child to ${data.name}`}
+              addAccountLabel={
+                isEquityTab
+                  ? categoryType === "INCOME"
+                    ? "Add Income Category"
+                    : "Add Expense Category"
+                  : "Add Account"
+              }
+              onAddAccount={
+                data.nodeType === "accountGroup" && onAddChild
+                  ? () => onAddChild(data, "account")
+                  : undefined
+              }
+              onAddGroup={
+                data.nodeType === "accountGroup" && onAddChild
+                  ? () => onAddChild(data, "accountGroup")
+                  : undefined
+              }
               archiveLabel={
                 getAccountConstraintMessage(
                   data.archiveDisabledReason,
@@ -342,11 +369,14 @@ export function useAccountTreeColumnDefs(params: {
       } satisfies ColDef<AccountsGridRow>,
     ];
   }, [
+    assetClasses,
     gainLossData,
     isGainLossLoading,
     isEquityTab,
+    categoryType,
     referenceCurrency,
     onEditRow,
+    onAddChild,
     onUnarchiveRow,
     unarchivePending,
     onArchiveRow,

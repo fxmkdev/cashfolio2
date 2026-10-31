@@ -4,7 +4,11 @@ import {
   moneyRound2,
   toMoney,
 } from "../../../shared/money";
-import type { AssetClass } from "../../../.prisma-client/enums";
+import {
+  classificationOptions,
+  defaultAssetClassNodes,
+  type ClassificationNode,
+} from "../../../shared/asset-class";
 import type { ReportingGrouping } from "../../../shared/reporting-grouping";
 import { buildAssetClassGroups } from "./period-reporting-groups";
 import {
@@ -25,12 +29,13 @@ import {
 export function buildPeriodEndAllocationBreakdown(args: {
   side: BalanceSide;
   grouping?: ReportingGrouping;
+  assetClasses?: readonly ClassificationNode[];
   items: Array<{
     accountId: string;
     accountName: string;
     groupId: string | null;
     accountType: AccountType;
-    assetClass?: AssetClass | null;
+    assetClassId?: string | null;
     convertedBalanceInReferenceCurrency: Money | null;
   }>;
   groupById: Map<string, PeriodGroupNode>;
@@ -49,7 +54,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
   skippedMissingReferenceBalanceCount: number;
 } {
   const breakdownItems: BreakdownHierarchyAccumulatorItem[] = [];
-  const assetClassGroups = buildAssetClassGroups();
+  const assetClassGroups = buildAssetClassGroups(args.assetClasses);
   let skippedMissingReferenceBalanceCount = 0;
 
   for (const item of args.items) {
@@ -70,7 +75,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
       accountName: item.accountName,
       groupId:
         args.grouping === "assetClass"
-          ? (item.assetClass ?? "unclassified")
+          ? (item.assetClassId ?? "unclassified")
           : item.groupId,
       amount: classified.amount,
     });
@@ -86,19 +91,33 @@ export function buildPeriodEndAllocationBreakdown(args: {
       args.grouping === "assetClass" ? assetClassGroups : args.groupById,
   });
   if (args.grouping === "assetClass") {
-    const classes = [...assetClassGroups.keys()];
-    hierarchy.sort(
-      (a, b) =>
-        classes.indexOf(a.id.slice("group:".length)) -
-        classes.indexOf(b.id.slice("group:".length)),
-    );
-    for (const node of hierarchy)
-      node.id = node.id.replace(/^group:/, "asset-class:");
-    for (let i = 0; i < hiddenAmountDiscrepancyNodeIds.length; i++) {
+    const classes = [
+      ...classificationOptions(args.assetClasses ?? defaultAssetClassNodes).map(
+        (node) => node.value,
+      ),
+      "unclassified",
+    ];
+    const updateNodes = (nodes: typeof hierarchy) => {
+      nodes.sort(
+        (a, b) =>
+          (a.kind === "group"
+            ? classes.indexOf(a.id.slice(6))
+            : Number.MAX_SAFE_INTEGER) -
+          (b.kind === "group"
+            ? classes.indexOf(b.id.slice(6))
+            : Number.MAX_SAFE_INTEGER),
+      );
+      for (const node of nodes) {
+        if (node.kind === "group")
+          node.id = node.id.replace(/^group:/, "asset-class:");
+        updateNodes(node.children);
+      }
+    };
+    updateNodes(hierarchy);
+    for (let i = 0; i < hiddenAmountDiscrepancyNodeIds.length; i++)
       hiddenAmountDiscrepancyNodeIds[i] = hiddenAmountDiscrepancyNodeIds[
         i
-      ].replace(/^group:/, "asset-class:");
-    }
+      ]!.replace(/^group:/, "asset-class:");
   }
   const topLevelBreakdown = buildBreakdownItems(
     hierarchy.map((node) => ({

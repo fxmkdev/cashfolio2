@@ -155,8 +155,12 @@ function compareGainLossScopeOptionPaths(
   leftPath: HistoryScopeOption[],
   rightPath: HistoryScopeOption[],
 ): number {
-  const leftRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(leftPath[0]!.value);
-  const rightRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(rightPath[0]!.value);
+  const leftRootRank =
+    leftPath[0]!.sortOrder ??
+    GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(leftPath[0]!.value);
+  const rightRootRank =
+    rightPath[0]!.sortOrder ??
+    GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(rightPath[0]!.value);
   const leftRank =
     leftRootRank === -1 ? GAIN_LOSS_ROOT_SCOPE_ORDER.length : leftRootRank;
   const rightRank =
@@ -176,6 +180,10 @@ function compareGainLossScopeOptionPaths(
       return 1;
     }
 
+    const orderComparison =
+      (leftOption.sortOrder ?? Number.MAX_SAFE_INTEGER) -
+      (rightOption.sortOrder ?? Number.MAX_SAFE_INTEGER);
+    if (orderComparison !== 0) return orderComparison;
     const labelComparison =
       leftOption.label.localeCompare(rightOption.label, "en") ||
       leftOption.value.localeCompare(rightOption.value, "en");
@@ -303,6 +311,14 @@ export const getPeriodHistory = createServerFn({
       data.gainLossScope,
       context.gainLossAccountScopes ?? [],
     );
+    if (
+      context.assetClassScopes &&
+      data.gainLossScope.startsWith("asset-class:") &&
+      !context.assetClassScopes.some(
+        (option) => option.value === data.gainLossScope,
+      )
+    )
+      data.gainLossScope = "total";
     const activeMetricScopeFilter = (() => {
       if (data.scopedMetric === "cashFlow" && data.cashFlowScope !== "total") {
         return {
@@ -368,6 +384,8 @@ export const getPeriodHistory = createServerFn({
       HistoryScopeSelection,
       HistoryScopeOption
     >();
+    for (const option of context.assetClassScopes ?? [])
+      gainLossScopeOptions.set(option.value, option);
     const netWorthScopeOptions = new Map<
       HistoryScopeSelection,
       HistoryScopeOption

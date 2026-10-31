@@ -12,6 +12,29 @@ export function clampGainsLossesPath(args: {
   hierarchy: GainsLossesBreakdownNode[];
   path: string[];
 }): string[] {
+  const selectedClass = args.path.findLast((id) =>
+    id.startsWith("asset-class:"),
+  );
+  if (selectedClass) {
+    const findPath = (
+      nodes: GainsLossesBreakdownNode[],
+      path: string[],
+    ): string[] | undefined => {
+      for (const node of nodes) {
+        const next = [...path, node.id];
+        if (node.id === selectedClass) return next;
+        const found = findPath(node.children, next);
+        if (found) return found;
+      }
+    };
+    const currentPath = findPath(args.hierarchy, []);
+    if (!currentPath) return [];
+    return clampDrillTreePath({
+      hierarchy: args.hierarchy,
+      path: currentPath,
+      isNodeDrillable: isGainsLossesNodeDrillable,
+    });
+  }
   return clampDrillTreePath({
     hierarchy: args.hierarchy,
     path: args.path,
@@ -26,7 +49,7 @@ export function getGainsLossesDrillState(args: {
 }) {
   return getDrillTreeState({
     hierarchy: args.hierarchy,
-    path: args.path,
+    path: clampGainsLossesPath(args),
     rootLabel: args.rootLabel,
     isNodeDrillable: isGainsLossesNodeDrillable,
   });

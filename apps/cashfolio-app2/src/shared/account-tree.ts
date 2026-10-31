@@ -1,5 +1,4 @@
 import type {
-  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -7,7 +6,7 @@ import type {
 import type { StatementImportCsvFormat } from "./statement-import-csv-format";
 
 export type AccountTreeRow = {
-  assetClass?: AssetClass | null;
+  assetClassId?: string | null;
   isVirtualArchivedGroup?: boolean;
   persistedParentId?: string | null;
   id: string;

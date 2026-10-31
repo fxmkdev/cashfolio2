@@ -108,7 +108,7 @@ export function createAccountsMutationActions(args: {
         data: {
           accountBookId: args.accountBookId,
           name: values.name!,
-          assetClass: values.assetClass,
+          assetClassId: values.assetClassId,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,
@@ -136,7 +136,7 @@ export function createAccountsMutationActions(args: {
           id: editingAccount.id,
           accountBookId: args.accountBookId,
           name: values.name!,
-          assetClass: values.assetClass,
+          assetClassId: values.assetClassId,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,
@@ -292,7 +292,9 @@ export function useAccountsPageController(args: {
   } = loaderData;
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
-  const modalState = useAccountsPageModalState();
+  const modalState = useAccountsPageModalState(
+    `${args.accountBookId}:${args.tab}`,
+  );
   const {
     isEquityTab,
     rowsWithAccountReferenceBalances,
@@ -451,9 +453,9 @@ export function useAccountsPageController(args: {
     scopeKey,
     enabled: !isEquityTab,
     rows,
-    submitAssetClass: (accountIds, assetClass) =>
+    submitAssetClass: (accountIds, assetClassId) =>
       setAccountsAssetClass({
-        data: { accountBookId: args.accountBookId, accountIds, assetClass },
+        data: { accountBookId: args.accountBookId, accountIds, assetClassId },
       }),
     invalidate: args.invalidate,
     onRefreshConstraints,
@@ -462,11 +464,23 @@ export function useAccountsPageController(args: {
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,
+    categoryType: args.tab === "EQUITY-INCOME" ? "INCOME" : "EXPENSE",
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: modalState.handleEditRow,
+    onAddChild: (row, kind) => {
+      if (
+        row.nodeType !== "accountGroup" ||
+        !row.isActive ||
+        row.isVirtualArchivedGroup ||
+        !accountGroups.some((group) => group.value === row.id)
+      )
+        return;
+      if (kind === "account") modalState.openCreateAccount(row.id);
+      else modalState.openCreateGroup(row.id);
+    },
     onUnarchiveRow: unarchiveRecovery.unarchive,
     unarchivePending: unarchiveRecovery.isPending,
     onArchiveRow: modalState.setArchivingRow,
@@ -497,6 +511,8 @@ export function useAccountsPageController(args: {
     pinnedBottomRowData,
     isGroupOpenByDefault,
     onRowGroupOpened,
+    createAccountGroupId: modalState.createAccountGroupId,
+    createGroupParentId: modalState.createGroupParentId,
     createModalOpened: modalState.createModalOpened,
     editModalOpen: modalState.editModalOpen,
     createGroupModalOpened: modalState.createGroupModalOpened,
@@ -507,8 +523,8 @@ export function useAccountsPageController(args: {
     archivingRow: modalState.archivingRow,
     reorderingRow: modalState.reorderingRow,
     selectedSiblingRows,
-    onOpenCreateGroup: () => modalState.setCreateGroupModalOpened(true),
-    onOpenCreateAccount: () => modalState.setCreateModalOpened(true),
+    onOpenCreateGroup: () => modalState.openCreateGroup(),
+    onOpenCreateAccount: () => modalState.openCreateAccount(),
     onOpenLedger: args.onOpenLedger,
     onCloseCreateAccount: () => modalState.setCreateModalOpened(false),
     onSubmitCreateAccount: actions.handleCreateAccount,

@@ -1,3 +1,4 @@
+import { defaultAssetClassIds } from "../shared/asset-class";
 import { fromUtcPlainDate, toUtcPlainDate } from "../shared/temporal-adapters";
 import {
   archivedHouseholdAccounts,
@@ -5,11 +6,7 @@ import {
 } from "./dataset-archived";
 import Decimal from "decimal.js";
 import { earliestDate } from "../shared/date";
-import {
-  AccountType,
-  AssetClass,
-  EquityAccountSubtype,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
 import {
   AAPL,
@@ -71,41 +68,59 @@ export function householdAccounts(target: SeedBook) {
       ...unit,
       groupKey,
       isCashAccount: true,
-      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
       ...(key === "current" ? { statementImportCsvFormat } : undefined),
     });
   }
-  for (const [key, name, groupKey, unit, assetClass] of [
-    ["aapl", "Apple shares", "securities", AAPL, AssetClass.EQUITIES],
-    ["msft", "Microsoft shares", "securities", MSFT, AssetClass.EQUITIES],
-    ["btc", "Bitcoin wallet", "crypto", BTC, AssetClass.DIGITAL_ASSETS],
+  for (const [key, name, groupKey, unit, assetClassId] of [
+    ["aapl", "Apple shares", "securities", AAPL, defaultAssetClassIds.EQUITIES],
+    [
+      "msft",
+      "Microsoft shares",
+      "securities",
+      MSFT,
+      defaultAssetClassIds.EQUITIES,
+    ],
+    [
+      "btc",
+      "Bitcoin wallet",
+      "crypto",
+      BTC,
+      defaultAssetClassIds.DIGITAL_ASSETS,
+    ],
     [
       "btc-transfer-source",
       "Bitcoin transfer source",
       "crypto",
       BTC,
-      AssetClass.DIGITAL_ASSETS,
+      defaultAssetClassIds.DIGITAL_ASSETS,
     ],
     [
       "btc-transfer-destination",
       "Bitcoin transfer destination",
       "crypto",
       BTC,
-      AssetClass.DIGITAL_ASSETS,
+      defaultAssetClassIds.DIGITAL_ASSETS,
     ],
-    ["eth", "Ethereum wallet", "crypto", ETH, AssetClass.DIGITAL_ASSETS],
+    [
+      "eth",
+      "Ethereum wallet",
+      "crypto",
+      ETH,
+      defaultAssetClassIds.DIGITAL_ASSETS,
+    ],
     [
       "pension",
       "Pillar 3a savings",
       "investments",
       CHF,
-      AssetClass.CASH_AND_CASH_EQUIVALENTS,
+      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
     ],
   ] as const) {
     addAccount(target, key, name, AccountType.BALANCE, {
       ...unit,
       groupKey,
-      assetClass,
+      assetClassId,
     });
   }
   addAccount(
@@ -116,7 +131,7 @@ export function householdAccounts(target: SeedBook) {
     {
       ...CHF,
       groupKey: "investments",
-      assetClass: AssetClass.OTHER_ASSETS,
+      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
     },
   );
   for (const [key, name] of [
@@ -125,7 +140,7 @@ export function householdAccounts(target: SeedBook) {
   ]) {
     addAccount(target, key, name, AccountType.BALANCE, {
       ...CHF,
-      assetClass: AssetClass.OTHER_ASSETS,
+      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
     });
   }
   for (const [key, name] of [

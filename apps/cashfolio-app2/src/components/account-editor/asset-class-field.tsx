@@ -1,3 +1,4 @@
+import { useAssetClasses } from "../../classification-context";
 import {
   ActionIcon,
   Group,
@@ -11,9 +12,10 @@ import {
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useId, useRef, useState } from "react";
-import { assetClassOptions } from "../../shared/asset-class";
+import { classificationOptions } from "../../shared/asset-class";
 
 export function AssetClassField(props: SelectProps) {
+  const assetClassOptions = classificationOptions(useAssetClasses());
   const inputId = useId();
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const [helpOpened, setHelpOpened] = useState(false);
@@ -70,6 +72,8 @@ export function AssetClassField(props: SelectProps) {
       <Select
         id={inputId}
         placeholder="Unclassified"
+        openOnFocus={false}
+        searchable
         clearable
         data={[{ value: "", label: "Unclassified" }, ...assetClassOptions]}
         {...props}
