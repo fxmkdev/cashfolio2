@@ -99,6 +99,7 @@ CREATE ROLE cashfolio_preview_provisioner
   LOGIN CREATEDB CREATEROLE NOINHERIT NOSUPERUSER NOREPLICATION NOBYPASSRLS;
 -- Use psql's interactive password command; never put the password in SQL/logs.
 \password cashfolio_preview_provisioner
+GRANT cashfolio_preview_provisioner TO CURRENT_USER WITH SET TRUE;
 CREATE DATABASE cashfolio_preview_control OWNER cashfolio_preview_provisioner;
 REVOKE ALL ON DATABASE cashfolio_preview_control FROM PUBLIC;
 -- Also restrict the project's initial database and every other connectable
@@ -106,6 +107,11 @@ REVOKE ALL ON DATABASE cashfolio_preview_control FROM PUBLIC;
 REVOKE ALL ON DATABASE neondb FROM PUBLIC;
 REVOKE ALL ON DATABASE postgres FROM PUBLIC;
 ```
+
+PostgreSQL 17 automatically grants a newly created role back to its creator with
+administration permission, but without `SET ROLE` permission. The explicit SET
+grant above lets a normal Neon operator assign the control database's ownership
+to the provisioner without requiring a superuser.
 
 The provisioner uses `CREATEROLE` to create restricted SQL roles and retains
 membership in its created roles for ownership/cleanup operations. It must not
