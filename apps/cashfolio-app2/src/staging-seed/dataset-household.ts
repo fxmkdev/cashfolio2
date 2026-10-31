@@ -492,6 +492,10 @@ export function householdTransactions(target: SeedBook, today: Date) {
     { accountKey: "msft", value: "-1" },
     { accountKey: "usd", value: "420" },
   ]);
+  post(target, today, "Grouping demo: EUR card purchase settled in CHF", [
+    { accountKey: "current", value: "-105" },
+    { accountKey: "travel", value: "100", metadata: EUR },
+  ]);
   transfer(target, today, "Cash withdrawal", "current", "wallet", "100");
   transfer(
     target,
