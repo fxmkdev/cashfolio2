@@ -8,16 +8,18 @@ migration-only.
 
 ## Deployment lifecycle
 
-1. The `Build` workflow builds the exact PR head, pushes it to the dedicated
-   preview image app, and uploads `preview-image.json` with the PR number, full
-   head SHA and immutable image digest. Forks cannot publish preview images.
+1. The `Build` workflow builds the exact PR head on Fly/Depot and pushes it to
+   the existing shared image repository using `FLY_CASHFOLIO_APP_STAGING_APP`
+   and `FLY_API_TOKEN`. It uploads `preview-image.json` with the PR number, full
+   head SHA and immutable image digest. PR tags include the head SHA, run ID and
+   attempt, separately from release tags. Forks cannot publish preview images.
 2. `Deploy preview` runs after Build finishes. It validates the GitHub run,
    successful image-build job, open same-repository PR and current head SHA.
    Other CI failures do not override a successful image build; their checks
    remain visible separately. Deployment now waits for the Build run to finish.
 3. The controller checks out its own default-branch commit. It treats downloaded
-   image metadata as data and validates its PR, SHA and dedicated registry path.
-   It never checks out PR code or executes a PR image on the provisioning
+   image metadata as data and validates its PR, SHA and configured registry
+   path. It never checks out PR code or executes a PR image on the provisioning
    runner.
 4. Through a verified connection to the fixed preview host, the controller
    creates or reuses the database and its two restricted roles. It stages only
@@ -116,8 +118,9 @@ Secrets in this environment:
   even-length lowercase hex. Generate it locally without logging it.
 - `SEED_USER_EXTERNAL_IDS`, `SEED_ADMIN_EXTERNAL_IDS`: comma-separated Logto
   IDs; admin IDs must be a nonempty subset of tester IDs.
-- `FLY_API_TOKEN`: nonproduction-only token that can create/delete preview apps,
-  stage their secrets and pull the dedicated preview images.
+- The existing `FLY_API_TOKEN` must be available to this environment, either
+  inherited from the repository or explicitly configured here. It must be able
+  to create/delete preview apps, stage their secrets and pull the shared images.
 - Existing preview secrets: `LOGTO_APP_SECRET`,
   `LOGTO_MANAGEMENT_API_APP_SECRET`, `CURRENCYLAYER_API_KEY`,
   `COINLAYER_API_KEY`, `MARKETSTACK_API_KEY`, `STAGING_REDIS_URL`.
@@ -139,18 +142,21 @@ Copy the existing preview deployment variables into the new environment:
 `FLY_ORG` (required), `FLY_PRIMARY_REGION`, `FLY_MIN_MACHINES_RUNNING`,
 `FLY_MEMORY`, `FLY_CPU_KIND`, `FLY_CPUS`, `LOGTO_ENDPOINT`, `LOGTO_APP_ID`,
 `LOGTO_MANAGEMENT_API_ENDPOINT`, `LOGTO_MANAGEMENT_API_RESOURCE`,
-`LOGTO_MANAGEMENT_API_APP_ID`. Set `FLY_PREVIEW_IMAGE_APP` to the dedicated,
-nonproduction Fly app used as the preview image repository.
+`LOGTO_MANAGEMENT_API_APP_ID`. Keep the repository variable
+`FLY_CASHFOLIO_APP_STAGING_APP` available to both the build and provisioning
+jobs; it identifies the existing shared image repository, even though its Fly
+app is named for staging.
 
-For the PR build job, set the repository variable `FLY_PREVIEW_IMAGE_APP` to
-that same app and repository secret `FLY_PREVIEW_BUILD_TOKEN` to a token limited
-to building/publishing its images. It has no provisioning, staging or production
-database credentials. A missing preview token does not fall back to another
-token.
+Same-repository contributors are trusted with the existing repository-level
+`FLY_API_TOKEN`: the PR workflow can access it when requesting Fly/Depot builds
+and publishing images. No separate preview image app, build token or Fly
+organization is required. This shared token does not isolate Fly access between
+previews, staging and production. Staging and production continue to deploy the
+same release image independently, without rebuilding it.
 
-Keep production credentials out of repository-wide secrets and preview
-configurations. Scope production deployment credentials to their own
-environment.
+Database provisioning credentials and the password-derivation key remain in the
+main-only environment. Keep staging seed and production database credentials out
+of PR build jobs and preview apps.
 
 ### Staging seed settings
 

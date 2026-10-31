@@ -3,6 +3,43 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const read = (path: string) =>
   readFileSync(new URL(`../../../../.github/${path}`, import.meta.url), "utf8");
+test("PR builds and preview deployment reuse the shared Fly image settings", () => {
+  const build = read("workflows/build.yml").replace(/\s+/g, " ");
+  const deploy = read("workflows/deploy-preview.yml").replace(/\s+/g, " ");
+  const prepare = readFileSync(
+    new URL("./prepare.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    build,
+    /IMAGE_APP: \$\{\{ vars\.FLY_CASHFOLIO_APP_STAGING_APP \}\}/,
+  );
+  assert.match(build, /FLY_API_TOKEN: \$\{\{ secrets\.FLY_API_TOKEN \}\}/);
+  assert.match(build, /password: \$\{\{ secrets\.FLY_API_TOKEN \}\}/);
+  assert.match(
+    deploy,
+    /FLY_CASHFOLIO_APP_STAGING_APP: \$\{\{ vars\.FLY_CASHFOLIO_APP_STAGING_APP \}\}/,
+  );
+  assert.match(
+    prepare,
+    /requireValue\(process\.env, "FLY_CASHFOLIO_APP_STAGING_APP"\)/,
+  );
+  for (const source of [build, deploy, prepare])
+    assert.doesNotMatch(source, /FLY_PREVIEW_(IMAGE_APP|BUILD_TOKEN)/);
+  assert.match(
+    build,
+    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
+  );
+  assert.match(
+    build,
+    /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/,
+  );
+  assert.match(
+    build,
+    /IMAGE_TAG="pr-\$\{PR_SHA\}-\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}"/,
+  );
+  assert.match(build, /flyctl deploy[\s\S]*--build-only[\s\S]*--push/);
+});
 test("deploy and cleanup share noncancelling per-PR concurrency and protected environment", () => {
   const deploy = read("workflows/deploy-preview.yml");
   const cleanup = read("workflows/cleanup-preview.yml");

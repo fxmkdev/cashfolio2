@@ -63,17 +63,18 @@ test("validates build provenance and the image job rather than trusting artifact
     );
   assert.throws(() => validateBuild(run, repository, [...jobs, ...jobs]));
 });
-test("accepts only a digest in the dedicated preview repository for the expected PR and SHA", () => {
-  const image = "registry.fly.io/preview-images@sha256:" + "b".repeat(64);
+test("accepts only a digest in the shared image repository for the expected PR and SHA", () => {
+  const imageApp = "cashfolio-staging";
+  const image = `registry.fly.io/${imageApp}@sha256:` + "b".repeat(64);
   const manifest = { pr: 42, sha, image };
-  assert.equal(validateManifest(manifest, 42, sha, "preview-images"), image);
+  assert.equal(validateManifest(manifest, 42, sha, imageApp), image);
   for (const value of [
     null,
     { ...manifest, pr: 43 },
     { ...manifest, sha: "b".repeat(40) },
-    { ...manifest, image: image.replace("preview-images", "production") },
-    { ...manifest, image: "registry.fly.io/preview-images:latest" },
+    { ...manifest, image: image.replace(imageApp, "other-app") },
+    { ...manifest, image: `registry.fly.io/${imageApp}:latest` },
     { ...manifest, image: image + "\nINJECT=true" },
   ])
-    assert.throws(() => validateManifest(value, 42, sha, "preview-images"));
+    assert.throws(() => validateManifest(value, 42, sha, imageApp));
 });
