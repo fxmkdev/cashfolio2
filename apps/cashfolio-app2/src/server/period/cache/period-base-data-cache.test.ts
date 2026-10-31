@@ -2,6 +2,13 @@ import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { toNumericMoney } from "../../money-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { deferred } from "../../test-support/deferred";
+import { withUserResourceRequest } from "../../test-support/resource-request";
+import {
+  checkResourceBudget,
+  getResourceSignal,
+  withResourceRequest,
+} from "../../resource-context.server";
 
 const redisState = vi.hoisted(() => ({
   kv: new Map<string, string>(),
@@ -79,6 +86,90 @@ vi.mock("../transfer-clearing/period-transfer-clearing", () => ({
 import * as periodBaseCache from "./period-base-data-cache";
 
 describe("period base-data cache", () => {
+  it("shares a same-user Redis miss after the initiating request cancels", async () => {
+    const ready = deferred();
+    const release = deferred();
+    let jobSignal!: AbortSignal;
+    redisClient.get.mockImplementationOnce(async () => {
+      jobSignal = getResourceSignal()!;
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = () =>
+      periodBaseCache.getOrLoadPeriodBaseData({
+        accountBookId: "book-1",
+        period: "2026-02",
+      });
+    const first = withUserResourceRequest(
+      "user",
+      async () => {
+        await load();
+      },
+      controller.signal,
+    );
+    await ready.promise;
+    const second = withUserResourceRequest("user", async () => {
+      await load();
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(redisClient.get).toHaveBeenCalledOnce();
+      controller.abort();
+      expect((await first).status).toBe(503);
+      expect(jobSignal.aborted).toBe(false);
+      release.resolve();
+      expect((await second).status).toBe(200);
+      expect(prisma.accountGroup.findMany).toHaveBeenCalledOnce();
+      expect(redisClient.setEx).toHaveBeenCalledOnce();
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it("does not join another request's cancelled Redis miss", async () => {
+    const ready = deferred();
+    const release = deferred();
+    redisClient.get.mockImplementationOnce(async () => {
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = (signal: AbortSignal) =>
+      withResourceRequest(signal, async () => {
+        await periodBaseCache.getOrLoadPeriodBaseData({
+          accountBookId: "book-1",
+          period: "2026-02",
+        });
+        return new Response();
+      });
+    const first = load(controller.signal);
+    await ready.promise;
+    const second = load(new AbortController().signal);
+    try {
+      await vi.waitFor(() => expect(redisClient.get).toHaveBeenCalledTimes(2));
+      controller.abort();
+      release.resolve();
+      expect((await first).status).toBe(503);
+      expect((await second).status).toBe(200);
+      expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+      expect(redisClient.setEx).toHaveBeenCalledTimes(1);
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
   beforeEach(() => {
     redisState.kv.clear();
     redisState.sets.clear();

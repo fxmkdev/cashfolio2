@@ -1,6 +1,7 @@
 import type { UserRole } from "../.prisma-client/enums";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { prisma } from "../prisma.server";
+import { bindResourceUser } from "../server/resource-context.server";
 
 export async function ensureUser() {
   const userContext = await ensureAuthenticated();
@@ -15,6 +16,7 @@ export async function ensureUser() {
       });
   if (!user || user.deletionPending)
     throw new Response("Forbidden", { status: 403 });
+  bindResourceUser(user.id);
   return user;
 }
 

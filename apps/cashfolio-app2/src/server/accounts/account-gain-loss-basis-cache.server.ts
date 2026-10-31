@@ -1,4 +1,7 @@
-import { checkResourceBudget } from "../resource-context.server";
+import {
+  checkResourceBudget,
+  createUserScopedSharedWork,
+} from "../resource-context.server";
 import { rethrowResourceError } from "../resource-error";
 import { prisma } from "../../prisma.server";
 import { getRedisClient } from "../../redis.server";
@@ -28,7 +31,7 @@ import {
 const TTL_SECONDS = 7 * 24 * 60 * 60;
 const MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 type Range = Awaited<ReturnType<typeof loadAccountGainLossRange>>;
-const inflight = new Map<string, Promise<Range>>();
+const runSharedLoad = createUserScopedSharedWork<Range>();
 let hasWarnedReadFailure = false;
 let hasWarnedWriteFailure = false;
 
@@ -85,10 +88,7 @@ export async function loadAccountGainLossSummaryRange(args: {
   });
   // Share closing work only for the same requested date and publication window.
   const inflightKey = `${cacheKey}:${args.asOfDate.toISOString()}:${latestFetchableDate.toISOString()}`;
-  const existing = inflight.get(inflightKey);
-  if (existing) return existing;
-
-  const promise = (async () => {
+  return runSharedLoad(inflightKey, async () => {
     let cachedBasis: AccountGainLossBasisRange | undefined;
     try {
       const encoded = await redis.get(cacheKey);
@@ -180,11 +180,5 @@ export async function loadAccountGainLossSummaryRange(args: {
         }
       },
     });
-  })();
-  inflight.set(inflightKey, promise);
-  try {
-    return await promise;
-  } finally {
-    inflight.delete(inflightKey);
-  }
+  });
 }

@@ -19,6 +19,13 @@ import { ensureUser, ensureUserHasRole } from "./functions.server";
 import { getOrCreateUser } from "../e2e/user.server";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { UserRole } from "../.prisma-client/enums";
+import {
+  bindResourceUser,
+  createUserScopedSharedWork,
+  withResourceRequest,
+} from "../server/resource-context.server";
+import { resourceStorage } from "../server/resource-scope.server";
+import { deferred } from "../server/test-support/deferred";
 
 const userContext = {
   isAuthenticated: true,
@@ -112,6 +119,54 @@ describe("Admin authorization", () => {
 });
 
 describe("ordinary user lookup", () => {
+  it("binds the verified application user so independent requests can share work", async () => {
+    vi.clearAllMocks();
+    vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+    prisma.user.findUnique.mockResolvedValue({
+      ...user,
+      deletionPending: false,
+    });
+    const shared = createUserScopedSharedWork<number>();
+    const ready = deferred();
+    const joined = deferred();
+    const release = deferred<number>();
+    const operation = vi.fn(() => {
+      ready.resolve();
+      return release.promise;
+    });
+    const request = (second = false) =>
+      withResourceRequest(new AbortController().signal, async () => {
+        await ensureUser();
+        const work = shared("key", operation);
+        if (second) joined.resolve();
+        expect(await work).toBe(1);
+        return new Response();
+      });
+    const first = request();
+    await ready.promise;
+    const second = request(true);
+    await joined.promise;
+    release.resolve(1);
+    expect((await Promise.all([first, second])).map((r) => r.status)).toEqual([
+      200, 200,
+    ]);
+    expect(operation).toHaveBeenCalledOnce();
+  });
+
+  it.each([null, { ...user, deletionPending: true }])(
+    "does not bind an unavailable user (%s)",
+    async (record) => {
+      vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+      prisma.user.findUnique.mockResolvedValue(record);
+      await withResourceRequest(new AbortController().signal, async () => {
+        await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
+        expect(resourceStorage.getStore()?.userId).toBeUndefined();
+        bindResourceUser("another-verified-user");
+        return new Response();
+      });
+    },
+  );
+
   it("does not recreate a deleted user from an existing authenticated context", async () => {
     vi.clearAllMocks();
     vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);

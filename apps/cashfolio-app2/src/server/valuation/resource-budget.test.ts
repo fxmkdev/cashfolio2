@@ -17,10 +17,14 @@ vi.mock("./provider-usage", async (importOriginal) => ({
 import {
   startReadBudget,
   consumeProviderAttempt,
+  checkResourceBudget,
   withResourceRequest,
 } from "../resource-context.server";
 import { fetchProviderResponse } from "./providers/request";
 import { getRateWithBacktracking } from "./backtracking";
+import { deferred } from "../test-support/deferred";
+import { withUserResourceRequest } from "../test-support/resource-request";
+import { recordValuationProviderRequest } from "./provider-usage";
 import { fetchSecurityPriceFromMarketstack } from "./providers/marketstack";
 import { getHistoryWindow } from "../period/history/history-window";
 import { loadCompleteHistory } from "@/routes/$accountBookId/history/-history-loading";
@@ -57,6 +61,198 @@ afterEach(() => {
 });
 
 describe("provider budgets at the network boundary", () => {
+  it.each([0, 1])(
+    "shares one logged provider attempt when same-user subscriber %s cancels",
+    async (failed) => {
+      vi.useFakeTimers();
+      vi.stubEnv("MARKETSTACK_API_KEY", "test-key");
+      const ready = deferred();
+      const release = deferred<Response>();
+      let signal!: AbortSignal;
+      wire.mockImplementation((_url, options) => {
+        signal = options!.signal!;
+        signal.addEventListener("abort", () => release.reject(signal.reason), {
+          once: true,
+        });
+        ready.resolve();
+        return release.promise;
+      });
+      const lookup = () =>
+        getRateWithBacktracking({
+          seriesKey: "shared-marketstack:AAPL:USD",
+          backtrackedFallbackCacheKey: "shared-marketstack-fallback",
+          date: new Date("2026-01-01Z"),
+          fetchRate: (date, reason) =>
+            fetchSecurityPriceFromMarketstack("AAPL", "USD", date, reason),
+        });
+      const controllers = [new AbortController(), new AbortController()];
+      const load = (index: number) =>
+        withUserResourceRequest(
+          "user",
+          async () => {
+            expect(await lookup()).toBe(180);
+            for (let i = 0; i < 249; i++) consumeProviderAttempt();
+          },
+          controllers[index]!.signal,
+        );
+      const first = load(0);
+      await ready.promise;
+      const second = load(1);
+      try {
+        await vi.waitFor(() =>
+          expect(cache.getCachedRate).toHaveBeenCalledTimes(2),
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        expect(wire).toHaveBeenCalledOnce();
+        controllers[failed]!.abort();
+        const requests = [first, second];
+        expect((await requests[failed]!).status).toBe(503);
+        expect(signal.aborted).toBe(false);
+        release.resolve(
+          new Response(
+            JSON.stringify({ data: [{ close: 180, currency: "USD" }] }),
+          ),
+        );
+        expect((await requests[1 - failed]!).status).toBe(200);
+        expect(recordValuationProviderRequest).toHaveBeenCalledOnce();
+        expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ outcome: "RETRIEVED" }),
+        );
+        expect(
+          cache.storeMissedAttemptForSeriesTimestamp,
+        ).not.toHaveBeenCalled();
+      } finally {
+        for (const controller of controllers) controller.abort();
+        release.reject(new Error("test finished"));
+        await Promise.allSettled([first, second]);
+      }
+    },
+  );
+
+  it("does not share uncached provider work between different users", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("MARKETSTACK_API_KEY", "test-key");
+    const release = deferred();
+    wire.mockImplementation(async () => {
+      await release.promise;
+      return new Response(
+        JSON.stringify({ data: [{ close: 180, currency: "USD" }] }),
+      );
+    });
+    const requests = ["one", "two"].map((user) =>
+      withUserResourceRequest(user, async () => {
+        expect(
+          await getRateWithBacktracking({
+            seriesKey: "different-users:AAPL:USD",
+            backtrackedFallbackCacheKey: "different-users-fallback",
+            date: new Date("2026-01-01Z"),
+            fetchRate: (date, reason) =>
+              fetchSecurityPriceFromMarketstack("AAPL", "USD", date, reason),
+          }),
+        ).toBe(180);
+      }),
+    );
+    await vi.waitFor(() => expect(wire).toHaveBeenCalledTimes(2));
+    release.resolve();
+    expect((await Promise.all(requests)).map((r) => r.status)).toEqual([
+      200, 200,
+    ]);
+    expect(recordValuationProviderRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["cancel the first", 0, "cancelled"],
+    ["cancel the second", 1, "cancelled"],
+    ["expire the first", 0, "read_deadline"],
+    ["exhaust the first", 0, "provider_request_limit"],
+  ] as const)(
+    "isolates identical lookups when we %s request",
+    async (mode, failed, code) => {
+      vi.useFakeTimers();
+      const started = [deferred(), deferred()];
+      const replies = [deferred<Response>(), deferred<Response>()];
+      const signals: AbortSignal[] = [];
+      wire.mockImplementation((_url, options) => {
+        const index = signals.length;
+        const signal = options!.signal!;
+        signals.push(signal);
+        signal.addEventListener(
+          "abort",
+          () => replies[index]!.reject(signal.reason),
+          { once: true },
+        );
+        started[index]!.resolve();
+        return replies[index]!.promise;
+      });
+      const controllers = [new AbortController(), new AbortController()];
+      const exhaust = deferred();
+      const exhausted = deferred();
+      const lookup = () =>
+        getRateWithBacktracking({
+          seriesKey: "isolated-series",
+          backtrackedFallbackCacheKey: "isolated-fallback",
+          date: new Date("2026-01-01Z"),
+          fetchRate: async () => Number(await (await request()).text()),
+        });
+      const load = (index: number) =>
+        withResourceRequest(controllers[index]!.signal, async () => {
+          startReadBudget();
+          const lookups = Promise.all([lookup(), lookup()]);
+          if (index === 0 && mode === "exhaust the first") {
+            // A separate calculation in this request uses its remaining budget.
+            void exhaust.promise.then(() => {
+              try {
+                for (let i = 0; i < 250; i++) consumeProviderAttempt();
+              } catch {
+                // The budget aborts the pending provider fetch as well.
+              } finally {
+                exhausted.resolve();
+              }
+            });
+          }
+          expect(await lookups).toEqual([1, 1]);
+          // One real attempt per request leaves all 249 other attempts available.
+          for (let i = 0; i < 249; i++) consumeProviderAttempt();
+          checkResourceBudget();
+          return new Response();
+        });
+      const first = load(0);
+      await started[0]!.promise;
+      if (code === "read_deadline") await vi.advanceTimersByTimeAsync(30_000);
+      const second = load(1);
+      const results = Promise.all([first, second]);
+      try {
+        await vi.waitFor(() => expect(wire).toHaveBeenCalledTimes(2));
+        await started[1]!.promise;
+        if (code === "read_deadline") await vi.advanceTimersByTimeAsync(30_000);
+        else if (code === "provider_request_limit") {
+          exhaust.resolve();
+          await exhausted.promise;
+        } else controllers[failed]!.abort();
+        expect(signals[failed]!.aborted).toBe(true);
+        expect(signals[1 - failed]!.aborted).toBe(false);
+        replies[1 - failed]!.resolve(new Response("1"));
+        const responses = await results;
+        expect(responses[failed]!.status).toBe(
+          code === "provider_request_limit" ? 429 : 503,
+        );
+        expect(
+          responses[failed]!.headers.get("X-Cashfolio-Resource-Limit"),
+        ).toBe(code);
+        expect(responses[1 - failed]!.status).toBe(200);
+        expect(wire).toHaveBeenCalledTimes(2);
+        expect(
+          cache.storeMissedAttemptForSeriesTimestamp,
+        ).not.toHaveBeenCalled();
+        expect(cache.storeBacktrackedFallbackInCache).not.toHaveBeenCalled();
+      } finally {
+        for (const controller of controllers) controller.abort();
+        exhaust.resolve();
+        await results;
+      }
+    },
+  );
+
   it("loads 120 cold-cache months with three securities through automatic sequential batches", async () => {
     const range = {
       granularity: "month" as const,

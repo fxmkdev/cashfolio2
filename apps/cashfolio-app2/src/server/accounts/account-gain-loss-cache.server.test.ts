@@ -2,6 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toMoney } from "../../shared/money";
 import { encodeMoneyCache } from "../money-cache-codec";
 import type { loadAccountGainLossRange as LoadRange } from "./account-gain-loss-range.server";
+import { deferred } from "../test-support/deferred";
+import { withUserResourceRequest } from "../test-support/resource-request";
+import {
+  checkResourceBudget,
+  getResourceSignal,
+  withResourceRequest,
+} from "../resource-context.server";
 
 const mocks = vi.hoisted(() => ({
   kv: new Map<string, string>(),
@@ -71,16 +78,6 @@ function createRange(): Awaited<ReturnType<typeof LoadRange>> {
     cacheableFromPermanentValuationCache: true,
   };
 }
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: Error) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.kv.clear();
@@ -107,6 +104,81 @@ afterEach(() => {
 });
 
 describe("account G/L summary cache", () => {
+  it("shares a same-user Redis miss after the initiating request cancels", async () => {
+    const ready = deferred();
+    const release = deferred();
+    let jobSignal!: AbortSignal;
+    mocks.get.mockImplementationOnce(async () => {
+      jobSignal = getResourceSignal()!;
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = () => getOrLoadAccountGainLossSummaries("book");
+    const first = withUserResourceRequest(
+      "user",
+      async () => {
+        await load();
+      },
+      controller.signal,
+    );
+    await ready.promise;
+    const second = withUserResourceRequest("user", async () => {
+      await load();
+    });
+    try {
+      await vi.waitFor(() => expect(mocks.revision).toHaveBeenCalledTimes(2));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mocks.get).toHaveBeenCalledOnce();
+      controller.abort();
+      expect((await first).status).toBe(503);
+      expect(jobSignal.aborted).toBe(false);
+      release.resolve();
+      expect((await second).status).toBe(200);
+      expect(mocks.load).toHaveBeenCalledOnce();
+      expect(mocks.setEx).toHaveBeenCalledOnce();
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it("does not join another request's cancelled Redis miss", async () => {
+    const ready = deferred();
+    const release = deferred();
+    mocks.get.mockImplementationOnce(async () => {
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = (signal: AbortSignal) =>
+      withResourceRequest(signal, async () => {
+        await getOrLoadAccountGainLossSummaries("book");
+        return new Response();
+      });
+    const first = load(controller.signal);
+    await ready.promise;
+    const second = load(new AbortController().signal);
+    try {
+      await vi.waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
+      controller.abort();
+      release.resolve();
+      expect((await first).status).toBe(503);
+      expect((await second).status).toBe(200);
+      expect(mocks.load).toHaveBeenCalledTimes(1);
+      expect(mocks.setEx).toHaveBeenCalledTimes(1);
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
   it("shares a book-wide replay across account states, preserving group totals and diagnostics", async () => {
     const query = (type: "BALANCE", accountState: "active" | "inactive") =>
       queryAccountGainLossSummaries({

@@ -37,18 +37,43 @@ submission and retain the draft when validation fails.
 
 ## Request-local calculation budgets
 
-Each incoming request can initiate at most 250 provider HTTP attempts, including
-retries and backtracking. Cache hits and joining an existing in-flight lookup do
-not consume another attempt. Settled provider probes are reused within the
-request, including without Redis; rejected probes are evicted. The memo and
-attempt count are discarded when the request ends.
+Each incoming request can use at most 250 distinct provider HTTP attempts,
+including retries and backtracking. A shared attempt counts once toward every
+request using it, even if that request joins after the attempt began. Stable
+attempt identities prevent double-counting when nested jobs reach a request
+through multiple paths. Physical provider usage is recorded only once. Redis
+hits need no provider attempts. Successful probes are memoized within their
+owning request or job, including without Redis; rejected probes are evicted.
+
+In-flight provider lookups, period base-data loads, History metrics, and account
+gain/loss summary and basis loads are shared within one server process by
+verified application user ID and the complete existing lookup key. `ensureUser`
+binds the identity only after validating an active application user. Every
+caller still authorizes its own book access before joining. User IDs never come
+from request inputs, and completed Redis entries retain their existing keys.
+
+Each shared job owns its resource context, mutable valuation maps, abort signal,
+fixed 60-second deadline, and 250-attempt ledger. A joining request inherits the
+job's past attempts for accounting, not its initiating caller's resource
+context. Joining never extends the job deadline. A caller's cancellation,
+deadline, or exhausted budget detaches only that caller; the job continues for
+remaining subscribers. Losing the last subscriber aborts the job and removes its
+registry entry. Job failures, including the job's own limits, are returned to
+all remaining subscribers. Settled jobs and empty user registries are removed,
+and failures can be retried by a new load.
+
+Unbound HTTP requests retain request-local deduplication. Context-free
+background callers share a separate in-flight map and cannot join authenticated
+HTTP jobs. There is no distributed coordination or aggregate per-user quota.
 
 Expensive reads start a 60-second cooperative deadline after authorization.
-Internal helpers share that deadline rather than extending it. Calculation units
-and provider attempts check the budget; provider fetches and retry delays
-receive its abort signal. Existing per-provider ten-second timeouts, bounded
-Marketstack retries, backtracking, caching, and deduplication remain in place.
-Redis connect/command timeouts remain one second with cache fallback.
+Internal helpers share their owning context's deadline rather than extending it.
+Shared jobs use their own deadline while each caller retains its request
+deadline. Calculation units and provider attempts check the budget; provider
+fetches and retry delays receive the owning context's abort signal. Existing
+per-provider ten-second timeouts, bounded Marketstack retries, backtracking,
+caching, and deduplication remain in place. Redis connect/command timeouts
+remain one second with cache fallback.
 
 A provider-attempt limit returns `429`; an expired read deadline returns `503`.
 Responses carry `X-Cashfolio-Resource-Limit` and `Retry-After`, so clients do
@@ -57,12 +82,14 @@ valuation fallbacks rather than becoming successful partial calculations or
 cached missing-price results. Logs include the error category and status,
 without financial payloads or secrets.
 
-The request context contains only cancellation, a deadline, an attempt counter,
-a bounded memo, and closed-state checks. Completion, failure, or disconnect
-closes and aborts it idempotently, preserving the original failure and
-preventing later provider attempts by delayed siblings. Response-stream
-completion/failure also closes the context. Calculation workers stop dequeuing
-after a failure and wait for already-started workers before propagating it.
+Resource contexts contain cancellation, a deadline, a bounded attempt ledger and
+memo, closed-state checks, and optional verified user identity. Shared jobs also
+forward attempt identities to their subscribers. Completion, failure, or
+disconnect closes and aborts the owning context idempotently, preserving the
+original failure and preventing later provider attempts by delayed siblings.
+Response-stream completion/failure also closes the context. Calculation workers
+stop dequeuing after a failure and wait for already-started workers before
+propagating it.
 
 There are no per-user rates, concurrency leases, shared provider quotas,
 database admission calls, or Prisma query interception. Ordinary database and

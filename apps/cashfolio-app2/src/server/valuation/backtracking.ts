@@ -1,5 +1,6 @@
 import {
   checkResourceBudget,
+  createUserScopedSharedWork,
   reuseResourceRequestWork,
 } from "../resource-context.server";
 import { rethrowResourceError } from "../resource-error";
@@ -103,7 +104,7 @@ const defaultDeps: RateWithBacktrackingDeps = {
   clearMissedAttemptForSeriesTimestamp,
 };
 
-const inFlightProviderFetchByKey = new Map<string, Promise<FetchRateResult>>();
+const runProviderFetch = createUserScopedSharedWork<FetchRateResult>();
 
 function getInFlightProviderFetchKey(
   seriesKey: string,
@@ -126,20 +127,9 @@ async function fetchRateWithInFlightDedup(args: {
     args.seriesKey,
     args.timestamp,
   );
-  const existingPromise = inFlightProviderFetchByKey.get(inFlightKey);
-  if (existingPromise) {
-    return existingPromise;
-  }
-
-  let fetchPromise: Promise<FetchRateResult>;
-  fetchPromise = args.fetchRate(args.date, args.requestReason).finally(() => {
-    if (inFlightProviderFetchByKey.get(inFlightKey) === fetchPromise) {
-      inFlightProviderFetchByKey.delete(inFlightKey);
-    }
-  });
-
-  inFlightProviderFetchByKey.set(inFlightKey, fetchPromise);
-  return fetchPromise;
+  return runProviderFetch(inFlightKey, () =>
+    args.fetchRate(args.date, args.requestReason),
+  );
 }
 
 export async function getRateWithBacktracking(
