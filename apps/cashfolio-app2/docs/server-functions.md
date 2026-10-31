@@ -262,7 +262,8 @@ the extracted helpers:
 - `breakdown/period-breakdown-state.ts`: group paths, accumulator types, and
   mutable hierarchy nodes shared by breakdown builders
 - `breakdown/period-breakdown-buckets.ts` and `period-allocation-breakdown.ts`:
-  bucket summaries and period-end allocation
+  bucket summaries and period-end allocation; `period-allocation-hierarchy.ts`
+  builds the allocation grouping tree and formats its reporting metadata
 - `breakdown/period-breakdown-hierarchy.ts` and
   `period-signed-breakdown-hierarchy.ts`: positive and signed hierarchy builders
   with their respective pruning/discrepancy rules

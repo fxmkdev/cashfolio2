@@ -556,6 +556,7 @@ waiting, retry, uncertain-outcome, and refresh feedback.
 - Report route (`src/routes/$accountBookId/report/route.tsx`) supports
   drill-down in:
   - Expense/Income charts (`Donut`, `Bar`)
+  - Assets/Liabilities Allocation charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
 - Gains/Losses processes each native double-click once across the chart's node
@@ -571,10 +572,8 @@ waiting, retry, uncertain-outcome, and refresh feedback.
   Managed Portfolios for Total Portfolio Value tracking. Retain the investment
   level even when it contains one account. Account metadata drives G/L
   navigation from chart and table leaves to the unified explanation, including
-  calculated holdings, recorded adjustments, and
-
-  supported synthetic amounts. Do not infer a destination from node-ID prefixes.
-
+  calculated holdings, recorded adjustments, and supported synthetic amounts. Do
+  not infer a destination from node-ID prefixes.
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
 - In Report's Asset Class view, account leaves show their full current account
@@ -1455,6 +1454,8 @@ application and Storybook. Development registers `ValidationModule` with
 overlay. Production omits that module. Cashfolio's charts remain standalone; no
 Integrated Charts or sparkline module is registered. Expanded account groups
 retain their existing session-storage keys and JSON array of group IDs.
+`RowAutoHeightModule` supports wrapping account paths in Report tables; retain
+it when updating the selective module list.
 
 ## Rejected book mutations
 
