@@ -1,6 +1,7 @@
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 import type { AssetClass } from "../../../.prisma-client/enums";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
+import { getAssetClassLabel } from "../../../shared/asset-class";
 
 export type GainLossAccountAttribution = {
   assetClass: AssetClass | null;
@@ -50,7 +51,7 @@ export function buildGainLossAccountAttribution(
       assetClass: account?.assetClass ?? null,
       kind,
       explanation: account
-        ? `Attributed to the originating account ${account.name}.`
+        ? `Grouped under ${getAssetClassLabel(account.assetClass)} based on the originating account: ${account.name}.`
         : "No single originating asset/liability account can be established; the amount remains Unclassified.",
     };
   };
