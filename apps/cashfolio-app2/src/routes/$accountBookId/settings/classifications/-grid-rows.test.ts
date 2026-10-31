@@ -28,6 +28,71 @@ const nodes: ManagedClass[] = [
   },
 ];
 describe("asset-class grid rows", () => {
+  it("builds rows when Map.getOrInsertComputed is unavailable", () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      Map.prototype,
+      "getOrInsertComputed",
+    );
+    let rows: ReturnType<typeof buildAssetClassGridRows>;
+    try {
+      Object.defineProperty(Map.prototype, "getOrInsertComputed", {
+        configurable: true,
+        value: undefined,
+      });
+      rows = buildAssetClassGridRows([
+        ...nodes,
+        {
+          id: "global",
+          name: "Global Equities",
+          parentId: "equities",
+          sortOrder: 1,
+          activeCount: 5,
+          archivedCount: 1,
+        },
+      ]);
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(Map.prototype, "getOrInsertComputed", descriptor);
+      } else {
+        Reflect.deleteProperty(Map.prototype, "getOrInsertComputed");
+      }
+    }
+
+    expect(rows).toMatchObject([
+      {
+        id: "equities",
+        path: "Equities",
+        activeCount: 1,
+        archivedCount: 0,
+        canReorder: true,
+        hasChildren: true,
+      },
+      {
+        id: "child",
+        path: "Equities / Swiss Equities",
+        activeCount: 3,
+        archivedCount: 2,
+        canReorder: true,
+        hasChildren: false,
+      },
+      {
+        id: "global",
+        path: "Equities / Global Equities",
+        activeCount: 5,
+        archivedCount: 1,
+        canReorder: true,
+        hasChildren: false,
+      },
+      {
+        id: "cash",
+        path: "Cash",
+        activeCount: 4,
+        archivedCount: 0,
+        canReorder: true,
+        hasChildren: false,
+      },
+    ]);
+  });
   it("preserves manual sibling order and full paths without aggregating direct counts", () => {
     const rows = buildAssetClassGridRows(nodes);
     expect(rows.map((row) => row.id)).toEqual(["equities", "child", "cash"]);
