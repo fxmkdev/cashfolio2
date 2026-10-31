@@ -59,6 +59,19 @@ it("keeps all unit metadata off equity accounts while retaining booking units", 
   }
 });
 
+it("marks the curated managed portfolio for total-value tracking", () => {
+  const managed = dataset.books
+    .flatMap((book) => book.accounts)
+    .filter((account) => account.trackingMethod === "TOTAL_PORTFOLIO_VALUE");
+  expect(managed).toHaveLength(1);
+  expect(managed[0]).toMatchObject({
+    key: "managed-portfolio",
+    unit: Unit.CURRENCY,
+    currency: "CHF",
+    assetClass: AssetClass.OTHER_ASSETS,
+  });
+});
+
 it("uses curated asset classes for active and archived demo balance accounts", () => {
   const classifications = (bookKey: string) =>
     Object.fromEntries(

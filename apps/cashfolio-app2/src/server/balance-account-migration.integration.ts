@@ -269,6 +269,8 @@ describe("unified balance account migration against disposable PostgreSQL", () =
     for (const subtype of ["GAIN_LOSS", "OPENING_BALANCES"] as const) {
       await expect(
         db.account.create({
+          // This fixture stops at the balance cutover, before later Account columns.
+          select: { id: true },
           data: {
             id: `duplicate-${subtype}`,
             accountBookId: "book",
@@ -303,11 +305,13 @@ describe("unified balance account migration against disposable PostgreSQL", () =
     ).toEqual({ type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" });
     await expect(
       db.account.update({
+        select: { id: true },
         where: { id_accountBookId: { id: "expense", accountBookId: "book" } },
         data: { assetClass: "EQUITIES" },
       }),
     ).rejects.toThrow();
     await db.account.update({
+      select: { id: true },
       where: { id_accountBookId: { id: "liability", accountBookId: "book" } },
       data: { assetClass: "FIXED_INCOME" },
     });
@@ -332,6 +336,7 @@ describe("unified balance account migration against disposable PostgreSQL", () =
     await expect(
       db.$transaction(async (tx) => {
         await tx.account.update({
+          select: { id: true },
           where: { id_accountBookId: { id: "asset", accountBookId: "book" } },
           data: { name: "Rollback" },
         });

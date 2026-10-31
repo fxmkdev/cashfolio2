@@ -90,7 +90,7 @@ export function GainsLossesTable({
       autoGroupColumnDef={{
         headerName:
           grouping === "assetClass"
-            ? "Asset Class / Account"
+            ? "Asset Class / Investment / Account"
             : "Account Structure",
         field: "name",
         width: 475,

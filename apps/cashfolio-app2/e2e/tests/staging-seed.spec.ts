@@ -111,6 +111,7 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   const portfolio = await prisma.account.findFirstOrThrow({
     where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
   });
+  expect(portfolio.trackingMethod).toBe("TOTAL_PORTFOLIO_VALUE");
 
   await page.goto(`/${household.id}/accounts?tab=ASSET`);
   const investments = agGridRowByText(page, "Investments");
@@ -158,6 +159,15 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     await expect(classRow).toBeVisible();
     const classExpander = classRow.locator(".ag-group-contracted");
     if (await classExpander.isVisible()) await classExpander.click();
+    const investmentRow = table.locator(
+      '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:OTHER_ASSETS:managed-portfolios"]',
+    );
+    await expect(investmentRow).toBeVisible();
+    await expect(agGridCellByColId(investmentRow, "totalGainLoss")).toHaveText(
+      expectedGainLoss,
+    );
+    const investmentExpander = investmentRow.locator(".ag-group-contracted");
+    if (await investmentExpander.isVisible()) await investmentExpander.click();
     const portfolioRow = table
       .locator(".ag-grid-scrolling-container > .ag-row")
       .filter({ hasText: "Managed Portfolio CHF" });
