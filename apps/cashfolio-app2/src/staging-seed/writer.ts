@@ -266,6 +266,9 @@ async function replaceStagingDataOnce(
         tx.account.count(),
         tx.transaction.count(),
         tx.booking.count(),
+        tx.classificationScheme.count(),
+        tx.classificationNode.count(),
+        tx.accountClassification.count(),
       ]);
       if (tableCounts.every((count) => count === 0)) {
         if (!adminIds.length)

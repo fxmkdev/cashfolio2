@@ -182,9 +182,23 @@ it("verifies both destinations before granting narrowly scoped seed permissions"
   expect(mock.verify).toHaveBeenCalledTimes(2);
   const migration = mock.create.mock.results[1].value;
   expect(migration.$executeRawUnsafe.mock.calls).toHaveLength(3);
-  expect(migration.$executeRawUnsafe.mock.calls[1][0]).toContain('"Booking"');
+  const tableGrant = migration.$executeRawUnsafe.mock.calls[1][0];
+  for (const table of [
+    "Booking",
+    "ClassificationScheme",
+    "ClassificationNode",
+    "AccountClassification",
+  ])
+    expect(tableGrant).toContain(`"${table}"`);
+  const functionGrant = migration.$executeRawUnsafe.mock.calls[2][0];
+  for (const signature of [
+    "ensure_gain_loss_account_for_new_book()",
+    "initialize_book_classifications()",
+    "seed_asset_class_scheme(text)",
+  ])
+    expect(functionGrant).toContain(`public.${signature}`);
   expect(migration.$executeRawUnsafe.mock.calls.join(" ")).not.toMatch(
-    /ALL TABLES|neon_superuser|CREATEROLE|TRUNCATE/,
+    /ALL TABLES|neon_superuser|CREATEROLE|TRUNCATE|AuthSession|AuthSubjectRevocation/,
   );
   expect(mock.replace).not.toHaveBeenCalled();
 });

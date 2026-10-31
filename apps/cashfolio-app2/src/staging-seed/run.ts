@@ -80,10 +80,10 @@ export async function runStagingSeed(
             `GRANT USAGE ON SCHEMA public TO ${role}`,
           );
           await migration.$executeRawUnsafe(
-            `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account", "Transaction", "Booking" TO ${role}`,
+            `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account", "Transaction", "Booking", "ClassificationScheme", "ClassificationNode", "AccountClassification" TO ${role}`,
           );
           await migration.$executeRawUnsafe(
-            `GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book() TO ${role}`,
+            `GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text) TO ${role}`,
           );
         }
       } finally {

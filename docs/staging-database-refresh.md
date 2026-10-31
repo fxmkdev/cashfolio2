@@ -8,7 +8,7 @@ there is no seed enablement flag or silent migration-only fallback.
 The release command verifies both the seed connection and migration connection
 read-only before migrations, grants narrowly scoped seed permissions after
 migrations, then replaces application data in one transaction. The replacement
-locks all seven application tables against concurrent writes and verifies server
+locks all ten application tables against concurrent writes and verifies server
 identity again inside the transaction. Any failure fails the release before web
 Machines update. Transaction conflicts/deadlocks get at most three attempts,
 with 100 ms and 200 ms retry delays; other failures fail immediately.
@@ -349,8 +349,9 @@ role membership, `TRUNCATE`, or `neon_superuser` membership. Add explicit grants
 when future seed changes require additional application tables. The
 classification migration extends these grants when the existing
 `cashfolio_staging_seed` role is present; it never creates that role. For a
-custom seed role name, apply the table and function grants above after the
-migration and before running the updated seed.
+preview seed role, the shared release runner applies these same narrow table and
+function grants after migrations and before replacement. Authentication tables
+are not granted to seed roles.
 
 Before enabling seeding, use an independently authorized read-only production
 connection to confirm that the role is absent:
