@@ -41,7 +41,7 @@ try {
     JSON.parse(metadata),
     number,
     pr.head.sha,
-    requireValue(process.env, "FLY_PREVIEW_IMAGE_APP"),
+    requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP"),
   );
   const names = previewNames(number, pr.head.ref, pr.title);
   await appendFile(

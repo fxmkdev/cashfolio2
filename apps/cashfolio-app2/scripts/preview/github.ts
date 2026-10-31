@@ -78,7 +78,7 @@ export function validateManifest(
     !/^[a-f0-9]{64}$/.test(metadata.image.slice(prefix.length))
   )
     throw new Error(
-      "Image metadata does not identify this PR, commit and preview image repository.",
+      "Image metadata does not identify this PR, commit and configured image repository.",
     );
   return metadata.image;
 }

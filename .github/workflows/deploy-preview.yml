@@ -80,7 +80,8 @@ jobs:
           PR_SHA: ${{ needs.resolve.outputs.sha }}
           GITHUB_TOKEN: ${{ github.token }}
           MANIFEST_PATH: ${{ runner.temp }}/preview-metadata/preview-image.json
-          FLY_PREVIEW_IMAGE_APP: ${{ vars.FLY_PREVIEW_IMAGE_APP }}
+          FLY_CASHFOLIO_APP_STAGING_APP:
+            ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           FLY_ORG: ${{ vars.FLY_ORG }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
