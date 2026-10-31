@@ -2,6 +2,7 @@ import {
   AccountType,
   EquityAccountSubtype,
   type AssetClass,
+  type AccountTrackingMethod,
 } from "@/.prisma-client/enums";
 import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
@@ -73,6 +74,8 @@ export type TreeRow = Awaited<
 >["rows"][number] & {
   /** Presentation only; undefined means the group has no account descendants. */
   groupAssetClass?: GroupAssetClassSummary;
+  /** Presentation only; undefined means the group has no account descendants. */
+  groupTrackingMethod?: AccountTrackingMethod | "Mixed";
 };
 
 export const REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID =

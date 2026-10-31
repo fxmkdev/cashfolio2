@@ -150,6 +150,14 @@ describe("gains/losses waterfall v14 callbacks", () => {
     }
     renderToStaticMarkup(createElement(Harness));
     const series = getWaterfallSeries();
+    expect(series.xKey).toBe("id");
+    const axisFormatter = capturedOptions.axes?.x?.label?.formatter;
+    if (!axisFormatter) throw new Error("Expected a category label formatter");
+    type AxisLabelParams = Parameters<typeof axisFormatter>[0];
+    expect(axisFormatter({ value: datum.id } as AxisLabelParams)).toBe(
+      datum.label,
+    );
+    expect(axisFormatter({ value: "Total" } as AxisLabelParams)).toBe("Total");
     for (const itemType of ["total", "subtotal"] as const) {
       expect(renderTooltip(series, { itemType, datum: undefined })).toEqual({
         heading: "Total",
@@ -166,7 +174,11 @@ describe("gains/losses waterfall v14 callbacks", () => {
     listener({ datum: undefined } as Event);
     listener({ datum: {} } as Event);
     expect(onNodeDoubleClick).not.toHaveBeenCalled();
-    listener({ datum } as Event);
-    expect(onNodeDoubleClick).toHaveBeenCalledExactlyOnceWith(datum);
+    const nativeEvent = new globalThis.Event("dblclick");
+    listener({ datum, event: nativeEvent } as Event);
+    expect(onNodeDoubleClick).toHaveBeenCalledExactlyOnceWith(
+      datum,
+      nativeEvent,
+    );
   });
 });

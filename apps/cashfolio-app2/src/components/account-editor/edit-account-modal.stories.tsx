@@ -88,6 +88,57 @@ export const Edit: Story = {
   },
 };
 
+export const ManagedPortfolio: Story = {
+  args: {
+    initialValues: {
+      ...editAccountInitialValues,
+      name: "Managed Portfolio",
+      groupId: undefined,
+      trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+    },
+    editingId: "portfolio",
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
+    const tracking = within(dialog).getByRole("combobox", {
+      name: "Tracking Method",
+    });
+    const helpText = /Track individual currency units, or a portfolio/;
+    await expect(body.queryByText(helpText)).not.toBeInTheDocument();
+    const helpButton = within(dialog).getByRole("button", {
+      name: "Show Tracking Method Help",
+    });
+    await userEvent.click(helpButton);
+    await waitFor(() => expect(body.getByText(helpText)).toBeVisible());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(body.queryByText(helpText)).not.toBeInTheDocument(),
+    );
+    await expect(dialog).toBeVisible();
+    await expect(args.onClose).not.toHaveBeenCalled();
+    await waitFor(() => expect(helpButton).toHaveFocus());
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(body.getByText(helpText)).toBeVisible());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(body.queryByText(helpText)).not.toBeInTheDocument(),
+    );
+    await expect(tracking).toHaveValue("Total Portfolio Value");
+    await expect(tracking).not.toBeDisabled();
+    await userEvent.click(tracking);
+    await userEvent.click(
+      await body.findByRole("option", { name: "Individual Units" }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ trackingMethod: "INDIVIDUAL_UNITS" }),
+      ),
+    );
+  },
+};
+
 export const LiabilityOpeningDebt: Story = {
   args: {
     initialValues: {

@@ -297,13 +297,27 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
+### Field Help
+
+Keep essential instructions and validation messages visible beside or below the
+input. Put longer optional explanations in a popover opened by an info icon
+beside the field label, as used for Asset Class and Tracking Method. Give the
+button a descriptive accessible name such as `Show Tracking Method Help` and a
+matching tooltip. Support mouse and keyboard activation, keep the popover within
+the viewport, and return focus to its trigger when closed. Escape dismisses the
+popover without closing its containing dialog.
+
+### Account Editor
+
 The account editor groups identity fields first, followed by unit details and
 the Cash Account flag, then Opening Balance beside Asset Class. Columns stack at
 narrow viewport widths. Opening Balance keeps concise sign guidance below the
-input; the detailed Asset Class explanation is available in a help popover.
-Statement Import Settings is collapsed at the start of each create/edit session.
-Its CSV editor stays mounted so collapsing it preserves drafts, and submitting
-an invalid CSV format opens the section to expose its validation error.
+input; the detailed Asset Class and Tracking Method explanations are available
+in info-icon popovers beside their labels. Tracking Method appears only for
+currency-denominated balance accounts. Statement Import Settings is collapsed at
+the start of each create/edit session. Its CSV editor stays mounted so
+collapsing it preserves drafts, and submitting an invalid CSV format opens the
+section to expose its validation error.
 
 The account editor offers an **Asset Class** selector for assets and
 liabilities, separate from Unit and valuation configuration. It remains editable
@@ -339,10 +353,10 @@ includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
-or Asset Class then Account; recorded adjustments use their counterpart
-financial account's class and group. Changing classification does not change
-amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
-Equities asset class.
+or Asset Class → Investment Group → Account; recorded adjustments use their
+counterpart financial account's class and group. Changing classification does
+not change amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to
+the Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -354,6 +368,7 @@ Its implementation lives in `src/components/account-editor/`:
   eligibility, submission, and close guards
 - `view.tsx`: the account modal render tree
 - `asset-class-field.tsx`: classification input and explanatory help
+- `tracking-method-field.tsx`: tracking-method input and explanatory help
 - `statement-import-csv-format-field.tsx`: CSV configuration input and JSON help
 
 The form/controller is created once per modal render, and a constraint refresh
@@ -476,14 +491,19 @@ submit UX and prevent duplicate requests.
   - Expense/Income charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
+- Gains/Losses processes each native double-click once across the chart's node
+  and single-item container handlers, including across rerenders. A unit with
+  one account still opens the account chart; opening details requires a separate
+  account double-click. A background double-click retains the single-item
+  shortcut.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses supports Account Structure and Asset Class → Account. Account
-  metadata drives navigation from chart and table leaves to the unified
-  explanation, including calculated holdings, recorded adjustments, and
+- Gains/Losses supports Account Structure and Asset Class → Investment Group →
+  Account. Account metadata drives navigation from chart and table leaves to the
+  unified explanation, including calculated holdings, recorded adjustments, and
   supported synthetic amounts. Do not infer a destination from node-ID prefixes.
-- Asset-class nodes drill into their accounts in charts and expand/collapse in
-  tables; they do not open a ledger.
+- Asset-class nodes drill into investment groups, which drill into accounts.
+  Both group levels expand/collapse in tables and do not open a ledger.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Report's **Group Accounts By** selector sits beside the period control and
@@ -601,8 +621,8 @@ sign; debt amounts are positive magnitudes in those reports.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
-  `Balance (<referenceCurrency>)`, `Asset Class`, G/L, and row actions in that
-  order.
+  `Balance (<referenceCurrency>)`, `Asset Class`, `Tracking Method`, G/L, and
+  row actions in that order.
 - `Ccy./Symbol` starts at 180px and can be resized and filtered. It shows
   foreign currency codes, cryptocurrency tickers, or security symbols; security
   trade currencies are omitted. Group, virtual Archived, and total rows stay
@@ -618,6 +638,15 @@ sign; debt amounts are positive magnitudes in those reports.
   without descendant accounts and the total row stay blank. Group summaries are
   read-only. The column preserves the existing sibling ordering and grid-only
   horizontal scrolling.
+- `Tracking Method` follows Asset Class, starts at 220px, and can be resized.
+  Its text filter and tooltip use the full display label: `Individual Units` or
+  `Total Portfolio Value`. All balance-account leaves show their method,
+  including archived accounts; securities, cryptocurrencies, and missing
+  metadata show `Individual Units`. Real groups and virtual Archived groups
+  summarize descendant accounts with the same inclusion rules as Asset Class:
+  one distinct method shows its label, differing methods show `Mixed`, and empty
+  groups and the total row stay blank. Group summaries are read-only; category
+  tabs do not show this column.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy./Symbol` and `Balance` blank to avoid duplicating the value already
@@ -742,6 +771,20 @@ Use the system-managed **Gain/Loss** equity account to record value changes in
 accounts valued manually, such as managed or discretionary portfolios. Represent
 the portfolio as a balance account in its reporting currency, tracking its total
 reported monetary value rather than individual securities.
+
+Set **Tracking Method** to **Total Portfolio Value** in the account editor for
+these portfolios. The default **Individual Units** groups ordinary accounts by
+currency, cryptocurrency, or security symbol (across trade currencies). In the
+Asset Class view, Total Portfolio Value groups the entire account return under
+**Managed Portfolios** within its assigned asset class, combining recorded
+performance and calculated FX gains/losses when its currency differs from the
+book's reference currency. Account Structure retains the account's physical
+group hierarchy. Existing accounts default to Individual Units; explicitly
+update managed portfolios. Tracking Method remains editable after bookings exist
+and applies to all historical Report/History periods. It changes reporting
+placement without changing valuation, cash-flow eligibility, or gain/loss
+calculations. Only currency-denominated balance accounts support Total Portfolio
+Value.
 
 Record contributions and withdrawals as transfers between the portfolio and the
 funding or receiving account. When a new portfolio statement arrives, calculate:

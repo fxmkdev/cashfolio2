@@ -32,6 +32,7 @@ import { StatementImportCsvFormatField } from "./statement-import-csv-format-fie
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import { useEditAccountModalController } from "./controller";
 import { AssetClassField } from "./asset-class-field";
+import { TrackingMethodField } from "./tracking-method-field";
 
 export function EditAccountModal(props: EditAccountModalProps) {
   const {
@@ -227,6 +228,14 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     </Grid.Col>
                   </Fragment>
                 ) : null}
+                {unit === Unit.CURRENCY && (
+                  <Grid.Col span={12}>
+                    <TrackingMethodField
+                      key={form.key("trackingMethod")}
+                      {...form.getInputProps("trackingMethod")}
+                    />
+                  </Grid.Col>
+                )}
                 {canMarkAsCashAccount ? (
                   <Grid.Col span={12}>
                     <Tooltip

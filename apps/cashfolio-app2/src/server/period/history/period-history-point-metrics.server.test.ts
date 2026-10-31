@@ -398,16 +398,24 @@ describe("loadPeriodHistoryPointMetrics", () => {
         kind: "gainLoss",
       },
       {
+        value: "gain-loss-investment:unclassified:unknown",
+        parentValue: "asset-class:unclassified",
+      },
+      {
         value: "gain-loss-account:cash-1",
-        label: "Unclassified / Cash",
+        label: "Unclassified / Unknown Unit / Cash",
         accountId: "cash-1",
+        parentValue: "gain-loss-investment:unclassified:unknown",
+      },
+      {
+        value: "gain-loss-investment:unclassified:CURRENCY:USD",
         parentValue: "asset-class:unclassified",
       },
       {
         value: "gain-loss-account:usd-cash",
-        label: "Unclassified / USD Cash",
+        label: "Unclassified / USD / USD Cash",
         accountId: "usd-cash",
-        parentValue: "asset-class:unclassified",
+        parentValue: "gain-loss-investment:unclassified:CURRENCY:USD",
       },
     ]);
 

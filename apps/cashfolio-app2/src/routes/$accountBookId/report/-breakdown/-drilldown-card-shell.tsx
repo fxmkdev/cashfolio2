@@ -1,3 +1,4 @@
+import type { MouseEventHandler } from "react";
 import {
   Alert,
   Breadcrumbs,
@@ -30,7 +31,7 @@ type DrilldownCardShellProps = {
   chartContainerTestId?: string;
   tableContainerTestId?: string;
   onDrillPathChange: (nextPath: string[]) => void;
-  onChartContainerDoubleClick?: (() => void) | null;
+  onChartContainerDoubleClick?: MouseEventHandler<HTMLDivElement> | null;
   showDrillControls?: boolean;
   headerControls?: ReactNode;
   footer?: ReactNode;

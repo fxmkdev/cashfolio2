@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import {
+  type AccountTrackingMethod,
   type AssetClass,
   AccountType,
   EquityAccountSubtype,
@@ -30,6 +31,7 @@ export type SeedGroup = {
 };
 
 export type SeedAccount = UnitMetadata & {
+  trackingMethod?: AccountTrackingMethod;
   assetClass: AssetClass | null;
   key: string;
   name: string;

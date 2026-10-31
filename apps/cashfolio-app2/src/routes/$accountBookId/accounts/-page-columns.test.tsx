@@ -7,6 +7,7 @@ import {
   getAccountListBalanceValue,
   getAccountListUnitIdentifierDisplayValue,
   getAccountListAssetClassValue,
+  getAccountListTrackingMethodValue,
   useAccountTreeColumnDefs,
 } from "./-page-columns";
 
@@ -75,6 +76,57 @@ const footerRow: AccountsGridRow = {
 };
 
 describe("account list column value getters", () => {
+  it.each([
+    ["INDIVIDUAL_UNITS", "Individual Units"],
+    ["TOTAL_PORTFOLIO_VALUE", "Total Portfolio Value"],
+    [undefined, "Individual Units"],
+  ] as const)(
+    "displays tracking method %s on active and archived accounts",
+    (trackingMethod, label) => {
+      for (const isActive of [true, false]) {
+        expect(
+          getAccountListTrackingMethodValue(
+            createAccountRow({ trackingMethod, isActive }),
+          ),
+        ).toBe(label);
+      }
+    },
+  );
+
+  it.each([Unit.SECURITY, Unit.CRYPTOCURRENCY])(
+    "displays Individual Units for %s",
+    (unit) => {
+      expect(
+        getAccountListTrackingMethodValue(createAccountRow({ unit })),
+      ).toBe("Individual Units");
+    },
+  );
+
+  it.each([
+    ["INDIVIDUAL_UNITS", "Individual Units"],
+    ["TOTAL_PORTFOLIO_VALUE", "Total Portfolio Value"],
+    ["Mixed", "Mixed"],
+    [undefined, undefined],
+  ] as const)(
+    "displays group tracking method %s",
+    (groupTrackingMethod, label) => {
+      for (const isVirtualArchivedGroup of [true, false]) {
+        expect(
+          getAccountListTrackingMethodValue({
+            ...createGroupRow(),
+            groupTrackingMethod,
+            isVirtualArchivedGroup,
+          }),
+        ).toBe(label);
+      }
+    },
+  );
+
+  it("leaves tracking method blank for totals and missing rows", () => {
+    expect(getAccountListTrackingMethodValue(footerRow)).toBeUndefined();
+    expect(getAccountListTrackingMethodValue(undefined)).toBeUndefined();
+  });
+
   it.each([
     [AssetClass.CASH_AND_CASH_EQUIVALENTS, "Cash & Cash Equivalents"],
     [AssetClass.EQUITIES, "Equities"],
@@ -309,7 +361,7 @@ describe("account tree Delete explanations", () => {
   }
 });
 
-describe("asset class column", () => {
+describe("account classification columns", () => {
   function readColumns(isEquityTab: boolean) {
     let columns: ReturnType<typeof useAccountTreeColumnDefs> = [];
     function ReadColumns() {
@@ -344,6 +396,7 @@ describe("asset class column", () => {
       { field: "balance" },
       { field: "balanceInReferenceCurrency" },
       { colId: "assetClass" },
+      { colId: "trackingMethod" },
       { groupId: "holding-gain-loss" },
       { colId: "actions", pinned: "right" },
     ]);
@@ -365,6 +418,45 @@ describe("asset class column", () => {
       colId: "actions",
       pinned: "right",
     });
+  });
+
+  it("places Tracking Method after Asset Class with label filtering and tooltips", () => {
+    const column = readColumns(false)[4];
+    expect(column).toMatchObject({
+      colId: "trackingMethod",
+      headerName: "Tracking Method",
+      initialWidth: 220,
+      resizable: true,
+      sortable: false,
+      filter: "agTextColumnFilter",
+      valueGetter: expect.any(Function),
+      tooltipValueGetter: expect.any(Function),
+    });
+    if (
+      !("valueGetter" in column) ||
+      typeof column.valueGetter !== "function" ||
+      typeof column.tooltipValueGetter !== "function"
+    ) {
+      throw new Error("Missing tracking method getters");
+    }
+    for (const data of [
+      createAccountRow({ trackingMethod: "TOTAL_PORTFOLIO_VALUE" }),
+      {
+        ...createGroupRow(),
+        groupTrackingMethod: "TOTAL_PORTFOLIO_VALUE" as const,
+      },
+    ]) {
+      expect(
+        column.valueGetter({ data } as Parameters<
+          typeof column.valueGetter
+        >[0]),
+      ).toBe("Total Portfolio Value");
+      expect(
+        column.tooltipValueGetter({ data } as Parameters<
+          typeof column.tooltipValueGetter
+        >[0]),
+      ).toBe("Total Portfolio Value");
+    }
   });
 
   it.each([

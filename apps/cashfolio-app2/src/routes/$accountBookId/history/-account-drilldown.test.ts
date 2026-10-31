@@ -15,13 +15,18 @@ const options: HistoryScopeOption[] = [
     kind: "account",
   },
   { value: "asset-class:EQUITIES", label: "Security", kind: "gainLoss" },
-  { value: "asset-class:EQUITIES", label: "AAPL", kind: "gainLoss" },
+  {
+    value: "gain-loss-investment:EQUITIES:SECURITY:AAPL",
+    label: "AAPL",
+    kind: "gainLoss",
+    parentValue: "asset-class:EQUITIES",
+  },
   {
     value: "gain-loss-account:asset",
     label: "Asset",
     accountId: "asset",
     kind: "gainLoss",
-    parentValue: "asset-class:EQUITIES",
+    parentValue: "gain-loss-investment:EQUITIES:SECURITY:AAPL",
   },
   {
     value:
@@ -29,7 +34,7 @@ const options: HistoryScopeOption[] = [
     label: "Clearing",
     accountId: "virtual:transfer-clearing:account:security:AAPL:USD",
     kind: "gainLoss",
-    parentValue: "asset-class:EQUITIES",
+    parentValue: "gain-loss-investment:EQUITIES:SECURITY:AAPL",
   },
   {
     value: "gain-loss-account:cash",
@@ -73,6 +78,7 @@ describe("History account drill-down", () => {
   test.each([
     "total",
     "group:expenses",
+    "gain-loss-investment:EQUITIES:SECURITY:AAPL",
     "account:missing",
     "account:virtual:transfer-clearing:account:currency:USD",
   ] as const)("does not navigate for unsupported scope %s", (scope) => {

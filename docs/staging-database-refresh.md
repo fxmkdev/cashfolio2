@@ -110,9 +110,9 @@ Open **Report** for the month containing the transaction: normally the seed's
 current month, or the previous month when refreshed on the first or second day.
 For example, an October 31 refresh dates the transaction October 29; a January 1
 refresh dates it December 30 of the previous year. Switch **Gains/Losses
-Breakdown** to **Table**, expand **Cash & Cash Equivalents**, and double-click
-**Travel**. The detail page shows an **Execution Residuals** row and this
-explanation:
+Breakdown** to **Table**, expand **Cash & Cash Equivalents → EUR**, and
+double-click **Travel**. The detail page shows an **Execution Residuals** row
+and this explanation:
 
 > Grouped under Cash & Cash Equivalents based on the originating account:
 > Everyday account CHF.
@@ -122,6 +122,21 @@ staging amounts depend on the historical EUR/CHF rate for the booking date. At
 EUR/CHF 0.95 the residual is CHF −10; the existing fixed E2E rates (EUR/CHF =
 0.5 / 1.1) produce CHF −59.55. Both bookings move together with the seed date,
 including month/year transitions and leap day.
+
+## Test currency gain/loss grouping
+
+The household book includes active **Broker cash USD** (Swissquote) and **USD
+Savings Account** (Zürcher Kantonalbank) accounts. Both are cash accounts
+classified as Cash and Cash Equivalents with Individual Units tracking. The
+savings account opens with USD 1,250 and receives USD 100 against CHF 90 from
+the everyday account on the sixth of each month within the generated date range.
+Search for `USD savings: monthly currency exchange` to inspect these transfers.
+
+In Report, drill into **Cash & Cash Equivalents → USD** to see both accounts.
+Each double-click advances one level, including units with only one account;
+opening account details requires a separate double-click on the account bar. The
+table's USD group aggregates the account contributions. History exposes the same
+USD grouping and individual account scopes.
 
 ## Test a manually valued managed portfolio
 
@@ -150,12 +165,14 @@ transactions. The previous cash rounding adjustment is no longer seeded.
 
 In the portfolio ledger, inspect the running balance and the separate
 contribution, withdrawal, and statement valuation transactions. In Report,
-switch Gains/Losses to Table and inspect `Other Assets → Managed Portfolio CHF`;
-double-click the portfolio row to open its unified gain/loss explanation for
-that period. Recorded Adjustments lists the statement valuations and links to
-their full transactions in Transactions for the selected report period,
-including bookings outside that period. In History, select Gains/Losses and the
-`Other Assets / Managed Portfolio CHF` scope to inspect the monthly series.
+switch Gains/Losses to Table and inspect
+`Other Assets → Managed Portfolios → Managed Portfolio CHF`; double-click the
+portfolio row to open its unified gain/loss explanation for that period.
+Recorded Adjustments lists the statement valuations and links to their full
+transactions in Transactions for the selected report period, including bookings
+outside that period. In History, select Gains/Losses and the
+`Other Assets / Managed Portfolios / Managed Portfolio CHF` scope to inspect the
+monthly series.
 
 For the automated fixture dated **2026-10-10**, there are 37 statement
 valuations with **CHF 8,100** cumulative explicit gains, CHF 9,000 of

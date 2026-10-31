@@ -1,6 +1,7 @@
 import { uploadStatementFile } from "../support/ui";
 import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
+import Decimal from "decimal.js";
 import { formatUtcDateForLocale } from "../../src/shared/date";
 import {
   generateStagingDataset,
@@ -103,6 +104,56 @@ test("synthetic household data supports reports and three years of history", asy
   ).toBeChecked();
 });
 
+test("USD investment grouping combines two active currency accounts", async ({
+  page,
+}) => {
+  const household = seededBook("household");
+  await page.goto(`/${household.id}/report?period=2026-10`);
+  await selectReportGrouping(page, "Asset Class");
+  await selectSegmentedControlOption(
+    page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
+    "Table",
+  );
+  const table = page.getByTestId("period-gains-losses-breakdown-table");
+  for (const id of [
+    "asset-class:CASH_AND_CASH_EQUIVALENTS",
+    "gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:USD",
+  ]) {
+    const row = table.locator(
+      `.ag-grid-scrolling-container > .ag-row[row-id="${id}"]`,
+    );
+    await expect(row).toBeVisible();
+    const expander = row.locator(".ag-group-contracted");
+    if (await expander.isVisible()) await expander.click();
+  }
+  const amount = async (row: ReturnType<typeof agGridRowByText>) =>
+    new Decimal(
+      (await agGridCellByColId(row, "totalGainLoss").innerText()).replace(
+        /[^\d.-]/g,
+        "",
+      ),
+    );
+  const broker = table
+    .locator(".ag-grid-scrolling-container > .ag-row")
+    .filter({ hasText: "Broker cash USD" });
+  const savings = table
+    .locator(".ag-grid-scrolling-container > .ag-row")
+    .filter({ hasText: "USD Savings Account" });
+  await expect(broker).toHaveCount(1);
+  await expect(savings).toHaveCount(1);
+  const group = table.locator(
+    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:USD"]',
+  );
+  expect((await amount(savings)).isZero()).toBe(false);
+  // Each level is independently rounded to cents at the response boundary.
+  expect(
+    (await amount(group))
+      .minus((await amount(broker)).plus(await amount(savings)))
+      .abs()
+      .lessThanOrEqualTo("0.01"),
+  ).toBe(true);
+});
+
 test("the managed portfolio separates cash flows from explicit statement gains and losses", async ({
   page,
 }) => {
@@ -111,6 +162,7 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   const portfolio = await prisma.account.findFirstOrThrow({
     where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
   });
+  expect(portfolio.trackingMethod).toBe("TOTAL_PORTFOLIO_VALUE");
 
   await page.goto(`/${household.id}/accounts?tab=ASSET`);
   const investments = agGridRowByText(page, "Investments");
@@ -158,6 +210,15 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     await expect(classRow).toBeVisible();
     const classExpander = classRow.locator(".ag-group-contracted");
     if (await classExpander.isVisible()) await classExpander.click();
+    const investmentRow = table.locator(
+      '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:OTHER_ASSETS:managed-portfolios"]',
+    );
+    await expect(investmentRow).toBeVisible();
+    await expect(agGridCellByColId(investmentRow, "totalGainLoss")).toHaveText(
+      expectedGainLoss,
+    );
+    const investmentExpander = investmentRow.locator(".ag-group-contracted");
+    if (await investmentExpander.isVisible()) await investmentExpander.click();
     const portfolioRow = table
       .locator(".ag-grid-scrolling-container > .ag-row")
       .filter({ hasText: "Managed Portfolio CHF" });
@@ -219,6 +280,12 @@ test("the seeded EUR card purchase explains its gain/loss asset-class grouping",
   await expect(classRow).toBeVisible();
   const expander = classRow.locator(".ag-group-contracted");
   if (await expander.isVisible()) await expander.click();
+  const eurRow = table.locator(
+    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:EUR"]',
+  );
+  await expect(eurRow).toBeVisible();
+  const eurExpander = eurRow.locator(".ag-group-contracted");
+  if (await eurExpander.isVisible()) await eurExpander.click();
   const travelRow = table
     .locator(".ag-grid-scrolling-container > .ag-row")
     .filter({ hasText: /^Travel\b/ });

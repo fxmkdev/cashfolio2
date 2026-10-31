@@ -38,7 +38,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
     total: string;
   };
   currencyFormatter: Intl.NumberFormat;
-  onNodeDoubleClick: (datum: GainsLossesWaterfallDatum) => void;
+  onNodeDoubleClick: (datum: GainsLossesWaterfallDatum, event: Event) => void;
 }): AgCartesianChartOptions {
   const {
     chartData,
@@ -51,6 +51,10 @@ export function useGainsLossesWaterfallChartOptions(args: {
     onNodeDoubleClick,
   } = args;
   const safeTotalGainLoss = toFiniteNumber(totalGainLoss);
+  const labelById = useMemo(
+    () => new Map(chartData.map((datum) => [datum.id, datum.label])),
+    [chartData],
+  );
   const userLocale = useUserLocale();
   const amountCompactFormatter = useMemo(
     () =>
@@ -66,7 +70,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
   >(
     () => ({
       type: "waterfall",
-      xKey: "label",
+      xKey: "id",
       yKey: "totalGainLoss",
       yName: "Gain/Loss",
       widthRatio: 0.72,
@@ -111,7 +115,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
       listeners: {
-        seriesNodeDoubleClick: ({ datum }) => {
+        seriesNodeDoubleClick: ({ datum, event }) => {
           if (datum == null) {
             return;
           }
@@ -125,12 +129,15 @@ export function useGainsLossesWaterfallChartOptions(args: {
             return;
           }
 
-          onNodeDoubleClick({
-            id: node.id,
-            label: node.label,
-            totalGainLoss: toFiniteNumber(node.totalGainLoss),
-            isDrillable: node.isDrillable,
-          });
+          onNodeDoubleClick(
+            {
+              id: node.id,
+              label: node.label,
+              totalGainLoss: toFiniteNumber(node.totalGainLoss),
+              isDrillable: node.isDrillable,
+            },
+            event,
+          );
         },
       },
     }),
@@ -151,7 +158,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
   >(
     () => ({
       type: "bar",
-      xKey: "label",
+      xKey: "id",
       yKey: "totalGainLoss",
       yName: "Gain/Loss",
       widthRatio: 0.72,
@@ -183,7 +190,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
       listeners: {
-        seriesNodeDoubleClick: ({ datum }) => {
+        seriesNodeDoubleClick: ({ datum, event }) => {
           const node = datum as Partial<GainsLossesWaterfallDatum>;
           if (
             typeof node.id !== "string" ||
@@ -193,12 +200,15 @@ export function useGainsLossesWaterfallChartOptions(args: {
             return;
           }
 
-          onNodeDoubleClick({
-            id: node.id,
-            label: node.label,
-            totalGainLoss: toFiniteNumber(node.totalGainLoss),
-            isDrillable: node.isDrillable,
-          });
+          onNodeDoubleClick(
+            {
+              id: node.id,
+              label: node.label,
+              totalGainLoss: toFiniteNumber(node.totalGainLoss),
+              isDrillable: node.isDrillable,
+            },
+            event,
+          );
         },
       },
     }),
@@ -241,6 +251,8 @@ export function useGainsLossesWaterfallChartOptions(args: {
         x: {
           type: "category",
           label: {
+            formatter: ({ value }) =>
+              labelById.get(String(value)) ?? String(value),
             rotation: -25,
           },
         },
@@ -261,6 +273,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
     }),
-    [amountCompactFormatter, chartData, chartSeries, colors],
+    [amountCompactFormatter, chartData, chartSeries, colors, labelById],
   );
 }

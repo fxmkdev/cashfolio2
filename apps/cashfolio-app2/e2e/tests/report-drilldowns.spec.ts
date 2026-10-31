@@ -106,6 +106,14 @@ async function expandRowIfCollapsed(row: Locator) {
   }
 }
 
+async function expandGainLossGroup(table: Locator, nodeId: string) {
+  const row = table.locator(
+    `.ag-grid-scrolling-container > .ag-row[row-id="${nodeId}"]`,
+  );
+  await expect(row).toBeVisible();
+  await expandRowIfCollapsed(row);
+}
+
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
@@ -209,6 +217,10 @@ test("period gains/losses table account drilldown opens reconciliation page and 
   const assetClassRow = gridRowByText(gainsLossesTable, "Equities");
   await expect(assetClassRow).toBeVisible();
   await expandRowIfCollapsed(assetClassRow);
+  await expandGainLossGroup(
+    gainsLossesTable,
+    "gain-loss-investment:EQUITIES:SECURITY:AAPL",
+  );
 
   const securityAccountRow = gridRowByText(
     gainsLossesTable,
@@ -269,6 +281,7 @@ test("period recorded gains/losses rows open the reference-currency account expl
   });
 
   await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
+  await selectReportGrouping(page, "Asset Class");
   await expect(
     page.getByRole("heading", { name: "January 2026" }),
   ).toBeVisible();
@@ -279,6 +292,11 @@ test("period recorded gains/losses rows open the reference-currency account expl
     tableTestId: "period-gains-losses-breakdown-table",
   });
 
+  await expandGainLossGroup(gainsLossesTable, "asset-class:unclassified");
+  await expandGainLossGroup(
+    gainsLossesTable,
+    "gain-loss-investment:unclassified:CURRENCY:CHF",
+  );
   const explicitRow = gridRowByText(gainsLossesTable, seeded.cashAccount.name);
   await expect(explicitRow).toBeVisible();
   await explicitRow.dblclick();
@@ -434,6 +452,7 @@ test("archived manual portfolio reclassification moves historical G/L without ch
       name: "Archived CHF Equity Portfolio",
       isActive: false,
       assetClass: AssetClass.EQUITIES,
+      trackingMethod: "TOTAL_PORTFOLIO_VALUE",
     },
   });
   await seedExplicitGainLossDrilldownScenario({
@@ -450,6 +469,10 @@ test("archived manual portfolio reclassification moves historical G/L without ch
   });
   await expect(gridRowByText(table, "Equities")).toBeVisible();
   await expandRowIfCollapsed(gridRowByText(table, "Equities"));
+  await expandGainLossGroup(
+    table,
+    "gain-loss-investment:EQUITIES:managed-portfolios",
+  );
   const amount = await gridRowByText(table, "Archived CHF Equity Portfolio")
     .locator('[col-id="totalGainLoss"]')
     .innerText();
@@ -479,6 +502,10 @@ test("archived manual portfolio reclassification moves historical G/L without ch
   await expect(gridRowByText(table, "Equities")).toHaveCount(0);
   await expect(gridRowByText(table, "Other Assets")).toBeVisible();
   await expandRowIfCollapsed(gridRowByText(table, "Other Assets"));
+  await expandGainLossGroup(
+    table,
+    "gain-loss-investment:OTHER_ASSETS:managed-portfolios",
+  );
   await expect(
     gridRowByText(table, "Archived CHF Equity Portfolio").locator(
       '[col-id="totalGainLoss"]',

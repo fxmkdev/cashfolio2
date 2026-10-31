@@ -78,6 +78,58 @@ export const SignedAccountHistory: Story = {
   },
 };
 
+export const ManagedPortfolioHistory: Story = {
+  args: {
+    selectedMetric: "gainsLosses",
+    history: {
+      ...history,
+      points: history.points.map((point, index) => ({
+        ...point,
+        gainsLosses: [50, -20, 30, 10, 40][index]!,
+      })),
+      scopeSelection: {
+        ...history.scopeSelection,
+        gainsLosses: "gain-loss-investment:EQUITIES:managed-portfolios",
+      },
+      scopeOptions: {
+        ...history.scopeOptions,
+        gainsLosses: [
+          {
+            value: "asset-class:EQUITIES",
+            label: "Equities",
+            treeLabel: "Equities",
+            kind: "gainLoss",
+          },
+          {
+            value: "gain-loss-investment:EQUITIES:managed-portfolios",
+            label: "Equities / Managed Portfolios",
+            treeLabel: "Managed Portfolios",
+            kind: "gainLoss",
+            parentValue: "asset-class:EQUITIES",
+          },
+          {
+            value: "gain-loss-account:portfolio",
+            label: "Equities / Managed Portfolios / Portfolio",
+            treeLabel: "Portfolio",
+            kind: "gainLoss",
+            parentValue: "gain-loss-investment:EQUITIES:managed-portfolios",
+            accountId: "portfolio",
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("textbox", { name: "View" })).toHaveValue(
+      "Managed Portfolios",
+    );
+    await expect(
+      canvas.queryByText("Double-click a period to open ledger."),
+    ).not.toBeInTheDocument();
+  },
+};
+
 const creditCardHistory: PeriodHistoryResponse = {
   ...history,
   openingBalancePoint: { ...history.openingBalancePoint, netWorth: 0 },

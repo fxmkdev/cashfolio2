@@ -182,6 +182,7 @@ describe("Decimal monetary pipelines", () => {
       ...stock,
       id: "portfolio",
       name: "USD Equity Portfolio",
+      trackingMethod: "TOTAL_PORTFOLIO_VALUE" as const,
       unit: Unit.CURRENCY,
       currency: "USD",
       symbol: null,
@@ -191,6 +192,7 @@ describe("Decimal monetary pipelines", () => {
       ...portfolio,
       id: "bank",
       name: "USD Bank",
+      trackingMethod: "INDIVIDUAL_UNITS" as const,
       assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     };
     const chf = {
@@ -248,10 +250,24 @@ describe("Decimal monetary pipelines", () => {
       accountBookId: "book-1",
       baseData: scenario,
     });
-    const leaves =
-      overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.flatMap(
-        (node) => node.children,
-      );
+    const assetClassHierarchy =
+      overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy;
+    expect(
+      assetClassHierarchy
+        .find((node) => node.id === "asset-class:EQUITIES")
+        ?.children.find((node) => node.label === "Managed Portfolios"),
+    ).toMatchObject({
+      children: expect.arrayContaining([
+        expect.objectContaining({
+          id: "gain-loss-account:portfolio",
+          totalGainLoss: 28,
+        }),
+      ]),
+    });
+    const leaves = assetClassHierarchy.flatMap((node) =>
+      node.children.flatMap((group) => group.children),
+    );
     expect(
       leaves.find((node) => node.account?.id === "portfolio"),
     ).toMatchObject({
@@ -324,6 +340,18 @@ describe("Decimal monetary pipelines", () => {
         overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
           .totalGainLoss,
       ).toBe(overview.stats.gainsLosses);
+      const managed = toNumericMoney(
+        await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData,
+          metricScopeFilter: {
+            metric: "gainsLosses",
+            scope: "gain-loss-investment:EQUITIES:managed-portfolios",
+          },
+        }),
+      );
+      expect(managed.scopedMetricValue).toBe(33);
+      expect(managed.gainsLosses).toBe(overview.stats.gainsLosses);
       const reclassified = {
         ...baseData,
         baseAssetLiabilityAccounts: baseData.baseAssetLiabilityAccounts.map(

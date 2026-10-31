@@ -418,6 +418,60 @@ describe("updateAccount opening balance management", () => {
     },
   );
 
+  it.each([undefined, "INDIVIDUAL_UNITS", "TOTAL_PORTFOLIO_VALUE"] as const)(
+    "preserves or updates tracking method %s without rewriting bookings",
+    async (trackingMethod) => {
+      tx.account.findUniqueOrThrow.mockResolvedValueOnce({
+        type: AccountType.BALANCE,
+        equityAccountSubtype: null,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        statementImportCsvFormat: null,
+        isCashAccount: false,
+        assetClass: AssetClass.EQUITIES,
+        trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+      });
+      await updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Portfolio",
+          type: AccountType.BALANCE,
+          trackingMethod,
+        },
+      });
+      expect(tx.account.update.mock.calls[0]![0].data.trackingMethod).toBe(
+        trackingMethod ?? "TOTAL_PORTFOLIO_VALUE",
+      );
+      expect(tx.booking.deleteMany).not.toHaveBeenCalled();
+      expect(tx.transaction.create).not.toHaveBeenCalled();
+      expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+        "book-1",
+      );
+    },
+  );
+
+  it("creates an explicitly managed portfolio", async () => {
+    await createAccount({
+      data: {
+        accountBookId: "book-1",
+        name: "Portfolio",
+        type: AccountType.BALANCE,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+      },
+    });
+    expect(tx.account.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+      }),
+    });
+  });
+
   it("ignores stale submitted unit identity fields when updating unitless equity accounts", async () => {
     const actual = await vi.importActual<
       typeof import("../../shared/account-validation")

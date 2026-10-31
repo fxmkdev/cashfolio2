@@ -18,6 +18,7 @@ export function createAccountInitialValues(
   return {
     name: source.name,
     assetClass: source.assetClass ?? null,
+    trackingMethod: source.trackingMethod ?? "INDIVIDUAL_UNITS",
     type: source.type,
     equityAccountSubtype: source.equityAccountSubtype,
     groupId: source.groupId ?? undefined,
@@ -42,6 +43,7 @@ export function toFormValues(initial: AccountInitialValues): FormValues {
   return {
     name: initial.name,
     assetClass: initial.assetClass ?? null,
+    trackingMethod: initial.trackingMethod ?? "INDIVIDUAL_UNITS",
     typeDescriptor,
     groupId: initial.groupId ?? undefined,
     sortOrder: initial.sortOrder ?? undefined,
@@ -82,6 +84,10 @@ export function transformAccountValues(
     ...values,
     type,
     assetClass: values.assetClass || null,
+    trackingMethod:
+      type === AccountType.BALANCE && values.unit === Unit.CURRENCY
+        ? (values.trackingMethod ?? "INDIVIDUAL_UNITS")
+        : ("INDIVIDUAL_UNITS" as const),
     openingBalance,
     statementImportCsvFormat: parseStatementImportCsvFormatJson(
       values.statementImportCsvFormat,

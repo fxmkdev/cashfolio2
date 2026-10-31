@@ -815,11 +815,21 @@ describe("getPeriodOverview", () => {
         children: [
           {
             label: "AAPL",
-            totalGainLoss: -10,
+            children: [
+              {
+                label: "AAPL",
+                totalGainLoss: -10,
+              },
+            ],
           },
           {
-            label: "Cash",
-            totalGainLoss: 5,
+            label: "Unknown Unit",
+            children: [
+              {
+                label: "Cash",
+                totalGainLoss: 5,
+              },
+            ],
           },
         ],
         totalGainLoss: -5,
@@ -959,8 +969,13 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Travel USD",
-            totalGainLoss: -10,
+            label: "USD",
+            children: [
+              {
+                label: "Travel USD",
+                totalGainLoss: -10,
+              },
+            ],
           },
         ],
         totalGainLoss: -10,
@@ -1099,8 +1114,13 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Salary USD",
-            totalGainLoss: 10,
+            label: "USD",
+            children: [
+              {
+                label: "Salary USD",
+                totalGainLoss: 10,
+              },
+            ],
           },
         ],
         totalGainLoss: 10,
@@ -1993,8 +2013,13 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Unattributed (Multiple Counterpart Accounts)",
-            totalGainLoss: 5,
+            label: "Unknown Unit",
+            children: [
+              {
+                label: "Unattributed (Multiple Counterpart Accounts)",
+                totalGainLoss: 5,
+              },
+            ],
           },
         ],
         totalGainLoss: 5,
@@ -2061,8 +2086,13 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Unattributed (No Counterpart Account)",
-            totalGainLoss: 5,
+            label: "Unknown Unit",
+            children: [
+              {
+                label: "Unattributed (No Counterpart Account)",
+                totalGainLoss: 5,
+              },
+            ],
           },
         ],
         totalGainLoss: 5,
@@ -2249,12 +2279,17 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Cash 1",
-            totalGainLoss: 5,
-          },
-          {
-            label: "Cash 2",
-            totalGainLoss: 7,
+            label: "Unknown Unit",
+            children: [
+              {
+                label: "Cash 1",
+                totalGainLoss: 5,
+              },
+              {
+                label: "Cash 2",
+                totalGainLoss: 7,
+              },
+            ],
           },
         ],
         totalGainLoss: 12,
@@ -2845,9 +2880,14 @@ describe("getPeriodOverview", () => {
         children: [
           {
             label: "USD",
-            realizedGainLoss: -4,
-            unrealizedGainLoss: -21,
-            totalGainLoss: -25,
+            children: [
+              {
+                label: "USD",
+                realizedGainLoss: -4,
+                unrealizedGainLoss: -21,
+                totalGainLoss: -25,
+              },
+            ],
           },
         ],
         realizedGainLoss: -4,

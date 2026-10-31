@@ -20,6 +20,7 @@ import type {
 } from "@/components/account-editor/edit-account-modal";
 import type { ReorderGroupChildRow } from "@/components/account-tree/reorder-group-children-modal";
 import { useAccountTreeColumnDefs } from "./-page-columns";
+import { useRowsWithGroupTrackingMethods } from "./-page-data-tracking-methods";
 import {
   useBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
@@ -430,9 +431,14 @@ function AccountsPageStoryHarness({
   }, [mode, tab, showArchived, rowsOverride, assetClasses]);
   const sourceRowsByParentKey = useRowsByParentKey(sourceRows);
   const isEquityTab = tab.startsWith("EQUITY-");
-  const rows = useRowsWithGroupAssetClasses(
+  const rowsWithGroupAssetClasses = useRowsWithGroupAssetClasses(
     sourceRowsByParentKey,
     sourceRows,
+    !isEquityTab,
+  );
+  const rows = useRowsWithGroupTrackingMethods(
+    sourceRowsByParentKey,
+    rowsWithGroupAssetClasses,
     !isEquityTab,
   );
   const rowsByParentKey = useRowsByParentKey(rows);
@@ -1978,6 +1984,40 @@ export const GroupAssetClassSummaries: Story = {
     await expect(
       canvasElement.querySelector('[row-id="closed-child"]'),
     ).toBeNull();
+  },
+};
+
+export const TrackingMethodColumn: Story = {
+  render: () => (
+    <Box w={1800}>
+      <AccountsPageStoryHarness
+        initialMode="active"
+        expandGroups
+        rowsOverride={groupSelectionRows.map((row) =>
+          row.id === "old" || row.id === "closed-child"
+            ? { ...row, trackingMethod: "TOTAL_PORTFOLIO_VALUE" }
+            : row,
+        )}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const cell = (id: string) =>
+      canvasElement.querySelector(`[row-id="${id}"] [col-id="trackingMethod"]`);
+    await waitFor(() => expect(cell("portfolio")).toHaveTextContent("Mixed"));
+    await expect(cell("account-checking")).toHaveTextContent(
+      "Individual Units",
+    );
+    await expect(cell("old")).toHaveTextContent("Total Portfolio Value");
+    await expect(cell("nested")).toHaveTextContent("Total Portfolio Value");
+    await expect(cell("__archived__:root")).toHaveTextContent(
+      "Total Portfolio Value",
+    );
+    await expect(cell("other-group")).toHaveTextContent("Individual Units");
+    await expect(cell("empty")).toHaveTextContent(/^$/);
+    await expect(
+      cell(REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID),
+    ).toHaveTextContent(/^$/);
   },
 };
 

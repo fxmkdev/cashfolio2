@@ -2,12 +2,17 @@ import type { GainLossContributionAccumulator } from "./period-gains-losses-cont
 import type { AssetClass } from "../../../.prisma-client/enums";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import { getAssetClassLabel } from "../../../shared/asset-class";
+import {
+  getGainLossInvestmentGroup,
+  type GainLossInvestmentGroup,
+} from "./period-gain-loss-investment-group";
 
 export type GainLossAccountAttribution = {
   assetClass: AssetClass | null;
   kind: "account" | "transferClearing" | "unattributed";
   explanation: string | null;
   instrumentLabel?: string;
+  investmentGroup?: GainLossInvestmentGroup;
 };
 
 /** Current classification is independent of valuation and FIFO identity. */
@@ -32,6 +37,7 @@ export function buildGainLossAccountAttribution(
       assetClass: account.assetClass ?? null,
       kind: "account",
       explanation: null,
+      investmentGroup: getGainLossInvestmentGroup(account),
       instrumentLabel: [
         account.currency,
         account.cryptocurrency,
@@ -56,9 +62,8 @@ export function buildGainLossAccountAttribution(
     };
   };
   for (const bucket of baseData.transferClearingUnitBuckets) {
-    result.set(
-      `virtual:transfer-clearing:account:${bucket.unitKey}`,
-      originating(
+    result.set(`virtual:transfer-clearing:account:${bucket.unitKey}`, {
+      ...originating(
         new Set(
           bucket.bookings.flatMap((booking) =>
             booking.originatingAccountIds?.length
@@ -68,7 +73,8 @@ export function buildGainLossAccountAttribution(
         ),
         "transferClearing",
       ),
-    );
+      investmentGroup: getGainLossInvestmentGroup(bucket),
+    });
   }
   const residualOrigins = new Map<string, Set<string>>();
   for (const contribution of contributions) {

@@ -104,7 +104,7 @@ describe("period history metrics cache", () => {
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toBe(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:income:account:income-a",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:income:account:income-a",
     );
   });
 
@@ -180,7 +180,7 @@ describe("period history metrics cache", () => {
     });
     const [firstKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(firstKey).toBe(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-05:2026-05-11:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-05:2026-05-11:total",
     );
 
     vi.setSystemTime(new Date("2026-05-12T14:30:00.000Z"));
@@ -190,7 +190,7 @@ describe("period history metrics cache", () => {
     });
     const [secondKey] = redisClient.setEx.mock.calls[1] ?? [];
     expect(secondKey).toBe(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-05:2026-05-12:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-05:2026-05-12:total",
     );
   });
 
@@ -198,7 +198,7 @@ describe("period history metrics cache", () => {
     const metrics = createMetrics();
     const { netWorth: _netWorth, ...oldScopeOptions } = metrics.scopeOptions;
     redisState.kv.set(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       JSON.stringify(
         encodeMoneyCache({
           ...metrics,
@@ -236,7 +236,7 @@ describe("period history metrics cache", () => {
         loadPeriodHistoryPointMetricsWithCacheability,
       ).toHaveBeenCalledTimes(1);
       expect(redisClient.get).toHaveBeenCalledWith(
-        "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+        "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       );
       expect(redisState.kv.has(oldKey)).toBe(true);
     },
@@ -258,7 +258,7 @@ describe("period history metrics cache", () => {
       1,
     );
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
     );
   });
 
@@ -278,7 +278,7 @@ describe("period history metrics cache", () => {
       1,
     );
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
     );
   });
 
@@ -298,7 +298,7 @@ describe("period history metrics cache", () => {
       1,
     );
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
     );
   });
 
@@ -318,13 +318,13 @@ describe("period history metrics cache", () => {
       1,
     );
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
     );
   });
 
   it("ignores legacy entries missing balance scope options", async () => {
     redisState.kv.set(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       JSON.stringify({
         totalReturn: toMoney(1),
         savings: toMoney(1),
@@ -361,7 +361,7 @@ describe("period history metrics cache", () => {
     };
     delete legacyMetrics.cashFlow;
     redisState.kv.set(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       JSON.stringify(legacyMetrics),
     );
 
@@ -378,7 +378,7 @@ describe("period history metrics cache", () => {
 
   it("ignores malformed cached scope option arrays", async () => {
     redisState.kv.set(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       JSON.stringify(
         createMetrics({
           scopeOptions: {
@@ -409,7 +409,7 @@ describe("period history metrics cache", () => {
     "validates cached grouping metadata %s",
     async (grouping) => {
       redisState.kv.set(
-        "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+        "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
         JSON.stringify(
           encodeMoneyCache(
             createMetrics({
@@ -551,7 +551,7 @@ describe("period history metrics cache", () => {
       JSON.stringify(createMetrics()),
     );
     redisState.kv.set(
-      "period:history:metrics:v12:preview-app-123:book-1:gen-1:2026-04:total",
+      "period:history:metrics:v13:preview-app-123:book-1:gen-1:2026-04:total",
       JSON.stringify({ totalReturn: { __cashfolioDecimal: "NaN" } }),
     );
     const result = await getOrLoadPeriodHistoryPointMetrics({

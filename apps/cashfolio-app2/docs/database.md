@@ -55,7 +55,10 @@ paths are relative to that app directory.
   `type`, `equityAccountSubtype`, `isActive`, `sortOrder`
 - `Account` — belongs to a group; has `type`, `equityAccountSubtype`,
   `isActive`, `unit`, `currency`, `cryptocurrency`, `symbol`, `tradeCurrency`,
-  `sortOrder`
+  `sortOrder`, `assetClass`, `trackingMethod`. Tracking method defaults to
+  `INDIVIDUAL_UNITS` for new and existing accounts; `TOTAL_PORTFOLIO_VALUE` is
+  permitted only for currency balance accounts, enforced by a database CHECK. It
+  is editable reporting metadata and does not change valuation or FIFO.
 - `Transaction` — has `description`; contains one or more `Booking` rows
 - `Booking` — has `date`, `description`, `value` (Decimal), `unit`, `currency`,
   `cryptocurrency`, `symbol`, `tradeCurrency`, `sortOrder`; links to both

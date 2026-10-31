@@ -3,6 +3,7 @@ export type { AccountGainLossSourceRow } from "../../../shared/gain-loss-reconci
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import { buildGainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { buildGainsLossesBreakdown } from "../breakdown/period-gains-losses-breakdown";
+import type { PeriodGainsLossesBreakdownNode } from "../breakdown/period-gains-losses-breakdown";
 import type { GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
 import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
 import { processPeriodEquityBookingsFromBaseData } from "../overview/period-equity-bookings";
@@ -99,10 +100,18 @@ export async function loadAccountGainLossSources(
       contributions,
     ),
   }).hierarchy;
+  const findAccount = (
+    nodes: PeriodGainsLossesBreakdownNode[],
+  ): PeriodGainsLossesBreakdownNode | undefined => {
+    for (const node of nodes) {
+      if (node.account?.id === accountId) return node;
+      const child = findAccount(node.children);
+      if (child) return child;
+    }
+    return undefined;
+  };
   return {
-    node: hierarchy
-      .flatMap((node) => node.children)
-      .find((node) => node.account?.id === accountId),
+    node: findAccount(hierarchy),
     contribution: contributions.find(
       (contribution) => contribution.accountId === accountId,
     ),

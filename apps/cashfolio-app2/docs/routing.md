@@ -185,17 +185,17 @@ their default handling. Revisit this filter if the app enables RSC.
   - The scope combobox applies to `cashFlow`, `income`, `expenses`,
     `gainsLosses`, and `netWorth`. The `Total` scope preserves the aggregate
     view; concrete scopes replace the selected metric series with that scope's
-    value. Gain/Loss scopes use either Account Structure or Asset Class then
-    Account, with explicit account metadata driving navigation. Current
-    classification applies to all history periods, and an account scope survives
-    reclassification.
+    value. Gain/Loss scopes use either Account Structure or Asset Class →
+    Investment Group → Account, with explicit account metadata driving
+    navigation. Current classification applies to all history periods, and an
+    account scope survives reclassification.
   - When an account scope is selected, double-click a period bar or an Net Worth
     balance point to open its ledger with that exact month or year. Gain/Loss
     account scopes open the unified account reconciliation page, including
     recorded adjustments, calculated holdings and residuals. Supported synthetic
     and unattributed accounts retain their own explanations. Totals, asset
-    classes, groups, overlays, and the opening-balance point do not open an
-    account. A hint appears when a destination is available.
+    classes, investment groups, groups, overlays, and the opening-balance point
+    do not open an account. A hint appears when a destination is available.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search

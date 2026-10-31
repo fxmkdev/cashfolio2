@@ -1,11 +1,18 @@
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import { useCallback, useMemo } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  type MouseEventHandler,
+  type MouseEvent,
+} from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import { useGainsLossesWaterfallChartOptions } from "./-gains-losses/-gains-losses-chart-options";
 import { getGainsLossesDrillState } from "./-gains-losses/-gains-losses-drill";
 import { buildGainsLossesWaterfallModel } from "./-gains-losses/-gains-losses-waterfall-model";
 import type { GainsLossesChartType } from "./-breakdown/-breakdown-types";
+import { handleGainsLossesDoubleClick } from "./-gains-losses/-gains-losses-double-click";
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
@@ -19,7 +26,7 @@ export type PeriodGainsLossesViewModel = {
     typeof useGainsLossesWaterfallChartOptions
   >;
   updateGainsLossesDrillPath: (nextPath: string[]) => void;
-  handleChartContainerDoubleClick: (() => void) | null;
+  handleChartContainerDoubleClick: MouseEventHandler<HTMLDivElement> | null;
 };
 
 export function usePeriodGainsLossesViewModel(args: {
@@ -92,27 +99,18 @@ export function usePeriodGainsLossesViewModel(args: {
     },
     [setDrillPathByGainsLosses],
   );
+  const handledDoubleClicks = useRef(new WeakSet<Event>());
   const handleNodeDoubleClick = useCallback(
-    (datum: (typeof waterfallModel)["data"][number]) => {
-      const accountId = gainsLossesDrillState.currentNodes.find(
-        (node) => node.id === datum.id,
-      )?.account?.id;
-      if (accountId) {
-        onUnitAccountDoubleClick?.(accountId);
-        return;
-      }
-
-      if (
-        !datum.isDrillable ||
-        gainsLossesDrillState.clampedPath.includes(datum.id)
-      ) {
-        return;
-      }
-
-      updateGainsLossesDrillPath([
-        ...gainsLossesDrillState.clampedPath,
-        datum.id,
-      ]);
+    (datum: (typeof waterfallModel)["data"][number], event: Event) => {
+      handleGainsLossesDoubleClick({
+        event,
+        handledEvents: handledDoubleClicks.current,
+        datum,
+        currentNodes: gainsLossesDrillState.currentNodes,
+        path: gainsLossesDrillState.clampedPath,
+        onOpenAccount: onUnitAccountDoubleClick,
+        onDrill: updateGainsLossesDrillPath,
+      });
     },
     [
       gainsLossesDrillState.clampedPath,
@@ -139,10 +137,10 @@ export function usePeriodGainsLossesViewModel(args: {
       return null;
     }
 
-    return () => {
+    return (event: MouseEvent<HTMLDivElement>) => {
       const onlyNode = waterfallModel.data[0];
       if (onlyNode) {
-        handleNodeDoubleClick(onlyNode);
+        handleNodeDoubleClick(onlyNode, event.nativeEvent);
       }
     };
   }, [handleNodeDoubleClick, selectedGainsLossesChartType, waterfallModel]);

@@ -8,6 +8,7 @@ import {
 } from "../../shared/date";
 
 import type {
+  AccountTrackingMethod,
   AssetClass,
   AccountType,
   EquityAccountSubtype,
@@ -18,6 +19,7 @@ import type { AccountState } from "./accounts-queries-reference-balances";
 import { getAccountsWhereClause } from "./accounts-queries-reference-balances";
 
 export type AccountTreeQueryAccount = {
+  trackingMethod?: AccountTrackingMethod;
   assetClass: AssetClass | null;
   id: string;
   name: string;
@@ -71,6 +73,7 @@ export async function fetchAccountTreeQueryData(args: {
         select: {
           id: true,
           assetClass: true,
+          trackingMethod: true,
           name: true,
           type: true,
           equityAccountSubtype: true,

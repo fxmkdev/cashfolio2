@@ -335,3 +335,32 @@ describe("equity subtype type-combination validators", () => {
     ).toBe("Equity subtype is only allowed for equity groups");
   });
 });
+
+describe("portfolio tracking validation", () => {
+  test("accepts portfolio value tracking only on currency balance accounts", async () => {
+    const { validateAccountTrackingMethod } =
+      await import("./account-validation");
+    expect(
+      validateAccountTrackingMethod(
+        "TOTAL_PORTFOLIO_VALUE",
+        "CURRENCY",
+        "BALANCE",
+      ),
+    ).toBeNull();
+    for (const unit of ["SECURITY", "CRYPTOCURRENCY", undefined] as const) {
+      expect(
+        validateAccountTrackingMethod("TOTAL_PORTFOLIO_VALUE", unit, "BALANCE"),
+      ).toBeTruthy();
+    }
+    expect(
+      validateAccountTrackingMethod(
+        "TOTAL_PORTFOLIO_VALUE",
+        "CURRENCY",
+        "EQUITY",
+      ),
+    ).toBeTruthy();
+    expect(
+      validateAccountTrackingMethod("INDIVIDUAL_UNITS", undefined, "EQUITY"),
+    ).toBeNull();
+  });
+});
