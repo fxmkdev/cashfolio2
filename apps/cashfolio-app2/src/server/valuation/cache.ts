@@ -1,3 +1,5 @@
+import { checkResourceBudget } from "../resource-context.server";
+import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
 import { VALUATION_SERIES_RETENTION_MS } from "./constants";
 import { getMissedAttemptCooldownCacheKey } from "./keys";
@@ -35,6 +37,7 @@ export async function getCachedRate(
 
     return { rate: latestEntry.value, timestamp: latestEntry.timestamp };
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationCacheReadFailure) {
       console.warn(
         "Failed to read valuation rate from Redis cache; continuing with API lookup.",
@@ -54,6 +57,7 @@ export async function storeCachedRate(
   const redis = await getRedisClient();
   if (!redis) return;
 
+  checkResourceBudget();
   await redis.ts.add(key, timestamp, rate, {
     ON_DUPLICATE: "LAST",
     RETENTION: VALUATION_SERIES_RETENTION_MS,
@@ -105,6 +109,7 @@ export async function getBacktrackedFallbackFromCache(
 
     return null;
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationFallbackCacheReadFailure) {
       console.warn(
         "Failed to read backtracked valuation fallback from Redis cache; continuing without fallback cache.",
@@ -125,8 +130,10 @@ export async function storeBacktrackedFallbackInCache(
     const redis = await getRedisClient();
     if (!redis) return;
 
+    checkResourceBudget();
     await redis.setEx(key, ttlSeconds, JSON.stringify(entry));
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationFallbackCacheWriteFailure) {
       console.warn(
         "Failed to store backtracked valuation fallback in Redis cache.",
@@ -143,8 +150,10 @@ export async function clearBacktrackedFallbackFromCache(
   try {
     const redis = await getRedisClient();
     if (!redis) return;
+    checkResourceBudget();
     await redis.del(key);
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationFallbackCacheWriteFailure) {
       console.warn(
         "Failed to clear backtracked valuation fallback from Redis cache.",
@@ -167,6 +176,7 @@ export async function hasRecentMissedAttemptForSeriesTimestamp(
     const exists = await redis.exists(missKey);
     return exists === 1;
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationMissCooldownCacheReadFailure) {
       console.warn(
         "Failed to read valuation miss-attempt cooldown from Redis cache; continuing without cooldown cache.",
@@ -191,8 +201,10 @@ export async function storeMissedAttemptForSeriesTimestamp(args: {
       args.seriesKey,
       args.timestamp,
     );
+    checkResourceBudget();
     await redis.setEx(missKey, args.ttlSeconds, "1");
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationMissCooldownCacheStoreFailure) {
       console.warn(
         "Failed to store valuation miss-attempt cooldown in Redis cache.",
@@ -212,8 +224,10 @@ export async function clearMissedAttemptForSeriesTimestamp(
     if (!redis) return;
 
     const missKey = getMissedAttemptCooldownCacheKey(seriesKey, timestamp);
+    checkResourceBudget();
     await redis.del(missKey);
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedValuationMissCooldownCacheClearFailure) {
       console.warn(
         "Failed to clear valuation miss-attempt cooldown in Redis cache.",

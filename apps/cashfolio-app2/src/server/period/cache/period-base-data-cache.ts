@@ -1,3 +1,5 @@
+import { checkResourceBudget } from "../../resource-context.server";
+import { rethrowResourceError } from "../../resource-error";
 import {
   PERIOD_BASE_CACHE_ENTRY_PREFIX,
   getPeriodBaseCacheEntryKey,
@@ -79,6 +81,7 @@ export async function getOrLoadPeriodBaseData(args: {
         return decodeMoneyCache<PeriodBaseData>(parsed);
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedPeriodBaseCacheReadFailure) {
         console.warn(
           "Failed to read period base-data cache entry; continuing uncached.",
@@ -111,10 +114,14 @@ export async function getOrLoadPeriodBaseData(args: {
           accountBookId: args.accountBookId,
           generation,
         });
+        checkResourceBudget();
         await redis.setEx(entryKey, PERIOD_CACHE_TTL_SECONDS, serialized);
+        checkResourceBudget();
         await redis.sAdd(indexKey, entryKey);
+        checkResourceBudget();
         await redis.expire(indexKey, PERIOD_CACHE_TTL_SECONDS);
         // This pointer is only a cleanup hint. Readers use the DB revision.
+        checkResourceBudget();
         await redis.set(
           getPeriodCacheGenerationKey({
             cacheEnv,
@@ -125,6 +132,7 @@ export async function getOrLoadPeriodBaseData(args: {
         );
       }
     } catch (error) {
+      rethrowResourceError(error);
       if (!hasWarnedPeriodBaseCacheWriteFailure) {
         console.warn(
           "Failed to write period base-data cache entry; continuing uncached.",
@@ -165,6 +173,7 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     }
     // Publish the cleanup hint before deleting obsolete entries. Even if any
     // Redis command fails, the committed DB revision already invalidated them.
+    checkResourceBudget();
     await redis.set(generationKey, generation);
     const indexKey = getPeriodBaseCacheIndexKey({
       cacheEnv,
@@ -173,11 +182,14 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     });
     const members = await redis.sMembers(indexKey);
     if (members.length > 0) {
+      checkResourceBudget();
       await redis.del([...members, indexKey]);
     } else {
+      checkResourceBudget();
       await redis.del(indexKey);
     }
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedPeriodBaseCacheInvalidationFailure) {
       console.warn(
         "Failed to clean up obsolete period cache entries; database revision still enforces invalidation.",

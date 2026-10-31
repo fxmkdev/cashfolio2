@@ -1,3 +1,4 @@
+import { checkResourceBudget } from "./resource-context.server";
 export async function mapWithConcurrencyLimit<TInput, TOutput>(
   items: readonly TInput[],
   concurrencyLimit: number,
@@ -13,19 +14,26 @@ export async function mapWithConcurrencyLimit<TInput, TOutput>(
     : 1;
   const workerCount = Math.min(Math.max(1, normalizedLimit), items.length);
   let nextIndex = 0;
+  let failure: { reason: unknown } | undefined;
 
-  await Promise.all(
+  await Promise.allSettled(
     Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        const currentIndex = nextIndex;
-        nextIndex += 1;
-        results[currentIndex] = await mapper(
-          items[currentIndex]!,
-          currentIndex,
-        );
+      while (!failure && nextIndex < items.length) {
+        try {
+          checkResourceBudget();
+          const currentIndex = nextIndex;
+          nextIndex += 1;
+          results[currentIndex] = await mapper(
+            items[currentIndex]!,
+            currentIndex,
+          );
+        } catch (reason) {
+          failure ??= { reason };
+        }
       }
     }),
   );
 
+  if (failure) throw failure.reason;
   return results;
 }

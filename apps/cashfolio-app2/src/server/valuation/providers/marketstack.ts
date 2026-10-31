@@ -1,3 +1,9 @@
+import { rethrowResourceError } from "../../resource-error";
+import { setTimeout as delay } from "node:timers/promises";
+import {
+  checkResourceBudget,
+  getResourceSignal,
+} from "../../resource-context.server";
 import { fetchProviderResponse } from "./request";
 import { getProviderApiKey } from "../provider-api-key";
 import {
@@ -105,9 +111,14 @@ export async function fetchSecurityPriceFromMarketstack(
       nextRetryCount: retryCount + 1,
       maxRetries: MARKETSTACK_RATE_LIMIT_MAX_RETRIES,
     });
-    await new Promise((resolve) =>
-      setTimeout(resolve, MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS),
-    );
+    await response.body?.cancel();
+    await delay(MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS, undefined, {
+      signal: getResourceSignal(),
+    }).catch((error: unknown) => {
+      checkResourceBudget();
+      throw error;
+    });
+    checkResourceBudget();
     return fetchSecurityPriceFromMarketstack(
       symbol,
       tradeCurrency,
@@ -144,6 +155,7 @@ export async function fetchSecurityPriceFromMarketstack(
       date,
     });
   } catch (error) {
+    rethrowResourceError(error);
     await recordUsage({
       outcome: "PROVIDER_ERROR",
       httpStatus: response.status,

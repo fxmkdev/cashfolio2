@@ -32,6 +32,61 @@ const simple = {
 };
 
 describe("transaction mutation input contracts", () => {
+  it("accepts the exact import limit and rejects excess before inspecting nested payloads", () => {
+    expect(
+      validateCreateTransactionsInput({
+        accountBookId: "book",
+        transactions: Array(1000).fill(transaction),
+      }).transactions,
+    ).toHaveLength(1000);
+    expect(() =>
+      validateCreateTransactionsInput({
+        accountBookId: "book",
+        transactions: Array(1001).fill(null),
+      }),
+    ).toThrow("1'000");
+  });
+  it("bounds per-transaction and aggregate bookings before parsing individual bookings", () => {
+    expect(() =>
+      validateCreateTransactionInput({
+        ...transaction,
+        bookings: Array(101).fill(null),
+      }),
+    ).toThrow("100");
+    const heavy = { ...transaction, bookings: Array(100).fill(booking) };
+    expect(
+      validateCreateTransactionsInput({
+        accountBookId: "book",
+        transactions: Array(50).fill(heavy),
+      }).transactions,
+    ).toHaveLength(50);
+    expect(() =>
+      validateCreateTransactionsInput({
+        accountBookId: "book",
+        transactions: Array(51).fill(heavy),
+      }),
+    ).toThrow("5’000");
+  });
+  it("bounds descriptions and instrument codes without truncating accepted data", () => {
+    expect(
+      validateCreateTransactionInput({
+        ...transaction,
+        description: "x".repeat(4000),
+      }).description,
+    ).toHaveLength(4000);
+    expect(() =>
+      validateCreateTransactionInput({
+        ...transaction,
+        description: "x".repeat(4001),
+      }),
+    ).toThrow("4'000");
+    expect(() =>
+      validateCreateTransactionInput({
+        ...transaction,
+        bookings: [{ ...booking, currency: "x".repeat(65) }],
+      }),
+    ).toThrow("64");
+  });
   it("accepts empty descriptions and strips unknown fields at every level", () => {
     expect(
       validateCreateTransactionInput({

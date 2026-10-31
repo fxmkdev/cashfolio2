@@ -47,13 +47,33 @@ failures; do not translate them into 404s.
 ### Build Diagnostics
 
 The app uses server-side rendering (SSR) without React Server Components (RSC).
-Dependencies such as Mantine and TanStack Router ship `"use client"` directives
-for RSC consumers. These markers have no role in this app's bundles, but
-Rolldown warns for each module that contains one.
+History opts out of SSR so its client-side loader can fetch bounded batches and
+handle resource limits before publishing the complete chart. Its route loader
+supplies a refresh key so router invalidation restarts loading. The surrounding
+authenticated account-book shell still uses SSR. Dependencies such as Mantine
+and TanStack Router ship `"use client"` directives for RSC consumers. These
+markers have no role in this app's bundles, but Rolldown warns for each module
+that contains one.
 
 `vite.config.ts` filters only `MODULE_LEVEL_DIRECTIVE` warnings mentioning
 `use client` through `build.rolldownOptions.onLog`; other diagnostics retain
 their default handling. Revisit this filter if the app enables RSC.
+
+### History Presentation and Loading
+
+History's page view owns layout, controls, errors, and empty states. Its chart
+model hook owns formatting, derived data, zoom and legend state; a separate
+range hook owns the chart reference and default-range lifecycle. The model stays
+mounted with the page even when an empty state hides the chart. The chart
+component only renders AG Charts. Configuration is assembled from common options
+and separate area/flow series builders, reusing the range-control and
+axis-domain helpers. Existing chart-options exports remain compatible.
+
+The automatic loader fetches sequential batches, shrinking only when a request
+exceeds a provider-attempt or read-deadline budget. Helpers validate revisions
+and continuation, merge batches, and finalize scope normalization. Other errors
+stop the load; explicit retry starts from the beginning. There are no retained
+checkpoints, quota waits, backoff timers, or automatic revision restarts.
 
 ### Route Structure
 
@@ -350,12 +370,27 @@ controllers.
 - Global top loading bar is rendered in `src/routes/__root.tsx` via
   `NavigationLoadingBar`
 - Implementation lives in `src/components/navigation/navigation-loading-bar.tsx`
-  and uses `@mantine/nprogress` + `useRouterState`
-- The progress bar tracks URL transitions only (loading while
-  `state.location.href` differs from the last settled URL), including same-route
-  search-param navigations (for example, period preset switching)
-- It intentionally does not run for same-URL refetches triggered via
-  `router.invalidate()` after mutations
+  and uses `@mantine/nprogress` + `useRouterState`. The root also installs
+  `GlobalLoadingProvider`, which coordinates all progress registrations.
+- Router progress tracks URL transitions (loading while `state.location.href`
+  differs from the last settled URL), including same-route search-param
+  navigations (for example, period preset switching)
+- Router progress intentionally excludes same-URL refetches triggered via
+  `router.invalidate()` after mutations. Pages with client-side loading can
+  explicitly register that work with `useGlobalLoading(active)` from
+  `src/components/navigation/global-loading.tsx`.
+- Registered client tasks and router transitions share one indicator, with a 120
+  ms start delay. It completes only after every registration is released;
+  completion waits one frame to allow a destination's client task to take over.
+  Hook cleanup releases work on completion, failure, cancellation, or unmount.
+- History registers its full automatic load, including retries, URL scope
+  normalization, and refreshes after invalidation. It uses no local spinner,
+  batch counts, or waiting messages. Initial loading retains the heading; active
+  refreshes retain the previous chart with disabled selection controls. Failures
+  stop progress and re-enable selectors on the retained chart. **Retry History**
+  retries the failed selection; **Restore Previous View** appears when
+  selections differ and restores the last successful mode, metric, and scopes
+  through replacement navigation and a fresh load.
 
 ### Loader Pattern
 

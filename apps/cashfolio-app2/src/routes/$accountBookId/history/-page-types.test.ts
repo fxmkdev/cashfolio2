@@ -12,6 +12,12 @@ import {
   parseHistorySearch,
 } from "./-page-types";
 
+test("ignores the former public page size setting", () => {
+  expect(parseHistorySearch({ pageSize: "1", mode: "month" })).toEqual({
+    mode: "month",
+  });
+});
+
 describe("isHistoryPeriodMode", () => {
   test("accepts month and year", () => {
     expect(isHistoryPeriodMode("month")).toBe(true);

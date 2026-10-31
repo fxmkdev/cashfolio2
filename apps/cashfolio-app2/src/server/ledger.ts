@@ -1,3 +1,4 @@
+import { startReadBudget } from "./resource-context.server";
 import { toNumericMoney } from "./money-boundary";
 import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
@@ -87,6 +88,7 @@ export const getLedgerAccountPersistedBalance = createServerFn({
   .validator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
     const aggregateResult = await prisma.booking.aggregate({
       where: {
@@ -126,6 +128,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;

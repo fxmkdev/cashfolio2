@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../../resource-error";
 import { prisma } from "../../../prisma.server";
 import {
   PERIOD_PRESET_LAST_MONTH,
@@ -124,6 +125,7 @@ export async function getPeriodCacheGeneration(args: {
     });
     return book.periodCacheRevision;
   } catch (error) {
+    rethrowResourceError(error);
     if (!hasWarnedPeriodCacheGenerationReadFailure) {
       console.warn(
         "Failed to read account-book cache revision; continuing uncached.",

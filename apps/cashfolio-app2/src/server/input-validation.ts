@@ -1,3 +1,5 @@
+import { RESOURCE_LIMITS, assertLength } from "../shared/resource-limits";
+
 export function assertRecord(
   value: unknown,
   message = "Input must be an object.",
@@ -17,6 +19,17 @@ export function requireStringField<TField extends string>(
     throw new Error(message);
   }
 
+  assertLength(
+    value,
+    field === "name" || field === "confirmationName" || field === "confirmation"
+      ? RESOURCE_LIMITS.name
+      : ["currency", "cryptocurrency", "symbol", "tradeCurrency"].includes(
+            field,
+          )
+        ? RESOURCE_LIMITS.unitCode
+        : RESOURCE_LIMITS.identifier,
+    field,
+  );
   return value;
 }
 
@@ -43,6 +56,7 @@ export function requireArrayField<TField extends string>(
     throw new Error(message);
   }
 
+  assertLength(value, RESOURCE_LIMITS.bulkItems, field);
   return value;
 }
 
@@ -55,6 +69,13 @@ export function requireTextField(
   if (typeof value !== "string") {
     throw new Error(`${field} must be a string.`);
   }
+  assertLength(
+    value,
+    field === "description"
+      ? RESOURCE_LIMITS.description
+      : RESOURCE_LIMITS.unitCode,
+    field,
+  );
   return value;
 }
 

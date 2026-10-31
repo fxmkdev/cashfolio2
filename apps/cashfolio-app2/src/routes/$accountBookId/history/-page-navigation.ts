@@ -3,6 +3,10 @@ import {
   DEFAULT_HISTORY_METRIC,
   DEFAULT_HISTORY_MODE,
   parseHistorySearch,
+  getHistoryMetric,
+  getHistoryMode,
+  getHistoryScopeForMetric,
+  type HistorySearch,
   type HistoryMetric,
   type HistoryPeriodMode,
   type HistoryViewSelection,
@@ -14,6 +18,54 @@ import {
 } from "@/shared/history-scope";
 
 type HistoryNavigationSearch = Record<string, unknown>;
+
+export function buildHistoryRestoreNavigation(args: {
+  search: HistorySearch;
+  previousSearch: HistorySearch;
+}) {
+  const { search, previousSearch } = args;
+  const metrics = [
+    "cashFlow",
+    "income",
+    "expenses",
+    "gainsLosses",
+    "netWorth",
+  ] as const;
+  if (
+    getHistoryMode(search) === getHistoryMode(previousSearch) &&
+    getHistoryMetric(search) === getHistoryMetric(previousSearch) &&
+    metrics.every(
+      (metric) =>
+        getHistoryScopeForMetric({ search, metric }) ===
+        getHistoryScopeForMetric({ search: previousSearch, metric }),
+    )
+  )
+    return undefined;
+  return { replace: true, search: previousSearch } as const;
+}
+
+export function buildHistoryScopeNormalization(args: {
+  search: HistorySearch;
+  scopeSelection: Record<HistoryScopedMetric, HistoryScopeSelection>;
+}) {
+  const { search, scopeSelection } = args;
+  if (
+    (Object.keys(scopeSelection) as HistoryScopedMetric[]).every(
+      (metric) =>
+        getHistoryScopeForMetric({ search, metric }) === scopeSelection[metric],
+    )
+  )
+    return undefined;
+  return buildHistorySearchNavigation({
+    mode: getHistoryMode(search),
+    metric: getHistoryMetric(search),
+    cashFlowScope: scopeSelection.cashFlow,
+    incomeScope: scopeSelection.income,
+    expenseScope: scopeSelection.expenses,
+    gainLossScope: scopeSelection.gainsLosses,
+    netWorthScope: scopeSelection.netWorth,
+  });
+}
 
 export function buildHistoryLegacySearchNavigation(
   search: HistoryNavigationSearch,

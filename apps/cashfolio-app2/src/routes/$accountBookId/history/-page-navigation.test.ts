@@ -9,6 +9,8 @@ import {
   buildHistoryLegacySearchNavigation,
   buildHistorySearchNavigation,
   buildHistoryViewNavigation,
+  buildHistoryScopeNormalization,
+  buildHistoryRestoreNavigation,
 } from "./-page-navigation";
 import { parseHistorySearch } from "./-page-types";
 
@@ -69,6 +71,93 @@ describe("legacy History URL canonicalization", () => {
 });
 
 describe("history page navigation", () => {
+  test("restores every saved selection using replacement navigation", () => {
+    const previousSearch = {
+      mode: "year",
+      metric: "gainsLosses",
+      cashFlowScope: "account:cash",
+      incomeScope: "group:income",
+      expenseScope: "account:expense",
+      gainLossScope: "gain-loss-investment:EQUITIES:managed-portfolios",
+      netWorthScope: "group:assets",
+    } as const;
+    expect(
+      buildHistoryRestoreNavigation({
+        search: { metric: "income" },
+        previousSearch,
+      }),
+    ).toEqual({ replace: true, search: previousSearch });
+    expect(
+      buildHistoryRestoreNavigation({
+        search: previousSearch,
+        previousSearch,
+      }),
+    ).toBeUndefined();
+  });
+
+  test("does not offer restore for equivalent default selections", () => {
+    expect(
+      buildHistoryRestoreNavigation({
+        search: {
+          mode: "month",
+          metric: "totalReturn",
+          gainLossScope: "total",
+        },
+        previousSearch: {},
+      }),
+    ).toBeUndefined();
+  });
+
+  test.each([
+    "mode",
+    "metric",
+    "cashFlowScope",
+    "incomeScope",
+    "expenseScope",
+    "gainLossScope",
+    "netWorthScope",
+  ] as const)("offers restore when only %s differs", (key) => {
+    const changed = {
+      mode: "year",
+      metric: "income",
+      cashFlowScope: "group:x",
+      incomeScope: "group:x",
+      expenseScope: "group:x",
+      gainLossScope: "gain-loss-investment:EQUITIES:managed-portfolios",
+      netWorthScope: "group:x",
+    } as const;
+    expect(
+      buildHistoryRestoreNavigation({
+        search: { [key]: changed[key] },
+        previousSearch: {},
+      }),
+    ).toEqual({ replace: true, search: {} });
+  });
+
+  test("normalizes merged scopes before making History interactive", () => {
+    const search = {
+      metric: "gainsLosses" as const,
+      gainLossScope: "explicit-account:cash" as const,
+    };
+    const scopeSelection = {
+      cashFlow: "total" as const,
+      income: "total" as const,
+      expenses: "total" as const,
+      gainsLosses: "gain-loss-account:cash" as const,
+      netWorth: "total" as const,
+    };
+    const navigation = buildHistoryScopeNormalization({
+      search,
+      scopeSelection,
+    });
+    expect(navigation?.replace).toBe(true);
+    const normalized = navigation!.search(search);
+    expect(normalized.gainLossScope).toBe("gain-loss-account:cash");
+    expect(
+      buildHistoryScopeNormalization({ search: normalized, scopeSelection }),
+    ).toBeUndefined();
+  });
+
   test("uses history replace and preserves existing search params", () => {
     const navigation = buildHistorySearchNavigation({
       mode: "year",

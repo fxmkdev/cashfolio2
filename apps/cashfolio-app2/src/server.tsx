@@ -1,3 +1,5 @@
+import { readBoundedRequest } from "./security/request-body.server";
+import { withResourceRequest } from "./server/resource-context.server";
 import {
   createStartHandler,
   defaultStreamHandler,
@@ -16,7 +18,12 @@ function createServerEntry(entry: { fetch: typeof fetch }) {
     async fetch(...args: Parameters<typeof fetch>) {
       const request = getRequestFromFetchArgs(args);
       try {
-        return await entry.fetch(...args);
+        if (!request) return await entry.fetch(...args);
+        const bounded = await readBoundedRequest(request);
+        if (bounded instanceof Response) return bounded;
+        return await withResourceRequest(bounded.signal, () =>
+          entry.fetch(bounded, args[1]),
+        );
       } catch (error) {
         if (shouldLogServerRequestError(error)) {
           await logServerError("Server request failed.", error, {

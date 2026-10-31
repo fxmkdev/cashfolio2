@@ -1,3 +1,4 @@
+import { rethrowResourceError } from "../../resource-error";
 import { type Money, toMoney, moneyAbs } from "../../../shared/money";
 import { Prisma } from "../../../.prisma-client/client";
 import {
@@ -72,6 +73,7 @@ async function getOrCreateOpeningBalancesAccountId(
     });
     return created.id;
   } catch (error) {
+    rethrowResourceError(error);
     if (isUniqueConstraintError(error)) {
       const concurrentlyCreated = await tx.account.findFirst({
         where: {

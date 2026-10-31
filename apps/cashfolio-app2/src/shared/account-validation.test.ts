@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   AssetClass,
+  AccountTrackingMethod,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -18,6 +19,27 @@ import {
   validateAccountStatementImportCsvFormat,
 } from "./account-validation";
 import type { AccountInput } from "./account-validation-types";
+import { RESOURCE_LIMITS } from "./resource-limits";
+
+describe("tracking-method account input limits", () => {
+  test.each(Object.values(AccountTrackingMethod))(
+    "validates name lengths for %s",
+    (trackingMethod) => {
+      const input: AccountInput = {
+        accountBookId: "book",
+        type: AccountType.BALANCE,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        trackingMethod,
+        name: "x".repeat(RESOURCE_LIMITS.name),
+      };
+      expect(() => validateAccountInput(input)).not.toThrow();
+      expect(() =>
+        validateAccountInput({ ...input, name: input.name + "x" }),
+      ).toThrow("255");
+    },
+  );
+});
 
 describe("equity account unit metadata", () => {
   test.each(Object.values(EquityAccountSubtype))(

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodHistory } from "@/server/period-history";
-import { loadHistoryPageData } from "./-page-loader";
+import { loadHistoryBatch } from "./-page-loader";
 
 vi.mock("@/server/period-history", () => ({
   getPeriodHistory: vi.fn(),
@@ -12,6 +12,7 @@ vi.mock("@/server/accounts", () => ({ getGainLossEquityAccountId: vi.fn() }));
 const mockedGetPeriodHistory = vi.mocked(getPeriodHistory);
 
 const historyFixture: Awaited<ReturnType<typeof getPeriodHistory>> = {
+  revision: "revision",
   referenceCurrency: "CHF",
   hasCashAccounts: true,
   openingBalancePoint: {
@@ -53,18 +54,23 @@ const historyFixture: Awaited<ReturnType<typeof getPeriodHistory>> = {
   },
 };
 
-describe("loadHistoryPageData", () => {
+describe("loadHistoryBatch", () => {
   beforeEach(() => {
     mockedGetPeriodHistory.mockReset();
     vi.mocked(getGainLossEquityAccountId).mockReset();
   });
 
-  test("loads history for the selected mode", async () => {
+  test("loads a bounded batch with cancellation and structured-error fetch", async () => {
+    const signal = new AbortController().signal;
     mockedGetPeriodHistory.mockResolvedValueOnce(historyFixture);
 
-    const result = await loadHistoryPageData({
+    const result = await loadHistoryBatch({
       accountBookId: "book-1",
+      signal,
+      locale: "en-US",
       mode: "year",
+      pageSize: 3,
+      before: "2026",
       scopedMetric: "income",
       cashFlowScope: "total",
       incomeScope: "group:income-1",
@@ -75,9 +81,13 @@ describe("loadHistoryPageData", () => {
 
     expect(mockedGetPeriodHistory).toHaveBeenCalledTimes(1);
     expect(mockedGetPeriodHistory).toHaveBeenNthCalledWith(1, {
+      signal,
+      fetch: expect.any(Function),
       data: {
         accountBookId: "book-1",
         granularity: "year",
+        pageSize: 3,
+        before: "2026",
         scopedMetric: "income",
         cashFlowScope: "total",
         incomeScope: "group:income-1",
@@ -88,49 +98,7 @@ describe("loadHistoryPageData", () => {
       },
     });
     expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
-    expect(result).toEqual({
-      history: {
-        referenceCurrency: "CHF",
-        hasCashAccounts: true,
-        openingBalancePoint: {
-          date: "2025-12-31T00:00:00.000Z",
-          label: "Opening Balance",
-          assets: 80,
-          liabilities: 20,
-          netWorth: 60,
-        },
-        points: [
-          {
-            periodValue: "2026-01",
-            periodLabel: "January 2026",
-            periodEndDate: "2026-01-31T00:00:00.000Z",
-            totalReturn: 10,
-            savings: 6,
-            cashFlow: 5,
-            income: 12,
-            expenses: 6,
-            gainsLosses: 4,
-            assets: 100,
-            liabilities: 40,
-            netWorth: 60,
-          },
-        ],
-        scopeOptions: {
-          cashFlow: [{ value: "total", label: "Total", kind: "total" }],
-          income: [{ value: "total", label: "Total", kind: "total" }],
-          expenses: [{ value: "total", label: "Total", kind: "total" }],
-          gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
-          netWorth: [{ value: "total", label: "Total", kind: "total" }],
-        },
-        scopeSelection: {
-          cashFlow: "total",
-          income: "total",
-          expenses: "total",
-          gainsLosses: "total",
-          netWorth: "total",
-        },
-      },
-    });
+    expect(result).toEqual(historyFixture);
   });
 
   test.each([
@@ -148,8 +116,11 @@ describe("loadHistoryPageData", () => {
         },
       });
       vi.mocked(getGainLossEquityAccountId).mockResolvedValueOnce("gain-loss");
-      const result = await loadHistoryPageData({
+      const result = await loadHistoryBatch({
         accountBookId: "book-1",
+        pageSize: 12,
+        signal: new AbortController().signal,
+        locale: "en-US",
         mode: "month",
         scopedMetric: "gainsLosses",
         cashFlowScope: "total",
@@ -158,7 +129,7 @@ describe("loadHistoryPageData", () => {
         gainLossScope: "explicit-account:cash",
         netWorthScope: "total",
       });
-      expect(result.history.scopeSelection.gainsLosses).toBe(scope);
+      expect(result.scopeSelection.gainsLosses).toBe(scope);
       expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
     },
   );

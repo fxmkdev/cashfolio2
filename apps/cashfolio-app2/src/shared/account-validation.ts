@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS } from "./resource-limits";
 import type { AccountType, Unit } from "../.prisma-client/enums";
 import type {
   AccountGroupInput,
@@ -12,6 +13,8 @@ export function validateAccountName(
   siblingNames?: string[],
 ): string | null {
   if (!name) return "Name is required";
+  if (name.length > RESOURCE_LIMITS.name)
+    return "Name cannot exceed 255 characters.";
   if (
     siblingNames &&
     siblingNames.some(
@@ -107,7 +110,11 @@ export function validateAccountCurrency(
   type?: AccountType,
 ): string | null {
   if (!isBalanceAccountType(type) || unit !== "CURRENCY") return null;
-  return currency ? null : "Currency is required";
+  return currency && currency.length > RESOURCE_LIMITS.unitCode
+    ? "Currency cannot exceed 64 characters."
+    : currency
+      ? null
+      : "Currency is required";
 }
 
 export function validateAccountCryptocurrency(
@@ -116,7 +123,11 @@ export function validateAccountCryptocurrency(
   type?: AccountType,
 ): string | null {
   if (!isBalanceAccountType(type) || unit !== "CRYPTOCURRENCY") return null;
-  return cryptocurrency ? null : "Cryptocurrency is required";
+  return cryptocurrency && cryptocurrency.length > RESOURCE_LIMITS.unitCode
+    ? "Cryptocurrency cannot exceed 64 characters."
+    : cryptocurrency
+      ? null
+      : "Cryptocurrency is required";
 }
 
 export function validateAccountSymbol(
@@ -125,7 +136,11 @@ export function validateAccountSymbol(
   type?: AccountType,
 ): string | null {
   if (!isBalanceAccountType(type) || unit !== "SECURITY") return null;
-  return symbol ? null : "Symbol is required";
+  return symbol && symbol.length > RESOURCE_LIMITS.unitCode
+    ? "Symbol cannot exceed 64 characters."
+    : symbol
+      ? null
+      : "Symbol is required";
 }
 
 export function validateAccountTradeCurrency(
@@ -134,7 +149,11 @@ export function validateAccountTradeCurrency(
   type?: AccountType,
 ): string | null {
   if (!isBalanceAccountType(type) || unit !== "SECURITY") return null;
-  return tradeCurrency ? null : "Trade currency is required";
+  return tradeCurrency && tradeCurrency.length > RESOURCE_LIMITS.unitCode
+    ? "Trade currency cannot exceed 64 characters."
+    : tradeCurrency
+      ? null
+      : "Trade currency is required";
 }
 
 export function validateAccountStatementImportCsvFormat(
@@ -174,6 +193,8 @@ export function validateAccountGroupName(
   siblingNames?: string[],
 ): string | null {
   if (!name) return "Name is required";
+  if (name.length > RESOURCE_LIMITS.name)
+    return "Name cannot exceed 255 characters.";
   if (
     siblingNames &&
     siblingNames.some(
