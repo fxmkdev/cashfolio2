@@ -1,4 +1,7 @@
-import { checkResourceBudget } from "../resource-context.server";
+import {
+  checkResourceBudget,
+  createRequestScopedInFlightMap,
+} from "../resource-context.server";
 import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
 import { startOfUtcDay } from "../../shared/date";
@@ -19,7 +22,8 @@ import {
 } from "./account-gain-loss-cache-data";
 
 const MAX_SERIALIZED_BYTES = 512 * 1024;
-const inflightByCacheKey = new Map<string, Promise<AccountGainLossCacheData>>();
+const getInflightLoads =
+  createRequestScopedInFlightMap<AccountGainLossCacheData>();
 let hasWarnedReadFailure = false;
 let hasWarnedWriteFailure = false;
 
@@ -46,6 +50,7 @@ export async function getOrLoadAccountGainLossSummaries(
     asOfDate: formatUtcDateKey(asOfDate),
     latestFetchableDate: formatUtcDateKey(latestFetchableDate),
   });
+  const inflightByCacheKey = getInflightLoads();
   const existing = inflightByCacheKey.get(cacheKey);
   if (existing) return existing;
 

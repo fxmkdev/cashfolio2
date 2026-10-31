@@ -2,6 +2,11 @@ import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { toNumericMoney } from "../../money-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { deferred } from "../../test-support/deferred";
+import {
+  checkResourceBudget,
+  withResourceRequest,
+} from "../../resource-context.server";
 
 const redisState = vi.hoisted(() => ({
   kv: new Map<string, string>(),
@@ -79,6 +84,42 @@ vi.mock("../transfer-clearing/period-transfer-clearing", () => ({
 import * as periodBaseCache from "./period-base-data-cache";
 
 describe("period base-data cache", () => {
+  it("does not join another request's cancelled Redis miss", async () => {
+    const ready = deferred();
+    const release = deferred();
+    redisClient.get.mockImplementationOnce(async () => {
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const load = (signal: AbortSignal) =>
+      withResourceRequest(signal, async () => {
+        await periodBaseCache.getOrLoadPeriodBaseData({
+          accountBookId: "book-1",
+          period: "2026-02",
+        });
+        return new Response();
+      });
+    const first = load(controller.signal);
+    await ready.promise;
+    const second = load(new AbortController().signal);
+    try {
+      await vi.waitFor(() => expect(redisClient.get).toHaveBeenCalledTimes(2));
+      controller.abort();
+      release.resolve();
+      expect((await first).status).toBe(503);
+      expect((await second).status).toBe(200);
+      expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+      expect(redisClient.setEx).toHaveBeenCalledTimes(1);
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
   beforeEach(() => {
     redisState.kv.clear();
     redisState.sets.clear();

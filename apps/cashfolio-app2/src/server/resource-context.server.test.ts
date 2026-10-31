@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RESOURCE_LIMITS } from "../shared/resource-limits";
 import { ResourceLimitError } from "./resource-error";
+import { deferred } from "./test-support/deferred";
 import {
   startReadBudget,
   checkResourceBudget,
   consumeProviderAttempt,
+  createRequestScopedInFlightMap,
   getResourceSignal,
   reuseResourceRequestWork,
   withResourceRequest,
@@ -15,6 +17,57 @@ const run = (operation: () => Promise<Response>) =>
   withResourceRequest(new AbortController().signal, operation);
 
 describe("request-local resource budgets", () => {
+  it("isolates in-flight maps by request and from background work", async () => {
+    const getEntries = createRequestScopedInFlightMap<number>();
+    const background = getEntries();
+    background.set("same-key", Promise.resolve(1));
+    const ready = deferred();
+    const release = deferred();
+    let firstEntries!: Map<string, Promise<number>>;
+    const first = run(async () => {
+      firstEntries = getEntries();
+      firstEntries.set("same-key", Promise.resolve(2));
+      ready.resolve();
+      await release.promise;
+      expect(getEntries()).toBe(firstEntries);
+      expect(await getEntries().get("same-key")).toBe(2);
+      return new Response();
+    });
+    await ready.promise;
+    try {
+      await run(async () => {
+        const entries = getEntries();
+        expect(entries).not.toBe(firstEntries);
+        expect(entries).not.toBe(background);
+        expect(entries.has("same-key")).toBe(false);
+        entries.set("same-key", Promise.resolve(3));
+        expect(getEntries()).toBe(entries);
+        return new Response();
+      });
+      expect(getEntries()).toBe(background);
+      expect(await background.get("same-key")).toBe(1);
+    } finally {
+      release.resolve();
+      await first;
+    }
+    await run(async () => {
+      expect(getEntries().has("same-key")).toBe(false);
+      return new Response();
+    });
+  });
+
+  it("does not expose an in-flight map after request cancellation", async () => {
+    const getEntries = createRequestScopedInFlightMap<number>();
+    const controller = new AbortController();
+    const response = await withResourceRequest(controller.signal, async () => {
+      getEntries();
+      controller.abort();
+      expect(getEntries).toThrow("request was cancelled");
+      return new Response();
+    });
+    expect(response.status).toBe(503);
+  });
+
   it.each(["operation error", "stream error", "completion"] as const)(
     "closes delayed siblings after %s and preserves the original failure",
     async (outcome) => {

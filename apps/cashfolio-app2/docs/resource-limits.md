@@ -38,10 +38,18 @@ submission and retain the draft when validation fails.
 ## Request-local calculation budgets
 
 Each incoming request can initiate at most 250 provider HTTP attempts, including
-retries and backtracking. Cache hits and joining an existing in-flight lookup do
-not consume another attempt. Settled provider probes are reused within the
-request, including without Redis; rejected probes are evicted. The memo and
-attempt count are discarded when the request ends.
+retries and backtracking. Cache hits and joining an existing in-flight lookup
+within the same request do not consume another attempt. Settled provider probes
+are reused within the request, including without Redis; rejected probes are
+evicted. The memo and attempt count are discarded when the request ends.
+
+In-flight provider lookups, period base-data loads, History metrics, and account
+gain/loss summary and basis loads are isolated by incoming request.
+Cancellation, deadlines, and exhausted budgets cannot fail another request
+through a shared promise. Completed Redis entries remain shared; simultaneous
+cold-cache requests may perform duplicate work, with each request charging its
+own HTTP attempts. Background callers outside an HTTP request share a separate
+in-flight map and never join request-owned promises.
 
 Expensive reads start a 60-second cooperative deadline after authorization.
 Internal helpers share that deadline rather than extending it. Calculation units

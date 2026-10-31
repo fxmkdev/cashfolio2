@@ -1,5 +1,6 @@
 import {
   checkResourceBudget,
+  createRequestScopedInFlightMap,
   reuseResourceRequestWork,
 } from "../resource-context.server";
 import { rethrowResourceError } from "../resource-error";
@@ -103,7 +104,8 @@ const defaultDeps: RateWithBacktrackingDeps = {
   clearMissedAttemptForSeriesTimestamp,
 };
 
-const inFlightProviderFetchByKey = new Map<string, Promise<FetchRateResult>>();
+const getInFlightProviderFetches =
+  createRequestScopedInFlightMap<FetchRateResult>();
 
 function getInFlightProviderFetchKey(
   seriesKey: string,
@@ -122,6 +124,7 @@ async function fetchRateWithInFlightDedup(args: {
     requestReason: ValuationProviderRequestReason,
   ) => Promise<FetchRateResult>;
 }): Promise<FetchRateResult> {
+  const inFlightProviderFetchByKey = getInFlightProviderFetches();
   const inFlightKey = getInFlightProviderFetchKey(
     args.seriesKey,
     args.timestamp,

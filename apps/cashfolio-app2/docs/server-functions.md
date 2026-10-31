@@ -913,9 +913,10 @@ drawers bypass both caches.
   Payloads exclude transactions, FIFO detail events, and internal cache
   metadata.
 - Every lookup reads the committed PostgreSQL revision, including warm hits.
-  Inflight promise deduplication uses the entire key, preventing requests after
-  a mutation from joining an older calculation. Only the DB snapshot runs inside
-  the existing read-only repeatable-read transaction; valuation runs afterwards.
+  Within each incoming request, inflight promise deduplication uses the entire
+  key, preventing loads after a mutation from joining an older calculation. Only
+  the DB snapshot runs inside the existing read-only repeatable-read
+  transaction; valuation runs afterwards.
 - Persistence requires identity/stable TimeSeries valuation sources, a snapshot
   revision matching the lookup revision and a final DB revision read, and an
   unchanged publication cutoff. Provider/fallback/missing results still answer

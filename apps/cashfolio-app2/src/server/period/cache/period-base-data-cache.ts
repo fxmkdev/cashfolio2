@@ -1,4 +1,7 @@
-import { checkResourceBudget } from "../../resource-context.server";
+import {
+  checkResourceBudget,
+  createRequestScopedInFlightMap,
+} from "../../resource-context.server";
 import { rethrowResourceError } from "../../resource-error";
 import {
   PERIOD_BASE_CACHE_ENTRY_PREFIX,
@@ -28,7 +31,7 @@ let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
 let hasWarnedPeriodBaseCacheInvalidationFailure = false;
 
-const inflightByCacheKey = new Map<string, Promise<PeriodBaseData>>();
+const getInflightLoads = createRequestScopedInFlightMap<PeriodBaseData>();
 
 export type { PeriodBaseData };
 export async function getOrLoadPeriodBaseData(args: {
@@ -57,6 +60,7 @@ export async function getOrLoadPeriodBaseData(args: {
     return loadUncached();
   }
   const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${cacheEnv}:${args.accountBookId}:${generation}:${inflightPeriodKey}`;
+  const inflightByCacheKey = getInflightLoads();
   const existingInflight = inflightByCacheKey.get(inflightKey);
   if (existingInflight) {
     return existingInflight;

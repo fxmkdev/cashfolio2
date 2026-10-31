@@ -1,4 +1,7 @@
-import { checkResourceBudget } from "../../resource-context.server";
+import {
+  checkResourceBudget,
+  createRequestScopedInFlightMap,
+} from "../../resource-context.server";
 import { rethrowResourceError } from "../../resource-error";
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
@@ -25,10 +28,8 @@ import {
 
 const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
-const inflightByCacheKey = new Map<
-  string,
-  Promise<PeriodHistoryPointMetrics>
->();
+const getInflightLoads =
+  createRequestScopedInFlightMap<PeriodHistoryPointMetrics>();
 
 let hasWarnedHistoryMetricsCacheReadFailure = false;
 let hasWarnedHistoryMetricsCacheWriteFailure = false;
@@ -148,6 +149,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     scopeKey: getScopeKey(args.metricScopeFilter),
   });
 
+  const inflightByCacheKey = getInflightLoads();
   const existingInflight = inflightByCacheKey.get(cacheKey);
   if (existingInflight) {
     return existingInflight;

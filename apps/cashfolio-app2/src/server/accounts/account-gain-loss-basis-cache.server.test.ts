@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { moneyMultiply, toMoney } from "../../shared/money";
 import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
 import type { ValuationRateSource } from "../valuation/types";
+import { deferred } from "../test-support/deferred";
+import {
+  checkResourceBudget,
+  withResourceRequest,
+} from "../resource-context.server";
 
 const mocks = vi.hoisted(() => ({
   entries: new Map<string, string>(),
@@ -621,7 +626,40 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(current.asOfDate).toBe("2026-05-12T00:00:00.000Z");
   });
 
-  it("deduplicates simultaneous requests and retries a rejected replay", async () => {
+  it("does not join another request's cancelled Redis miss", async () => {
+    const ready = deferred();
+    const release = deferred();
+    redis.get.mockImplementationOnce(async () => {
+      ready.resolve();
+      await release.promise;
+      checkResourceBudget();
+      return null;
+    });
+    const controller = new AbortController();
+    const request = (signal: AbortSignal) =>
+      withResourceRequest(signal, async () => {
+        await load();
+        return new Response();
+      });
+    const first = request(controller.signal);
+    await ready.promise;
+    const second = request(new AbortController().signal);
+    try {
+      await vi.waitFor(() => expect(redis.get).toHaveBeenCalledTimes(2));
+      controller.abort();
+      release.resolve();
+      expect((await first).status).toBe(503);
+      expect((await second).status).toBe(200);
+      expect(mocks.db.transaction.findMany).toHaveBeenCalledTimes(1);
+      expect(redis.setEx).toHaveBeenCalledTimes(1);
+    } finally {
+      controller.abort();
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it("deduplicates simultaneous context-free loads and retries a rejected replay", async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;

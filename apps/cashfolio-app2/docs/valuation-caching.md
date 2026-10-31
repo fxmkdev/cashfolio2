@@ -48,7 +48,7 @@ There are five complementary layers:
 2. Redis TimeSeries daily rates
 3. Redis fallback key-value cache for backtracked results and explicit no-data
 4. Redis miss-attempt cooldown cache for day-level misses
-5. In-process in-flight provider fetch deduplication (per series/day)
+5. Request-scoped in-flight provider fetch deduplication (per series/day)
 
 ```mermaid
 flowchart LR
@@ -58,7 +58,7 @@ flowchart LR
   D --> E["Redis TimeSeries daily series"]
   D --> F["Redis fallback key-value entries"]
   D --> H["Redis miss-attempt cooldown entries"]
-  D --> I["In-flight provider dedup map"]
+  D --> I["Request-scoped in-flight provider dedup map"]
   I --> G["Provider APIs"]
   G --> D
   E --> D
@@ -76,6 +76,15 @@ This deduplicates identical lookups during a single server-function execution.
     do not need an explicit date.
 
 This layer is in-memory only and is cleared after each request.
+
+In-flight promise maps are scoped to the incoming HTTP request for provider
+fetches and the period base-data, History metrics, and account gain/loss summary
+and basis caches. Identical work within one request still deduplicates, but
+separate requests cannot inherit each other's cancellation, deadline, or budget
+failure. Completed Redis results remain shared. Simultaneous cold-cache requests
+may perform duplicate provider or calculation work, and each request accounts
+for the HTTP attempts it starts. Context-free background callers use separate
+maps that never share running work with HTTP requests.
 
 ## Historical Publish Window
 
@@ -274,14 +283,17 @@ flowchart TD
 Implementation: `src/server/valuation/backtracking.ts`
 (`inFlightProviderFetchByKey`)
 
-Within a server process, provider calls are deduplicated by:
+Within each incoming request, provider calls are deduplicated by:
 
 - key: `<seriesKey>:<timestamp>`
-- behavior: concurrent requests for the same key await the same Promise
+- behavior: concurrent lookups for the same key await the same Promise
 - cleanup: key is removed when the Promise settles
 
-This is separate from request-local memoization and helps when multiple requests
-hit the same uncached day concurrently.
+The shared factory in `src/server/resource-context.server.ts` selects a map by
+request context using weak references. Context-free callers use a separate map.
+This layer removes settled promises; the bounded request-local memo retains
+successful probes for reuse until the request ends. Separate HTTP requests never
+join these running promises, even when they query the same series/day.
 
 ## Provider Semantics and Cache Impact
 

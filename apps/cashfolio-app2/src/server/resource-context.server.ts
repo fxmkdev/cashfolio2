@@ -57,6 +57,24 @@ export function getResourceSignal() {
   return storage.getStore()?.controller.signal;
 }
 
+/** Keep cancellation-sensitive promises within their owning request. */
+export function createRequestScopedInFlightMap<T>() {
+  const requests = new WeakMap<ResourceContext, Map<string, Promise<T>>>();
+  // Background callers have no request cancellation or budget to inherit.
+  const background = new Map<string, Promise<T>>();
+  return (): Map<string, Promise<T>> => {
+    checkResourceBudget();
+    const context = storage.getStore();
+    if (!context) return background;
+    let entries = requests.get(context);
+    if (!entries) {
+      entries = new Map();
+      requests.set(context, entries);
+    }
+    return entries;
+  };
+}
+
 /** Reuse settled provider probes within this request even without Redis. */
 export function reuseResourceRequestWork<T>(
   key: string,
