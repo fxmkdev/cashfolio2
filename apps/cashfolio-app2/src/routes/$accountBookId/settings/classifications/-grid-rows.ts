@@ -15,7 +15,12 @@ export function buildAssetClassGridRows(
   const siblingsByParent = new Map<string | null, string[]>();
   for (const option of ordered) {
     const node = byId.get(option.value)!;
-    siblingsByParent.getOrInsertComputed(node.parentId, () => []).push(node.id);
+    let siblings = siblingsByParent.get(node.parentId);
+    if (!siblings) {
+      siblings = [];
+      siblingsByParent.set(node.parentId, siblings);
+    }
+    siblings.push(node.id);
   }
   return ordered.map((option) => {
     const node = byId.get(option.value)!;
