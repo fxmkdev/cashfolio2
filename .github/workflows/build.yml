@@ -1,6 +1,7 @@
 name: Build
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
@@ -21,17 +22,24 @@ jobs:
     name: "Generate version"
     uses: ./.github/workflows/version.yml
     with:
-      force_release: ${{ github.event_name == 'workflow_dispatch' && inputs.force_release }}
+      force_release:
+        ${{ github.event_name == 'workflow_dispatch' && inputs.force_release }}
 
   cashfolio-app2-build-push:
+    if:
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     name: "cashfolio-app2: Build and Push"
     runs-on: ubuntu-latest
     needs: [version]
     outputs:
-      image: ${{ steps.image-name.outputs.image }}
+      preview_image: ${{ steps.preview-image.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
@@ -48,13 +56,23 @@ jobs:
       - name: Get cashfolio-app2 image name
         id: image-name
         run: |
-          IMAGE_NAME=${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
-          IMAGE_TAG=v${{ needs.version.outputs.version_with_sha }}
+          set -euo pipefail
+          : "${IMAGE_APP:?Image app configuration is required}"
+          IMAGE_NAME="$IMAGE_APP"
+          IMAGE_TAG="v${VERSION}"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            IMAGE_TAG="pr-${PR_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          fi
           {
             echo "image_name=$IMAGE_NAME"
             echo "image_tag=$IMAGE_TAG"
             echo "image=registry.fly.io/$IMAGE_NAME:$IMAGE_TAG"
           } >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE_APP: ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          VERSION: ${{ needs.version.outputs.version_with_sha }}
       - name: Build and push cashfolio-app2 Docker image
         run: |
           flyctl deploy \
@@ -67,8 +85,26 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Authenticate to preview image registry
+        if: github.event_name == 'pull_request'
+        run: flyctl auth docker
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Resolve immutable preview image
+        id: preview-image
+        if: github.event_name == 'pull_request'
+        run: node apps/cashfolio-app2/scripts/preview/resolve-image.ts
+        env:
+          IMAGE: ${{ steps.image-name.outputs.image }}
+          FLY_CASHFOLIO_APP_STAGING_APP:
+            ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+
   cashfolio-app2-e2e:
-    name: "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{ matrix.shard_total }})"
+    name:
+      "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{
+      matrix.shard_total }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -112,14 +148,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cashfolio-app2-playwright-timings-${{ matrix.shard_index }}-of-${{ matrix.shard_total }}
+          name:
+            cashfolio-app2-playwright-timings-${{ matrix.shard_index }}-of-${{
+            matrix.shard_total }}
           path: apps/cashfolio-app2/test-results/results.json
           if-no-files-found: ignore
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: cashfolio-app2-playwright-artifacts-${{ matrix.shard_index }}-of-${{ matrix.shard_total }}
+          name:
+            cashfolio-app2-playwright-artifacts-${{ matrix.shard_index }}-of-${{
+            matrix.shard_total }}
           path: |
             apps/cashfolio-app2/playwright-report
             apps/cashfolio-app2/test-results
@@ -162,8 +202,8 @@ jobs:
         uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
-      - name: Verify staging release ordering and failure behavior
-        run: pnpm --filter cashfolio-app2 test:staging-release
+      - name: Verify preview provisioning and deployment controls
+        run: pnpm --filter cashfolio-app2 test:preview
       - name: Verify transactional seed against PostgreSQL
         run: pnpm --filter cashfolio-app2 test:staging-seed
       - name: Verify concurrent accounting mutations against PostgreSQL
@@ -287,7 +327,9 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter cashfolio-app2 build-storybook
       - name: Run Storybook and Temporal tests
-        run: pnpm --filter cashfolio-app2 exec vitest run --project storybook --project 'temporal-*'
+        run:
+          pnpm --filter cashfolio-app2 exec vitest run --project storybook
+          --project 'temporal-*'
       - name: Upload Storybook failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -378,126 +420,116 @@ jobs:
           exitOnceUploaded: true
           autoAcceptChanges: true
 
-  resolve-preview-names:
-    name: Resolve preview resource names
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
-    outputs:
-      fly_app: ${{ steps.names.outputs.fly_app }}
-      preview_hostname: ${{ steps.names.outputs.preview_hostname }}
-      preview_url: ${{ steps.names.outputs.preview_url }}
-      neon_branch_name: ${{ steps.names.outputs.neon_branch_name }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Resolve preview resource names
-        id: names
-        uses: ./.github/actions/resolve-preview-names
-        with:
-          pr_number: ${{ github.event.pull_request.number }}
-          head_ref: ${{ github.event.pull_request.head.ref }}
-
   preview-deploy:
-    name: Deploy to preview
+    name: "Deploy to preview / cashfolio-app2: Deploy"
     if: >-
       github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.repo.fork == false
-    needs:
-      - version
-      - cashfolio-app2-build-push
-      - resolve-preview-names
-      - cli-tests
-    permissions:
-      contents: read
-      deployments: write
-    concurrency:
-      group: preview-pr-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    uses: ./.github/workflows/deploy-version.yml
-    with:
-      version_with_sha: ${{ needs.version.outputs.version_with_sha }}
-      sha: ${{ needs.version.outputs.sha }}
-      environment: preview
-      app_environment_name: preview-cashfolio-app
-      app_environment_url: ${{ needs.resolve-preview-names.outputs.preview_url }}
-      deploy-cashfolio-app2: true
-      deploy-cashfolio-redis: false
-      high_availability: false
-      prepare_preview_environment: true
-      cashfolio_app2_image: ${{ needs.cashfolio-app2-build-push.outputs.image }}
-      fly_app: ${{ needs.resolve-preview-names.outputs.fly_app }}
-      canonical_hostname: ${{ needs.resolve-preview-names.outputs.preview_hostname }}
-      base_url: ${{ needs.resolve-preview-names.outputs.preview_url }}
-      neon_branch_name: ${{ needs.resolve-preview-names.outputs.neon_branch_name }}
-    secrets: inherit
-
-  preview-post:
-    name: Publish preview URL on PR
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
-    needs:
-      - resolve-preview-names
-      - preview-deploy
     permissions:
       contents: read
       pull-requests: write
-      issues: write
+      deployments: write
+    needs: cashfolio-app2-build-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: preview-cashfolio-app
+      url: ${{ steps.prepare.outputs.preview_url }}
     concurrency:
-      group: preview-pr-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    env:
-      PREVIEW_URL: ${{ needs.resolve-preview-names.outputs.preview_url }}
-      FLY_APP: ${{ needs.resolve-preview-names.outputs.fly_app }}
-      NEON_BRANCH_NAME: ${{ needs.resolve-preview-names.outputs.neon_branch_name }}
+      group: cashfolio-app2-preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     steps:
-      - name: Publish preview URL on PR
-        uses: actions/github-script@v8
+      - uses: actions/checkout@v5
         with:
-          script: |
-            const marker = "<!-- cashfolio-app2-dynamic-preview -->";
-            const bodyLines = [
-              marker,
-              "Dynamic preview deployed",
-              "",
-              `- URL: ${process.env.PREVIEW_URL}`,
-              `- Fly app: \`${process.env.FLY_APP}\``,
-              `- Neon branch: \`${process.env.NEON_BRANCH_NAME}\``,
-              `- Commit: \`${context.sha.slice(0, 7)}\``,
-            ];
-            const body = bodyLines.join("\n");
-
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number,
-              per_page: 100,
-            });
-
-            const existing = comments.find((comment) => {
-              return comment.user?.type === "Bot" && comment.body?.includes(marker);
-            });
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body,
-              });
-            }
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install preview tooling
+        run:
+          pnpm --filter cashfolio-app2 install --frozen-lockfile
+          --ignore-scripts
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Provision database and stage preview-only credentials
+        id: prepare
+        run: node apps/cashfolio-app2/scripts/preview/prepare.ts
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_IMAGE:
+            ${{ needs.cashfolio-app2-build-push.outputs.preview_image }}
+          FLY_CASHFOLIO_APP_STAGING_APP:
+            ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          FLY_ORG: ${{ vars.FLY_ORG }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
+          PREVIEW_DATABASE_TARGET: ${{ vars.PREVIEW_DATABASE_TARGET }}
+          PREVIEW_DATABASE_PASSWORD_KEY:
+            ${{ secrets.PREVIEW_DATABASE_PASSWORD_KEY }}
+          SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
+          SEED_ADMIN_EXTERNAL_IDS: ${{ secrets.SEED_ADMIN_EXTERNAL_IDS }}
+          LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}
+          LOGTO_MANAGEMENT_API_APP_SECRET:
+            ${{ secrets.LOGTO_MANAGEMENT_API_APP_SECRET }}
+          CURRENCYLAYER_API_KEY: ${{ secrets.CURRENCYLAYER_API_KEY }}
+          COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
+          MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
+          STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+      - name: Deploy and seed preview
+        uses: ./.github/actions/deploy-cashfolio-app2
+        with:
+          image: ${{ needs.cashfolio-app2-build-push.outputs.preview_image }}
+          high_availability: "false"
+          app_environment: preview
+          release_command:
+            node apps/cashfolio-app2/dist/staging-seed/seed.mjs --release
+          fly_app: ${{ steps.prepare.outputs.fly_app }}
+          canonical_hostname: ${{ steps.prepare.outputs.preview_hostname }}
+          base_url: ${{ steps.prepare.outputs.preview_url }}
+          fly_primary_region: ${{ vars.FLY_PRIMARY_REGION }}
+          fly_min_machines_running: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
+          fly_memory: ${{ vars.FLY_MEMORY }}
+          fly_cpu_kind: ${{ vars.FLY_CPU_KIND }}
+          fly_cpus: ${{ vars.FLY_CPUS }}
+          logto_endpoint: ${{ vars.LOGTO_ENDPOINT }}
+          logto_app_id: ${{ vars.LOGTO_APP_ID }}
+          logto_management_api_endpoint:
+            ${{ vars.LOGTO_MANAGEMENT_API_ENDPOINT }}
+          logto_management_api_resource:
+            ${{ vars.LOGTO_MANAGEMENT_API_RESOURCE }}
+          logto_management_api_app_id: ${{ vars.LOGTO_MANAGEMENT_API_APP_ID }}
+          fly_api_token: ${{ secrets.FLY_API_TOKEN }}
+      - name: Wake preview
+        uses: ./.github/actions/warm-up-url
+        with:
+          url: ${{ steps.prepare.outputs.preview_url }}
+      - name: Update preview link on PR
+        run: node apps/cashfolio-app2/scripts/preview/publish.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.prepare.outputs.preview_url }}
+          PREVIEW_DATABASE: ${{ steps.prepare.outputs.database }}
+      - name: Deployment summary
+        if: always()
+        run: |
+          {
+            echo '### Preview deployment and seed'
+            echo "PR: #$PR_NUMBER"
+            echo "Commit: $PR_SHA"
+            echo "Preview: ${PREVIEW_URL:-unavailable}"
+            echo "Outcome: $OUTCOME"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.prepare.outputs.preview_url }}
+          OUTCOME: ${{ job.status }}
 
   deploy:
     name: Deploy to staging
@@ -527,8 +559,8 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: >-
-      github.event_name != 'pull_request' && needs.version.outputs.is_new_release
-      == 'true'
+      github.event_name != 'pull_request' &&
+      needs.version.outputs.is_new_release == 'true'
     needs:
       - deploy
       - version

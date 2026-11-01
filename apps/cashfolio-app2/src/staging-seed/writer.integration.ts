@@ -18,7 +18,7 @@ import {
 } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
-import type { ApprovedSeedTarget } from "./target";
+import type { NeonTarget } from "./target";
 import { generateStagingDataset } from "./dataset";
 import { replaceStagingData } from "./writer";
 import { defaultAssetClassNodes } from "../shared/asset-class";
@@ -73,7 +73,7 @@ function client(connectionString: string) {
 const admin = client(adminUrl.href);
 const fixture = client(databaseUrl.href);
 const seed = client(seedUrl.href);
-const target: ApprovedSeedTarget = {
+const target: NeonTarget = {
   hostname: adminUrl.hostname,
   projectId: "staging-seed-test-project",
   branchId: "staging-seed-test-branch",
@@ -223,6 +223,15 @@ describe("staging seed against disposable PostgreSQL", () => {
     await fixture.$executeRawUnsafe(
       `GRANT SELECT, INSERT, UPDATE, DELETE ON ${applicationTables.map((table) => `"${table}"`).join(", ")} TO "${roleName}"`,
     );
+    // Match release permissions without relying on PUBLIC function access.
+    const functions =
+      "public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text)";
+    await fixture.$executeRawUnsafe(
+      `REVOKE EXECUTE ON FUNCTION ${functions} FROM PUBLIC`,
+    );
+    await fixture.$executeRawUnsafe(
+      `GRANT EXECUTE ON FUNCTION ${functions} TO "${roleName}"`,
+    );
   });
 
   beforeEach(async () => {
@@ -262,6 +271,63 @@ describe("staging seed against disposable PostgreSQL", () => {
       await admin.$executeRawUnsafe(`DROP ROLE "${roleName}"`);
     }
     await admin.$disconnect();
+  });
+
+  it("bootstraps only explicitly configured administrators in an empty database", async () => {
+    await fixture.$executeRawUnsafe(
+      `TRUNCATE ${applicationTables.map((table) => `"${table}"`).join(", ")} CASCADE`,
+    );
+    await replaceStagingData(
+      seed,
+      { ...config, adminExternalIds: [testerExternalIds[0]] },
+      dataset,
+    );
+    const users = await fixture.user.findMany({
+      orderBy: { externalId: "asc" },
+    });
+    expect(
+      users.find((user) => user.externalId === testerExternalIds[0])?.roles,
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      users.find((user) => user.externalId === testerExternalIds[1])?.roles,
+    ).toEqual([]);
+    await replaceStagingData(
+      seed,
+      { ...config, adminExternalIds: [testerExternalIds[1]] },
+      dataset,
+    );
+    expect(
+      (
+        await fixture.user.findUniqueOrThrow({
+          where: { externalId: testerExternalIds[1] },
+        })
+      ).roles,
+    ).toEqual([]);
+  });
+
+  it("refuses bootstrap in a nonempty database and rolls back without replacing data", async () => {
+    await fixture.user.updateMany({ data: { roles: [] } });
+    const initial = await snapshot();
+    await expect(
+      replaceStagingData(
+        seed,
+        { ...config, adminExternalIds: [testerExternalIds[0]] },
+        dataset,
+      ),
+    ).rejects.toThrow("existing administrator");
+    expect(await snapshot()).toEqual(initial);
+  });
+
+  it("rejects unconfigured administrator identities without changing data", async () => {
+    const initial = await snapshot();
+    await expect(
+      replaceStagingData(
+        seed,
+        { ...config, adminExternalIds: ["unconfigured"] },
+        dataset,
+      ),
+    ).rejects.toThrow("also be configured testers");
+    expect(await snapshot()).toEqual(initial);
   });
 
   it("replaces legacy data, preserves tester roles/locales, and creates valid shared books using CRUD-only credentials", async () => {
@@ -415,7 +481,7 @@ describe("staging seed against disposable PostgreSQL", () => {
         },
         dataset,
       ),
-    ).rejects.toThrow("existing staging administrator");
+    ).rejects.toThrow("existing administrator");
     expect(await snapshot()).toEqual(initial);
   });
 
@@ -440,6 +506,19 @@ describe("staging seed against disposable PostgreSQL", () => {
     }
     expect(second.links).toHaveLength(first.links.length);
     expect(second.users).toEqual(first.users);
+    for (const table of ["schemes", "nodes", "assignments"] as const) {
+      expect(second[table].length).toBeGreaterThan(0);
+      expect(second[table]).toHaveLength(first[table].length);
+      const oldBookIds = new Set(first.books.map((book) => book.id));
+      const newBookIds = new Set(second.books.map((book) => book.id));
+      expect(
+        second[table].every(
+          (row) =>
+            newBookIds.has(row.accountBookId) &&
+            !oldBookIds.has(row.accountBookId),
+        ),
+      ).toBe(true);
+    }
     expect(secondSummary.books.map(({ id: _id, ...book }) => book)).toEqual(
       firstSummary.books.map(({ id: _id, ...book }) => book),
     );

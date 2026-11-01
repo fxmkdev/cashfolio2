@@ -1,59 +1,111 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { createSeedClient } from "./connections";
 import {
   generateStagingDataset,
   generateStatementImportSample,
 } from "./dataset";
+import { runSeedRelease } from "./release";
 import {
   parseVerifiedConnection,
   readSeedConfig,
+  requireValue,
   SeedSafetyError,
   verifyServerIdentity,
 } from "./target";
 import { replaceStagingData } from "./writer";
 
+const execute = promisify(execFile);
+const migrationScript = fileURLToPath(
+  new URL("../../scripts/prisma-migrate-deploy-with-retry.sh", import.meta.url),
+);
+
 export async function runStagingSeed(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<string> {
-  if (args.length === 1 && args[0] === "--sample-csv") {
+  if (args.length === 1 && args[0] === "--sample-csv")
     return generateStatementImportSample();
+  const command = args.length === 0 ? "seed" : args.length === 1 ? args[0] : "";
+  if (
+    !["seed", "--check-target", "--grant-permissions", "--release"].includes(
+      command,
+    )
+  )
+    throw new SeedSafetyError(
+      "Usage: seed [--release | --check-target | --grant-permissions | --sample-csv]",
+    );
+  // Reject production and incomplete configuration before any subprocess or connection.
+  const config = readSeedConfig(env);
+  const migrationTarget = {
+    ...config.target,
+    role: config.target.migrationRole,
+  };
+  const migrationConnection = parseVerifiedConnection(
+    requireValue(env, "DATABASE_URL"),
+    migrationTarget,
+    true,
+  );
+  if (command === "--release") {
+    return runSeedRelease({
+      verify: () => runStagingSeed(["--check-target"], env),
+      migrate: async () => {
+        // Prisma's migration engine has different TLS URL semantics from pg.
+        // Require certificate verification on this new connection as well.
+        const migrationUrl = new URL(requireValue(env, "DATABASE_URL"));
+        migrationUrl.searchParams.set("sslmode", "require");
+        migrationUrl.searchParams.set("sslaccept", "strict");
+        try {
+          await execute("sh", [migrationScript], {
+            env: { ...env, DATABASE_URL: migrationUrl.href },
+            maxBuffer: 4 * 1024 * 1024,
+          });
+        } catch {
+          // Do not forward raw Prisma output, SQL or driver diagnostics into logs.
+          throw new SeedSafetyError(
+            "Migration failed; seeding was not attempted.",
+          );
+        }
+      },
+      grant: () => runStagingSeed(["--grant-permissions"], env),
+      replace: () => runStagingSeed([], env),
+    });
   }
-  const checkOnly = args.length === 1 && args[0] === "--check-target";
-  if (args.length && !checkOnly)
-    throw new SeedSafetyError("Usage: seed [--check-target | --sample-csv]");
-  const config = readSeedConfig(env, !checkOnly);
   const seed = createSeedClient(config.seedConnection);
   try {
-    if (checkOnly) {
-      // A staging DATABASE_URL accidentally pointing at production must also
-      // fail before the release command runs Prisma migrations.
-      if (!env.DATABASE_URL)
-        throw new SeedSafetyError(
-          "DATABASE_URL is required to verify the staging migration target.",
-        );
-      const connection = parseVerifiedConnection(
-        env.DATABASE_URL,
-        config.target,
-        true,
-      );
-      const migration = createSeedClient(connection);
+    if (command !== "seed") {
+      const migration = createSeedClient(migrationConnection);
       try {
         await verifyServerIdentity(seed, config.target);
-        await verifyServerIdentity(migration, {
-          ...config.target,
-          role: connection.user,
-        });
+        await verifyServerIdentity(migration, migrationTarget);
+        if (command === "--grant-permissions") {
+          const role = `"${config.target.role}"`; // Validated SQL identifier, never a free-form input.
+          await migration.$executeRawUnsafe(
+            `GRANT USAGE ON SCHEMA public TO ${role}`,
+          );
+          await migration.$executeRawUnsafe(
+            `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account", "Transaction", "Booking", "ClassificationScheme", "ClassificationNode", "AccountClassification" TO ${role}`,
+          );
+          await migration.$executeRawUnsafe(
+            `GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text) TO ${role}`,
+          );
+        }
       } finally {
         await migration.$disconnect();
       }
-      return JSON.stringify({ event: "staging_seed_target_verified" });
+      return JSON.stringify({ event: "seed_target_verified" });
     }
     const summary = await replaceStagingData(
       seed,
       config,
       generateStagingDataset(),
     );
-    return JSON.stringify({ event: "staging_seed_complete", ...summary });
+    return JSON.stringify({
+      event: "seed_complete",
+      environment: config.target.environment,
+      ...summary,
+    });
   } finally {
     await seed.$disconnect();
   }

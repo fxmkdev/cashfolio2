@@ -73,23 +73,22 @@ RUN pnpm add --workspace-root --prod \
 
 FROM base
 
-# Install openssl needed to run Prisma
+# Install certificate authorities and OpenSSL for verified Prisma connections.
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
     apt-get update -qq && \
-    apt-get install --no-install-recommends -y openssl
+    apt-get install --no-install-recommends -y ca-certificates openssl
 
 # Copy built application
 COPY --from=build /app/apps/cashfolio-app2/.output .output
 COPY --from=build /app/package.json package.json
 COPY --from=build /app/apps/cashfolio-app2/package.json apps/cashfolio-app2/package.json
 
-# Copy the release-command payload for migrations and staging-only seeding.
+# Copy the release-command payload for migrations and nonproduction seeding.
 COPY --from=migration-tools /app/node_modules node_modules
 COPY --from=build /app/apps/cashfolio-app2/prisma apps/cashfolio-app2/prisma
 COPY --from=build /app/apps/cashfolio-app2/prisma.config.ts apps/cashfolio-app2/prisma.config.ts
 COPY --from=build /app/apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh
-COPY --from=build /app/apps/cashfolio-app2/scripts/release-staging.sh apps/cashfolio-app2/scripts/release-staging.sh
 COPY --from=build /app/apps/cashfolio-app2/dist/staging-seed apps/cashfolio-app2/dist/staging-seed
 COPY --from=build /app/apps/cashfolio-app2/dist/provider-usage-cleanup apps/cashfolio-app2/dist/provider-usage-cleanup
 
