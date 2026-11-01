@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { EditAccountModal } from "./edit-account-modal";
+import { AssetClassContext } from "../../classification-context";
 import {
   accountGroupOptions,
   editAccountInitialValues,
@@ -255,6 +256,51 @@ export const ValidationSmoke: Story = {
 
     await userEvent.click(body.getByRole("button", { name: "Create" }));
     await expect(body.getByText("Name is required")).toBeInTheDocument();
+  },
+};
+
+export const NestedAssetClass: Story = {
+  args: {
+    initialValues: { ...editAccountInitialValues, assetClassId: "swiss" },
+    editingId: "account-checking",
+  },
+  decorators: [
+    (Story) => (
+      <AssetClassContext.Provider
+        value={[
+          { id: "equities", name: "Equities", parentId: null, sortOrder: 0 },
+          {
+            id: "swiss",
+            name: "Swiss Shares",
+            parentId: "equities",
+            sortOrder: 0,
+          },
+        ]}
+      >
+        <Story />
+      </AssetClassContext.Provider>
+    ),
+  ],
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Edit Account" }),
+    );
+    const input = dialog.getByRole("textbox", { name: "Asset Class" });
+    await expect(input).toHaveValue("Swiss Shares");
+    await userEvent.click(input);
+    await userEvent.click(body.getByText("Equities", { exact: true }));
+    await expect(input).toHaveValue("Equities");
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Clear Asset Class" }),
+    );
+    await expect(input).toHaveValue("");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ assetClassId: null }),
+      ),
+    );
   },
 };
 

@@ -89,7 +89,7 @@ for (const scenario of [
     await expect(
       dialog.getByRole("combobox", { name: "Unit", exact: true }),
     ).toBeDisabled();
-    const assetClassInput = dialog.getByRole("combobox", {
+    const assetClassInput = dialog.getByRole("textbox", {
       name: "Asset Class",
     });
     await expect(assetClassInput).toBeEnabled();

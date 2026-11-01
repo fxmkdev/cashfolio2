@@ -4,18 +4,21 @@ import {
   Group,
   Input,
   Popover,
-  Select,
-  type SelectProps,
   Stack,
   Text,
   Tooltip,
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useId, useRef, useState } from "react";
-import { classificationOptions } from "../../shared/asset-class";
+import {
+  AssetClassTreeSelect,
+  type AssetClassTreeSelectProps,
+} from "../controls/asset-class-tree-select";
 
-export function AssetClassField(props: SelectProps) {
-  const assetClassOptions = classificationOptions(useAssetClasses());
+export function AssetClassField(
+  props: Omit<AssetClassTreeSelectProps, "nodes">,
+) {
+  const nodes = useAssetClasses();
   const inputId = useId();
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const [helpOpened, setHelpOpened] = useState(false);
@@ -69,13 +72,15 @@ export function AssetClassField(props: SelectProps) {
           </Popover.Dropdown>
         </Popover>
       </Group>
-      <Select
+      <AssetClassTreeSelect
         id={inputId}
         placeholder="Unclassified"
         openOnFocus={false}
         searchable
         clearable
-        data={[{ value: "", label: "Unclassified" }, ...assetClassOptions]}
+        clearButtonProps={{ "aria-label": "Clear Asset Class" }}
+        nodes={nodes}
+        unclassifiedValue=""
         {...props}
       />
     </Stack>

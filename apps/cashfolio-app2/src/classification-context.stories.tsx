@@ -84,8 +84,12 @@ export const RefreshPreservesEditorDraft: Story = {
       expect(dialog.getByRole("button", { name: "Save" })).toBeEnabled(),
     );
     expect(name).toHaveValue("Unsaved Draft");
-    const selector = dialog.getByRole("combobox", { name: "Asset Class" });
+    const selector = dialog.getByRole("textbox", { name: "Asset Class" });
     await userEvent.click(selector);
+    expect(
+      body.getByRole("option", { name: "Old Class (no longer available)" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await userEvent.clear(selector);
     expect(
       body.queryByRole("option", { name: "Old Class" }),
     ).not.toBeInTheDocument();

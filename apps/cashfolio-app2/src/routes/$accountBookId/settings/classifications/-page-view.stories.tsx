@@ -150,10 +150,118 @@ export const DeleteAssignedLeaf: Story = {
     await expect(dialog.getByText(/2 active and 1 archived/)).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Delete" })).toBeDisabled();
     await userEvent.click(dialog.getByLabelText("Replacement Asset Class"));
+    await expect(
+      body.queryByRole("option", { name: "Swiss Equities" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(body.getByRole("option", { name: "Unclassified" }));
     await userEvent.click(dialog.getByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(args.onDelete).toHaveBeenCalledWith("swiss", null),
+    );
+  },
+};
+
+export const ParentSelectionExcludesSubtree: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const actions = await rowActions(canvasElement, "equities");
+    await userEvent.click(
+      actions.getByRole("button", { name: "Edit Equities" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Edit Asset Class" }),
+    );
+    const parent = dialog.getByLabelText("Parent Class");
+    await userEvent.click(parent);
+    await expect(body.queryByRole("option", { name: /Equities/ })).toBeNull();
+    await expect(
+      body.queryByRole("option", { name: "Swiss Equities" }),
+    ).toBeNull();
+    await userEvent.click(body.getByRole("option", { name: "Cash" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSave).toHaveBeenCalledWith({
+        id: "equities",
+        name: "Equities",
+        parentId: "cash",
+      }),
+    );
+  },
+};
+
+export const ClearParentToTopLevel: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const actions = await rowActions(canvasElement, "swiss");
+    await userEvent.click(
+      actions.getByRole("button", { name: "Edit Swiss Equities" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Edit Asset Class" }),
+    );
+    const parent = dialog.getByLabelText("Parent Class");
+    await expect(parent).toHaveValue("Equities");
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Clear Parent Class" }),
+    );
+    await expect(parent).toHaveValue("");
+    await expect(parent).toHaveAttribute("placeholder", "Top Level");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSave).toHaveBeenCalledWith({
+        id: "swiss",
+        name: "Swiss Equities",
+        parentId: null,
+      }),
+    );
+  },
+};
+
+export const NestedParentSelection: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "New Asset Class" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "New Asset Class" }),
+    );
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /^Name/ }),
+      "Pension",
+    );
+    const parent = dialog.getByLabelText("Parent Class");
+    await userEvent.click(parent);
+    await userEvent.type(parent, "Equities / Swiss");
+    await userEvent.click(body.getByRole("option", { name: "Swiss Equities" }));
+    await expect(parent).toHaveValue("Swiss Equities");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSave).toHaveBeenCalledWith({
+        id: undefined,
+        name: "Pension",
+        parentId: "swiss",
+      }),
+    );
+  },
+};
+
+export const NestedReplacementSelection: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const actions = await rowActions(canvasElement, "cash");
+    await userEvent.click(actions.getByRole("button", { name: "Delete Cash" }));
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Delete Asset Class" }),
+    );
+    const replacement = dialog.getByLabelText("Replacement Asset Class");
+    await userEvent.click(replacement);
+    await userEvent.type(replacement, "Equities / Swiss");
+    await userEvent.click(body.getByRole("option", { name: "Swiss Equities" }));
+    await expect(replacement).toHaveValue("Swiss Equities");
+    await userEvent.click(dialog.getByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(args.onDelete).toHaveBeenCalledWith("cash", "swiss"),
     );
   },
 };
@@ -288,7 +396,9 @@ export const ExpansionSurvivesRefresh: Story = {
     ).toBeNull();
     const refreshed = await gridRow(canvasElement, "equities");
     await userEvent.click(refreshed.querySelector(".ag-group-contracted")!);
-    await expect(await gridRow(canvasElement, "swiss")).toBeVisible();
+    await waitFor(async () =>
+      expect(await gridRow(canvasElement, "swiss")).toBeVisible(),
+    );
   },
 };
 export const DeepHierarchy: Story = {
