@@ -68,8 +68,13 @@ and **Asset Class**. The grouping is preserved in the URL and when returning
 from a ledger. Switching grouping reuses the current balance and gain/loss data.
 Asset Class shows occupied classes and their ancestors, with account leaves
 directly beneath their assigned class and unassigned accounts under
-**Unclassified**. Original account-group paths appear beneath account names and
-are included in name filtering and tooltips. Empty classes are omitted.
+**Unclassified**. The **Path** column replaces **Asset Class** in this view and
+shows each account's original account-group hierarchy, excluding its own name,
+with spaced `/` separators. Ungrouped accounts, headings, and the total row have
+blank Path cells. Path has its own text filter and full-path tooltip. Names
+remain single-line at the standard row height, with name-only filtering and
+tooltips. Account Structure retains the Asset Class column. Empty classes are
+omitted.
 
 In Asset Class, archived accounts appear in a collapsed **Archived** branch
 within their assigned class, regardless of their original group hierarchy. Class

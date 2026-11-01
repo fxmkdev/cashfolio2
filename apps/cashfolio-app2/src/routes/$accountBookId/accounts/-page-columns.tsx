@@ -47,6 +47,20 @@ export function getAccountListAssetClassValue(
   return getAssetClassLabel(data.assetClassId, assetClasses);
 }
 
+export function getAccountListPathValue(
+  data: AccountsGridRow | undefined,
+): string | undefined {
+  if (
+    !data ||
+    isReferenceCurrencyTotalFooterRow(data) ||
+    data.nodeType !== "account"
+  )
+    return undefined;
+  return data.accountGroupPath?.length
+    ? data.accountGroupPath.join(" / ")
+    : undefined;
+}
+
 export function getAccountListTrackingMethodValue(
   data: AccountsGridRow | undefined,
 ): string | undefined {
@@ -248,28 +262,43 @@ export function useAccountTreeColumnDefs(params: {
                 return formatValue?.(value) ?? value.toString();
               },
             } satisfies ColDef<AccountsGridRow>,
-            {
-              colId: "assetClass",
-              headerName: "Asset Class",
-              width: 220,
-              resizable: true,
-              sortable: false,
-              filter: "agTextColumnFilter",
-              valueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data, assetClasses),
-              tooltipValueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data, assetClasses),
-              cellRenderer: ({
-                value,
-              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
-                value === "Unclassified" ? (
-                  <Text component="span" inherit c="dimmed">
-                    {value}
-                  </Text>
-                ) : (
-                  (value ?? null)
-                ),
-            } satisfies ColDef<AccountsGridRow>,
+            grouping === "assetClass"
+              ? ({
+                  colId: "path",
+                  headerName: "Path",
+                  width: 220,
+                  resizable: true,
+                  sortable: false,
+                  filter: "agTextColumnFilter",
+                  valueGetter: ({ data }) => getAccountListPathValue(data),
+                  tooltipValueGetter: ({ data }) =>
+                    getAccountListPathValue(data),
+                } satisfies ColDef<AccountsGridRow>)
+              : ({
+                  colId: "assetClass",
+                  headerName: "Asset Class",
+                  width: 220,
+                  resizable: true,
+                  sortable: false,
+                  filter: "agTextColumnFilter",
+                  valueGetter: ({ data }) =>
+                    getAccountListAssetClassValue(data, assetClasses),
+                  tooltipValueGetter: ({ data }) =>
+                    getAccountListAssetClassValue(data, assetClasses),
+                  cellRenderer: ({
+                    value,
+                  }: ICellRendererParams<
+                    AccountsGridRow,
+                    string | undefined
+                  >) =>
+                    value === "Unclassified" ? (
+                      <Text component="span" inherit c="dimmed">
+                        {value}
+                      </Text>
+                    ) : (
+                      (value ?? null)
+                    ),
+                } satisfies ColDef<AccountsGridRow>),
             {
               colId: "trackingMethod",
               headerName: "Tracking Method",

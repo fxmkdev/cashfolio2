@@ -372,14 +372,7 @@ export function AccountsPageView({
             resizable: true,
             filter: "agTextColumnFilter",
             valueGetter: ({ data }) => data?.name,
-            filterValueGetter: ({ data }) =>
-              data && "accountGroupPath" in data
-                ? [...(data.accountGroupPath ?? []), data.name].join(" / ")
-                : data?.name,
-            tooltipValueGetter: ({ data }) =>
-              data && "accountGroupPath" in data
-                ? [...(data.accountGroupPath ?? []), data.name].join(" / ")
-                : data?.name,
+            tooltipValueGetter: ({ data }) => data?.name,
             suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
             cellRendererParams: {
               suppressCount: true,
@@ -389,19 +382,10 @@ export function AccountsPageView({
           postSortRows={postSortAccountRows}
           treeData={true}
           treeDataParentIdField="parentId"
-          getRowHeight={({ data }) =>
-            data && "accountGroupPath" in data && data.accountGroupPath?.length
-              ? 54
-              : undefined
-          }
           pinnedBottomRowData={pinnedBottomRowData}
           onGridReady={(event) => {
             onGridReady?.(event);
             bulkAccountActions?.gridProps.onGridReady?.(event);
-          }}
-          onRowDataUpdated={(event) => {
-            bulkAccountActions?.gridProps.onRowDataUpdated?.(event);
-            event.api.resetRowHeights();
           }}
           isGroupOpenByDefault={isGroupOpenByDefault}
           onRowGroupOpened={onRowGroupOpened}

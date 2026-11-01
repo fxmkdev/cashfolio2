@@ -4,6 +4,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import {
   getAccountListBalanceValue,
   getAccountListUnitIdentifierDisplayValue,
@@ -416,10 +417,14 @@ describe("account tree Delete explanations", () => {
 });
 
 describe("account classification columns", () => {
-  function readColumns(isEquityTab: boolean) {
+  function readColumns(
+    isEquityTab: boolean,
+    grouping: ReportingGrouping = "accountStructure",
+  ) {
     let columns: ReturnType<typeof useAccountTreeColumnDefs> = [];
     function ReadColumns() {
       columns = useAccountTreeColumnDefs({
+        grouping,
         isEquityTab,
         rowsByParentKey: new Map(),
         referenceCurrency: "CHF",
@@ -472,6 +477,76 @@ describe("account classification columns", () => {
       colId: "actions",
       pinned: "right",
     });
+  });
+
+  it("replaces Asset Class with Path in the same position and keeps neighboring columns", () => {
+    const columns = readColumns(false, "assetClass");
+    expect(columns[3]).toMatchObject({
+      colId: "path",
+      headerName: "Path",
+      width: 220,
+      resizable: true,
+      sortable: false,
+      filter: "agTextColumnFilter",
+    });
+    expect(columns[4]).toMatchObject({ colId: "trackingMethod" });
+    expect(
+      columns.some(
+        (column) => "colId" in column && column.colId === "assetClass",
+      ),
+    ).toBe(false);
+    expect(readColumns(true, "assetClass")).toHaveLength(1);
+  });
+
+  it("uses original group paths for Path display, filtering and tooltips on active and archived accounts", () => {
+    const column = readColumns(false, "assetClass")[3];
+    if (
+      !("valueGetter" in column) ||
+      typeof column.valueGetter !== "function" ||
+      typeof column.tooltipValueGetter !== "function"
+    )
+      throw new Error("Missing Path getters");
+    const cases: Array<[AccountsGridRow | undefined, string | undefined]> = [
+      [
+        createAccountRow({ accountGroupPath: ["Cash", "Swissquote"] }),
+        "Cash / Swissquote",
+      ],
+      [
+        createAccountRow({
+          isActive: false,
+          accountGroupPath: ["Cash", "Swissquote"],
+        }),
+        "Cash / Swissquote",
+      ],
+      [createAccountRow({ accountGroupPath: ["Cash"] }), "Cash"],
+      [createAccountRow({ accountGroupPath: [] }), undefined],
+      [createAccountRow(), undefined],
+      ...(["assetClass", "unclassified", "archived"] as const).map(
+        (presentationKind) =>
+          [
+            {
+              ...createGroupRow(),
+              presentationKind,
+              accountGroupPath: ["Ignored"],
+            },
+            undefined,
+          ] as [TreeRow, undefined],
+      ),
+      [footerRow, undefined],
+      [undefined, undefined],
+    ];
+    for (const [data, expected] of cases) {
+      expect(
+        column.valueGetter({ data } as Parameters<
+          typeof column.valueGetter
+        >[0]),
+      ).toBe(expected);
+      expect(
+        column.tooltipValueGetter({ data } as Parameters<
+          typeof column.tooltipValueGetter
+        >[0]),
+      ).toBe(expected);
+    }
   });
 
   it("places Tracking Method after Asset Class with label filtering and tooltips", () => {

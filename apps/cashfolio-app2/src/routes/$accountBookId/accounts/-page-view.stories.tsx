@@ -646,7 +646,7 @@ function AccountsPageStoryHarness({
               bulkApiRef.current?.setFilterModel({
                 "ag-Grid-AutoColumn": {
                   filterType: "text",
-                  type: grouping === "assetClass" ? "contains" : "equals",
+                  type: "equals",
                   filter: "Checking",
                 },
               })
@@ -885,6 +885,17 @@ export const AssetClassSwitchingAndExpansion: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const classId = assetClassRowId("EQUITIES");
+    const checkingName = () =>
+      canvasElement.querySelector<HTMLElement>(
+        '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+      );
+    await waitFor(() => expect(checkingName()).toBeVisible());
+    const standardRowHeight = checkingName()!
+      .closest<HTMLElement>(".ag-row")!
+      .getBoundingClientRect().height;
+    await expect(
+      canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
+    ).toBeVisible();
     const collapse = async (id: string) => {
       const selector = `[row-id="${id}"] .ag-group-expanded`;
       await waitFor(() =>
@@ -908,9 +919,22 @@ export const AssetClassSwitchingAndExpansion: Story = {
     await waitFor(() =>
       expect(
         canvasElement.querySelector(
-          '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+          '[row-id="account-checking"] [col-id="path"]',
         ),
       ).toHaveTextContent("Portfolio"),
+    );
+    await expect(checkingName()).toHaveTextContent(/^Checking$/);
+    await expect(
+      canvas.getByRole("columnheader", { name: /^Path$/ }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("columnheader", { name: /^Asset Class$/ }),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        checkingName()!.closest<HTMLElement>(".ag-row")!.getBoundingClientRect()
+          .height,
+      ).toBe(standardRowHeight),
     );
     await expect(
       canvasElement.querySelectorAll(
@@ -923,6 +947,11 @@ export const AssetClassSwitchingAndExpansion: Story = {
       expect(canvasElement.querySelector('[row-id="old"]')).not.toBeNull(),
     );
     for (const id of ["account-checking", "old"]) {
+      await expect(
+        canvasElement
+          .querySelector<HTMLElement>(`[row-id="${id}"]`)!
+          .getBoundingClientRect().height,
+      ).toBe(standardRowHeight);
       const actions = canvasElement.querySelector(
         `[row-id="${id}"] [col-id="actions"]`,
       )!;
@@ -945,6 +974,18 @@ export const AssetClassSwitchingAndExpansion: Story = {
       ).not.toBeNull(),
     );
     await expandAssignmentGroup(canvasElement, "portfolio");
+    await waitFor(() => expect(checkingName()).toBeVisible());
+    await expect(checkingName()).toHaveTextContent(/^Checking$/);
+    await expect(
+      checkingName()!.closest<HTMLElement>(".ag-row")!.getBoundingClientRect()
+        .height,
+    ).toBe(standardRowHeight);
+    await expect(
+      canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("columnheader", { name: /^Path$/ }),
+    ).not.toBeInTheDocument();
     await chooseAccountGrouping(canvasElement, "Asset Class");
     await waitFor(() =>
       expect(
@@ -1005,8 +1046,10 @@ export const AssetClassFilteredBulkAssignment: Story = {
     );
     await waitFor(() =>
       expect(
-        assetClassCell(canvasElement, "account-checking"),
-      ).toHaveTextContent("Fixed Income"),
+        canvasElement.querySelector(
+          '[row-id="account-checking"] [col-id="path"]',
+        ),
+      ).toHaveTextContent("Portfolio"),
     );
     await expect(
       canvasElement.querySelector(
