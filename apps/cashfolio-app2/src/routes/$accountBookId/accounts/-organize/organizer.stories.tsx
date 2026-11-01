@@ -104,6 +104,10 @@ export const FindAndArchivedSelection: Story = {
     );
     const archived = await row(canvasElement, "archived");
     await expect(archived).toBeVisible();
+    const unmarked = await row(canvasElement, "investments");
+    expect(getComputedStyle(archived).backgroundColor).not.toBe(
+      getComputedStyle(unmarked).backgroundColor,
+    );
     const virtual = await row(canvasElement, "__archived__:group:investments");
     await expect(
       within(virtual).queryByRole("checkbox"),

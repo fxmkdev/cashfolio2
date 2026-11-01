@@ -1,5 +1,5 @@
-.match {
-  --ag-row-background-color: var(--mantine-color-yellow-light);
+.match:global(.ag-row) {
+  background-color: var(--mantine-color-yellow-light);
 }
 
 .recent {
