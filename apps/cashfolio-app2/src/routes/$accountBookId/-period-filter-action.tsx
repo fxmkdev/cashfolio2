@@ -88,6 +88,7 @@ export function PeriodFilterAction({
           <Button
             variant="default"
             justify="center"
+            w="clamp(8.5rem, 16vw, 12rem)"
             onClick={() => onPickerOpenedChange(!pickerOpened)}
             className={classes.trigger}
             data-testid="period-picker-trigger"

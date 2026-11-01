@@ -1,5 +1,5 @@
 .trigger {
-  inline-size: clamp(8.5rem, 16vw, 12rem);
+  flex-shrink: 0;
   min-inline-size: 0;
 }
 

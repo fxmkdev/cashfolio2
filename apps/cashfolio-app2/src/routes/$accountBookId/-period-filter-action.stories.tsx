@@ -1,4 +1,5 @@
 import { Button, Stack, Text } from "@mantine/core";
+import buttonStyles from "@mantine/core/styles/Button.css?inline";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useCallback, useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -74,9 +75,24 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const FilteredLedger: Story = {
+  render: (args) => (
+    <>
+      <PeriodFilterExample {...args} />
+      {/* Route styles must also work when Mantine's CSS loads afterward. */}
+      <style>{buttonStyles}</style>
+    </>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
+    const picker = canvas.getByTestId("period-picker-trigger");
+    const selector = picker.parentElement!;
+    const initialWidth = selector.getBoundingClientRect().width;
+    const expectStableWidth = () =>
+      expect(selector.getBoundingClientRect().width).toBeCloseTo(
+        initialWidth,
+        1,
+      );
     await userEvent.click(
       canvas.getByRole("button", { name: "Previous Period" }),
     );
@@ -86,6 +102,7 @@ export const FilteredLedger: Story = {
     await userEvent.click(canvas.getByTestId("period-picker-trigger"));
     await userEvent.click(await body.findByRole("radio", { name: "Year" }));
     await expect(canvas.getByRole("status")).toHaveTextContent(/^2026$/);
+    await expectStableWidth();
     await userEvent.click(
       within(await body.findByTestId("period-year-picker")).getByRole(
         "button",
@@ -123,6 +140,7 @@ export const FilteredLedger: Story = {
     await expect(canvas.getByTestId("period-picker-trigger")).toHaveTextContent(
       "All Periods",
     );
+    await expectStableWidth();
   },
 };
 
