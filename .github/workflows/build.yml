@@ -34,6 +34,7 @@ jobs:
     needs: [version]
     outputs:
       image: ${{ steps.image-name.outputs.image }}
+      preview_image: ${{ steps.preview-image.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -90,25 +91,21 @@ jobs:
         run: flyctl auth docker
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Record immutable preview image
+      - name: Resolve immutable preview image
+        id: preview-image
         if: github.event_name == 'pull_request'
-        run: node apps/cashfolio-app2/scripts/preview/record-image.ts
+        run: node apps/cashfolio-app2/scripts/preview/resolve-image.ts
         env:
           IMAGE: ${{ steps.image-name.outputs.image }}
-          FLY_CASHFOLIO_APP_STAGING_APP: ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          FLY_CASHFOLIO_APP_STAGING_APP:
+            ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
-      - name: Upload preview image metadata
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
-        with:
-          name: preview-image
-          path: ${{ runner.temp }}/preview-image.json
-          retention-days: 7
-          overwrite: true
 
   cashfolio-app2-e2e:
-    name: "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{ matrix.shard_total }})"
+    name:
+      "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{
+      matrix.shard_total }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -152,14 +149,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cashfolio-app2-playwright-timings-${{ matrix.shard_index }}-of-${{ matrix.shard_total }}
+          name:
+            cashfolio-app2-playwright-timings-${{ matrix.shard_index }}-of-${{
+            matrix.shard_total }}
           path: apps/cashfolio-app2/test-results/results.json
           if-no-files-found: ignore
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: cashfolio-app2-playwright-artifacts-${{ matrix.shard_index }}-of-${{ matrix.shard_total }}
+          name:
+            cashfolio-app2-playwright-artifacts-${{ matrix.shard_index }}-of-${{
+            matrix.shard_total }}
           path: |
             apps/cashfolio-app2/playwright-report
             apps/cashfolio-app2/test-results
@@ -327,7 +328,9 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter cashfolio-app2 build-storybook
       - name: Run Storybook and Temporal tests
-        run: pnpm --filter cashfolio-app2 exec vitest run --project storybook --project 'temporal-*'
+        run:
+          pnpm --filter cashfolio-app2 exec vitest run --project storybook
+          --project 'temporal-*'
       - name: Upload Storybook failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -418,6 +421,119 @@ jobs:
           exitOnceUploaded: true
           autoAcceptChanges: true
 
+  preview-deploy:
+    name: "Deploy to preview / cashfolio-app2: Deploy"
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.repo.fork == false
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    needs: cashfolio-app2-build-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: preview-cashfolio-app
+      url: ${{ steps.prepare.outputs.preview_url }}
+    concurrency:
+      group: cashfolio-app2-preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install preview tooling
+        run:
+          pnpm --filter cashfolio-app2 install --frozen-lockfile
+          --ignore-scripts
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Provision database and stage preview-only credentials
+        id: prepare
+        run: node apps/cashfolio-app2/scripts/preview/prepare.ts
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_IMAGE:
+            ${{ needs.cashfolio-app2-build-push.outputs.preview_image }}
+          FLY_CASHFOLIO_APP_STAGING_APP:
+            ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          FLY_ORG: ${{ vars.FLY_ORG }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
+          PREVIEW_DATABASE_TARGET: ${{ vars.PREVIEW_DATABASE_TARGET }}
+          PREVIEW_DATABASE_PASSWORD_KEY:
+            ${{ secrets.PREVIEW_DATABASE_PASSWORD_KEY }}
+          SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
+          SEED_ADMIN_EXTERNAL_IDS: ${{ secrets.SEED_ADMIN_EXTERNAL_IDS }}
+          LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}
+          LOGTO_MANAGEMENT_API_APP_SECRET:
+            ${{ secrets.LOGTO_MANAGEMENT_API_APP_SECRET }}
+          CURRENCYLAYER_API_KEY: ${{ secrets.CURRENCYLAYER_API_KEY }}
+          COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
+          MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
+          STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+      - name: Deploy and seed preview
+        uses: ./.github/actions/deploy-cashfolio-app2
+        with:
+          image: ${{ steps.prepare.outputs.image }}
+          high_availability: "false"
+          app_environment: preview
+          release_command:
+            node apps/cashfolio-app2/dist/staging-seed/seed.mjs --release
+          fly_app: ${{ steps.prepare.outputs.fly_app }}
+          canonical_hostname: ${{ steps.prepare.outputs.preview_hostname }}
+          base_url: ${{ steps.prepare.outputs.preview_url }}
+          fly_primary_region: ${{ vars.FLY_PRIMARY_REGION }}
+          fly_min_machines_running: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
+          fly_memory: ${{ vars.FLY_MEMORY }}
+          fly_cpu_kind: ${{ vars.FLY_CPU_KIND }}
+          fly_cpus: ${{ vars.FLY_CPUS }}
+          logto_endpoint: ${{ vars.LOGTO_ENDPOINT }}
+          logto_app_id: ${{ vars.LOGTO_APP_ID }}
+          logto_management_api_endpoint:
+            ${{ vars.LOGTO_MANAGEMENT_API_ENDPOINT }}
+          logto_management_api_resource:
+            ${{ vars.LOGTO_MANAGEMENT_API_RESOURCE }}
+          logto_management_api_app_id: ${{ vars.LOGTO_MANAGEMENT_API_APP_ID }}
+          fly_api_token: ${{ secrets.FLY_API_TOKEN }}
+      - name: Wake preview
+        uses: ./.github/actions/warm-up-url
+        with:
+          url: ${{ steps.prepare.outputs.preview_url }}
+      - name: Update preview link on PR
+        run: node apps/cashfolio-app2/scripts/preview/publish.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.prepare.outputs.preview_url }}
+          PREVIEW_DATABASE: ${{ steps.prepare.outputs.database }}
+      - name: Deployment summary
+        if: always()
+        run: |
+          {
+            echo '### Preview deployment and seed'
+            echo "PR: #$PR_NUMBER"
+            echo "Commit: $PR_SHA"
+            echo "Preview: ${PREVIEW_URL:-unavailable}"
+            echo "Outcome: $OUTCOME"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.prepare.outputs.preview_url }}
+          OUTCOME: ${{ job.status }}
+
   deploy:
     name: Deploy to staging
     if: github.event_name != 'pull_request'
@@ -446,8 +562,8 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: >-
-      github.event_name != 'pull_request' && needs.version.outputs.is_new_release
-      == 'true'
+      github.event_name != 'pull_request' &&
+      needs.version.outputs.is_new_release == 'true'
     needs:
       - deploy
       - version

@@ -169,10 +169,11 @@ slim release payload. The command needs no workspace install in that image.
 
 Staging's `SEED_DATABASE_URL`, `SEED_TARGET`, `SEED_USER_EXTERNAL_IDS`, and
 `SEED_ADMIN_EXTERNAL_IDS` remain operator-provisioned Fly secrets. Previews
-receive only their own generated database/seed credentials from a trusted
-controller on `main`; its database provisioning credential never enters PR code.
-No Neon branching operations are used. Exact Neon identity checks continue to
-protect the configured fixed hosts and databases.
+receive only their own generated database/seed credentials from the PR Build
+workflow. Same-repository contributors are trusted with preview provisioning
+credentials; these credentials never enter the preview Fly app. No Neon
+branching operations are used. Exact Neon identity checks continue to protect
+the configured fixed hosts and databases.
 
 See [Synthetic staging data](../../../docs/staging-database-refresh.md) for
 staging setup and [Preview environments](../../../docs/preview-environments.md)

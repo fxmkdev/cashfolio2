@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { publishedImage } from "./record-image.ts";
+import { publishedImage } from "./resolve-image.ts";
 
 const sha = "a".repeat(40);
 const digest = `registry.fly.io/cashfolio-staging@sha256:${"b".repeat(64)}`;
@@ -31,7 +31,7 @@ test("waits for a Depot image to become readable and records the shared reposito
       pauses.push(milliseconds);
     },
   });
-  assert.deepEqual(result, { pr: 42, sha, image: digest });
+  assert.equal(result, digest);
   assert.deepEqual(pauses, [20_000, 20_000]);
   assert.equal(calls.length, 4);
   assert.deepEqual(calls.at(-1), [

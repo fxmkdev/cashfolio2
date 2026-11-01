@@ -10,37 +10,32 @@ migration-only.
 
 1. The `Build` workflow builds the exact PR head on Fly/Depot and pushes it to
    the existing shared image repository using `FLY_CASHFOLIO_APP_STAGING_APP`
-   and `FLY_API_TOKEN`. It uploads `preview-image.json` with the PR number, full
-   head SHA and immutable image digest. PR tags include the head SHA, run ID and
-   attempt, separately from release tags. Forks cannot publish preview images.
-   Docker registry authentication uses `flyctl auth docker`. Digest recording
-   retries registry reads with bounded delays while a new Depot image becomes
-   available; missing or invalid digests fail the build without publishing
-   deployment metadata. Rerunning the image job replaces its metadata artifact
-   for that workflow run.
-2. `Deploy preview` runs after Build finishes. It validates the GitHub run,
-   successful image-build job, open same-repository PR and current head SHA.
-   Other CI failures do not override a successful image build; their checks
-   remain visible separately. Deployment now waits for the Build run to finish.
-3. The controller checks out its own default-branch commit. It treats downloaded
-   image metadata as data and validates its PR, SHA and configured registry
-   path. It never checks out PR code or executes a PR image on the provisioning
-   runner.
-4. Through a verified connection to the fixed preview host, the controller
-   creates or reuses the database and its two restricted roles. It stages only
-   preview credentials on the preview Fly app, then deploys the exact image
-   digest.
+   and `FLY_API_TOKEN`. PR tags include the head SHA, run ID and attempt,
+   separately from release tags. Forks cannot publish preview images or deploy.
+2. The build job resolves the immutable image digest and passes it directly to
+   the preview deployment job through a job output. Registry authentication uses
+   `flyctl auth docker`; bounded retries account for newly published Depot
+   images becoming available. Missing or invalid digests fail the build and
+   prevent deployment. No metadata artifact or separate deployment workflow is
+   used.
+3. The preview deployment job uses the exact PR head's scripts and validates the
+   open, same-repository PR, current head SHA and configured image repository.
+   It starts after a successful image build; unrelated CI checks run
+   independently.
+4. Through a verified connection to the fixed preview host, it creates or reuses
+   the database and its two restricted roles. It stages only that preview's
+   credentials on the preview Fly app, rechecks the PR head, then deploys the
+   exact image digest. Later deployments reuse the database, rather than
+   recreating it.
 5. The Fly release command verifies both database connections read-only, applies
-   migrations, grants seed permissions, and transactionally seeds the database.
-   Configuration, migration or seed failure fails the release before web
+   migrations, grants seed permissions, and transactionally replaces application
+   data. Configuration, migration or seed failure fails the release before web
    Machines update. Review the deployment summary for PR, exact commit, URL and
    outcome.
 
-The controller publishes pending and final commit statuses on the resolved PR
-head using the existing required context
-`Deploy to preview / cashfolio-app2: Deploy`. A `workflow_run` job's own check
-belongs to the default-branch commit, so this explicit PR status preserves the
-repository's merge requirement. Failures and cancellations never report success.
+The preview job retains the required check name
+`Deploy to preview / cashfolio-app2: Deploy`. GitHub reports the job outcome
+normally; no custom commit-status publisher is needed.
 
 No preview deployment creates, copies, resets or deletes a Neon branch. Neon
 still hosts PostgreSQL on its fixed default branch; its project/branch/endpoint
@@ -72,13 +67,14 @@ revoked.
 
 Passwords are deterministically derived with HMAC-SHA-256 from a private
 provisioning-only key, PR number and role kind. Retries do not rotate active
-credentials. Never put the key or provisioning URL in a preview app, PR build
-job or repository-wide secret. Changing the key requires a coordinated operator
-credential rotation; existing roles are deliberately not reset.
+credentials. Never put the key or provisioning URL in a preview app. Keep both
+in the preview deployment environment, rather than repository-wide secrets.
+Changing the key requires a coordinated operator credential rotation; existing
+roles are deliberately not reset.
 
 Deployment and cleanup share a noncancelling per-PR concurrency group. Database
-operations also take a per-PR advisory lock. The controller rechecks PR state
-and head after preparing resources; closed or obsolete runs fail without
+operations also take a per-PR advisory lock. The deployment job rechecks PR
+state and head after preparing resources; closed or obsolete runs fail without
 deploying.
 
 Preview apps retain shared staging Redis for market rates. Fresh book IDs and
@@ -120,12 +116,20 @@ current database and current role through its connection. Its identity must not
 exist on staging or production; independently verify production authentication
 with preview credentials is rejected, without recording passwords.
 
-### Trusted GitHub environment
+### Existing preview GitHub environment
 
-Create `preview-cashfolio-provision` with a deployment branch policy allowing
-**only `main`**, no tags. Configure this restriction **before adding secrets**.
-No manual reviewer gate is required. Do not reuse the old unprotected
-`preview-cashfolio-app` environment for privileged database credentials.
+Use the existing `preview-cashfolio-app` environment for preview deployment and
+cleanup. Its deployment policy must allow same-repository PR workflows and
+`main` for cleanup; it must not be restricted to `main` only. No new environment
+or manual reviewer gate is required.
+
+Same-repository contributors are trusted with this environment's preview
+provisioning credentials: PRs can change both the workflow and its scripts.
+These credentials can manage all databases and roles on the dedicated preview
+host, and the password-derivation key can derive other previews' passwords.
+Forks are excluded from image publishing, provisioning and deployment. This is a
+contributor trust policy; destination checks still protect against accidental
+misconfiguration.
 
 Secrets in this environment:
 
@@ -155,9 +159,9 @@ Variable `PREVIEW_DATABASE_TARGET` is the independently reviewed exact host:
 }
 ```
 
-Copy the existing preview deployment variables into the new environment:
-`FLY_ORG` (required), `FLY_PRIMARY_REGION`, `FLY_MIN_MACHINES_RUNNING`,
-`FLY_MEMORY`, `FLY_CPU_KIND`, `FLY_CPUS`, `LOGTO_ENDPOINT`, `LOGTO_APP_ID`,
+Retain the existing preview deployment variables in this environment: `FLY_ORG`
+(required), `FLY_PRIMARY_REGION`, `FLY_MIN_MACHINES_RUNNING`, `FLY_MEMORY`,
+`FLY_CPU_KIND`, `FLY_CPUS`, `LOGTO_ENDPOINT`, `LOGTO_APP_ID`,
 `LOGTO_MANAGEMENT_API_ENDPOINT`, `LOGTO_MANAGEMENT_API_RESOURCE`,
 `LOGTO_MANAGEMENT_API_APP_ID`. Keep the repository variable
 `FLY_CASHFOLIO_APP_STAGING_APP` available to both the build and provisioning
@@ -171,9 +175,11 @@ organization is required. This shared token does not isolate Fly access between
 previews, staging and production. Staging and production continue to deploy the
 same release image independently, without rebuilding it.
 
-Database provisioning credentials and the password-derivation key remain in the
-main-only environment. Keep staging seed and production database credentials out
-of PR build jobs and preview apps.
+Database provisioning credentials and the password-derivation key are passed
+only to the preview preparation step, never to the Fly app. Keep staging seed
+and production database credentials out of preview settings. Environment scoping
+is organizational and does not prevent trusted contributors from changing PR
+code to access preview secrets.
 
 ### Staging seed settings
 
@@ -184,18 +190,19 @@ optional staging seed enablement flag.
 
 ## Cutover and operation
 
-The controller must exist on `main` before it can run. This bootstrap PR cannot
-produce a real deployment status through a controller that has not landed yet;
-the repository owner must coordinate that initial rollout with the existing
-required preview check. Complete the protected environment and staging settings
-first. Keep the required context for subsequent PRs, and do not publish a
-successful preview status for a deployment that was not run.
+Configure the preview environment and staging seed settings before rollout. A
+push to an open same-repository PR, or a rerun of its Build workflow, provisions
+and deploys the preview directly. Missing configuration fails deployment;
+seeding is never silently skipped. No default-branch deployment controller
+bootstrap is required.
 
-After the controller exists on `main`, push to an open same-repository PR or
-rerun its Build workflow. The new controller switches its Fly app to a new empty
-database, migrates and seeds it. Previous preview data is disposable and is not
-copied. Older images without the shared release command fail rather than bypass
-its protections; update the PR before deployment.
+On its next deployment, an existing preview switches to its newly provisioned
+empty database, then migrates and seeds it. Previous preview data is disposable
+and is not copied. Older images without the shared release command fail rather
+than bypass its protections; update the PR before deployment.
+
+Cleanup on PR closure uses the workflow and scripts on `main`, so that cleanup
+change must land before it handles closures under the new database setup.
 
 After verifying cutover, manually inventory and remove the old per-PR Neon
 branches. The new cleanup workflow intentionally does not access the old project
