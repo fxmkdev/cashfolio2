@@ -509,6 +509,7 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    onOrganizeSaved: args.invalidate,
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss,

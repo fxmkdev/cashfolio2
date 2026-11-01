@@ -1,4 +1,8 @@
 import { AssetClassAssignmentDialog } from "./-asset-class-assignment";
+import { useRef, useState } from "react";
+import type { GridApi, GridState } from "ag-grid-enterprise";
+import { AccountOrganizer } from "./-organize/organizer";
+import type { OrganizerApi } from "./-organize/use-organizer";
 import { TrackingMethodAssignmentDialog } from "./-tracking-method-assignment";
 import { BulkAccountToolbar } from "./-bulk-account-toolbar";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
@@ -10,6 +14,7 @@ import {
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   Group,
@@ -18,7 +23,7 @@ import {
   Title,
   VisuallyHidden,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconArrowsMove } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
@@ -66,6 +71,8 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  organizerApi?: OrganizerApi;
+  onOrganizeSaved?: () => void;
   bulkAccountActions?: BulkAccountActions;
   managementContext?: AccountManagementContext;
   gainLoss?: {
@@ -132,7 +139,13 @@ export type AccountsPageViewProps = {
   ) => Promise<void>;
 };
 
-export function AccountsPageView({
+export function AccountsPageView(props: AccountsPageViewProps) {
+  return <AccountsPageContent key={props.accountBookId} {...props} />;
+}
+
+function AccountsPageContent({
+  organizerApi,
+  onOrganizeSaved,
   bulkAccountActions,
   managementContext = "accounts",
   gainLoss,
@@ -186,6 +199,22 @@ export function AccountsPageView({
   onCloseReorder,
   onReorderSiblings,
 }: AccountsPageViewProps) {
+  const [organizing, setOrganizing] = useState(false);
+  const normalGrid = useRef<GridApi<AccountsGridRow> | null>(null);
+  const normalGridState = useRef<GridState | undefined>(undefined);
+  const openOrganizer = () => {
+    normalGridState.current = normalGrid.current?.getState();
+    bulkAccountActions?.clearSelection();
+    setOrganizing(true);
+  };
+  const closeOrganizer = () => {
+    setOrganizing(false);
+    requestAnimationFrame(() => {
+      if (normalGridState.current && !normalGrid.current?.isDestroyed()) {
+        normalGrid.current?.setState(normalGridState.current, ["rowSelection"]);
+      }
+    });
+  };
   const isEditingArchivedAccount = rows.some(
     (row) => row.id === editingAccount?.id && !row.isActive,
   );
@@ -223,6 +252,15 @@ export function AccountsPageView({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
+      {!isCategories && (
+        <Button
+          variant="default"
+          leftSection={<IconArrowsMove size={16} />}
+          onClick={openOrganizer}
+        >
+          Organize
+        </Button>
+      )}
       <Button
         variant="default"
         leftSection={<IconPlus size={16} />}
@@ -269,92 +307,110 @@ export function AccountsPageView({
       ) : (
         <TopPageHeader
           heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
-          actions={managementActions}
+          actions={organizing ? undefined : managementActions}
         />
       )}
 
-      <UnarchiveMutationFeedback
-        listLabel={isCategories ? "category list" : "account list"}
-        recovery={unarchiveRecovery}
-        onRefreshConstraints={onRefreshConstraints}
-      />
-
-      {!isCategories && (
-        <Text size="sm" c="dimmed" mb="sm">
-          Totals include active and archived accounts, including collapsed
-          groups.
-        </Text>
-      )}
-      {gainLoss?.error ? (
-        <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
-          {gainLoss.error}
-          <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
-            Retry
-          </Button>
-        </Alert>
-      ) : null}
-      {bulkAccountActions && (
-        <BulkAccountToolbar actions={bulkAccountActions} />
-      )}
-      {bulkAccountActions?.assetClassTarget && (
-        <AssetClassAssignmentDialog
-          target={bulkAccountActions.assetClassTarget}
-          onClose={bulkAccountActions.close}
-          onSubmit={bulkAccountActions.applyAssetClass}
-          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+      {organizing && !isCategories && (
+        <AccountOrganizer
+          accountBookId={accountBookId}
+          api={organizerApi}
+          onDone={closeOrganizer}
+          onSaved={() => onOrganizeSaved?.()}
         />
       )}
-      {bulkAccountActions?.trackingMethodTarget && (
-        <TrackingMethodAssignmentDialog
-          target={bulkAccountActions.trackingMethodTarget}
-          onClose={bulkAccountActions.close}
-          onSubmit={bulkAccountActions.applyTrackingMethod}
-          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
-        />
-      )}
-      <AccountGainLossDetails
-        data={gainLoss?.data}
-        loading={gainLoss?.loading ?? false}
+      <Box
+        style={{
+          display: organizing ? "none" : "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
       >
-        <DataGrid
-          {...bulkAccountActions?.gridProps}
-          containerStyle={{ flex: 1, minHeight: 0 }}
-          rowData={rows}
-          columnDefs={columnDefs}
-          autoGroupColumnDef={{
-            headerName: "Name",
-            field: "name",
-            pinned: isCategories ? null : "left",
-            flex: isCategories ? 1 : 0,
-            initialWidth: 320,
-            minWidth: 320,
-            resizable: true,
-            filter: "agTextColumnFilter",
-            valueGetter: ({ data }) => data?.name,
-            suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
-            cellRendererParams: {
-              suppressCount: true,
-              innerRenderer: AccountNameCell,
-            },
-          }}
-          postSortRows={postSortAccountRows}
-          treeData={true}
-          treeDataParentIdField="parentId"
-          pinnedBottomRowData={pinnedBottomRowData}
-          onGridReady={(event) => {
-            onGridReady?.(event);
-            bulkAccountActions?.gridProps.onGridReady?.(event);
-          }}
-          isGroupOpenByDefault={isGroupOpenByDefault}
-          onRowGroupOpened={onRowGroupOpened}
-          getRowId={({ data }) => data.id}
-          onRowDoubleClicked={(e) => {
-            if (e.data?.nodeType === "account") {
-              onOpenLedger(e.data.id);
-            }
-          }}
+        <UnarchiveMutationFeedback
+          listLabel={isCategories ? "category list" : "account list"}
+          recovery={unarchiveRecovery}
+          onRefreshConstraints={onRefreshConstraints}
         />
-      </AccountGainLossDetails>
+
+        {!isCategories && (
+          <Text size="sm" c="dimmed" mb="sm">
+            Totals include active and archived accounts, including collapsed
+            groups.
+          </Text>
+        )}
+        {gainLoss?.error ? (
+          <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
+            {gainLoss.error}
+            <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
+              Retry
+            </Button>
+          </Alert>
+        ) : null}
+        {bulkAccountActions && (
+          <BulkAccountToolbar actions={bulkAccountActions} />
+        )}
+        {bulkAccountActions?.assetClassTarget && (
+          <AssetClassAssignmentDialog
+            target={bulkAccountActions.assetClassTarget}
+            onClose={bulkAccountActions.close}
+            onSubmit={bulkAccountActions.applyAssetClass}
+            onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+          />
+        )}
+        {bulkAccountActions?.trackingMethodTarget && (
+          <TrackingMethodAssignmentDialog
+            target={bulkAccountActions.trackingMethodTarget}
+            onClose={bulkAccountActions.close}
+            onSubmit={bulkAccountActions.applyTrackingMethod}
+            onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+          />
+        )}
+        <AccountGainLossDetails
+          data={gainLoss?.data}
+          loading={gainLoss?.loading ?? false}
+        >
+          <DataGrid
+            {...bulkAccountActions?.gridProps}
+            containerStyle={{ flex: 1, minHeight: 0 }}
+            rowData={rows}
+            columnDefs={columnDefs}
+            autoGroupColumnDef={{
+              headerName: "Name",
+              field: "name",
+              pinned: isCategories ? null : "left",
+              flex: isCategories ? 1 : 0,
+              initialWidth: 320,
+              minWidth: 320,
+              resizable: true,
+              filter: "agTextColumnFilter",
+              valueGetter: ({ data }) => data?.name,
+              suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
+              cellRendererParams: {
+                suppressCount: true,
+                innerRenderer: AccountNameCell,
+              },
+            }}
+            postSortRows={postSortAccountRows}
+            treeData={true}
+            treeDataParentIdField="parentId"
+            pinnedBottomRowData={pinnedBottomRowData}
+            onGridReady={(event) => {
+              normalGrid.current = event.api;
+              onGridReady?.(event);
+              bulkAccountActions?.gridProps.onGridReady?.(event);
+            }}
+            isGroupOpenByDefault={isGroupOpenByDefault}
+            onRowGroupOpened={onRowGroupOpened}
+            getRowId={({ data }) => data.id}
+            onRowDoubleClicked={(e) => {
+              if (e.data?.nodeType === "account") {
+                onOpenLedger(e.data.id);
+              }
+            }}
+          />
+        </AccountGainLossDetails>
+      </Box>
 
       <>
         <EditAccountModal

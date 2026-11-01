@@ -1,4 +1,5 @@
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
+import { createOrganizerStoryApi } from "./-organize/story-fixtures";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
 
@@ -332,6 +333,7 @@ function getPinnedBottomRowData(
 }
 
 function AccountsPageStoryHarness({
+  organize = false,
   bulkAssignment = false,
   assignmentFailsOnce = false,
   rowsOverride,
@@ -344,6 +346,7 @@ function AccountsPageStoryHarness({
   startWithEditModal = false,
   routeSmoke = false,
 }: {
+  organize?: boolean;
   bulkAssignment?: boolean;
   assignmentFailsOnce?: boolean;
   rowsOverride?: TreeRow[];
@@ -356,6 +359,9 @@ function AccountsPageStoryHarness({
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
+  const [organizerApi] = useState(() =>
+    organize ? createOrganizerStoryApi() : undefined,
+  );
   const [assignmentScope, setAssignmentScope] = useState("first");
   const bulkApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const hasFailed = useRef(false);
@@ -654,6 +660,7 @@ function AccountsPageStoryHarness({
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
       <AccountsPageView
+        organizerApi={organizerApi}
         bulkAccountActions={
           bulkAssignment && !isEquityTab ? assignment : undefined
         }
@@ -817,6 +824,32 @@ async function openGainLossDetails(canvasElement: HTMLElement) {
 
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
+};
+
+export const OrganizeEntryAndExit: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" organize bulkAssignment />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+    await expect(
+      await canvas.findByRole("region", { name: "Organize Accounts" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Add Account" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("button", { name: "Set Asset Class" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await expect(
+      canvas.queryByRole("region", { name: "Organize Accounts" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Add Account" }),
+    ).toBeVisible();
+  },
 };
 
 export const ConstrainedWidthWithGainLoss: Story = {

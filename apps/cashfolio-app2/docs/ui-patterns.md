@@ -1396,8 +1396,9 @@ dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 
 ## Sibling Reorder Pattern
 
-- Main hierarchy grids do not use row dragging. Accounts, categories, and asset
-  classes share this pattern.
+- Normal hierarchy grids do not use row dragging. Accounts, categories, and
+  asset classes share this pattern. The Account List's explicit Organize mode
+  additionally supports structural movement and ordering as described below.
 - Reorder action availability follows the generic `Action Availability Pattern`.
 - Availability is based on sibling count under the same parent.
 - Clicking the action opens `ReorderGroupChildrenModal`
@@ -1417,6 +1418,57 @@ dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 - Reuse the shared hook's confirmed-order restoration and option refresh after
   failure, busy retries, and uncertain-outcome feedback. Refresh the tree and
   invalidate affected reporting caches after a successful save.
+
+### Account List Organize Mode
+
+**Organize** switches the Account List to a compact, separate `DataGrid` while
+keeping the normal financial grid mounted and hidden, preserving its columns,
+filters, scrolling, and expansion. **Done** returns to it. Categories and Asset
+Classes retain their existing management interactions and sibling dialog.
+
+Organize checkboxes select real accounts or groups themselves, including empty
+groups. Selected descendants of a selected group are normalized out of the move;
+the complete subtree travels intact, including archived descendants. This
+selection is separate from the normal account-property bulk selection and starts
+empty on entry. Creation, editing, archiving, deletion, and property bulk
+actions are hidden while organizing.
+
+Virtual Archived sections keep their normal presentation and expand/collapse
+behavior but are never selected, dragged, or persisted as parents. Organizing
+uses the real `persistedParentId` relationship. Before/after insertion is
+offered only within a compatible displayed sibling section. Mixed
+active/archived selections can move into a real group or to Top Level using
+First/Last placement.
+
+Drag handles provide before/after insertion indicators and inside-group drop
+highlighting, plus a separate Top Level drop target. Rows remain stationary
+during dragging; hovering over a collapsed branch for 500 ms expands it. Escape
+or dropping outside a valid destination cancels. The keyboard-accessible **Move
+To…** dialog offers equivalent destination and placement controls. Find
+highlights matching names/paths, expands ancestors, and navigates matches
+without filtering rows. Organize always displays saved manual order, without
+sorting.
+
+Moves inherit existing parent Cash Account rules, including subtree propagation
+and non-currency restrictions. Moving to Top Level preserves flags; reordering
+does not change them. Both movement controls preview the destination and any
+Cash Account changes. Success reveals the moved items and announces the result.
+
+Each move autosaves through an authorized serialized book mutation. A coherent
+balance-hierarchy metadata snapshot supplies a version checked under the book
+lock before moving or undoing, preventing stale writes. Unrelated booking and
+balance changes do not affect that version. The latest successful move has one
+in-memory **Undo**, restoring exact previous parents, nullable sort orders, and
+all affected Cash Account flags. Undo is validated again on the server and is
+cleared by exit, reload, account-book change, or conflicting hierarchy refresh.
+There is no Redo or persistent undo history.
+
+One request runs at a time. Failed moves restore confirmed data and refresh
+choices using shared mutation feedback. Only confirmed busy rollbacks offer an
+explicit retry while the hierarchy version remains unchanged. Uncertain network
+outcomes require a successful refresh before another operation. Movement remains
+disabled when that refresh fails. Both moves and Undo invalidate reporting data
+after a committed change; financial fields are never accepted by these APIs.
 
 ## Node Type Mixing in Tree Data
 
