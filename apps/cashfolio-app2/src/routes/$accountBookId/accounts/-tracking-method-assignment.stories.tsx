@@ -31,9 +31,7 @@ export const SubmissionGuards: Story = {
     args.onSubmit.mockImplementationOnce(() => pending);
     await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
     await userEvent.click(dialog.getByLabelText("Tracking Method"));
-    await userEvent.click(
-      body.getByRole("option", { name: "Total Portfolio Value" }),
-    );
+    await userEvent.click(body.getByRole("option", { name: "Total Value" }));
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     try {
       await expect(

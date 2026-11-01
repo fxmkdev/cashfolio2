@@ -55,7 +55,7 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
         .getByRole("combobox", { name: "Tracking Method", exact: true })
         .click();
       await page
-        .getByRole("option", { name: "Total Portfolio Value", exact: true })
+        .getByRole("option", { name: "Total Value", exact: true })
         .click();
       await dialog.getByRole("combobox", { name: "Currency" }).click();
       await page.getByRole("option", { name: /CHF/ }).first().click();

@@ -204,7 +204,7 @@ export const TablesWithLongPaths: Story = {
     );
     for (const table of [allocationTable, gainsTable]) {
       await expect(
-        await table.findByText("Managed Portfolios", { exact: true }),
+        await table.findByText("Total Value Accounts", { exact: true }),
       ).toBeVisible();
       await expect(table.getByText("CHF", { exact: true })).toBeVisible();
       await expect(table.getByText("AAPL", { exact: true })).toBeVisible();
@@ -308,7 +308,7 @@ export const SingleManagedPortfolio: Story = {
                 ...node,
                 amount: 100,
                 children: node.children.filter(
-                  (child) => child.label === "Managed Portfolios",
+                  (child) => child.label === "Total Value Accounts",
                 ),
               })),
           },
@@ -329,7 +329,7 @@ export const SingleManagedPortfolio: Story = {
     );
     await userEvent.dblClick(chart);
     await expect(
-      await canvas.findByText("Managed Portfolios", { exact: true }),
+      await canvas.findByText("Total Value Accounts", { exact: true }),
     ).toBeVisible();
     await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
     await userEvent.dblClick(chart);
@@ -348,7 +348,7 @@ export const SingleManagedPortfolio: Story = {
     await waitFor(() =>
       expect(
         within(chart.closest<HTMLElement>(".mantine-Card-root")!).queryByText(
-          "Managed Portfolios",
+          "Total Value Accounts",
           { exact: true },
         ),
       ).not.toBeInTheDocument(),

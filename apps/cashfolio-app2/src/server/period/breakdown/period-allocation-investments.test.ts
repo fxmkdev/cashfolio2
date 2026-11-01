@@ -173,7 +173,7 @@ describe("allocation investment hierarchy", () => {
       expect(gainInvestments.children.map((node) => node.label)).toEqual([
         "Equities",
         "CHF",
-        "Managed Portfolios",
+        "Total Value Accounts",
         "Unknown Unit",
       ]);
       expect(gainInvestments.children[0].children[0]).toMatchObject({
@@ -192,7 +192,7 @@ describe("allocation investment hierarchy", () => {
       });
       expect(
         gainInvestments.children.find(
-          (node) => node.label === "Managed Portfolios",
+          (node) => node.label === "Total Value Accounts",
         ),
       ).toMatchObject({ totalGainLoss: 50 });
     },

@@ -60,10 +60,10 @@ export function TrackingMethodField(props: SelectProps) {
           />
           <Popover.Dropdown data-mantine-stop-propagation>
             <Text size="sm">
-              Track individual currency units, or a portfolio’s total statement
-              value with gains/losses recorded as transactions. Portfolio
-              tracking keeps its recorded and FX gains/losses together under
-              Managed Portfolios.
+              Track individual units, or an account’s total monetary value with
+              valuation changes recorded as Gain/Loss transactions. Total Value
+              accounts appear together under Total Value Accounts within their
+              assigned asset class.
             </Text>
           </Popover.Dropdown>
         </Popover>

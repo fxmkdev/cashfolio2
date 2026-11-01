@@ -105,7 +105,8 @@ export const ManagedPortfolio: Story = {
     const tracking = within(dialog).getByRole("combobox", {
       name: "Tracking Method",
     });
-    const helpText = /Track individual currency units, or a portfolio/;
+    const helpText =
+      /Track individual units, or an account’s total monetary value/;
     await expect(body.queryByText(helpText)).not.toBeInTheDocument();
     const helpButton = within(dialog).getByRole("button", {
       name: "Show Tracking Method Help",
@@ -125,7 +126,7 @@ export const ManagedPortfolio: Story = {
     await waitFor(() =>
       expect(body.queryByText(helpText)).not.toBeInTheDocument(),
     );
-    await expect(tracking).toHaveValue("Total Portfolio Value");
+    await expect(tracking).toHaveValue("Total Value");
     await expect(tracking).not.toBeDisabled();
     await userEvent.click(tracking);
     await userEvent.click(

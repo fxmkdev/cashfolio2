@@ -2045,11 +2045,9 @@ export const TrackingMethodColumn: Story = {
     await expect(cell("account-checking")).toHaveTextContent(
       "Individual Units",
     );
-    await expect(cell("old")).toHaveTextContent("Total Portfolio Value");
-    await expect(cell("nested")).toHaveTextContent("Total Portfolio Value");
-    await expect(cell("__archived__:root")).toHaveTextContent(
-      "Total Portfolio Value",
-    );
+    await expect(cell("old")).toHaveTextContent("Total Value");
+    await expect(cell("nested")).toHaveTextContent("Total Value");
+    await expect(cell("__archived__:root")).toHaveTextContent("Total Value");
     await expect(cell("other-group")).toHaveTextContent("Individual Units");
     await expect(cell("empty")).toHaveTextContent(/^$/);
     await expect(
@@ -2467,9 +2465,7 @@ export const BulkTrackingMethodMixedGroupSelection: Story = {
     ).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
     await userEvent.click(dialog.getByLabelText("Tracking Method"));
-    await userEvent.click(
-      body.getByRole("option", { name: "Total Portfolio Value" }),
-    );
+    await userEvent.click(body.getByRole("option", { name: "Total Value" }));
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(
@@ -2603,15 +2599,13 @@ export const GroupTrackingMethodRetry: Story = {
       dialog.getByText(/2 currency accounts \(1 archived\)/),
     ).toBeVisible();
     await userEvent.click(dialog.getByLabelText("Tracking Method"));
-    await userEvent.click(
-      body.getByRole("option", { name: "Total Portfolio Value" }),
-    );
+    await userEvent.click(body.getByRole("option", { name: "Total Value" }));
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     await expect(await dialog.findByRole("alert")).toHaveTextContent(
       ACCOUNT_BOOK_BUSY_MESSAGE,
     );
     await expect(dialog.getByLabelText("Tracking Method")).toHaveValue(
-      "Total Portfolio Value",
+      "Total Value",
     );
     await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
       "Refreshes: 1; invalidations: 0",

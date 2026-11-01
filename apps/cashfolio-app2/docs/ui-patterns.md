@@ -411,8 +411,8 @@ and accounts with missing unit metadata are skipped. The toolbar retains the
 full selected count; the action is disabled with an explanation when no currency
 accounts are selected. Its dialog freezes eligible account IDs, shows the
 affected and archived counts plus any skipped count, and requires an explicit
-**Individual Units** or **Total Portfolio Value** choice. The shared field
-includes its help popover. Applying replaces tracking methods for all historical
+**Individual Units** or **Total Value** choice. The shared field includes its
+help popover. Applying replaces tracking methods for all historical
 Report/History periods without rewriting bookings or changing valuation.
 Submission prevents duplicate requests and dismissal; errors retain the choice
 for refresh/retry, and success clears selection and refreshes data. Server
@@ -622,12 +622,12 @@ callers to override it when needed.
   navigate to a ledger or gain/loss reconciliation for the selected period.
 - Allocation and Gains/Losses support Account Structure and Asset Class →
   Subclass → Investment Group → Account. Investment groups use currency or
-  cryptocurrency codes, security symbols (combining trade currencies), or
-  Managed Portfolios for Total Portfolio Value tracking. Retain the investment
-  level even when it contains one account. Account metadata drives G/L
-  navigation from chart and table leaves to the unified explanation, including
-  calculated holdings, recorded adjustments, and supported synthetic amounts. Do
-  not infer a destination from node-ID prefixes.
+  cryptocurrency codes, security symbols (combining trade currencies), or Total
+  Value Accounts for Total Value tracking. Retain the investment level even when
+  it contains one account. Account metadata drives G/L navigation from chart and
+  table leaves to the unified explanation, including calculated holdings,
+  recorded adjustments, and supported synthetic amounts. Do not infer a
+  destination from node-ID prefixes.
 - Asset-class nodes drill into investment groups, which drill into accounts.
   Both group levels expand/collapse in tables and do not open a ledger.
 - In Report's Asset Class view, account leaves show their full current account
@@ -781,13 +781,13 @@ sign; debt amounts are positive magnitudes in those reports.
   horizontal scrolling.
 - `Tracking Method` follows Asset Class, starts at 220px, and can be resized.
   Its text filter and tooltip use the full display label: `Individual Units` or
-  `Total Portfolio Value`. All balance-account leaves show their method,
-  including archived accounts; securities, cryptocurrencies, and missing
-  metadata show `Individual Units`. Real groups and virtual Archived groups
-  summarize descendant accounts with the same inclusion rules as Asset Class:
-  one distinct method shows its label, differing methods show `Mixed`, and empty
-  groups and the total row stay blank. Group summaries are read-only; category
-  tabs do not show this column.
+  `Total Value`. All balance-account leaves show their method, including
+  archived accounts; securities, cryptocurrencies, and missing metadata show
+  `Individual Units`. Real groups and virtual Archived groups summarize
+  descendant accounts with the same inclusion rules as Asset Class: one distinct
+  method shows its label, differing methods show `Mixed`, and empty groups and
+  the total row stay blank. Group summaries are read-only; category tabs do not
+  show this column.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy./Symbol` and `Balance` blank to avoid duplicating the value already
@@ -909,23 +909,27 @@ empty collapsed selection.
 ## Explicit Gain/Loss for Manually Valued Accounts
 
 Use the system-managed **Gain/Loss** equity account to record value changes in
-accounts valued manually, such as managed or discretionary portfolios. Represent
-the portfolio as a balance account in its reporting currency, tracking its total
-reported monetary value rather than individual securities.
+accounts valued manually, such as managed portfolios or private equity
+investments. Represent the investment as a balance account in its reporting
+currency, tracking its total reported monetary value rather than individual
+units.
 
-Set **Tracking Method** to **Total Portfolio Value** in the account editor for
-these portfolios. The default **Individual Units** groups ordinary accounts by
-currency, cryptocurrency, or security symbol (across trade currencies). In the
-Asset Class view, Total Portfolio Value groups the entire account return under
-**Managed Portfolios** within its assigned asset class, combining recorded
-performance and calculated FX gains/losses when its currency differs from the
-book's reference currency. Account Structure retains the account's physical
-group hierarchy. Existing accounts default to Individual Units; explicitly
-update managed portfolios. Tracking Method remains editable after bookings exist
-and applies to all historical Report/History periods. It changes reporting
-placement without changing valuation, cash-flow eligibility, or gain/loss
-calculations. Only currency-denominated balance accounts support Total Portfolio
-Value.
+Set **Tracking Method** to **Total Value** in the account editor for these
+accounts. The default **Individual Units** groups ordinary accounts by currency,
+cryptocurrency, or security symbol (across trade currencies). In the Asset Class
+view, Total Value groups the entire account return under **Total Value
+Accounts** within its assigned asset class, combining recorded performance and
+calculated FX gains/losses when its currency differs from the book's reference
+currency. Account Structure retains the account's physical group hierarchy.
+Existing accounts default to Individual Units; explicitly update manually valued
+accounts. Tracking Method remains editable after bookings exist and applies to
+all historical Report/History periods. It changes reporting placement without
+changing valuation, cash-flow eligibility, or gain/loss calculations. Only
+currency-denominated balance accounts support Total Value.
+
+The persisted `TOTAL_PORTFOLIO_VALUE` tracking method and `managed-portfolios`
+investment-group key remain internal compatibility identifiers, preserving
+existing Report drill paths and History selections.
 
 Record contributions and withdrawals as transfers between the portfolio and the
 funding or receiving account. When a new portfolio statement arrives, calculate:
