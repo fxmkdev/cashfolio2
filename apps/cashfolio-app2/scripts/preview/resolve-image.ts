@@ -1,10 +1,9 @@
 import { execFile } from "node:child_process";
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { appendFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { validateManifest } from "./github.ts";
+import { validatePreviewImage } from "./github.ts";
 import { prNumber } from "./names.ts";
 import { requireValue } from "../../src/staging-seed/target.ts";
 
@@ -70,9 +69,7 @@ export async function publishedImage(
         (value) => typeof value === "string" && value.startsWith(prefix),
       )
     : undefined;
-  const manifest = { pr: build.number, sha: build.sha, image };
-  validateManifest(manifest, build.number, build.sha, build.imageApp);
-  return manifest;
+  return validatePreviewImage(image, build.imageApp);
 }
 
 if (
@@ -80,19 +77,19 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    const metadata = await publishedImage({
+    const image = await publishedImage({
       image: requireValue(process.env, "IMAGE"),
       imageApp: requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP"),
       number: Number(requireValue(process.env, "PR_NUMBER")),
       sha: requireValue(process.env, "PR_SHA"),
     });
-    await writeFile(
-      join(requireValue(process.env, "RUNNER_TEMP"), "preview-image.json"),
-      JSON.stringify(metadata),
+    await appendFile(
+      requireValue(process.env, "GITHUB_OUTPUT"),
+      `image=${image}\n`,
     );
   } catch {
     console.error(
-      "Failed to record the published preview image; no deployment metadata was produced.",
+      "Failed to resolve the published preview image; deployment cannot proceed.",
     );
     process.exitCode = 1;
   }

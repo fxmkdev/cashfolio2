@@ -1,9 +1,9 @@
-import { appendFile, readFile, lstat } from "node:fs/promises";
+import { appendFile } from "node:fs/promises";
 import { provisionDatabase } from "./database.ts";
 import {
   githubApi,
   validatePr,
-  validateManifest,
+  validatePreviewImage,
   type PullRequest,
 } from "./github.ts";
 import {
@@ -22,25 +22,15 @@ import {
 let phase = "input validation";
 try {
   const number = prNumber(Number(process.env.PR_NUMBER));
+  const sha = requireValue(process.env, "PR_SHA");
   const api = githubApi(
     process.env.GITHUB_REPOSITORY!,
     process.env.GITHUB_TOKEN!,
   );
   const pr = await api<PullRequest>(`/pulls/${number}`);
-  validatePr(pr, process.env.GITHUB_REPOSITORY!, process.env.PR_SHA);
-  const manifestPath = requireValue(process.env, "MANIFEST_PATH");
-  const stat = await lstat(manifestPath);
-  if (!stat.isFile() || stat.size > 2048)
-    throw new Error("Invalid image metadata file.");
-  const metadata = await readFile(
-    requireValue(process.env, "MANIFEST_PATH"),
-    "utf8",
-  );
-  if (metadata.length > 2048) throw new Error("Oversized image metadata.");
-  const image = validateManifest(
-    JSON.parse(metadata),
-    number,
-    pr.head.sha,
+  validatePr(pr, process.env.GITHUB_REPOSITORY!, sha);
+  const image = validatePreviewImage(
+    requireValue(process.env, "PREVIEW_IMAGE"),
     requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP"),
   );
   const names = previewNames(number, pr.head.ref, pr.title);

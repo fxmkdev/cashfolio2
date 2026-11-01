@@ -10,7 +10,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: preview-cashfolio-provision
+    environment: preview-cashfolio-app
     concurrency:
       group: cashfolio-app2-preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: false
