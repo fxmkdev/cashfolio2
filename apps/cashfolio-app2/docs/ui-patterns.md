@@ -502,6 +502,18 @@ Clear contextual defaults on cancellation, successful creation, book/tab
 changes, and toolbar creation. Retain drafts on failed submission and use shared
 waiting, retry, uncertain-outcome, and refresh feedback.
 
+## Hierarchy Parent Selectors
+
+Optional parent selectors show **Top Level** as a muted placeholder when no
+parent is selected. Use the standard Mantine placeholder styling, show the
+selected parent normally, and restore **Top Level** when the selection is
+cleared. Apply this pattern in both creation and editing dialogs for accounts,
+account groups, categories, category groups, and asset classes.
+
+**Top Level** is display text only, not a selectable option or a stored value.
+The shared `GroupTreeSelect` provides this placeholder by default and allows
+callers to override it when needed.
+
 ## Top Page Header Pattern
 
 - Use `TopPageHeader` (`src/components/layout/top-page-header.tsx`) for

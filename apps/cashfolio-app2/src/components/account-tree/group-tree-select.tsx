@@ -101,6 +101,7 @@ export const GroupTreeSelect = forwardRef<
   {
     groups,
     comboboxProps,
+    placeholder = "Top Level",
     nothingFoundMessage = "Nothing found",
     searchable = true,
     allowDeselect = false,
@@ -134,6 +135,7 @@ export const GroupTreeSelect = forwardRef<
     <TreeSelect
       ref={ref}
       {...props}
+      placeholder={placeholder}
       data={data}
       error={
         props.error ??
