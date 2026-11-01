@@ -608,6 +608,10 @@ waiting, retry, uncertain-outcome, and refresh feedback.
   applies together to Assets, Liabilities, and Gains/Losses charts and tables.
   It defaults to Account Structure and uses per-book session storage. Income,
   Expenses, and Cash Flow retain their existing category/account breakdowns.
+- The shared period control keeps the same width for month, year, and All
+  Periods labels. Its trigger uses Mantine's `w` prop with
+  `clamp(8.5rem, 16vw, 12rem)` so its responsive width takes precedence over
+  Mantine's default button width regardless of stylesheet load order.
 - Preserve allocation and G/L drill paths separately per grouping, and namespace
   expanded-table storage by grouping. Legacy allocation paths belong to Account
   Structure; legacy G/L paths belong to Asset Class. Chart type choices survive
