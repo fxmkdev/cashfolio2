@@ -952,17 +952,18 @@ export const AssetClassSwitchingAndExpansion: Story = {
           .querySelector<HTMLElement>(`[row-id="${id}"]`)!
           .getBoundingClientRect().height,
       ).toBe(standardRowHeight);
-      const actions = canvasElement.querySelector(
-        `[row-id="${id}"] [col-id="actions"]`,
-      )!;
-      await expect(
-        within(actions as HTMLElement).getByRole("button", {
-          name: "Reorder Siblings",
-        }),
-      ).toBeDisabled();
-      await expect(
-        within(actions as HTMLElement).getByRole("button", { name: "Edit" }),
-      ).toBeEnabled();
+      await waitFor(() => {
+        const actions = canvasElement.querySelector<HTMLElement>(
+          `.ag-row:not(.ag-opacity-zero)[row-id="${id}"] [col-id="actions"]`,
+        );
+        if (!actions) throw new Error(`Missing actions for ${id}`);
+        expect(
+          within(actions).getByRole("button", { name: "Reorder Siblings" }),
+        ).toBeDisabled();
+        expect(
+          within(actions).getByRole("button", { name: "Edit" }),
+        ).toBeEnabled();
+      });
     }
     await collapse(classId);
     await chooseAccountGrouping(canvasElement, "Account Structure");
