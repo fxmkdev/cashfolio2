@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { Box } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  expect,
-  fireEvent,
-  fn,
-  userEvent,
-  waitFor,
-  within,
-} from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AccountOrganizer } from "./organizer";
 import { createOrganizerStoryApi } from "./story-fixtures";
 
@@ -29,7 +22,12 @@ function Harness({
 const meta = {
   title: "Routes/Accounts/Organize",
   component: AccountOrganizer,
-  args: { accountBookId: "story-book", onDone: fn(), onSaved: fn() },
+  args: {
+    accountBookId: "story-book",
+    onDone: fn(),
+    onSaved: fn(),
+    api: createOrganizerStoryApi(),
+  },
   render: (args) => <Harness {...args} />,
 } satisfies Meta<typeof AccountOrganizer>;
 export default meta;
@@ -46,7 +44,7 @@ async function row(canvasElement: HTMLElement, id: string) {
 async function select(canvasElement: HTMLElement, id: string) {
   const element = await row(canvasElement, id);
   const checkbox = element.querySelector<HTMLElement>(
-    ".ag-selection-checkbox",
+    ".ag-selection-checkbox input",
   )!;
   await userEvent.click(checkbox);
 }
@@ -84,15 +82,13 @@ export const BulkSubtreeMoveAndUndo: Story = {
       ).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(args.onSaved).toHaveBeenCalled());
-    await expect(await row(canvasElement, "investments")).toHaveAttribute(
-      "aria-level",
-      "2",
+    await expect(await row(canvasElement, "investments")).toHaveClass(
+      "ag-row-level-1",
     );
     await userEvent.click(canvas.getByRole("button", { name: "Undo" }));
     await waitFor(async () =>
-      expect(await row(canvasElement, "investments")).toHaveAttribute(
-        "aria-level",
-        "1",
+      expect(await row(canvasElement, "investments")).toHaveClass(
+        "ag-row-level-0",
       ),
     );
     await expect(canvas.getByRole("button", { name: "Undo" })).toBeDisabled();
@@ -152,9 +148,8 @@ export const RelativePlacementAndCashPreview: Story = {
     await userEvent.click(body.getByRole("option", { name: "Investments" }));
     await userEvent.click(next.getByRole("button", { name: "Move" }));
     await waitFor(async () =>
-      expect(await row(canvasElement, "checking")).toHaveAttribute(
-        "aria-level",
-        "1",
+      expect(await row(canvasElement, "checking")).toHaveClass(
+        "ag-row-level-0",
       ),
     );
   },
@@ -168,32 +163,164 @@ export const DragIntoGroup: Story = {
     await expect(handle).not.toBeNull();
     const from = handle.getBoundingClientRect();
     const to = target.getBoundingClientRect();
-    await fireEvent.mouseDown(handle, {
-      clientX: from.x + from.width / 2,
-      clientY: from.y + from.height / 2,
-      buttons: 1,
-      button: 0,
-    });
-    await fireEvent.mouseMove(target, {
-      clientX: to.x + 180,
-      clientY: to.y + to.height / 2,
-      buttons: 1,
-    });
-    await fireEvent.mouseMove(target, {
-      clientX: to.x + 182,
-      clientY: to.y + to.height / 2,
-      buttons: 1,
-    });
-    await fireEvent.mouseUp(target, {
-      clientX: to.x + 182,
-      clientY: to.y + to.height / 2,
-      button: 0,
-    });
+    await userEvent.hover(handle);
+    await userEvent.pointer([
+      {
+        target: handle,
+        coords: {
+          clientX: from.x + from.width / 2,
+          clientY: from.y + from.height / 2,
+        },
+        keys: "[MouseLeft>]",
+      },
+      {
+        target,
+        coords: { clientX: to.x + 180, clientY: to.y + to.height / 2 },
+      },
+      {
+        target,
+        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
+      },
+      {
+        target,
+        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
+        keys: "[/MouseLeft]",
+      },
+    ]);
+    await waitFor(async () =>
+      expect(await row(canvasElement, "checking")).toHaveClass(
+        "ag-row-level-1",
+      ),
+    );
+  },
+};
+
+export const DragReorderAndCancel: Story = {
+  play: async ({ canvasElement }) => {
+    const source = await row(canvasElement, "checking");
+    const target = await row(canvasElement, "investments");
+    const handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
+    const from = handle.getBoundingClientRect();
+    const to = target.getBoundingClientRect();
+    const user = userEvent.setup();
+    await user.pointer([
+      {
+        target: handle,
+        coords: { clientX: from.x + 5, clientY: from.y + 5 },
+        keys: "[MouseLeft>]",
+      },
+      { target, coords: { clientX: to.x + 180, clientY: to.y + 3 } },
+      { target, coords: { clientX: to.x + 182, clientY: to.y + 3 } },
+    ]);
+    await expect(
+      within(canvasElement).getByText(/Move 1 item before Investments/),
+    ).toBeVisible();
+    await user.keyboard("{Escape}");
+    await user.pointer({ target, keys: "[/MouseLeft]" });
+    await expect(source).toHaveAttribute("row-index", "5");
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Undo" }),
+    ).toBeDisabled();
+    await user.pointer([
+      {
+        target: handle,
+        coords: { clientX: from.x + 5, clientY: from.y + 5 },
+        keys: "[MouseLeft>]",
+      },
+      { target, coords: { clientX: to.x + 180, clientY: to.y + 3 } },
+      { target, coords: { clientX: to.x + 182, clientY: to.y + 3 } },
+      {
+        target,
+        coords: { clientX: to.x + 182, clientY: to.y + 3 },
+        keys: "[/MouseLeft]",
+      },
+    ]);
     await waitFor(async () =>
       expect(await row(canvasElement, "checking")).toHaveAttribute(
-        "aria-level",
-        "2",
+        "row-index",
+        "0",
       ),
+    );
+  },
+};
+
+export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
+  play: async ({ canvasElement }) => {
+    await select(canvasElement, "investments");
+    await select(canvasElement, "nested");
+    await select(canvasElement, "checking");
+    const source = await row(canvasElement, "investments");
+    const target = await row(canvasElement, "destination");
+    let handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
+    let from = handle.getBoundingClientRect();
+    const to = target.getBoundingClientRect();
+    await userEvent.pointer([
+      {
+        target: handle,
+        coords: { clientX: from.x + 5, clientY: from.y + 5 },
+        keys: "[MouseLeft>]",
+      },
+      {
+        target,
+        coords: { clientX: to.x + 180, clientY: to.y + to.height / 2 },
+      },
+      {
+        target,
+        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
+      },
+      {
+        target,
+        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
+        keys: "[/MouseLeft]",
+      },
+    ]);
+    await waitFor(async () =>
+      expect(await row(canvasElement, "investments")).toHaveClass(
+        "ag-row-level-1",
+      ),
+    );
+    await expect(await row(canvasElement, "checking")).toHaveClass(
+      "ag-row-level-1",
+    );
+    await expect(await row(canvasElement, "nested")).toHaveClass(
+      "ag-row-level-2",
+    );
+    const root = within(canvasElement).getByLabelText("Top Level Drop Target");
+    const top = root.getBoundingClientRect();
+    handle = (
+      await row(canvasElement, "investments")
+    ).querySelector<HTMLElement>(".ag-row-drag")!;
+    from = handle.getBoundingClientRect();
+    await userEvent.pointer([
+      {
+        target: handle,
+        coords: { clientX: from.x + 5, clientY: from.y + 5 },
+        keys: "[MouseLeft>]",
+      },
+      {
+        target: root,
+        coords: { clientX: top.x + 180, clientY: top.y + top.height / 2 },
+      },
+      {
+        target: root,
+        coords: { clientX: top.x + 182, clientY: top.y + top.height / 2 },
+      },
+      {
+        target: root,
+        coords: { clientX: top.x + 182, clientY: top.y + top.height / 2 },
+        keys: "[/MouseLeft]",
+      },
+    ]);
+    await waitFor(async () =>
+      expect(await row(canvasElement, "investments")).toHaveClass(
+        "ag-row-level-0",
+      ),
+    );
+    await expect(await row(canvasElement, "checking")).toHaveClass(
+      "ag-row-level-0",
+    );
+    await expect(await row(canvasElement, "nested")).toHaveClass(
+      "ag-row-level-1",
     );
   },
 };
@@ -208,16 +335,14 @@ export const BusyFailureAndRetry: Story = {
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "No changes were saved",
     );
-    await expect(await row(canvasElement, "checking")).toHaveAttribute(
-      "aria-level",
-      "1",
+    await expect(await row(canvasElement, "checking")).toHaveClass(
+      "ag-row-level-0",
     );
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
     await userEvent.click(canvas.getByRole("button", { name: "Try Again" }));
     await waitFor(async () =>
-      expect(await row(canvasElement, "checking")).toHaveAttribute(
-        "aria-level",
-        "2",
+      expect(await row(canvasElement, "checking")).toHaveClass(
+        "ag-row-level-1",
       ),
     );
   },
@@ -240,9 +365,8 @@ export const UncertainFailureRequiresRefresh: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "Refresh Choices" }),
     );
-    await expect(await row(canvasElement, "checking")).toHaveAttribute(
-      "aria-level",
-      "1",
+    await expect(await row(canvasElement, "checking")).toHaveClass(
+      "ag-row-level-0",
     );
   },
 };

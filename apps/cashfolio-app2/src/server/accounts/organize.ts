@@ -21,6 +21,10 @@ import {
   validateOrganizeMove,
   validateOrganizeUndo,
 } from "./organize-input";
+import {
+  validateAccountName,
+  validateAccountGroupName,
+} from "../../shared/account-validation";
 
 export const getAccountOrganizeData = createServerFn({ method: "GET" })
   .validator(validateOrganizeBook)
@@ -39,6 +43,39 @@ async function persistOrganize(
   next: OrganizeSnapshot["nodes"],
 ) {
   const changes = organizeChanges(before.nodes, next);
+  const newRoots = next.filter(
+    (node) =>
+      node.parentId === null &&
+      before.nodes.some(
+        (previous) => previous.id === node.id && previous.parentId !== null,
+      ),
+  );
+  if (newRoots.length) {
+    // Existing editors also check root names against categories/system accounts.
+    const [accounts, groups] = await Promise.all([
+      tx.account.findMany({
+        where: { accountBookId, type: { not: "BALANCE" }, groupId: null },
+        select: { name: true },
+      }),
+      tx.accountGroup.findMany({
+        where: { accountBookId, type: { not: "BALANCE" }, parentGroupId: null },
+        select: { name: true },
+      }),
+    ]);
+    for (const node of newRoots) {
+      const error =
+        node.nodeType === "account"
+          ? validateAccountName(
+              node.name,
+              accounts.map((item) => item.name),
+            )
+          : validateAccountGroupName(
+              node.name,
+              groups.map((item) => item.name),
+            );
+      if (error) throw new Error(error);
+    }
+  }
   for (const change of changes) {
     const where = { id_accountBookId: { id: change.id, accountBookId } };
     if (change.nodeType === "account") {

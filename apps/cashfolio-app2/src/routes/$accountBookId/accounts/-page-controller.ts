@@ -1,4 +1,11 @@
 import { getAccountsModalViewProps } from "./-page-modal-props";
+import { useMemo } from "react";
+import {
+  getAccountOrganizeData,
+  moveAccountTreeItems,
+  undoAccountTreeMove,
+} from "@/server/accounts";
+import type { OrganizerApi } from "./-organize/use-organizer";
 import { getManagementTabs } from "./-page-types";
 import { useSelectedSiblingRows } from "./-page-data";
 import { useAccountsPageModalState } from "./-page-modal-state";
@@ -26,6 +33,21 @@ export function useAccountsPageController(args: {
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
   const mode = args.mode ?? "active";
+  const organizerApi = useMemo<OrganizerApi>(
+    () => ({
+      load: () =>
+        getAccountOrganizeData({ data: { accountBookId: args.accountBookId } }),
+      move: (move, version) =>
+        moveAccountTreeItems({
+          data: { accountBookId: args.accountBookId, ...move, version },
+        }),
+      undo: (undo) =>
+        undoAccountTreeMove({
+          data: { accountBookId: args.accountBookId, undo },
+        }),
+    }),
+    [args.accountBookId],
+  );
   const grouping =
     args.managementContext === "categories"
       ? "accountStructure"

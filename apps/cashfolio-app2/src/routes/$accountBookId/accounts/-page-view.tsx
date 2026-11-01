@@ -16,7 +16,12 @@ import type { AccountsPageViewProps } from "./-page-view-types";
 export type { AccountsPageViewProps } from "./-page-view-types";
 
 export function AccountsPageView(props: AccountsPageViewProps) {
-  return <AccountsPageContent key={props.accountBookId} {...props} />;
+  return (
+    <AccountsPageContent
+      key={`${props.accountBookId}:${props.managementContext ?? "accounts"}:${props.tab}`}
+      {...props}
+    />
+  );
 }
 
 function AccountsPageContent(props: AccountsPageViewProps) {
@@ -47,9 +52,9 @@ function AccountsPageContent(props: AccountsPageViewProps) {
       <AccountsPageHeader
         {...props}
         organizing={organizing}
-        onOrganize={openOrganizer}
+        onOrganize={props.organizerApi ? openOrganizer : undefined}
       />
-      {organizing && !isCategories && (
+      {organizing && !isCategories && props.organizerApi && (
         <AccountOrganizer
           accountBookId={props.accountBookId}
           api={props.organizerApi}

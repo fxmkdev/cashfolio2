@@ -6,6 +6,7 @@ import type {
 
 const mocks = vi.hoisted(() => ({
   nodes: [] as OrganizeNode[],
+  otherAccountNames: [] as { name: string }[],
   failId: "",
   authorizeRead: vi.fn(),
   authorizeWrite: vi.fn(),
@@ -111,22 +112,27 @@ const initial: OrganizeNode[] = [
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.nodes = structuredClone(initial);
+  mocks.otherAccountNames = [];
   mocks.failId = "";
-  mocks.accountRead.mockImplementation(async () =>
-    mocks.nodes
-      .filter((n) => n.nodeType === "account")
-      .map(({ parentId, nodeType: _nodeType, ...node }) => ({
-        ...node,
-        groupId: parentId,
-      })),
+  mocks.accountRead.mockImplementation(async (query) =>
+    typeof query.where.type === "object"
+      ? mocks.otherAccountNames
+      : mocks.nodes
+          .filter((n) => n.nodeType === "account")
+          .map(({ parentId, nodeType: _nodeType, ...node }) => ({
+            ...node,
+            groupId: parentId,
+          })),
   );
-  mocks.groupRead.mockImplementation(async () =>
-    mocks.nodes
-      .filter((n) => n.nodeType === "accountGroup")
-      .map(({ parentId, nodeType: _nodeType, unit: _unit, ...node }) => ({
-        ...node,
-        parentGroupId: parentId,
-      })),
+  mocks.groupRead.mockImplementation(async (query) =>
+    typeof query.where.type === "object"
+      ? []
+      : mocks.nodes
+          .filter((n) => n.nodeType === "accountGroup")
+          .map(({ parentId, nodeType: _nodeType, unit: _unit, ...node }) => ({
+            ...node,
+            parentGroupId: parentId,
+          })),
   );
   const update = async ({
     where,
@@ -252,6 +258,16 @@ describe("organize server boundary", () => {
     expect(result.undo).toBeNull();
     expect(mocks.accountWrite).not.toHaveBeenCalled();
     expect(mocks.invalidate).not.toHaveBeenCalled();
+  });
+
+  it("retains editor name validation against category/system accounts at Top Level", async () => {
+    mocks.otherAccountNames = [{ name: "account" }];
+    const before = await snapshot();
+    await expect(save({ items: [initial[2]], parentId: null })).rejects.toThrow(
+      "already exists",
+    );
+    expect(await snapshot()).toEqual(before);
+    expect(mocks.accountWrite).not.toHaveBeenCalled();
   });
   it("rejects stale moves before any writes", async () => {
     await expect(save({ version: "old" })).rejects.toThrow("hierarchy changed");
