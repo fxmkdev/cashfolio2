@@ -1,373 +1,24 @@
 import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
-import { createElement, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import { useAccountTreeColumnDefs } from "./-page-columns";
 import {
-  getAccountListBalanceValue,
-  getAccountListUnitIdentifierDisplayValue,
-  getAccountListAssetClassValue,
-  getAccountListTrackingMethodValue,
-  useAccountTreeColumnDefs,
-} from "./-page-columns";
-
-function createAccountRow(overrides: Partial<TreeRow> = {}): TreeRow {
-  return {
-    id: "account-1",
-    nodeType: "account",
-    name: "Cash",
-    type: AccountType.BALANCE,
-    equityAccountSubtype: null,
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    balance: 10,
-    balanceInReferenceCurrency: 10,
-    openingBalance: null,
-    parentId: undefined,
-    isActive: true,
-    groupId: undefined,
-    sortOrder: 1,
-    deletable: true,
-    deleteDisabledReason: undefined,
-    archivable: true,
-    archiveDisabledReason: undefined,
-    unarchivable: true,
-    unarchiveDisabledReason: undefined,
-    ...overrides,
-  };
-}
-
-function createGroupRow(): TreeRow {
-  return {
-    id: "group-1",
-    nodeType: "accountGroup",
-    name: "Assets",
-    type: AccountType.BALANCE,
-    equityAccountSubtype: null,
-    unit: null,
-    currency: null,
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    balance: null,
-    balanceInReferenceCurrency: null,
-    openingBalance: null,
-    parentId: undefined,
-    isActive: true,
-    groupId: "group-1",
-    sortOrder: 1,
-    deletable: true,
-    deleteDisabledReason: undefined,
-    archivable: true,
-    archiveDisabledReason: undefined,
-    unarchivable: true,
-    unarchiveDisabledReason: undefined,
-  };
-}
-
-const footerRow: AccountsGridRow = {
-  id: "__reference_currency_total_footer__",
-  rowType: "referenceCurrencyTotalFooter",
-  name: "Total",
-  balanceInReferenceCurrency: 10,
-};
-
-describe("account list column value getters", () => {
-  it.each([
-    ["INDIVIDUAL_UNITS", "Individual Units"],
-    ["TOTAL_PORTFOLIO_VALUE", "Total Value"],
-    [undefined, "Individual Units"],
-  ] as const)(
-    "displays tracking method %s on active and archived accounts",
-    (trackingMethod, label) => {
-      for (const isActive of [true, false]) {
-        expect(
-          getAccountListTrackingMethodValue(
-            createAccountRow({ trackingMethod, isActive }),
-          ),
-        ).toBe(label);
-      }
-    },
-  );
-
-  it.each([Unit.SECURITY, Unit.CRYPTOCURRENCY])(
-    "displays Individual Units for %s",
-    (unit) => {
-      expect(
-        getAccountListTrackingMethodValue(createAccountRow({ unit })),
-      ).toBe("Individual Units");
-    },
-  );
-
-  it.each([
-    ["INDIVIDUAL_UNITS", "Individual Units"],
-    ["TOTAL_PORTFOLIO_VALUE", "Total Value"],
-    ["Mixed", "Mixed"],
-    [undefined, undefined],
-  ] as const)(
-    "displays group tracking method %s",
-    (groupTrackingMethod, label) => {
-      for (const isVirtualArchivedGroup of [true, false]) {
-        expect(
-          getAccountListTrackingMethodValue({
-            ...createGroupRow(),
-            groupTrackingMethod,
-            isVirtualArchivedGroup,
-          }),
-        ).toBe(label);
-      }
-    },
-  );
-
-  it("leaves tracking method blank for totals and missing rows", () => {
-    expect(getAccountListTrackingMethodValue(footerRow)).toBeUndefined();
-    expect(getAccountListTrackingMethodValue(undefined)).toBeUndefined();
-  });
-
-  it.each([
-    [defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS, "Cash & Cash Equivalents"],
-    [defaultAssetClassIds.EQUITIES, "Equities"],
-    [defaultAssetClassIds.FIXED_INCOME, "Fixed Income"],
-    [defaultAssetClassIds.REAL_ESTATE, "Real Estate"],
-
-    [
-      defaultAssetClassIds.COMMODITIES_AND_PRECIOUS_METALS,
-      "Commodities & Precious Metals",
-    ],
-    [defaultAssetClassIds.DIGITAL_ASSETS, "Digital Assets"],
-    [defaultAssetClassIds.ALTERNATIVE_INVESTMENTS, "Alternative Investments"],
-    [defaultAssetClassIds.OTHER_ASSETS, "Other Assets"],
-    [null, "Unclassified"],
-    [undefined, "Unclassified"],
-  ] as const)("displays %s using its shared label", (assetClassId, label) => {
-    for (const type of [AccountType.BALANCE]) {
-      for (const isActive of [true, false]) {
-        expect(
-          getAccountListAssetClassValue(
-            createAccountRow({ assetClassId, type, isActive }),
-          ),
-        ).toBe(label);
-      }
-    }
-  });
-
-  it.each([
-    [defaultAssetClassIds.EQUITIES, "Equities"],
-    [null, "Unclassified"],
-    ["Mixed", "Mixed"],
-  ] as const)("displays group summary %s as %s", (groupAssetClass, label) => {
-    for (const isVirtualArchivedGroup of [true, false]) {
-      expect(
-        getAccountListAssetClassValue({
-          ...createGroupRow(),
-          groupAssetClass,
-          isVirtualArchivedGroup,
-        }),
-      ).toBe(label);
-    }
-  });
-
-  it("leaves empty groups, totals, and missing data blank", () => {
-    for (const row of [
-      createGroupRow(),
-      { ...createGroupRow(), isVirtualArchivedGroup: true },
-      footerRow,
-      undefined,
-    ]) {
-      expect(getAccountListAssetClassValue(row)).toBeUndefined();
-    }
-  });
-
-  it.each([true, false])(
-    "hides native currency and balance for reference-currency cash accounts (active=%s)",
-    (isActive) => {
-      const row = createAccountRow({
-        currency: "CHF",
-        balance: 10,
-        isActive,
-      });
-
-      expect(
-        getAccountListUnitIdentifierDisplayValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBeUndefined();
-      expect(
-        getAccountListBalanceValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBeNull();
-    },
-  );
-
-  it.each([true, false])(
-    "keeps native currency and balance for non-reference-currency cash accounts (active=%s)",
-    (isActive) => {
-      const row = createAccountRow({
-        currency: "USD",
-        balance: 20,
-        isActive,
-      });
-
-      expect(
-        getAccountListUnitIdentifierDisplayValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBe("USD");
-      expect(
-        getAccountListBalanceValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBe(20);
-    },
-  );
-
-  it.each(["CHF", "USD"])(
-    "shows security symbols and quantities with %s trade currency",
-    (tradeCurrency) => {
-      for (const isActive of [true, false]) {
-        const row = createAccountRow({
-          unit: Unit.SECURITY,
-          currency: null,
-          tradeCurrency,
-          symbol: "ACME",
-          balance: 5,
-          isActive,
-        });
-
-        expect(
-          getAccountListUnitIdentifierDisplayValue({
-            data: row,
-            referenceCurrency: "CHF",
-          }),
-        ).toBe("ACME");
-        expect(
-          getAccountListBalanceValue({
-            data: row,
-            referenceCurrency: "CHF",
-          }),
-        ).toBe(5);
-      }
-    },
-  );
-
-  it("shows cryptocurrency tickers and quantities for active and archived accounts", () => {
-    for (const isActive of [true, false]) {
-      const row = createAccountRow({
-        unit: Unit.CRYPTOCURRENCY,
-        currency: null,
-        cryptocurrency: "BTC",
-        balance: 2,
-        isActive,
-      });
-      expect(
-        getAccountListUnitIdentifierDisplayValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBe("BTC");
-      expect(
-        getAccountListBalanceValue({
-          data: row,
-          referenceCurrency: "CHF",
-        }),
-      ).toBe(2);
-    }
-  });
-
-  it("leaves groups, virtual Archived rows, totals, unitless accounts, and missing data blank in unit and native balance columns", () => {
-    for (const data of [
-      createGroupRow(),
-      { ...createGroupRow(), isVirtualArchivedGroup: true },
-      footerRow,
-      createAccountRow({ unit: null, balance: null }),
-      undefined,
-    ]) {
-      expect(
-        getAccountListUnitIdentifierDisplayValue({
-          data,
-          referenceCurrency: "CHF",
-        }),
-      ).toBeUndefined();
-      expect(
-        getAccountListBalanceValue({
-          data,
-          referenceCurrency: "CHF",
-        }),
-      ).toBeNull();
-    }
-  });
-});
-
-describe("account tree Delete explanations", () => {
-  for (const isActive of [true, false]) {
-    for (const isEquityTab of [true, false]) {
-      it.each(["account", "accountGroup"] as const)(
-        `uses contextual wording for ${isActive ? "active" : "archived"} ${isEquityTab ? "category" : "account"} %s rows`,
-        (nodeType) => {
-          const row =
-            nodeType === "account" ? createAccountRow() : createGroupRow();
-          row.isActive = isActive;
-          row.type = isEquityTab ? AccountType.EQUITY : AccountType.BALANCE;
-          row.deletable = false;
-          row.deleteDisabledReason =
-            nodeType === "account"
-              ? "Cannot delete account because it has bookings"
-              : "Cannot delete group because it contains accounts";
-          let action!: ReactElement<{
-            deleteLabel: string;
-            deletable: boolean;
-          }>;
-          function Harness() {
-            const columns = useAccountTreeColumnDefs({
-              isEquityTab,
-              rowsByParentKey: new Map(),
-              referenceCurrency: "CHF",
-              isReferenceBalancesLoading: false,
-              balanceInReferenceCurrencyByGroupId: new Map(),
-              onEditRow: () => {},
-              onUnarchiveRow: async () => {},
-              onArchiveRow: () => {},
-              onDeleteRow: () => {},
-              onReorderRow: () => {},
-            });
-            const column = columns.find(
-              (candidate) =>
-                "colId" in candidate && candidate.colId === "actions",
-            );
-            if (!column || !("cellRenderer" in column))
-              throw new Error("Missing actions column");
-            action = column.cellRenderer({ data: row });
-            return null;
-          }
-          renderToStaticMarkup(createElement(Harness));
-          expect(action.props.deleteLabel).toBe(
-            isEquityTab
-              ? nodeType === "account"
-                ? "Cannot delete category because it has bookings"
-                : "Cannot delete category group because it contains categories"
-              : row.deleteDisabledReason,
-          );
-          expect(action.props.deletable).toBe(false);
-        },
-      );
-    }
-  }
-});
-
+  createAccountRow,
+  createGroupRow,
+  footerRow,
+} from "./-column-test-fixtures";
 describe("account classification columns", () => {
-  function readColumns(isEquityTab: boolean) {
+  function readColumns(
+    isEquityTab: boolean,
+    grouping: ReportingGrouping = "accountStructure",
+  ) {
     let columns: ReturnType<typeof useAccountTreeColumnDefs> = [];
     function ReadColumns() {
       columns = useAccountTreeColumnDefs({
+        grouping,
         isEquityTab,
         rowsByParentKey: new Map(),
         referenceCurrency: "CHF",
@@ -420,6 +71,76 @@ describe("account classification columns", () => {
       colId: "actions",
       pinned: "right",
     });
+  });
+
+  it("replaces Asset Class with Path in the same position and keeps neighboring columns", () => {
+    const columns = readColumns(false, "assetClass");
+    expect(columns[3]).toMatchObject({
+      colId: "path",
+      headerName: "Path",
+      width: 220,
+      resizable: true,
+      sortable: false,
+      filter: "agTextColumnFilter",
+    });
+    expect(columns[4]).toMatchObject({ colId: "trackingMethod" });
+    expect(
+      columns.some(
+        (column) => "colId" in column && column.colId === "assetClass",
+      ),
+    ).toBe(false);
+    expect(readColumns(true, "assetClass")).toHaveLength(1);
+  });
+
+  it("uses original group paths for Path display, filtering and tooltips on active and archived accounts", () => {
+    const column = readColumns(false, "assetClass")[3];
+    if (
+      !("valueGetter" in column) ||
+      typeof column.valueGetter !== "function" ||
+      typeof column.tooltipValueGetter !== "function"
+    )
+      throw new Error("Missing Path getters");
+    const cases: Array<[AccountsGridRow | undefined, string | undefined]> = [
+      [
+        createAccountRow({ accountGroupPath: ["Cash", "Swissquote"] }),
+        "Cash / Swissquote",
+      ],
+      [
+        createAccountRow({
+          isActive: false,
+          accountGroupPath: ["Cash", "Swissquote"],
+        }),
+        "Cash / Swissquote",
+      ],
+      [createAccountRow({ accountGroupPath: ["Cash"] }), "Cash"],
+      [createAccountRow({ accountGroupPath: [] }), undefined],
+      [createAccountRow(), undefined],
+      ...(["assetClass", "unclassified", "unit", "archived"] as const).map(
+        (presentationKind) =>
+          [
+            {
+              ...createGroupRow(),
+              presentationKind,
+              accountGroupPath: ["Ignored"],
+            },
+            undefined,
+          ] as [TreeRow, undefined],
+      ),
+      [footerRow, undefined],
+      [undefined, undefined],
+    ];
+    for (const [data, expected] of cases) {
+      expect(
+        column.valueGetter({ data } as Parameters<
+          typeof column.valueGetter
+        >[0]),
+      ).toBe(expected);
+      expect(
+        column.tooltipValueGetter({ data } as Parameters<
+          typeof column.tooltipValueGetter
+        >[0]),
+      ).toBe(expected);
+    }
   });
 
   it("places Tracking Method after Asset Class with label filtering and tooltips", () => {

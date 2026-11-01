@@ -51,6 +51,25 @@ describe("accounts page tab parsing", () => {
   );
 });
 
+describe("accounts grouping search", () => {
+  it.each([undefined, "unknown", null, 1])(
+    "defaults invalid grouping %s",
+    (grouping) => {
+      expect(
+        parseAccountsSearch({ grouping }).grouping ?? "accountStructure",
+      ).toBe("accountStructure");
+    },
+  );
+  it.each(["assetClass", "accountStructure"])(
+    "preserves %s through legacy normalization",
+    (grouping) => {
+      expect(
+        parseAccountsSearch({ tab: "ASSET", mode: "archived", grouping }),
+      ).toEqual({ tab: "BALANCE", mode: "active", grouping });
+    },
+  );
+});
+
 describe("getAccountsPageTitle", () => {
   it("separates editable category tabs from balance accounts and system accounts", () => {
     expect(getManagementTabs("accounts").map((tab) => tab.value)).toEqual([

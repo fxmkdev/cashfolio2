@@ -54,16 +54,62 @@ this view.
 
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.
-- Route orchestration for this page is in
-  `src/routes/$accountBookId/accounts/-page-controller.ts`, with focused helpers
-  in:
-  - `-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
-  - `-page-reference-balances.ts` (lazy reference-balance hydration and delayed
-    loading indicator state)
+- The route-local `-page-controller.ts` composes data loading/refresh,
+  presentation, grid lifecycle, and management actions through focused hooks.
+  `-account-mutations.ts` owns mutation payloads and the injectable API used by
+  its unit tests; `-page-modal-state.ts` owns editor/confirmation state, with
+  `-page-modal-props.ts` binding it to submission and close callbacks.
+- `-use-accounts-presentation.ts` derives hierarchy projections, group metadata,
+  reference balances, gain/loss, and footer rows without server requests. Both
+  the production controller and Storybook harness use this hook. Reference
+  balance hydration and its delayed loading indicator remain in
+  `-page-reference-balances.ts`.
+- `-page-view.tsx` composes typed header/navigation, grid, and dialog
+  components. The column hook assembles separate balance, metadata, and action
+  definitions; live refs keep loading indicators and sibling checks current
+  without rebuilding column definitions for each balance update.
+- The private `-stories/` folder contains shared fixtures, interaction helpers,
+  and a small harness backed by focused routing, modal, and assignment hooks.
+  Stories are grouped by behavior and retain the `Routes/AccountsPageView` title
+  and original story IDs. Presentation changes belong in the shared hook rather
+  than being duplicated in the harness.
 
 ## Archived groups and totals
 
-Accounts shows balance accounts and active/archived real items together.
+Accounts offers a **Group By** selector with **Account Structure** (the default)
+and **Asset Class**. The grouping is preserved in the URL and when returning
+from a ledger. Switching grouping reuses the current balance and gain/loss data.
+Asset Class shows occupied classes and their ancestors, then a unit grouping
+level beneath each assigned class. Unassigned accounts appear under
+**Unclassified**, also grouped by unit. Unit identities are shared with Report:
+currency codes, cryptocurrency codes, and security symbols (combining trade
+currencies for the same symbol), with **Total Value Accounts** for total-value
+tracking and **Unknown Unit** for missing identities. Unit groups appear even
+for a single account and retain zero, negative, and unvalued accounts.
+Subclasses precede directly assigned unit groups; units and accounts sort
+alphabetically by default. The **Path** column replaces **Asset Class** in this
+view and shows each account's original account-group hierarchy, excluding its
+own name, with spaced `/` separators. Ungrouped accounts, headings, and the
+total row have blank Path cells. Path has its own text filter and full-path
+tooltip. Names remain single-line at the standard row height, with name-only
+filtering and tooltips. Account Structure retains the Asset Class column. Empty
+classes are omitted.
+
+In Asset Class, archived accounts appear in a collapsed **Archived** branch
+within their assigned unit group, regardless of their original group hierarchy.
+Class and unit totals include all descendant accounts exactly once, including
+archived and collapsed items; the overall totals match Account Structure. Each
+view aggregates reference balances and gain/loss in decimal precision through
+all ancestors, converting to numbers only for final display values. Each view
+remembers expansion independently for the session. New unit groups start
+collapsed. Switching grouping clears account selection. Class and unit headings
+support descendant account selection for bulk assignments but have no
+account-group mutation actions. Account actions retain their existing
+eligibility rules; sibling reordering is available only in Account Structure.
+**Manage Asset Classes** opens Settings → Classifications. Grouping changes only
+presentation, never stored account groups or valuation calculations.
+
+In Account Structure, active and archived real accounts/groups appear together.
 Directly archived children of an active group, or archived roots, appear beneath
 a virtual **Archived** group. Archived real groups retain their complete
 original subtrees; no further virtual wrappers are inserted inside them. Empty
