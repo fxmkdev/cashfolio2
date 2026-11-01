@@ -77,7 +77,7 @@ export type TreeRow = Awaited<
   ReturnType<typeof getAccountTreeData>
 >["rows"][number] & {
   /** Synthetic headings never represent persisted account groups. */
-  presentationKind?: "assetClass" | "unclassified" | "archived";
+  presentationKind?: "assetClass" | "unclassified" | "unit" | "archived";
   accountGroupPath?: string[];
   /** Presentation only; undefined means the group has no account descendants. */
   groupAssetClass?: GroupAssetClassSummary;

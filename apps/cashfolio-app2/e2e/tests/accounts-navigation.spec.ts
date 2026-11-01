@@ -84,6 +84,12 @@ test("asset class grouping survives legacy redirects, reload, history and ledger
   await page.goBack();
   await expect(grouping).toHaveValue("Asset Class");
   const source = page.url();
+  const chfUnit = page
+    .locator('[row-id^="__asset_class_unit__:"]')
+    .filter({ hasText: "CHF" })
+    .first();
+  await expect(chfUnit).toHaveAttribute("aria-expanded", "false");
+  await chfUnit.locator(".ag-group-contracted").click();
   await page
     .locator(
       `[row-id="${seeded.cashAccount.id}"] [col-id="ag-Grid-AutoColumn"]`,

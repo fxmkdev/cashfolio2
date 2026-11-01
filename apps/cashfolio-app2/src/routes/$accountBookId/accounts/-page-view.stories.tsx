@@ -6,6 +6,7 @@ import {
   buildAssetClassTree,
   projectAssetClassGainLoss,
   assetClassRowId,
+  unitRowId,
   archivedClassRowId,
 } from "./-asset-class-tree";
 import type { GridApi } from "ag-grid-enterprise";
@@ -885,9 +886,10 @@ export const AssetClassSwitchingAndExpansion: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const classId = assetClassRowId("EQUITIES");
+    const unitId = unitRowId(classId, "CURRENCY:CHF");
     const checkingName = () =>
       canvasElement.querySelector<HTMLElement>(
-        '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+        '.ag-row:not(.ag-opacity-zero)[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
       );
     await waitFor(() => expect(checkingName()).toBeVisible());
     const standardRowHeight = checkingName()!
@@ -907,9 +909,11 @@ export const AssetClassSwitchingAndExpansion: Story = {
     await chooseAccountGrouping(canvasElement, "Asset Class");
     await waitFor(() =>
       expect(
-        canvasElement.querySelector('[row-id="account-checking"]'),
-      ).not.toBeNull(),
+        canvasElement.querySelector(`[row-id="${unitId}"]`),
+      ).toHaveAttribute("aria-expanded", "false"),
     );
+    await expect(checkingName()).toBeNull();
+    await expandAssignmentGroup(canvasElement, unitId);
     await expect(
       canvas.getByRole("link", { name: "Manage Asset Classes" }),
     ).toHaveAttribute("href", "/storybook-book/settings/classifications");
@@ -942,7 +946,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
       ),
     ).toHaveLength(0);
     await expect(canvasElement.querySelector('[row-id="old"]')).toBeNull();
-    await expandAssignmentGroup(canvasElement, archivedClassRowId(classId));
+    await expandAssignmentGroup(canvasElement, archivedClassRowId(unitId));
     await waitFor(() =>
       expect(canvasElement.querySelector('[row-id="old"]')).not.toBeNull(),
     );
@@ -995,7 +999,13 @@ export const AssetClassSwitchingAndExpansion: Story = {
         ),
       ).not.toBeNull(),
     );
-    await selectAssignmentAccount(canvasElement, classId);
+    await expandAssignmentGroup(canvasElement, classId);
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(`[row-id="${unitId}"]`),
+      ).toHaveAttribute("aria-expanded", "true"),
+    );
+    await selectAssignmentAccount(canvasElement, unitId);
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "2 accounts selected",
     );
@@ -1026,7 +1036,10 @@ export const AssetClassFilteredBulkAssignment: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "Filter to Checking" }),
     );
-    await selectAssignmentAccount(canvasElement, assetClassRowId("EQUITIES"));
+    await selectAssignmentAccount(
+      canvasElement,
+      unitRowId(assetClassRowId("EQUITIES"), "CURRENCY:CHF"),
+    );
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "1 account selected",
     );
@@ -1059,6 +1072,74 @@ export const AssetClassFilteredBulkAssignment: Story = {
     ).not.toBeNull();
     await expect(
       canvasElement.querySelector(`[row-id="${assetClassRowId("EQUITIES")}"]`),
+    ).not.toBeNull();
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const AssetClassTrackingMethodRegrouping: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialGrouping="assetClass"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows.map((row) =>
+        row.nodeType === "account" ? { ...row, assetClassId: "EQUITIES" } : row,
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const classId = assetClassRowId("EQUITIES");
+    const managedId = unitRowId(classId, "managed-portfolios");
+    const balance = (id: string) =>
+      canvasElement.querySelector(
+        `[row-id="${id}"] [col-id="balanceInReferenceCurrency"]`,
+      );
+    await waitFor(() => {
+      expect(balance(REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID)).toHaveTextContent(
+        /\d/,
+      );
+      expect(balance("account-checking")).toHaveTextContent(/\d/);
+    });
+    const totalBefore = balance(
+      REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+    )!.textContent;
+    const checkingBefore = balance("account-checking")!.textContent;
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Tracking Method" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Tracking Method"));
+    await userEvent.click(dialog.getByLabelText("Tracking Method"));
+    await userEvent.click(
+      body.getByRole("option", { name: "Total Portfolio Value" }),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(balance(managedId)).toHaveTextContent(checkingBefore!),
+    );
+    await expect(
+      canvasElement.querySelector(
+        `[row-id="${managedId}"] [col-id="ag-Grid-AutoColumn"]`,
+      ),
+    ).toHaveTextContent("Managed Portfolios");
+    await expect(
+      balance(REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID),
+    ).toHaveTextContent(totalBefore!);
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="account-checking"] [col-id="path"]',
+      ),
+    ).toHaveTextContent("Portfolio");
+    await expect(
+      canvasElement.querySelector(
+        `[row-id="${archivedClassRowId(unitRowId(classId, "CURRENCY:CHF"))}"]`,
+      ),
     ).not.toBeNull();
     await expect(
       canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),

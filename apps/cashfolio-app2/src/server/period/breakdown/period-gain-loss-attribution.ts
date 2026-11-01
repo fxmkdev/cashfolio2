@@ -5,7 +5,7 @@ import { getAssetClassLabel } from "../../../shared/asset-class";
 import {
   getGainLossInvestmentGroup,
   type GainLossInvestmentGroup,
-} from "./period-gain-loss-investment-group";
+} from "../../../shared/investment-group";
 
 export type GainLossAccountAttribution = {
   assetClassId: string | null;

@@ -7,10 +7,14 @@ import {
   buildAssetClassTree,
   projectAssetClassGainLoss,
   assetClassRowId,
+  unitRowId,
   archivedClassRowId,
   UNCLASSIFIED_ROW_ID,
 } from "./-asset-class-tree";
 import type { TreeRow } from "./-page-types";
+
+const chfUnitId = (classId: string) =>
+  unitRowId(assetClassRowId(classId), "CURRENCY:CHF");
 
 function account(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
   return {
@@ -85,14 +89,14 @@ describe("asset class account projection", () => {
     ]);
     expect(
       projected
-        .filter((row) => row.parentId === assetClassRowId("swiss"))
+        .filter((row) => row.parentId === chfUnitId("swiss"))
         .map((row) => row.id),
     ).toEqual(["a", "z"]);
     expect(projected.find((row) => row.id === "parent")?.parentId).toBe(
-      assetClassRowId("equities"),
+      chfUnitId("equities"),
     );
     expect(projected.find((row) => row.id === "stale")?.parentId).toBe(
-      UNCLASSIFIED_ROW_ID,
+      unitRowId(UNCLASSIFIED_ROW_ID, "CURRENCY:CHF"),
     );
     expect(projected.some((row) => row.id === assetClassRowId("empty"))).toBe(
       false,
@@ -129,7 +133,7 @@ describe("asset class account projection", () => {
     );
     const old = projected.find((row) => row.id === "old")!;
     expect(old).toMatchObject({
-      parentId: archivedClassRowId(assetClassRowId("swiss")),
+      parentId: archivedClassRowId(chfUnitId("swiss")),
       accountGroupPath: ["Bank", "Broker"],
       groupId: "broker",
       persistedParentId: "broker",
@@ -137,14 +141,19 @@ describe("asset class account projection", () => {
       sortOrder: 2,
     });
     expect(projected.find((row) => row.id === "active")).toMatchObject({
-      parentId: assetClassRowId("equities"),
+      parentId: chfUnitId("equities"),
       accountGroupPath: ["Bank", "Broker"],
     });
     expect(
       projected
         .filter((row) => row.presentationKind === "archived")
         .map((row) => row.parentId),
-    ).toEqual([assetClassRowId("swiss"), UNCLASSIFIED_ROW_ID]);
+    ).toEqual(
+      expect.arrayContaining([
+        chfUnitId("swiss"),
+        unitRowId(UNCLASSIFIED_ROW_ID, "CURRENCY:CHF"),
+      ]),
+    );
     expect(
       projected
         .filter((row) => row.nodeType === "account")
@@ -169,6 +178,152 @@ describe("asset class account projection", () => {
       hasMissingReferenceBalance: false,
     });
     expect(balances.get(UNCLASSIFIED_ROW_ID)?.sum).toBe(10);
+    expect(balances.get(chfUnitId("swiss"))?.sum).toBe(10);
+  });
+
+  it("groups by Report identities, keeps singleton and archived-only units, and orders subclasses before units", () => {
+    const rows = buildAssetClassTree(
+      [
+        account("aapl-usd", {
+          unit: "SECURITY",
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+        }),
+        account("aapl-eur", {
+          unit: "SECURITY",
+          symbol: " aapl ",
+          tradeCurrency: "EUR",
+        }),
+        account("crypto", { unit: "CRYPTOCURRENCY", cryptocurrency: "BTC" }),
+        account("currency", { currency: "BTC" }),
+        account("managed-chf", { trackingMethod: "TOTAL_PORTFOLIO_VALUE" }),
+        account("managed-usd", {
+          currency: "USD",
+          trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+        }),
+        account("unknown", { unit: null }),
+        account("archived-only", { currency: "USD", isActive: false }),
+        account("parent", { assetClassId: "equities" }),
+      ],
+      classes,
+    );
+    expect(
+      rows
+        .filter((row) => row.parentId === assetClassRowId("swiss"))
+        .map((row) => row.name),
+    ).toEqual([
+      "AAPL",
+      "BTC",
+      "BTC",
+      "Managed Portfolios",
+      "Unknown Unit",
+      "USD",
+    ]);
+    expect(rows.find((row) => row.id === "aapl-usd")?.parentId).toBe(
+      rows.find((row) => row.id === "aapl-eur")?.parentId,
+    );
+    expect(rows.find((row) => row.id === "crypto")?.parentId).not.toBe(
+      rows.find((row) => row.id === "currency")?.parentId,
+    );
+    expect(rows.find((row) => row.id === "managed-chf")?.parentId).toBe(
+      rows.find((row) => row.id === "managed-usd")?.parentId,
+    );
+    const archivedOnlyUnit = unitRowId(
+      assetClassRowId("swiss"),
+      "CURRENCY:USD",
+    );
+    expect(rows.find((row) => row.id === "archived-only")?.parentId).toBe(
+      archivedClassRowId(archivedOnlyUnit),
+    );
+    expect(
+      rows
+        .filter((row) => row.parentId === archivedOnlyUnit)
+        .map((row) => row.presentationKind),
+    ).toEqual(["archived"]);
+    expect(
+      rows
+        .filter((row) => row.parentId === assetClassRowId("equities"))
+        .map((row) => row.id),
+    ).toEqual([assetClassRowId("swiss"), chfUnitId("equities")]);
+    expect(
+      rows
+        .filter((row) => row.presentationKind === "unit")
+        .every((row) => row.balance === null && row.unit === null),
+    ).toBe(true);
+  });
+
+  it("retains zero, negative and unvalued accounts and their unit subtotal", () => {
+    const source = [
+      account("zero", { balanceInReferenceCurrency: 0 }),
+      account("negative", { balanceInReferenceCurrency: -4 }),
+      account("missing", { balanceInReferenceCurrency: null }),
+    ];
+    const rows = buildAssetClassTree(source, classes);
+    expect(
+      rows
+        .filter((row) => row.nodeType === "account")
+        .map((row) => row.id)
+        .sort(),
+    ).toEqual(["missing", "negative", "zero"]);
+    const children = new Map<string, TreeRow[]>();
+    for (const row of rows)
+      if (row.parentId)
+        children.set(row.parentId, [
+          ...(children.get(row.parentId) ?? []),
+          row,
+        ]);
+    const balances = calculateBalanceInReferenceCurrencyByGroupId(
+      children,
+      rows,
+    );
+    expect(balances.get(chfUnitId("swiss"))).toEqual({
+      sum: -4,
+      hasAccountDescendants: true,
+      hasMissingReferenceBalance: true,
+    });
+    expect(balances.get(assetClassRowId("equities"))).toEqual(
+      balances.get(chfUnitId("swiss")),
+    );
+  });
+
+  it("keeps unit IDs stable across renames and reordering, and scopes identical units by class", () => {
+    const source = [account("a"), account("b", { assetClassId: "equities" })];
+    const first = buildAssetClassTree(source, classes);
+    const second = buildAssetClassTree(
+      [...source].reverse().map((row) => ({
+        ...row,
+        name: `Renamed ${row.id}`,
+        currency: " chf ",
+      })),
+      classes.map((node) => ({
+        ...node,
+        name: `Renamed ${node.name}`,
+        sortOrder: node.sortOrder + 1,
+      })),
+    );
+    expect(
+      first
+        .filter((row) => row.presentationKind === "unit")
+        .map((row) => row.id),
+    ).toEqual(
+      second
+        .filter((row) => row.presentationKind === "unit")
+        .map((row) => row.id),
+    );
+    expect(first.find((row) => row.id === "a")?.parentId).not.toBe(
+      first.find((row) => row.id === "b")?.parentId,
+    );
+    const regrouped = buildAssetClassTree(
+      source.map((row) => ({
+        ...row,
+        trackingMethod: "TOTAL_PORTFOLIO_VALUE",
+      })),
+      classes,
+    );
+    expect(regrouped.find((row) => row.id === "a")?.parentId).toBe(
+      unitRowId(assetClassRowId("swiss"), "managed-portfolios"),
+    );
+    expect(regrouped.some((row) => row.id === chfUnitId("swiss"))).toBe(false);
   });
 
   it("propagates missing reference balances through class and archive ancestors", () => {
@@ -195,7 +350,7 @@ describe("asset class account projection", () => {
       hasMissingReferenceBalance: true,
     });
     expect(
-      balances.get(archivedClassRowId(assetClassRowId("swiss")))
+      balances.get(archivedClassRowId(chfUnitId("swiss")))
         ?.hasMissingReferenceBalance,
     ).toBe(true);
   });
@@ -251,8 +406,18 @@ describe("asset class gain/loss", () => {
       diagnostics: [diagnostic],
     });
     expect(
+      projected.rows.find((row) => row.id === chfUnitId("swiss")),
+    ).toMatchObject({
+      summary: {
+        realizedGainLoss: 0.3,
+        unrealizedGainLoss: null,
+        totalGainLoss: null,
+      },
+      diagnostics: [diagnostic],
+    });
+    expect(
       projected.rows.find(
-        (row) => row.id === archivedClassRowId(assetClassRowId("swiss")),
+        (row) => row.id === archivedClassRowId(chfUnitId("swiss")),
       )?.summary.realizedGainLoss,
     ).toBe(0.2);
     expect(projected.rows.find((row) => row.id === "a")).toEqual(data.rows[0]);

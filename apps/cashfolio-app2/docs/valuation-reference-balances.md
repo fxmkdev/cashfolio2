@@ -66,27 +66,33 @@ this view.
 Accounts offers a **Group By** selector with **Account Structure** (the default)
 and **Asset Class**. The grouping is preserved in the URL and when returning
 from a ledger. Switching grouping reuses the current balance and gain/loss data.
-Asset Class shows occupied classes and their ancestors, with account leaves
-directly beneath their assigned class and unassigned accounts under
-**Unclassified**. The **Path** column replaces **Asset Class** in this view and
-shows each account's original account-group hierarchy, excluding its own name,
-with spaced `/` separators. Ungrouped accounts, headings, and the total row have
-blank Path cells. Path has its own text filter and full-path tooltip. Names
-remain single-line at the standard row height, with name-only filtering and
-tooltips. Account Structure retains the Asset Class column. Empty classes are
-omitted.
+Asset Class shows occupied classes and their ancestors, then a unit grouping
+level beneath each assigned class. Unassigned accounts appear under
+**Unclassified**, also grouped by unit. Unit identities are shared with Report:
+currency codes, cryptocurrency codes, and security symbols (combining trade
+currencies for the same symbol), with **Managed Portfolios** for portfolio-value
+tracking and **Unknown Unit** for missing identities. Unit groups appear even
+for a single account and retain zero, negative, and unvalued accounts.
+Subclasses precede directly assigned unit groups; units and accounts sort
+alphabetically by default. The **Path** column replaces **Asset Class** in this
+view and shows each account's original account-group hierarchy, excluding its
+own name, with spaced `/` separators. Ungrouped accounts, headings, and the
+total row have blank Path cells. Path has its own text filter and full-path
+tooltip. Names remain single-line at the standard row height, with name-only
+filtering and tooltips. Account Structure retains the Asset Class column. Empty
+classes are omitted.
 
 In Asset Class, archived accounts appear in a collapsed **Archived** branch
-within their assigned class, regardless of their original group hierarchy. Class
-totals include all descendant accounts exactly once, including archived and
-collapsed items; the overall totals match Account Structure. Each view remembers
-expansion independently for the session. Switching grouping clears account
-selection. Class headings support descendant account selection for bulk
-assignments but have no account-group mutation actions. Account actions retain
-their existing eligibility rules; sibling reordering is available only in
-Account Structure. **Manage Asset Classes** opens Settings → Classifications.
-Grouping changes only presentation, never stored account groups or valuation
-calculations.
+within their assigned unit group, regardless of their original group hierarchy.
+Class and unit totals include all descendant accounts exactly once, including
+archived and collapsed items; the overall totals match Account Structure. Each
+view remembers expansion independently for the session. New unit groups start
+collapsed. Switching grouping clears account selection. Class and unit headings
+support descendant account selection for bulk assignments but have no
+account-group mutation actions. Account actions retain their existing
+eligibility rules; sibling reordering is available only in Account Structure.
+**Manage Asset Classes** opens Settings → Classifications. Grouping changes only
+presentation, never stored account groups or valuation calculations.
 
 Accounts shows balance accounts and active/archived real items together.
 Directly archived children of an active group, or archived roots, appear beneath

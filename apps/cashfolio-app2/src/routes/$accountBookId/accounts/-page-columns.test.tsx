@@ -344,6 +344,7 @@ describe("account tree Delete explanations", () => {
       for (const presentationKind of [
         "assetClass",
         "unclassified",
+        "unit",
         "archived",
       ] as const) {
         expect(
@@ -521,7 +522,7 @@ describe("account classification columns", () => {
       [createAccountRow({ accountGroupPath: ["Cash"] }), "Cash"],
       [createAccountRow({ accountGroupPath: [] }), undefined],
       [createAccountRow(), undefined],
-      ...(["assetClass", "unclassified", "archived"] as const).map(
+      ...(["assetClass", "unclassified", "unit", "archived"] as const).map(
         (presentationKind) =>
           [
             {
