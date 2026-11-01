@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   GridApi,
   IRowNode,
@@ -60,114 +60,122 @@ export function useOrganizeDrag({
   const hover = useRef<
     { id: string; timer: ReturnType<typeof setTimeout> } | undefined
   >(undefined);
-  const clearHover = () => {
+  const clearHover = useCallback(() => {
     clearTimeout(hover.current?.timer);
     hover.current = undefined;
-  };
-  const showHint = (value: string) => {
+  }, []);
+  const showHint = useCallback((value: string) => {
     hintRef.current = value;
     setHint(value);
-  };
-  const itemsFor = (
-    source: IRowNode<OrganizeDisplayRow>,
-  ): OrganizeNodeRef[] => {
-    const selected = source.isSelected()
-      ? (api?.getSelectedRows() ?? [])
-      : source.data
-        ? [source.data]
-        : [];
-    return normalizeOrganizeSelection(
-      nodes,
-      selected.filter((row) => !row.isVirtualArchivedGroup),
-    );
-  };
-  const preview = (move: OrganizeMove) => {
-    if (blocked || cancelled.current)
-      throw new Error("Movement is unavailable while saving or refreshing.");
-    const key = JSON.stringify(move);
-    if (
-      previewCache.current?.nodes === nodes &&
-      previewCache.current.key === key
-    ) {
+  }, []);
+  const itemsFor = useCallback(
+    (source: IRowNode<OrganizeDisplayRow>): OrganizeNodeRef[] => {
+      const selected = source.isSelected()
+        ? (api?.getSelectedRows() ?? [])
+        : source.data
+          ? [source.data]
+          : [];
+      return normalizeOrganizeSelection(
+        nodes,
+        selected.filter((row) => !row.isVirtualArchivedGroup),
+      );
+    },
+    [api, nodes],
+  );
+  const preview = useCallback(
+    (move: OrganizeMove) => {
+      if (blocked || cancelled.current)
+        throw new Error("Movement is unavailable while saving or refreshing.");
+      const key = JSON.stringify(move);
+      if (
+        previewCache.current?.nodes === nodes &&
+        previewCache.current.key === key
+      ) {
+        proposed.current = move;
+        showHint(previewCache.current.message);
+        return;
+      }
+      const next = planAccountMove(nodes, move);
+      const destination = move.parentId
+        ? organizePath(nodes, move.parentId)
+        : "Top Level";
+      const relative = move.anchorId
+        ? `${move.placement} ${nodes.find((node) => node.id === move.anchorId)?.name} in `
+        : "into ";
       proposed.current = move;
-      showHint(previewCache.current.message);
-      return;
-    }
-    const next = planAccountMove(nodes, move);
-    const destination = move.parentId
-      ? organizePath(nodes, move.parentId)
-      : "Top Level";
-    const relative = move.anchorId
-      ? `${move.placement} ${nodes.find((node) => node.id === move.anchorId)?.name} in `
-      : "into ";
-    proposed.current = move;
-    const message =
-      `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${moveSummary(nodes, next)}`.trim();
-    previewCache.current = { nodes, key, message };
-    showHint(message);
-  };
-  const start = () => {
-    cancelled.current = false;
+      const message =
+        `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${moveSummary(nodes, next)}`.trim();
+      previewCache.current = { nodes, key, message };
+      showHint(message);
+    },
+    [blocked, nodes, showHint],
+  );
+  const start = useCallback(() => {
+    cancelled.current = blocked;
     proposed.current = undefined;
-  };
-  const cancel = () => {
+  }, [blocked]);
+  const cancel = useCallback(() => {
     cancelled.current = true;
     proposed.current = undefined;
     clearHover();
     api?.setRowDropPositionIndicator(null);
     showHint("");
-  };
-  const leave = () => {
+  }, [api, clearHover, showHint]);
+  const leave = useCallback(() => {
     proposed.current = undefined;
     clearHover();
     api?.setRowDropPositionIndicator(null);
     showHint("");
-  };
-  const finish = () => {
+  }, [api, clearHover, showHint]);
+  const finish = useCallback(() => {
     const move = proposed.current;
     leave();
     if (move && !cancelled.current && !blocked) void saveMove(move);
-  };
-  const validateDrop = (
-    params: IsRowValidDropPositionParams<OrganizeDisplayRow>,
-  ) => {
-    const target = params.overNode;
-    const row = target?.data;
-    if (!row) {
-      proposed.current = undefined;
-      return false;
-    }
-    if (hover.current?.id !== row.id) {
-      clearHover();
-      if (target.group && !target.expanded)
-        hover.current = {
-          id: row.id,
-          timer: setTimeout(() => target.setExpanded(true), 500),
+  }, [blocked, leave, saveMove]);
+  const validateDrop = useCallback(
+    (params: IsRowValidDropPositionParams<OrganizeDisplayRow>) => {
+      const target = params.overNode;
+      const row = target?.data;
+      if (!row) {
+        proposed.current = undefined;
+        return false;
+      }
+      if (hover.current?.id !== row.id) {
+        clearHover();
+        if (target.group && !target.expanded)
+          hover.current = {
+            id: row.id,
+            timer: setTimeout(() => target.setExpanded(true), 500),
+          };
+      }
+      const ratio =
+        (params.y - (target.rowTop ?? 0)) / (target.rowHeight || 38);
+      const position: "above" | "inside" | "below" =
+        row.nodeType === "accountGroup" && ratio >= 0.25 && ratio <= 0.75
+          ? "inside"
+          : ratio < 0.5
+            ? "above"
+            : "below";
+      try {
+        preview(dragMove(itemsFor(params.source), row, position));
+        return {
+          allowed: true,
+          highlight: true,
+          target,
+          position,
+          newParent: position === "inside" ? target : target.parent,
+          changed: true,
         };
-    }
-    const ratio = (params.y - (target.rowTop ?? 0)) / (target.rowHeight || 38);
-    const position: "above" | "inside" | "below" =
-      row.nodeType === "accountGroup" && ratio >= 0.25 && ratio <= 0.75
-        ? "inside"
-        : ratio < 0.5
-          ? "above"
-          : "below";
-    try {
-      preview(dragMove(itemsFor(params.source), row, position));
-      return {
-        allowed: true,
-        highlight: true,
-        target,
-        position,
-        newParent: position === "inside" ? target : target.parent,
-        changed: true,
-      };
-    } catch (error) {
-      proposed.current = undefined;
-      showHint(error instanceof Error ? error.message : "Invalid destination.");
-      return false;
-    }
-  };
+      } catch (error) {
+        proposed.current = undefined;
+        showHint(
+          error instanceof Error ? error.message : "Invalid destination.",
+        );
+        return false;
+      }
+    },
+    [clearHover, itemsFor, preview, showHint],
+  );
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
   useEffect(() => {
@@ -180,6 +188,10 @@ export function useOrganizeDrag({
       clearTimeout(hover.current?.timer);
     };
   }, []);
+  const dragText = useCallback(
+    () => hintRef.current || "Move selected items",
+    [],
+  );
   return {
     hint,
     start,
@@ -187,6 +199,6 @@ export function useOrganizeDrag({
     leave,
     finish,
     validateDrop,
-    dragText: () => hintRef.current || "Move selected items",
+    dragText,
   };
 }

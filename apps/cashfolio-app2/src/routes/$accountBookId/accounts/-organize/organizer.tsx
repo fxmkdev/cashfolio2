@@ -9,7 +9,14 @@ import {
   Text,
   VisuallyHidden,
 } from "@mantine/core";
-import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-enterprise";
+import type {
+  ColDef,
+  GridApi,
+  GridOptions,
+  GridReadyEvent,
+  ICellRendererParams,
+  SelectionChangedEvent,
+} from "ag-grid-enterprise";
 import { IconArrowBackUp } from "@tabler/icons-react";
 import { DataGrid } from "@/components/grid/data-grid";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
@@ -23,6 +30,31 @@ import { MoveDialog } from "./move-dialog";
 import { useOrganizer, type OrganizerApi } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
+
+// Hint updates must not reconfigure the tree column or recreate its controls.
+const gridOptions: GridOptions<OrganizeDisplayRow> = {
+  defaultColDef: { sortable: false, filter: false, resizable: true },
+  autoGroupColumnDef: {
+    headerName: "Name",
+    field: "name",
+    flex: 1,
+    minWidth: 280,
+    rowDrag: ({ data }) => !!data && !data.isVirtualArchivedGroup,
+    cellRendererParams: { suppressCount: true },
+  },
+  getRowId: ({ data }) => data.id,
+  isGroupOpenByDefault: ({ rowNode }) =>
+    !rowNode.data?.isVirtualArchivedGroup && rowNode.level === 0,
+  rowSelection: {
+    mode: "multiRow",
+    groupSelects: "self",
+    headerCheckbox: false,
+    enableClickSelection: false,
+    isRowSelectable: (node) => !node.data?.isVirtualArchivedGroup,
+    checkboxes: ({ data }) => !!data && !data.isVirtualArchivedGroup,
+  },
+  selectionColumnDef: { pinned: "left", width: 48, resizable: false },
+};
 
 export function AccountOrganizer({
   accountBookId,
@@ -125,10 +157,31 @@ export function AccountOrganizer({
     (node) => node.nodeType === "accountGroup",
   ).length;
   const accounts = roots.length - groups;
+  const onGridReady = useCallback(
+    ({ api }: GridReadyEvent<OrganizeDisplayRow>) => setApi(api),
+    [],
+  );
+  const onSelectionChanged = useCallback(
+    ({ api }: SelectionChangedEvent<OrganizeDisplayRow>) =>
+      setSelected(
+        api.getSelectedRows().filter((row) => !row.isVirtualArchivedGroup),
+      ),
+    [],
+  );
+  const rowClassRules = useMemo<
+    GridOptions<OrganizeDisplayRow>["rowClassRules"]
+  >(
+    () => ({
+      [styles.recent]: ({ data }) =>
+        !!data && organizer.revealIds.includes(data.id),
+    }),
+    [organizer.revealIds],
+  );
   return (
     <Box
       component="section"
       aria-label="Organize Accounts"
+      className={organizer.blocked ? styles.blocked : undefined}
       data-account-book-id={accountBookId}
       style={{
         display: "flex",
@@ -204,56 +257,25 @@ export function AccountOrganizer({
         {organizer.message}
       </VisuallyHidden>
       <DataGrid
+        {...gridOptions}
         containerStyle={{ flex: 1, minHeight: 200 }}
         rowData={rows}
         columnDefs={columnDefs}
-        defaultColDef={{ sortable: false, filter: false, resizable: true }}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          flex: 1,
-          minWidth: 280,
-          rowDrag: ({ data }) => !!data && !data.isVirtualArchivedGroup,
-          cellRendererParams: { suppressCount: true },
-        }}
         treeData
         treeDataParentIdField="parentId"
-        getRowId={({ data }) => data.id}
         groupDefaultExpanded={1}
-        isGroupOpenByDefault={({ rowNode }) =>
-          !rowNode.data?.isVirtualArchivedGroup && rowNode.level === 0
-        }
-        rowSelection={{
-          mode: "multiRow",
-          groupSelects: "self",
-          headerCheckbox: false,
-          enableClickSelection: false,
-          isRowSelectable: (node) => !node.data?.isVirtualArchivedGroup,
-          checkboxes: ({ data }) => !!data && !data.isVirtualArchivedGroup,
-        }}
-        selectionColumnDef={{ pinned: "left", width: 48, resizable: false }}
-        onGridReady={({ api: readyApi }) => setApi(readyApi)}
-        onSelectionChanged={({ api: gridApi }) =>
-          setSelected(
-            gridApi
-              .getSelectedRows()
-              .filter((row) => !row.isVirtualArchivedGroup),
-          )
-        }
+        onGridReady={onGridReady}
+        onSelectionChanged={onSelectionChanged}
         rowDragMultiRow
         rowDragManaged={false}
         suppressMoveWhenRowDragging
-        suppressRowDrag={organizer.blocked}
         rowDragText={drag.dragText}
         isRowValidDropPosition={drag.validateDrop}
         onRowDragEnter={drag.start}
         onRowDragEnd={drag.finish}
         onRowDragLeave={drag.leave}
         onRowDragCancel={drag.cancel}
-        rowClassRules={{
-          [styles.recent]: ({ data }) =>
-            !!data && organizer.revealIds.includes(data.id),
-        }}
+        rowClassRules={rowClassRules}
       />
       {dialogItems && (
         <MoveDialog
