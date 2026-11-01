@@ -90,9 +90,10 @@ test("asset class grouping survives legacy redirects, reload, history and ledger
     .first();
   await expect(chfUnit).toHaveAttribute("aria-expanded", "false");
   await chfUnit.locator(".ag-group-contracted").click();
+  await expect(page.locator(".ag-row.ag-opacity-zero")).toHaveCount(0);
   await page
     .locator(
-      `[row-id="${seeded.cashAccount.id}"] [col-id="ag-Grid-AutoColumn"]`,
+      `.ag-row:not(.ag-opacity-zero)[row-id="${seeded.cashAccount.id}"] [col-id="ag-Grid-AutoColumn"]`,
     )
     .dblclick();
   await expect(page).toHaveURL(
