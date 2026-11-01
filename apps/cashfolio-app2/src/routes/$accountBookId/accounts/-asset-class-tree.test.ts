@@ -1,56 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
-import type { ClassificationNode } from "@/shared/asset-class";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import { calculateBalanceInReferenceCurrencyByGroupId } from "./-page-data";
 import {
   buildAssetClassTree,
-  projectAssetClassGainLoss,
   assetClassRowId,
   unitRowId,
   archivedClassRowId,
   UNCLASSIFIED_ROW_ID,
 } from "./-asset-class-tree";
 import type { TreeRow } from "./-page-types";
-
-const chfUnitId = (classId: string) =>
-  unitRowId(assetClassRowId(classId), "CURRENCY:CHF");
-
-function account(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
-  return {
-    id,
-    name: id,
-    nodeType: "account",
-    type: "BALANCE",
-    equityAccountSubtype: null,
-    unit: "CURRENCY",
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    balance: 10,
-    balanceInReferenceCurrency: 10,
-    openingBalance: null,
-    parentId: "broker",
-    groupId: "broker",
-    sortOrder: 2,
-    isActive: true,
-    deletable: true,
-    deleteDisabledReason: undefined,
-    archivable: true,
-    archiveDisabledReason: undefined,
-    unarchivable: false,
-    unarchiveDisabledReason: "Original constraint",
-    assetClassId: "swiss",
-    ...overrides,
-  };
-}
-const classes: ClassificationNode[] = [
-  { id: "swiss", name: "Swiss", parentId: "equities", sortOrder: 0 },
-  { id: "empty", name: "Empty", parentId: null, sortOrder: 0 },
-  { id: "equities", name: "Equities", parentId: null, sortOrder: 2 },
-  { id: "cash", name: "Cash", parentId: null, sortOrder: 1 },
-];
+import { account, chfUnitId, classes } from "./-asset-class-test-fixtures";
 const originalGroups = [
   account("bank", {
     nodeType: "accountGroup",
@@ -353,92 +312,5 @@ describe("asset class account projection", () => {
       balances.get(archivedClassRowId(chfUnitId("swiss")))
         ?.hasMissingReferenceBalance,
     ).toBe(true);
-  });
-});
-
-describe("asset class gain/loss", () => {
-  const diagnostic = { date: "2026-01-01", message: "Valuation unavailable." };
-  const result = (
-    id: string,
-    realized: number | null,
-    unrealized: number | null,
-    applicable = true,
-  ) => ({
-    id,
-    applicable,
-    summary: {
-      realizedGainLoss: realized,
-      unrealizedGainLoss: unrealized,
-      totalGainLoss:
-        realized == null || unrealized == null ? null : realized + unrealized,
-    },
-    diagnostics: unrealized == null && applicable ? [diagnostic] : [],
-  });
-  const total = result("total", 100, 20);
-  const data: AccountGainLossSummaries = {
-    referenceCurrency: "CHF",
-    startDate: "2026-01-01",
-    asOfDate: "2026-02-01",
-    rows: [
-      result("a", 0.1, 2),
-      result("b", 0.2, null),
-      result("c", null, null, false),
-      result("broker", 9999, 9999),
-    ],
-    total,
-  };
-  it("uses leaves only, sums exactly, propagates partial components and diagnostics, and preserves total", () => {
-    const rows = buildAssetClassTree(
-      [account("a"), account("b", { isActive: false }), account("c")],
-      classes,
-    );
-    const projected = projectAssetClassGainLoss(data, rows)!;
-    expect(projected.total).toBe(total);
-    expect(
-      projected.rows.find((row) => row.id === assetClassRowId("equities")),
-    ).toMatchObject({
-      applicable: true,
-      summary: {
-        realizedGainLoss: 0.3,
-        unrealizedGainLoss: null,
-        totalGainLoss: null,
-      },
-      diagnostics: [diagnostic],
-    });
-    expect(
-      projected.rows.find((row) => row.id === chfUnitId("swiss")),
-    ).toMatchObject({
-      summary: {
-        realizedGainLoss: 0.3,
-        unrealizedGainLoss: null,
-        totalGainLoss: null,
-      },
-      diagnostics: [diagnostic],
-    });
-    expect(
-      projected.rows.find(
-        (row) => row.id === archivedClassRowId(chfUnitId("swiss")),
-      )?.summary.realizedGainLoss,
-    ).toBe(0.2);
-    expect(projected.rows.find((row) => row.id === "a")).toEqual(data.rows[0]);
-  });
-  it("withholds missing leaf results and preserves all-inapplicable branches", () => {
-    const rows = buildAssetClassTree(
-      [
-        account("a"),
-        account("missing"),
-        account("c", { assetClassId: "cash" }),
-      ],
-      classes,
-    );
-    const projected = projectAssetClassGainLoss(data, rows)!;
-    expect(
-      projected.rows.find((row) => row.id === assetClassRowId("equities"))
-        ?.summary.realizedGainLoss,
-    ).toBeNull();
-    expect(
-      projected.rows.find((row) => row.id === assetClassRowId("cash")),
-    ).toMatchObject({ applicable: false, summary: { totalGainLoss: null } });
-    expect(projectAssetClassGainLoss(undefined, rows)).toBeUndefined();
   });
 });

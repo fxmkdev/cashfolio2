@@ -4,11 +4,11 @@ import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import {
   buildAssetClassTree,
-  projectAssetClassGainLoss,
   assetClassRowId,
   unitRowId,
   archivedClassRowId,
 } from "./-asset-class-tree";
+import { projectAssetClassGainLoss } from "./-asset-class-gain-loss";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
 

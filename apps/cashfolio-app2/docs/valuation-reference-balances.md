@@ -86,7 +86,9 @@ In Asset Class, archived accounts appear in a collapsed **Archived** branch
 within their assigned unit group, regardless of their original group hierarchy.
 Class and unit totals include all descendant accounts exactly once, including
 archived and collapsed items; the overall totals match Account Structure. Each
-view remembers expansion independently for the session. New unit groups start
+view aggregates reference balances and gain/loss in decimal precision through
+all ancestors, converting to numbers only for final display values. Each view
+remembers expansion independently for the session. New unit groups start
 collapsed. Switching grouping clears account selection. Class and unit headings
 support descendant account selection for bulk assignments but have no
 account-group mutation actions. Account actions retain their existing
@@ -94,7 +96,7 @@ eligibility rules; sibling reordering is available only in Account Structure.
 **Manage Asset Classes** opens Settings → Classifications. Grouping changes only
 presentation, never stored account groups or valuation calculations.
 
-Accounts shows balance accounts and active/archived real items together.
+In Account Structure, active and archived real accounts/groups appear together.
 Directly archived children of an active group, or archived roots, appear beneath
 a virtual **Archived** group. Archived real groups retain their complete
 original subtrees; no further virtual wrappers are inserted inside them. Empty

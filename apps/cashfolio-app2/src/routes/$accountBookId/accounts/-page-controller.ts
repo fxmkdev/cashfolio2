@@ -2,10 +2,8 @@ import {
   useAssetClasses,
   useRefreshAssetClasses,
 } from "@/classification-context";
-import {
-  buildAssetClassTree,
-  projectAssetClassGainLoss,
-} from "./-asset-class-tree";
+import { buildAssetClassTree } from "./-asset-class-tree";
+import { projectAssetClassGainLoss } from "./-asset-class-gain-loss";
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";

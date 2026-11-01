@@ -2,13 +2,6 @@ import {
   classificationOptions,
   type ClassificationNode,
 } from "@/shared/asset-class";
-import {
-  aggregateAccountGainLoss,
-  EMPTY_GAIN_LOSS_SUMMARY,
-  type AccountGainLossSummaries,
-  type AccountGainLossResult,
-} from "@/shared/account-gain-loss";
-import { toMoneyNumber } from "@/shared/money";
 import { getGainLossInvestmentGroup } from "@/shared/investment-group";
 import type { TreeRow } from "./-page-types";
 
@@ -103,6 +96,22 @@ function appendUnitGroups(result: TreeRow[], units: Map<string, UnitGroup>) {
   }
 }
 
+function classHeadings(
+  classes: readonly ClassificationNode[],
+  occupied: Set<string>,
+) {
+  return classes
+    .filter((node) => occupied.has(node.id))
+    .map((node) =>
+      heading(
+        assetClassRowId(node.id),
+        node.name,
+        node.parentId ? assetClassRowId(node.parentId) : undefined,
+        "assetClass",
+      ),
+    );
+}
+
 /** Project only account leaves; original groups are used solely for name context. */
 export function buildAssetClassTree(
   rows: TreeRow[],
@@ -115,9 +124,11 @@ export function buildAssetClassTree(
       )
       .map((row) => [row.id, row]),
   );
-  const orderedClasses = classificationOptions(classes);
   const classById = new Map(classes.map((node) => [node.id, node]));
-  const validIds = new Set(orderedClasses.map((node) => node.value));
+  const orderedClasses = classificationOptions(classes).map((node) =>
+    classById.get(node.value)!,
+  );
+  const validIds = new Set(orderedClasses.map((node) => node.id));
   const units = new Map<string, UnitGroup>();
   const occupied = new Set<string>();
   for (const account of rows) {
@@ -147,78 +158,11 @@ export function buildAssetClassTree(
     });
     units.set(id, unit);
   }
-  const result: TreeRow[] = orderedClasses
-    .filter((node) => occupied.has(node.value))
-    .map(({ value }) => {
-      const node = classById.get(value)!;
-      return heading(
-        assetClassRowId(node.id),
-        node.name,
-        node.parentId ? assetClassRowId(node.parentId) : undefined,
-        "assetClass",
-      );
-    });
+  const result = classHeadings(orderedClasses, occupied);
   if ([...units.values()].some((unit) => unit.parentId === UNCLASSIFIED_ROW_ID))
     result.push(
       heading(UNCLASSIFIED_ROW_ID, "Unclassified", undefined, "unclassified"),
     );
   appendUnitGroups(result, units);
   return result;
-}
-
-/** Reuse leaf calculations, never the server's account-structure group totals. */
-export function projectAssetClassGainLoss(
-  data: AccountGainLossSummaries | undefined,
-  rows: TreeRow[],
-): AccountGainLossSummaries | undefined {
-  if (!data) return undefined;
-  const byId = new Map(data.rows.map((row) => [row.id, row]));
-  const children = new Map<string, TreeRow[]>();
-  for (const row of rows) {
-    if (!row.parentId) continue;
-    const siblings = children.get(row.parentId) ?? [];
-    siblings.push(row);
-    children.set(row.parentId, siblings);
-  }
-  const results = new Map<string, AccountGainLossResult>();
-  const summarize = (row: TreeRow): AccountGainLossResult => {
-    const cached = results.get(row.id);
-    if (cached) return cached;
-    if (row.nodeType === "account")
-      return (
-        byId.get(row.id) ?? {
-          applicable: true,
-          summary: EMPTY_GAIN_LOSS_SUMMARY,
-          diagnostics: [
-            { date: data.asOfDate, message: "Gain/loss is unavailable." },
-          ],
-        }
-      );
-    const aggregated = aggregateAccountGainLoss(
-      (children.get(row.id) ?? []).map(summarize),
-    );
-    const result = {
-      ...aggregated,
-      summary: {
-        realizedGainLoss:
-          aggregated.summary.realizedGainLoss == null
-            ? null
-            : toMoneyNumber(aggregated.summary.realizedGainLoss),
-        unrealizedGainLoss:
-          aggregated.summary.unrealizedGainLoss == null
-            ? null
-            : toMoneyNumber(aggregated.summary.unrealizedGainLoss),
-        totalGainLoss:
-          aggregated.summary.totalGainLoss == null
-            ? null
-            : toMoneyNumber(aggregated.summary.totalGainLoss),
-      },
-    };
-    results.set(row.id, result);
-    return result;
-  };
-  return {
-    ...data,
-    rows: rows.map((row) => ({ id: row.id, ...summarize(row) })),
-  };
 }
