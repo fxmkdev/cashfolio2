@@ -482,18 +482,40 @@ function AccountsPageStoryHarness({
     projectedRows,
     !isEquityTab,
   );
-  const rows = useRowsWithGroupTrackingMethods(
+  const classifiedRows = useRowsWithGroupTrackingMethods(
     sourceRowsByParentKey,
     rowsWithGroupAssetClasses,
     !isEquityTab,
   );
-  const rowsByParentKey = useRowsByParentKey(rows);
+  const rowsByParentKey = useRowsByParentKey(classifiedRows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
     reorderingRow,
   );
   const balanceInReferenceCurrencyByGroupId =
-    useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, rows, !isEquityTab);
+    useBalanceInReferenceCurrencyByGroupId(
+      rowsByParentKey,
+      classifiedRows,
+      !isEquityTab,
+    );
+  const rows = useMemo(
+    () =>
+      grouping === "assetClass"
+        ? classifiedRows.map((row) => {
+            if (row.nodeType !== "accountGroup") return row;
+            const aggregation = balanceInReferenceCurrencyByGroupId.get(row.id);
+            return {
+              ...row,
+              balanceInReferenceCurrency:
+                !aggregation?.hasAccountDescendants ||
+                aggregation.hasMissingReferenceBalance
+                  ? null
+                  : aggregation.sum,
+            };
+          })
+        : classifiedRows,
+    [grouping, classifiedRows, balanceInReferenceCurrencyByGroupId],
+  );
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
     rows,
     !isEquityTab,
@@ -891,7 +913,11 @@ export const AssetClassSwitchingAndExpansion: Story = {
       canvasElement.querySelector<HTMLElement>(
         '.ag-row:not(.ag-opacity-zero)[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
       );
-    await waitFor(() => expect(checkingName()).toBeVisible());
+    await waitFor(() => {
+      const name = checkingName();
+      if (!name) throw new Error("Initial Checking row is missing");
+      expect(name).toBeVisible();
+    });
     const standardRowHeight = checkingName()!
       .closest<HTMLElement>(".ag-row")!
       .getBoundingClientRect().height;
@@ -899,11 +925,23 @@ export const AssetClassSwitchingAndExpansion: Story = {
       canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
     ).toBeVisible();
     const collapse = async (id: string) => {
-      const selector = `[row-id="${id}"] .ag-group-expanded`;
+      await waitFor(() =>
+        expect(
+          canvasElement.querySelector(".ag-row.ag-opacity-zero"),
+        ).toBeNull(),
+      );
+      const selector = `.ag-row:not(.ag-opacity-zero)[row-id="${id}"] .ag-group-expanded`;
       await waitFor(() =>
         expect(canvasElement.querySelector(selector)).not.toBeNull(),
       );
       await userEvent.click(canvasElement.querySelector(selector)!);
+      await waitFor(() =>
+        expect(
+          canvasElement.querySelector(
+            `.ag-row:not(.ag-opacity-zero)[row-id="${id}"]`,
+          ),
+        ).toHaveAttribute("aria-expanded", "false"),
+      );
     };
     await collapse("portfolio");
     await chooseAccountGrouping(canvasElement, "Asset Class");
@@ -979,7 +1017,12 @@ export const AssetClassSwitchingAndExpansion: Story = {
       ).not.toBeNull(),
     );
     await expandAssignmentGroup(canvasElement, "portfolio");
-    await waitFor(() => expect(checkingName()).toBeVisible());
+    await waitFor(() => {
+      const name = checkingName();
+      if (!name)
+        throw new Error("Checking row is missing after reopening Portfolio");
+      expect(name).toBeVisible();
+    });
     await expect(checkingName()).toHaveTextContent(/^Checking$/);
     await expect(
       checkingName()!.closest<HTMLElement>(".ag-row")!.getBoundingClientRect()
@@ -2395,11 +2438,21 @@ function assignmentCheckbox(canvasElement: HTMLElement, id: string) {
 }
 
 async function expandAssignmentGroup(canvasElement: HTMLElement, id: string) {
-  const selector = `.ag-row[row-id="${id}"] .ag-group-contracted`;
+  await waitFor(() =>
+    expect(canvasElement.querySelector(".ag-row.ag-opacity-zero")).toBeNull(),
+  );
+  const selector = `.ag-row:not(.ag-opacity-zero)[row-id="${id}"] .ag-group-contracted`;
   await waitFor(() =>
     expect(canvasElement.querySelector(selector)).not.toBeNull(),
   );
   await userEvent.click(canvasElement.querySelector(selector)!);
+  await waitFor(() =>
+    expect(
+      canvasElement.querySelector(
+        `.ag-row:not(.ag-opacity-zero)[row-id="${id}"]`,
+      ),
+    ).toHaveAttribute("aria-expanded", "true"),
+  );
 }
 
 export const BulkGroupCheckboxSelection: Story = {
