@@ -32,8 +32,9 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await expect(
     page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
   ).toBeVisible();
+  // Open root reordering from the first root; later roots may be virtualized.
   await clickPinnedRowAction({
-    row: page.locator('[row-id="OTHER_ASSETS"]').first(),
+    row: page.locator('[row-id="CASH_AND_CASH_EQUIVALENTS"]').first(),
     actionLabel: "Reorder Siblings",
   });
   const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
