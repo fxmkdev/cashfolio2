@@ -227,7 +227,7 @@ describe("preview target isolation", () => {
     role: "cashfolio_pr_42_seed",
     migrationRole: "cashfolio_pr_42_app",
   };
-  it("accepts exact preview-only database and role configuration", () => {
+  it("accepts separate preview database and role configuration on staging’s exact host", () => {
     expect(
       readSeedConfig({
         ...env,
@@ -237,6 +237,42 @@ describe("preview target isolation", () => {
         SEED_DATABASE_URL: `postgresql://${previewTarget.role}:secret@${previewTarget.hostname}/${previewTarget.database}?sslmode=verify-full`,
       }).target,
     ).toEqual(previewTarget);
+  });
+  it("rejects staging/preview connection swaps even with identical Neon host identifiers", async () => {
+    const previewUrl = `postgresql://${previewTarget.role}:secret@${previewTarget.hostname}/${previewTarget.database}?sslmode=verify-full`;
+    for (const [expected, wrongUrl] of [
+      [previewTarget, url],
+      [target, previewUrl],
+    ] as const) {
+      expect(() => parseVerifiedConnection(wrongUrl, expected)).toThrow();
+    }
+    const connection = (identity: unknown) =>
+      ({ $queryRaw: vi.fn().mockResolvedValue([identity]) }) as unknown as Pick<
+        Prisma.TransactionClient,
+        "$queryRaw"
+      >;
+    for (const [expected, other] of [
+      [previewTarget, target],
+      [target, previewTarget],
+    ] as const) {
+      const identity = {
+        projectId: expected.projectId,
+        branchId: expected.branchId,
+        endpointId: expected.endpointId,
+        database: expected.database,
+        role: expected.role,
+      };
+      await expect(
+        verifyServerIdentity(connection(identity), expected),
+      ).resolves.toBeUndefined();
+      for (const key of ["database", "role"] as const)
+        await expect(
+          verifyServerIdentity(
+            connection({ ...identity, [key]: other[key] }),
+            expected,
+          ),
+        ).rejects.toThrow("no replacement");
+    }
   });
   it.each([
     { environment: "prod" },

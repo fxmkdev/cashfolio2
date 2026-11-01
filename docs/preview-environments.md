@@ -1,10 +1,10 @@
 # Preview environments
 
 Every open, same-repository PR gets a Fly app and an isolated PostgreSQL
-database on one fixed, preview-only Neon project. Deployment applies the PR's
-migrations and replaces application data with that PR's synthetic dataset.
-Preview edits are disposable: every deployment replaces them. Production remains
-migration-only.
+database on staging’s existing fixed Neon branch and endpoint. Deployment
+applies the PR's migrations and replaces application data with that PR's
+synthetic dataset. Preview edits are disposable: every deployment replaces them.
+Production remains migration-only.
 
 ## Deployment lifecycle
 
@@ -22,7 +22,7 @@ migration-only.
    open, same-repository PR, current head SHA and configured image repository.
    It starts after a successful image build; unrelated CI checks run
    independently.
-4. Through a verified connection to the fixed preview host, it creates or reuses
+4. Through a verified connection to staging’s fixed host, it creates or reuses
    the database and its two restricted roles. It stages only that preview's
    credentials on the preview Fly app, rechecks the PR head, then deploys the
    exact image digest. Later deployments reuse the database, rather than
@@ -38,8 +38,10 @@ The preview job retains the required check name
 normally; no custom commit-status publisher is needed.
 
 No preview deployment creates, copies, resets or deletes a Neon branch. Neon
-still hosts PostgreSQL on its fixed default branch; its project/branch/endpoint
-IDs are used only to verify the configured server identity.
+hosts staging and preview databases on the same existing staging branch;
+project/branch/endpoint IDs remain exact server identity checks. Staging keeps
+its existing database. Production must use a separate endpoint that rejects
+preview credentials.
 
 ## Names and isolation
 
@@ -63,7 +65,15 @@ have independent passwords. The app role owns only its database and runs
 migrations; the seed role receives only application-table CRUD, schema usage and
 required function execution. Neither role can create databases or roles, bypass
 RLS, or inherit privileged Neon membership. Database access for `PUBLIC` is
-revoked.
+revoked for each preview database. Staging also requires explicit CONNECT grants
+for its existing consumers before PUBLIC connection access is revoked, so
+preview credentials cannot connect to staging even though the hostname is the
+same. Privileged staging operators may access preview databases; separate
+credentials do not constrain Neon administrative roles.
+
+Staging and previews share compute capacity and availability. A busy preview can
+slow staging, and a host outage affects both. Their application tables,
+migrations and seeded data remain in separate databases.
 
 Passwords are deterministically derived with HMAC-SHA-256 from a private
 provisioning-only key, PR number and role kind. Retries do not rotate active
@@ -82,13 +92,35 @@ cache revisions prevent stale calculations after seeding; no Redis flush occurs.
 
 ## One-time configuration — complete before merge
 
-### Fixed preview database host
+### Shared staging database host
 
-Create a **new, empty, preview-only Neon project**, using PostgreSQL 17 or newer
-and a fixed direct endpoint. It must contain no production or staging data,
-credentials, or inherited roles. Keep staging on its existing database.
+Use **staging’s existing PostgreSQL 17+ Neon branch and fixed direct endpoint**.
+Do not create a new project or recreate staging’s database. Confirm production
+uses a different endpoint and that no production database is hosted on this
+shared staging endpoint.
 
-Using an independently authorized SQL session on this new project only:
+First configure staging’s dedicated seed role as described in
+[Synthetic staging data](staging-database-refresh.md). Inventory existing
+staging connection users, including migration, seed, operator and any other
+service roles. Using an independently authorized operator session on the staging
+branch, grant those users explicit CONNECT access **before** removing PUBLIC
+access. For the example staging database and roles (substitute the actual
+reviewed names):
+
+```sql
+GRANT CONNECT ON DATABASE neondb TO neondb_owner, cashfolio_staging_seed;
+-- Grant CONNECT to every other existing consumer that needs this database too.
+REVOKE CONNECT ON DATABASE neondb FROM PUBLIC;
+```
+
+This changes connection access only. Preserve existing database, schema and
+table privileges, ownership and passwords. Verify fresh connections with each
+existing consumer still work. Apply the same reviewed grant-before-revoke
+process to any other application databases on this endpoint. Do not
+blanket-revoke permissions on maintenance databases or change staging ownership.
+
+Then create the restricted preview provisioner and its separate control database
+on this same staging host:
 
 ```sql
 CREATE ROLE cashfolio_preview_provisioner
@@ -98,10 +130,6 @@ CREATE ROLE cashfolio_preview_provisioner
 GRANT cashfolio_preview_provisioner TO CURRENT_USER WITH SET TRUE;
 CREATE DATABASE cashfolio_preview_control OWNER cashfolio_preview_provisioner;
 REVOKE ALL ON DATABASE cashfolio_preview_control FROM PUBLIC;
--- Also restrict the project's initial database and every other connectable
--- database on this preview-only host. Adjust the initial name if necessary.
-REVOKE ALL ON DATABASE neondb FROM PUBLIC;
-REVOKE ALL ON DATABASE postgres FROM PUBLIC;
 ```
 
 PostgreSQL 17 automatically grants a newly created role back to its creator with
@@ -112,9 +140,13 @@ to the provisioner without requiring a superuser.
 The provisioner uses `CREATEROLE` to create restricted SQL roles and retains
 membership in its created roles for ownership/cleanup operations. It must not
 belong to `neon_superuser`. Check the approved Neon project/branch/endpoint,
-current database and current role through its connection. Its identity must not
-exist on staging or production; independently verify production authentication
-with preview credentials is rejected, without recording passwords.
+current database and current role through its control-database connection. Do
+not grant it staging database ownership, staging role membership or
+`neon_superuser` membership. Its role and each preview’s roles must be absent
+from production; independently verify production authentication with preview
+credentials is rejected, without recording passwords. A network failure is not
+proof of credential isolation. Never copy these roles into production by cloning
+the shared staging branch.
 
 ### Existing preview GitHub environment
 
@@ -125,11 +157,11 @@ or manual reviewer gate is required.
 
 Same-repository contributors are trusted with this environment's preview
 provisioning credentials: PRs can change both the workflow and its scripts.
-These credentials can manage all databases and roles on the dedicated preview
-host, and the password-derivation key can derive other previews' passwords.
-Forks are excluded from image publishing, provisioning and deployment. This is a
-contributor trust policy; destination checks still protect against accidental
-misconfiguration.
+These credentials can create databases and roles on the shared staging host and
+manage the preview resources they own. The password-derivation key can derive
+other previews’ passwords. Forks are excluded from image publishing,
+provisioning and deployment. This is a contributor trust policy; destination
+checks still protect against accidental misconfiguration.
 
 Secrets in this environment:
 
@@ -146,14 +178,16 @@ Secrets in this environment:
   `LOGTO_MANAGEMENT_API_APP_SECRET`, `CURRENCYLAYER_API_KEY`,
   `COINLAYER_API_KEY`, `MARKETSTACK_API_KEY`, `STAGING_REDIS_URL`.
 
-Variable `PREVIEW_DATABASE_TARGET` is the independently reviewed exact host:
+Variable `PREVIEW_DATABASE_TARGET` uses staging’s exact hostname, project,
+branch and direct endpoint identifiers, with the preview control database and
+provisioner role rather than staging’s application database or roles:
 
 ```json
 {
-  "hostname": "ep-preview-example.eu-central-1.aws.neon.tech",
-  "projectId": "preview-project-id",
-  "branchId": "br-fixed-preview-host",
-  "endpointId": "ep-preview-example",
+  "hostname": "ep-approved-staging.eu-central-1.aws.neon.tech",
+  "projectId": "approved-project-id",
+  "branchId": "br-approved-staging",
+  "endpointId": "ep-approved-staging",
   "database": "cashfolio_preview_control",
   "role": "cashfolio_preview_provisioner"
 }
@@ -190,11 +224,11 @@ optional staging seed enablement flag.
 
 ## Cutover and operation
 
-Configure the preview environment and staging seed settings before rollout. A
-push to an open same-repository PR, or a rerun of its Build workflow, provisions
-and deploys the preview directly. Missing configuration fails deployment;
-seeding is never silently skipped. No default-branch deployment controller
-bootstrap is required.
+Configure the shared-host connection grants, preview environment and staging
+seed settings before rollout. A push to an open same-repository PR, or a rerun
+of its Build workflow, provisions and deploys the preview directly. Missing
+configuration fails deployment; seeding is never silently skipped. No
+default-branch deployment controller bootstrap is required.
 
 On its next deployment, an existing preview switches to its newly provisioned
 empty database, then migrates and seeds it. Previous preview data is disposable

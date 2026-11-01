@@ -29,7 +29,7 @@ deployment; changing them does not immediately modify deployed data.
 The `Refresh staging database` workflow still rebuilds and redeploys staging
 daily at 03:30 Europe/Zurich, and supports manual dispatch from `main`. Staging
 stays on its existing database. Preview databases are independent, initially
-empty databases on a fixed preview-only host; see
+empty databases on staging’s existing fixed host; see
 [Preview environments](preview-environments.md).
 
 The history covers the rolling three years through today's Zurich calendar date,
@@ -372,8 +372,13 @@ rejection from the reachable production service. A network failure, timeout, or
 DNS error does not establish credential isolation. Do not record the password or
 connection string in the evidence. Keep only the reviewed endpoint identifiers
 and the successful staging/failed production authentication outcome. A uniquely
-named staging-only role provides isolation without changing projects. The fixed
-preview host has independent roles and receives no staging seed secrets.
+named staging-only role provides isolation from production without changing
+projects. Previews use separate databases and credentials on this same staging
+branch and endpoint; they receive no staging seed secrets. Before enabling
+preview provisioning, grant CONNECT explicitly to every existing staging
+consumer, then revoke PUBLIC connection access as described in
+[Preview environments](preview-environments.md). This preserves staging access
+while denying preview-role connections to its database.
 
 ## Validate before deployment
 

@@ -12,7 +12,7 @@ import {
   verifiedProvisioner,
   serializeFlySecrets,
 } from "./runtime.ts";
-import { prNumber, previewNames } from "./names.ts";
+import { prNumber } from "./names.ts";
 import {
   parseApprovedTarget,
   readExternalIds,
@@ -29,14 +29,9 @@ try {
   );
   const pr = await api<PullRequest>(`/pulls/${number}`);
   validatePr(pr, process.env.GITHUB_REPOSITORY!, sha);
-  const image = validatePreviewImage(
+  validatePreviewImage(
     requireValue(process.env, "PREVIEW_IMAGE"),
     requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP"),
-  );
-  const names = previewNames(number, pr.head.ref, pr.title);
-  await appendFile(
-    process.env.GITHUB_OUTPUT!,
-    `fly_app=${names.flyApp}\npreview_hostname=${names.hostname}\npreview_url=${names.previewUrl}\nimage=${image}\n`,
   );
   const testerIds = readExternalIds(
     requireValue(process.env, "SEED_USER_EXTERNAL_IDS"),
@@ -139,7 +134,7 @@ try {
     );
     await appendFile(
       process.env.GITHUB_OUTPUT!,
-      `fly_app=${preview.flyApp}\npreview_hostname=${preview.hostname}\npreview_url=${preview.previewUrl}\nimage=${image}\ndatabase=${preview.database}\n`,
+      `fly_app=${preview.flyApp}\npreview_hostname=${preview.hostname}\npreview_url=${preview.previewUrl}\ndatabase=${preview.database}\n`,
     );
   } finally {
     await client.end();
