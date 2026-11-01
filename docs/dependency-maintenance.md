@@ -292,7 +292,7 @@ integrity), engines, and the Docker migration-tools stage. Published on October
 9 at 12:22 UTC, it passed the one-day release-age threshold when rechecked on
 October 10 before the final review. pnpm 12.11.2 remains too young. The existing
 one-day policy is now explicit as `minimumReleaseAge: 1440`; retain the narrow
-`@fxmk/releaser@0.5.6` exception and the reviewed `allowBuilds` entries.
+`@fxmk/releaser@0.5.7` exception and the reviewed `allowBuilds` entries.
 
 The stable default installation mode is retained. Review pnpm 12's workspace
 setting validation, engine enforcement, cyclic peer resolution, platform binary

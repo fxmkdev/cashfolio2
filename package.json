@@ -11,7 +11,7 @@
     }
   },
   "devDependencies": {
-    "@fxmk/releaser": "0.5.6",
+    "@fxmk/releaser": "0.5.7",
     "github-actionlint": "1.7.12",
     "prettier": "3.9.9"
   },
