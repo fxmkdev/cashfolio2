@@ -79,6 +79,7 @@ const db = new PrismaClient({
 let databaseCreated = false;
 let applicationDb: PrismaClient | undefined;
 let mutations: typeof import("./accounts/accounts-mutations");
+let organize: typeof import("./accounts/organize");
 let transactions: typeof import("./transactions/transactions-mutations");
 let settings: typeof import("./accounts/account-book-settings");
 let boundary: typeof import("./account-book-mutation.server");
@@ -187,6 +188,7 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     applicationDb = (await import("../prisma.server")).prisma;
     boundary = await import("./account-book-mutation.server");
     mutations = await import("./accounts/accounts-mutations");
+    organize = await import("./accounts/organize");
     transactions = await import("./transactions/transactions-mutations");
     settings = await import("./accounts/account-book-settings");
   });
@@ -216,6 +218,112 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
         `DROP DATABASE "${databaseName}" WITH (FORCE)`,
       );
     await admin.$disconnect();
+  });
+
+  it("serializes competing organize moves and rejects the stale hierarchy", async () => {
+    const snapshot = await organize.getAccountOrganizeData({
+      data: { accountBookId: bookId },
+    });
+    const move = (id: string, parentId: string) =>
+      organize.moveAccountTreeItems({
+        data: {
+          accountBookId: bookId,
+          version: snapshot.version,
+          items: [{ id, nodeType: "accountGroup" }],
+          parentId,
+          placement: "last",
+        },
+      });
+    const outcomes = await race(
+      () => move("A", "B"),
+      () => move("B", "A"),
+    );
+    expectRejected(outcomes, "hierarchy changed");
+    expect(
+      (
+        await db.accountGroup.findUniqueOrThrow({
+          where: { id_accountBookId: { id: "A", accountBookId: bookId } },
+        })
+      ).parentGroupId,
+    ).toBe("B");
+  });
+
+  it("rejects an Undo after a concurrent group edit without replacing the newer state", async () => {
+    const snapshot = await organize.getAccountOrganizeData({
+      data: { accountBookId: bookId },
+    });
+    const moved = await organize.moveAccountTreeItems({
+      data: {
+        accountBookId: bookId,
+        version: snapshot.version,
+        items: [{ id: "A", nodeType: "accountGroup" }],
+        parentId: "B",
+        placement: "last",
+      },
+    });
+    const outcomes = await race(
+      () =>
+        mutations.updateAccountGroup({
+          data: { ...groupUpdate("B").data, name: "Renamed B" },
+        }),
+      () =>
+        organize.undoAccountTreeMove({
+          data: { accountBookId: bookId, undo: moved.undo! },
+        }),
+    );
+    expectRejected(outcomes, "hierarchy changed");
+    const groups = await db.accountGroup.findMany({
+      where: { accountBookId: bookId },
+    });
+    expect(groups.find((group) => group.id === "A")?.parentGroupId).toBe("B");
+    expect(groups.find((group) => group.id === "B")?.name).toBe("Renamed B");
+  });
+
+  it("rolls back organize cash propagation, parent/order changes and cache revision on a later database failure", async () => {
+    await mutations.createAccount({ data: account("Child", { groupId: "A" }) });
+    await db.accountGroup.update({
+      where: { id_accountBookId: { id: "B", accountBookId: bookId } },
+      data: { isCashAccount: true },
+    });
+    const snapshot = await organize.getAccountOrganizeData({
+      data: { accountBookId: bookId },
+    });
+    const revision = (
+      await db.accountBook.findUniqueOrThrow({ where: { id: bookId } })
+    ).periodCacheRevision;
+    await db.$executeRawUnsafe(
+      `CREATE FUNCTION reject_organize_update() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'organize write rejected'; END; $$ LANGUAGE plpgsql`,
+    );
+    await db.$executeRawUnsafe(
+      `CREATE TRIGGER reject_organize_update BEFORE UPDATE ON "AccountGroup" FOR EACH ROW WHEN (NEW.id = 'A') EXECUTE FUNCTION reject_organize_update()`,
+    );
+    try {
+      await expect(
+        organize.moveAccountTreeItems({
+          data: {
+            accountBookId: bookId,
+            version: snapshot.version,
+            items: [{ id: "A", nodeType: "accountGroup" }],
+            parentId: "B",
+            placement: "last",
+          },
+        }),
+      ).rejects.toThrow("organize write rejected");
+      expect(
+        await organize.getAccountOrganizeData({
+          data: { accountBookId: bookId },
+        }),
+      ).toEqual(snapshot);
+      expect(
+        (await db.accountBook.findUniqueOrThrow({ where: { id: bookId } }))
+          .periodCacheRevision,
+      ).toBe(revision);
+    } finally {
+      await db.$executeRawUnsafe(
+        `DROP TRIGGER reject_organize_update ON "AccountGroup"`,
+      );
+      await db.$executeRawUnsafe(`DROP FUNCTION reject_organize_update()`);
+    }
   });
 
   it.each(["update", "import"] as const)(

@@ -1,0 +1,27 @@
+.match {
+  --ag-row-background-color: var(--mantine-color-yellow-light);
+}
+
+.recent {
+  animation: reveal 2s ease-out;
+}
+
+@keyframes reveal {
+  from {
+    background-color: var(--mantine-color-blue-light);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.rootTarget {
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  padding: var(--mantine-spacing-xs);
+}
+
+.find {
+  flex: 1;
+  min-width: 180px;
+}

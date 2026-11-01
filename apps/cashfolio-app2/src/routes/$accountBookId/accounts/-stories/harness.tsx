@@ -1,4 +1,6 @@
 import { Box, Text } from "@mantine/core";
+import { useState } from "react";
+import { createOrganizerStoryApi } from "../-organize/story-fixtures";
 import { SettingsNavigation } from "../../settings/-settings-navigation";
 import { AccountsPageView } from "../-page-view";
 import { StoryControls } from "./controls";
@@ -7,6 +9,9 @@ import { getStoryViewProps } from "./view-props";
 import type { AccountsStoryOptions } from "./types";
 
 export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
+  const [organizerApi] = useState(() =>
+    options.organize ? createOrganizerStoryApi() : undefined,
+  );
   const model = useAccountsStoryModel(options);
   const { routing } = model;
   return (
@@ -15,7 +20,10 @@ export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
       {routing.isEquityTab && (
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
-      <AccountsPageView {...getStoryViewProps(model, options)} />
+      <AccountsPageView
+        {...getStoryViewProps(model, options)}
+        organizerApi={organizerApi}
+      />
       {options.routeSmoke && (
         <>
           <Text data-testid="router-path">{routing.pathname}</Text>

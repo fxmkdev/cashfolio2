@@ -1,6 +1,7 @@
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import type { AccountsMode, TabValue, TreeRow } from "../-page-types";
 export type AccountsStoryOptions = {
+  organize?: boolean;
   bulkAssignment?: boolean;
   assignmentFailsOnce?: boolean;
   rowsOverride?: TreeRow[];
