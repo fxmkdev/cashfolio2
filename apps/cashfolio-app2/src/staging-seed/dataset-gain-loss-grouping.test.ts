@@ -156,19 +156,24 @@ describe("staging gain/loss grouping demo", () => {
           totalGainLoss: -10,
           children: [
             {
-              label: "EUR",
+              label: "Bank Deposits",
               totalGainLoss: -10,
               children: [
                 {
-                  label: "Travel",
+                  label: "EUR",
                   totalGainLoss: -10,
-                  account: {
-                    id: "travel",
-                    assetClassId:
-                      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-                    explanation:
-                      "Grouped under Cash & Cash Equivalents based on the originating account: Everyday account CHF.",
-                  },
+                  children: [
+                    {
+                      label: "Travel",
+                      totalGainLoss: -10,
+                      account: {
+                        id: "travel",
+                        assetClassId: defaultAssetClassIds.BANK_DEPOSITS,
+                        explanation:
+                          "Grouped under Cash & Cash Equivalents / Bank Deposits based on the originating account: Everyday account CHF.",
+                      },
+                    },
+                  ],
                 },
               ],
             },

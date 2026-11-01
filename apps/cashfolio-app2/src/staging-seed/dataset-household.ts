@@ -69,53 +69,62 @@ export function householdAccounts(target: SeedBook) {
       ...unit,
       groupKey,
       isCashAccount: true,
-      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId:
+        key === "wallet"
+          ? defaultAssetClassIds.PHYSICAL_CASH
+          : defaultAssetClassIds.BANK_DEPOSITS,
       ...(key === "current" ? { statementImportCsvFormat } : undefined),
     });
   }
   for (const [key, name, groupKey, unit, assetClassId] of [
-    ["aapl", "Apple shares", "securities", AAPL, defaultAssetClassIds.EQUITIES],
+    [
+      "aapl",
+      "Apple shares",
+      "securities",
+      AAPL,
+      defaultAssetClassIds.LISTED_EQUITIES,
+    ],
     [
       "msft",
       "Microsoft shares",
       "securities",
       MSFT,
-      defaultAssetClassIds.EQUITIES,
+      defaultAssetClassIds.LISTED_EQUITIES,
     ],
     [
       "btc",
       "Bitcoin wallet",
       "crypto",
       BTC,
-      defaultAssetClassIds.DIGITAL_ASSETS,
+      defaultAssetClassIds.CRYPTOCURRENCIES,
     ],
     [
       "btc-transfer-source",
       "Bitcoin transfer source",
       "crypto",
       BTC,
-      defaultAssetClassIds.DIGITAL_ASSETS,
+      defaultAssetClassIds.CRYPTOCURRENCIES,
     ],
     [
       "btc-transfer-destination",
       "Bitcoin transfer destination",
       "crypto",
       BTC,
-      defaultAssetClassIds.DIGITAL_ASSETS,
+      defaultAssetClassIds.CRYPTOCURRENCIES,
     ],
     [
       "eth",
       "Ethereum wallet",
       "crypto",
       ETH,
-      defaultAssetClassIds.DIGITAL_ASSETS,
+      defaultAssetClassIds.CRYPTOCURRENCIES,
     ],
     [
       "pension",
       "Pillar 3a savings",
       "investments",
       CHF,
-      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+      defaultAssetClassIds.BANK_DEPOSITS,
     ],
   ] as const) {
     addAccount(target, key, name, AccountType.BALANCE, {
@@ -132,7 +141,7 @@ export function householdAccounts(target: SeedBook) {
     {
       ...CHF,
       groupKey: "investments",
-      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
+      assetClassId: defaultAssetClassIds.MULTI_ASSET_INVESTMENTS,
       trackingMethod: "TOTAL_PORTFOLIO_VALUE",
     },
   );
@@ -142,7 +151,6 @@ export function householdAccounts(target: SeedBook) {
   ]) {
     addAccount(target, key, name, AccountType.BALANCE, {
       ...CHF,
-      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
     });
   }
   for (const [key, name] of [

@@ -104,6 +104,47 @@ test("synthetic household data supports reports and three years of history", asy
   ).toBeChecked();
 });
 
+test("the default cash hierarchy rolls up populated sibling asset classes", async ({
+  page,
+}) => {
+  await page.goto(`/${seededBook("household").id}/report?period=2026-10`);
+  await selectReportGrouping(page, "Asset Class");
+  await selectSegmentedControlOption(
+    page.getByRole("radiogroup", { name: "Allocation Chart Type" }),
+    "Table",
+  );
+  const table = page.getByTestId("period-allocation-breakdown-table");
+  const row = (id: string) =>
+    table.locator(
+      `.ag-grid-scrolling-container > .ag-row[row-id="asset-class:${id}"]`,
+    );
+  const cash = row("CASH_AND_CASH_EQUIVALENTS");
+  await expect(cash).toBeVisible();
+  const expander = cash.locator(".ag-group-contracted");
+  if (await expander.isVisible()) await expander.click();
+  const deposits = row("BANK_DEPOSITS");
+  const physicalCash = row("PHYSICAL_CASH");
+  await expect(deposits).toBeVisible();
+  await expect(physicalCash).toBeVisible();
+  await expect(deposits).toHaveAttribute("aria-level", "2");
+  await expect(physicalCash).toHaveAttribute("aria-level", "2");
+  const amount = async (target: typeof cash) =>
+    new Decimal(
+      (await agGridCellByColId(target, "value").innerText()).replace(
+        /[^\d.-]/g,
+        "",
+      ),
+    );
+  expect((await amount(deposits)).isPositive()).toBe(true);
+  expect((await amount(physicalCash)).isPositive()).toBe(true);
+  expect(
+    (await amount(cash))
+      .minus((await amount(deposits)).plus(await amount(physicalCash)))
+      .abs()
+      .lessThanOrEqualTo("0.01"),
+  ).toBe(true);
+});
+
 test("USD investment grouping combines two active currency accounts", async ({
   page,
 }) => {
@@ -117,7 +158,8 @@ test("USD investment grouping combines two active currency accounts", async ({
   const table = page.getByTestId("period-gains-losses-breakdown-table");
   for (const id of [
     "asset-class:CASH_AND_CASH_EQUIVALENTS",
-    "gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:USD",
+    "asset-class:BANK_DEPOSITS",
+    "gain-loss-investment:BANK_DEPOSITS:CURRENCY:USD",
   ]) {
     const row = table.locator(
       `.ag-grid-scrolling-container > .ag-row[row-id="${id}"]`,
@@ -142,7 +184,7 @@ test("USD investment grouping combines two active currency accounts", async ({
   await expect(broker).toHaveCount(1);
   await expect(savings).toHaveCount(1);
   const group = table.locator(
-    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:USD"]',
+    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:BANK_DEPOSITS:CURRENCY:USD"]',
   );
   expect((await amount(savings)).isZero()).toBe(false);
   // Each level is independently rounded to cents at the response boundary.
@@ -174,10 +216,10 @@ test("the managed portfolio separates cash flows from explicit statement gains a
       agGridRowByText(page, "Managed Portfolio CHF"),
       "assetClass",
     ),
-  ).toHaveText("Other Assets");
+  ).toHaveText("Multi-Asset Investments");
   await page.goto(`/${household.id}/${portfolio.id}?period=2026-10`);
   await expect(
-    page.getByTitle("Asset Class: Other Assets", { exact: true }),
+    page.getByTitle("Asset Class: Multi-Asset Investments", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Managed Portfolio CHF", exact: true }),
@@ -206,12 +248,12 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     await expect(table).toBeVisible();
     const classRow = table
       .locator(".ag-grid-scrolling-container > .ag-row")
-      .filter({ hasText: /^Other Assets/ });
+      .filter({ hasText: /^Multi-Asset Investments/ });
     await expect(classRow).toBeVisible();
     const classExpander = classRow.locator(".ag-group-contracted");
     if (await classExpander.isVisible()) await classExpander.click();
     const investmentRow = table.locator(
-      '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:OTHER_ASSETS:managed-portfolios"]',
+      '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:MULTI_ASSET_INVESTMENTS:managed-portfolios"]',
     );
     await expect(investmentRow).toBeVisible();
     await expect(agGridCellByColId(investmentRow, "totalGainLoss")).toHaveText(
@@ -280,8 +322,15 @@ test("the seeded EUR card purchase explains its gain/loss asset-class grouping",
   await expect(classRow).toBeVisible();
   const expander = classRow.locator(".ag-group-contracted");
   if (await expander.isVisible()) await expander.click();
+  const bankDepositsRow = table.locator(
+    '.ag-grid-scrolling-container > .ag-row[row-id="asset-class:BANK_DEPOSITS"]',
+  );
+  await expect(bankDepositsRow).toBeVisible();
+  const bankDepositsExpander = bankDepositsRow.locator(".ag-group-contracted");
+  if (await bankDepositsExpander.isVisible())
+    await bankDepositsExpander.click();
   const eurRow = table.locator(
-    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:CASH_AND_CASH_EQUIVALENTS:CURRENCY:EUR"]',
+    '.ag-grid-scrolling-container > .ag-row[row-id="gain-loss-investment:BANK_DEPOSITS:CURRENCY:EUR"]',
   );
   await expect(eurRow).toBeVisible();
   const eurExpander = eurRow.locator(".ag-group-contracted");
@@ -302,7 +351,7 @@ test("the seeded EUR card purchase explains its gain/loss asset-class grouping",
   );
   await expect(
     page.getByText(
-      "Grouped under Cash & Cash Equivalents based on the originating account: Everyday account CHF.",
+      "Grouped under Cash & Cash Equivalents / Bank Deposits based on the originating account: Everyday account CHF.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -387,7 +436,9 @@ test("the seeded Bitcoin fee transfer preserves acquisition basis through a late
   });
   await page.goto(`/${household.id}/${destination.id}`);
   await expect(
-    page.getByTitle("Asset Class: Digital Assets", { exact: true }),
+    page.getByTitle("Asset Class: Digital Assets / Cryptocurrencies", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
     "200.00",
@@ -452,7 +503,7 @@ test("archived synthetic accounts remain available for archive workflows", async
       agGridRowByText(page, "Closed bank account CHF"),
       "assetClass",
     ),
-  ).toHaveText("Cash & Cash Equivalents");
+  ).toHaveText("Cash & Cash Equivalents / Bank Deposits");
   const archived = await prisma.account.findFirstOrThrow({
     where: {
       accountBookId: seededBook("household").id,
@@ -461,7 +512,9 @@ test("archived synthetic accounts remain available for archive workflows", async
   });
   await page.goto(`/${seededBook("household").id}/${archived.id}`);
   await expect(
-    page.getByTitle("Asset Class: Cash & Cash Equivalents", { exact: true }),
+    page.getByTitle("Asset Class: Cash & Cash Equivalents / Bank Deposits", {
+      exact: true,
+    }),
   ).toBeVisible();
 });
 

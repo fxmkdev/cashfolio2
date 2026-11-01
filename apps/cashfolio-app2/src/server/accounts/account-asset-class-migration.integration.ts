@@ -13,6 +13,17 @@ import { AccountType, Unit } from "../../.prisma-client/enums";
 
 const run = promisify(execFile);
 const migrationName = "20261024120000_add_account_asset_class";
+// This existing book retains the original eight classes after later migrations.
+const legacyAssetClassIds = [
+  "CASH_AND_CASH_EQUIVALENTS",
+  "EQUITIES",
+  "FIXED_INCOME",
+  "REAL_ESTATE",
+  "COMMODITIES_AND_PRECIOUS_METALS",
+  "DIGITAL_ASSETS",
+  "ALTERNATIVE_INVESTMENTS",
+  "OTHER_ASSETS",
+];
 const adminUrl = new URL(
   process.env.MUTATION_TEST_ADMIN_DATABASE_URL ??
     "postgresql://postgres:postgres@127.0.0.1:5433/postgres",
@@ -129,7 +140,7 @@ it("defaults newly created accounts to Unclassified", async () => {
 
 it("allows all classes on converted balance accounts and rejects classified equity", async () => {
   for (const legacyType of ["ASSET", "LIABILITY"]) {
-    for (const assetClassId of Object.values(defaultAssetClassIds)) {
+    for (const assetClassId of legacyAssetClassIds) {
       const updated = await db.account
         .update({
           include: { classifications: assetClassSelection },

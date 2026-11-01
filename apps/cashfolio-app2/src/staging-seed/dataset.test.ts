@@ -1,4 +1,7 @@
-import { defaultAssetClassIds } from "../shared/asset-class";
+import {
+  defaultAssetClassIds,
+  defaultAssetClassNodes,
+} from "../shared/asset-class";
 import Decimal from "decimal.js";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -71,7 +74,7 @@ it("funds two active USD accounts within the same investment group", () => {
       unit: Unit.CURRENCY,
       currency: "USD",
       isCashAccount: true,
-      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.BANK_DEPOSITS,
     });
     expect(account.trackingMethod ?? "INDIVIDUAL_UNITS").toBe(
       "INDIVIDUAL_UNITS",
@@ -118,7 +121,7 @@ it("marks the curated managed portfolio for total-value tracking", () => {
     key: "managed-portfolio",
     unit: Unit.CURRENCY,
     currency: "CHF",
-    assetClassId: defaultAssetClassIds.OTHER_ASSETS,
+    assetClassId: defaultAssetClassIds.MULTI_ASSET_INVESTMENTS,
   });
 });
 
@@ -131,42 +134,46 @@ it("uses curated asset classes for active and archived demo balance accounts", (
         .map((account) => [account.key, account.assetClassId]),
     );
   expect(classifications("household")).toEqual({
-    current: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    savings: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    wallet: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    eur: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    usd: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "usd-savings": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    spare: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    pension: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    aapl: defaultAssetClassIds.EQUITIES,
-    msft: defaultAssetClassIds.EQUITIES,
-    btc: defaultAssetClassIds.DIGITAL_ASSETS,
-    "btc-transfer-source": defaultAssetClassIds.DIGITAL_ASSETS,
-    "btc-transfer-destination": defaultAssetClassIds.DIGITAL_ASSETS,
-    eth: defaultAssetClassIds.DIGITAL_ASSETS,
-    "managed-portfolio": defaultAssetClassIds.OTHER_ASSETS,
-    card: defaultAssetClassIds.OTHER_ASSETS,
-    loan: defaultAssetClassIds.OTHER_ASSETS,
-    archived: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "closed-postfinance-eur": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "closed-ubs-chf": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "closed-ubs-usd": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "closed-cs-usd": defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    "closed-aapl": defaultAssetClassIds.EQUITIES,
-    "closed-cs-aapl": defaultAssetClassIds.EQUITIES,
-    "closed-cs-msft": defaultAssetClassIds.EQUITIES,
-    "closed-car-loan": defaultAssetClassIds.OTHER_ASSETS,
+    current: defaultAssetClassIds.BANK_DEPOSITS,
+    savings: defaultAssetClassIds.BANK_DEPOSITS,
+    wallet: defaultAssetClassIds.PHYSICAL_CASH,
+    eur: defaultAssetClassIds.BANK_DEPOSITS,
+    usd: defaultAssetClassIds.BANK_DEPOSITS,
+    "usd-savings": defaultAssetClassIds.BANK_DEPOSITS,
+    spare: defaultAssetClassIds.BANK_DEPOSITS,
+    pension: defaultAssetClassIds.BANK_DEPOSITS,
+    aapl: defaultAssetClassIds.LISTED_EQUITIES,
+    msft: defaultAssetClassIds.LISTED_EQUITIES,
+    btc: defaultAssetClassIds.CRYPTOCURRENCIES,
+    "btc-transfer-source": defaultAssetClassIds.CRYPTOCURRENCIES,
+    "btc-transfer-destination": defaultAssetClassIds.CRYPTOCURRENCIES,
+    eth: defaultAssetClassIds.CRYPTOCURRENCIES,
+    "managed-portfolio": defaultAssetClassIds.MULTI_ASSET_INVESTMENTS,
+    card: null,
+    loan: null,
+    archived: defaultAssetClassIds.BANK_DEPOSITS,
+    "closed-postfinance-eur": defaultAssetClassIds.BANK_DEPOSITS,
+    "closed-ubs-chf": defaultAssetClassIds.BANK_DEPOSITS,
+    "closed-ubs-usd": defaultAssetClassIds.BANK_DEPOSITS,
+    "closed-cs-usd": defaultAssetClassIds.BANK_DEPOSITS,
+    "closed-aapl": defaultAssetClassIds.LISTED_EQUITIES,
+    "closed-cs-aapl": defaultAssetClassIds.LISTED_EQUITIES,
+    "closed-cs-msft": defaultAssetClassIds.LISTED_EQUITIES,
+    "closed-car-loan": null,
   });
   expect(classifications("edge-cases")).toEqual({
-    current: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
-    eur: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    current: defaultAssetClassIds.BANK_DEPOSITS,
+    eur: defaultAssetClassIds.BANK_DEPOSITS,
     unlisted: defaultAssetClassIds.ALTERNATIVE_INVESTMENTS,
   });
 });
 
 it("keeps seed equity accounts and unspecified classifications Unclassified", () => {
+  const defaultIds = new Set(defaultAssetClassNodes.map((node) => node.id));
   for (const account of dataset.books.flatMap((book) => book.accounts)) {
+    if (account.assetClassId !== null) {
+      expect(defaultIds.has(account.assetClassId)).toBe(true);
+    }
     if (account.type === AccountType.EQUITY) {
       expect(account.assetClassId).toBeNull();
     }
