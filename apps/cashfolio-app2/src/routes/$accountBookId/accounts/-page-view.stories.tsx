@@ -905,14 +905,18 @@ export const AssetClassSwitchingAndExpansion: Story = {
     await expect(
       canvas.queryByRole("button", { name: "Add Group" }),
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+        ),
+      ).toHaveTextContent("Portfolio"),
+    );
     await expect(
-      canvasElement.querySelector(
-        '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+      canvasElement.querySelectorAll(
+        `[row-id="${classId}"] [col-id="actions"] button`,
       ),
-    ).toHaveTextContent("Portfolio");
-    await expect(
-      canvasElement.querySelector(`[row-id="${classId}"] [col-id="actions"]`),
-    ).toBeEmptyDOMElement();
+    ).toHaveLength(0);
     await expect(canvasElement.querySelector('[row-id="old"]')).toBeNull();
     await expandAssignmentGroup(canvasElement, archivedClassRowId(classId));
     await waitFor(() =>
@@ -1973,7 +1977,11 @@ const bulkRows: TreeRow[] = [
 ];
 
 async function selectAssignmentAccount(canvasElement: HTMLElement, id: string) {
-  const selector = `.ag-row[row-id="${id}"] .ag-selection-checkbox input`;
+  // Reparenting briefly retains fading copies with the same stable row ID.
+  await waitFor(() =>
+    expect(canvasElement.querySelector(".ag-row.ag-opacity-zero")).toBeNull(),
+  );
+  const selector = `.ag-row:not(.ag-opacity-zero)[row-id="${id}"] .ag-selection-checkbox input`;
   await waitFor(() =>
     expect(canvasElement.querySelector(selector)).not.toBeNull(),
   );

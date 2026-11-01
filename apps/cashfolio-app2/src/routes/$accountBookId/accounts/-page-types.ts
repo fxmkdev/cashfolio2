@@ -143,9 +143,9 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
   const tab = isTabValue(search.tab) ? search.tab : "BALANCE";
   return {
     tab,
-    grouping: isReportingGrouping(search.grouping)
-      ? search.grouping
-      : "accountStructure",
+    ...(isReportingGrouping(search.grouping)
+      ? { grouping: search.grouping }
+      : {}),
     ...(tab.startsWith("EQUITY-") && typeof search.showArchived === "boolean"
       ? { showArchived: search.showArchived }
       : {}),

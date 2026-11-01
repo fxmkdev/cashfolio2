@@ -294,6 +294,22 @@ export function AccountsPageView({
       ) : (
         <TopPageHeader
           heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+          headingAccessory={
+            <Group gap="xs" wrap="nowrap">
+              <Text size="sm">Group By</Text>
+              <Select
+                aria-label="Group By"
+                w={180}
+                data={reportingGroupingOptions}
+                value={grouping}
+                allowDeselect={false}
+                onChange={(value) => {
+                  if (value === "accountStructure" || value === "assetClass")
+                    onGroupingChange?.(value);
+                }}
+              />
+            </Group>
+          }
           actions={managementActions}
         />
       )}
@@ -304,20 +320,6 @@ export function AccountsPageView({
         onRefreshConstraints={onRefreshConstraints}
       />
 
-      {!isCategories && (
-        <Group mb="sm">
-          <Select
-            label="Group By"
-            data={reportingGroupingOptions}
-            value={grouping}
-            allowDeselect={false}
-            onChange={(value) => {
-              if (value === "accountStructure" || value === "assetClass")
-                onGroupingChange?.(value);
-            }}
-          />
-        </Group>
-      )}
       {!isCategories && (
         <Text size="sm" c="dimmed" mb="sm">
           Totals include active and archived accounts, including collapsed

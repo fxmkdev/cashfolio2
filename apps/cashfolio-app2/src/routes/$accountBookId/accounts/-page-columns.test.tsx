@@ -311,9 +311,7 @@ describe("account tree Delete explanations", () => {
   it.each([true, false])(
     "protects synthetic headings and disables reorder in Asset Class view (active=%s)",
     (isActive) => {
-      let render!: (params: {
-        data: TreeRow;
-      }) => ReactElement<{
+      let render!: (params: { data: TreeRow }) => ReactElement<{
         reorderEnabled: boolean;
         reorderLabel: string;
         onEdit: () => void;

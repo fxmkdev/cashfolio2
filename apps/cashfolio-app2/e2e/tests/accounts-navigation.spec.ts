@@ -71,7 +71,7 @@ test("asset class grouping survives legacy redirects, reload, history and ledger
   await page.goto(
     `/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived&grouping=assetClass`,
   );
-  const grouping = page.getByLabel("Group By");
+  const grouping = page.getByRole("combobox", { name: "Group By" });
   await expect(grouping).toHaveValue("Asset Class");
   await expect(page).toHaveURL(/grouping=assetClass/);
   await page.reload();
