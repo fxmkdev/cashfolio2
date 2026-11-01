@@ -102,8 +102,9 @@ export const ArchivedSelection: Story = {
     await userEvent.click(
       virtual.querySelector<HTMLElement>(".ag-group-contracted")!,
     );
-    const archived = await row(canvasElement, "archived");
-    await expect(archived).toBeVisible();
+    await waitFor(async () =>
+      expect(await row(canvasElement, "archived")).toBeVisible(),
+    );
     await expect(
       within(virtual).queryByRole("checkbox"),
     ).not.toBeInTheDocument();
