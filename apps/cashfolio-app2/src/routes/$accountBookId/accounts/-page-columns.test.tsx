@@ -79,7 +79,7 @@ const footerRow: AccountsGridRow = {
 describe("account list column value getters", () => {
   it.each([
     ["INDIVIDUAL_UNITS", "Individual Units"],
-    ["TOTAL_PORTFOLIO_VALUE", "Total Portfolio Value"],
+    ["TOTAL_PORTFOLIO_VALUE", "Total Value"],
     [undefined, "Individual Units"],
   ] as const)(
     "displays tracking method %s on active and archived accounts",
@@ -105,7 +105,7 @@ describe("account list column value getters", () => {
 
   it.each([
     ["INDIVIDUAL_UNITS", "Individual Units"],
-    ["TOTAL_PORTFOLIO_VALUE", "Total Portfolio Value"],
+    ["TOTAL_PORTFOLIO_VALUE", "Total Value"],
     ["Mixed", "Mixed"],
     [undefined, undefined],
   ] as const)(
@@ -452,12 +452,12 @@ describe("account classification columns", () => {
         column.valueGetter({ data } as Parameters<
           typeof column.valueGetter
         >[0]),
-      ).toBe("Total Portfolio Value");
+      ).toBe("Total Value");
       expect(
         column.tooltipValueGetter({ data } as Parameters<
           typeof column.tooltipValueGetter
         >[0]),
-      ).toBe("Total Portfolio Value");
+      ).toBe("Total Value");
     }
   });
 

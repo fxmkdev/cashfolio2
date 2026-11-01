@@ -374,8 +374,8 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v14:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v12 and History metrics v14 store monetary values as tagged exact
+  `period:history:metrics:v15:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v12 and History metrics v15 store monetary values as tagged exact
 
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
@@ -599,7 +599,7 @@ operations.
 
 Investment groups use currency codes, cryptocurrency codes, or security symbols
 across trade currencies. Accounts marked `TOTAL_PORTFOLIO_VALUE` group under
-Managed Portfolios, keeping recorded performance and calculated FX together.
+Total Value Accounts, keeping recorded performance and calculated FX together.
 Account identity metadata determines grouping, so an adjustment booking's
 currency cannot move an investment to a different unit. Synthetic accounts use
 their clearing-bucket or unique contribution unit, otherwise Unknown Unit.
@@ -658,7 +658,7 @@ different month or year. Calculated-event and execution-residual links retain
 the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v12 includes account tracking methods alongside originating-account
-IDs and recorded booking descriptions. History metrics v14 carries both grouping
+IDs and recorded booking descriptions. History metrics v15 carries both grouping
 lenses, investment scopes, and explicit account metadata; older hierarchy
 payloads are not reused. Classification and tracking-method edits advance
 
@@ -1011,8 +1011,8 @@ positive debt magnitudes. Existing allocation rounding and hidden-small-balance
 discrepancy indicators remain applicable.
 
 Allocation reuses G/L investment descriptors from account attribution: currency
-and cryptocurrency codes, security symbols across trade currencies, and Managed
-Portfolios for Total Portfolio Value tracking. Investment IDs are
+and cryptocurrency codes, security symbols across trade currencies, and Total
+Value Accounts for Total Value tracking. Investment IDs are
 `allocation-investment:<classId>:<groupKey>`; class/account IDs stay stable.
 Discrepancy metadata includes affected investment groups and class ancestors.
 Report Asset Class account leaves include optional `accountGroupPath` metadata
@@ -1028,7 +1028,7 @@ rounding. The complete real Balance Account hierarchy is loaded once per
 request, including archived accounts, zero balances, and empty Balance Account
 groups. Virtual transfer-clearing scopes are merged across period points.
 Unavailable valuations remain omitted from amounts without removing real scope
-options. History metrics v14 includes Net Worth scopes, both Gain/Loss grouping
+options. History metrics v15 includes Net Worth scopes, both Gain/Loss grouping
 lenses, and investment groups; base-data v12 includes tracking methods.
 Valuation caches remain compatible.
 

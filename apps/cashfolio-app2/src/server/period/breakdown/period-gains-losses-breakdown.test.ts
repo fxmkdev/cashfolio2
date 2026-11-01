@@ -158,7 +158,7 @@ describe("gain/loss investment grouping", () => {
         totalGainLoss: 10,
         children: [
           {
-            label: "Managed Portfolios",
+            label: "Total Value Accounts",
             totalGainLoss: 3,
             children: [
               {

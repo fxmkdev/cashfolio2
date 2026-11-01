@@ -86,8 +86,8 @@ describe("automatic complete History loading", () => {
       scope;
     const investment = {
       value: scope,
-      label: "Equities / Managed Portfolios",
-      treeLabel: "Managed Portfolios",
+      label: "Equities / Total Value Accounts",
+      treeLabel: "Total Value Accounts",
       kind: "gainLoss" as const,
       grouping: "assetClass" as const,
       parentValue: "asset-class:EQUITIES" as const,
@@ -460,7 +460,7 @@ it("keeps custom class ordering and nested investment selections when merging Hi
     },
     {
       value: selection,
-      label: "Z First / Z First / Managed Portfolios",
+      label: "Z First / Z First / Total Value Accounts",
       parentValue: "asset-class:child-first",
       kind: "gainLoss",
     },

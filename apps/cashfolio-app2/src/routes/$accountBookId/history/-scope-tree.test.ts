@@ -457,14 +457,14 @@ test("History exposes selectable investment groups between classes and accounts"
       { value: "asset-class:EQUITIES", label: "Equities", kind: "gainLoss" },
       {
         value: "gain-loss-investment:EQUITIES:managed-portfolios",
-        label: "Equities / Managed Portfolios",
-        treeLabel: "Managed Portfolios",
+        label: "Equities / Total Value Accounts",
+        treeLabel: "Total Value Accounts",
         kind: "gainLoss",
         parentValue: "asset-class:EQUITIES",
       },
       {
         value: "gain-loss-account:portfolio",
-        label: "Equities / Managed Portfolios / Portfolio",
+        label: "Equities / Total Value Accounts / Portfolio",
         treeLabel: "Portfolio",
         kind: "gainLoss",
         parentValue: "gain-loss-investment:EQUITIES:managed-portfolios",
@@ -480,7 +480,7 @@ test("History exposes selectable investment groups between classes and accounts"
     (node) => node.value === "gainsLosses:grouping:assetClass",
   )!;
   const group = assetClassBranch.children![0]!.children![0]!;
-  expect(group.label).toBe("Managed Portfolios");
+  expect(group.label).toBe("Total Value Accounts");
   expect(group.children![0]!.label).toBe("Portfolio");
   expect(getHistoryViewTreeSelection(group.value, mutable)).toEqual({
     metric: "gainsLosses",

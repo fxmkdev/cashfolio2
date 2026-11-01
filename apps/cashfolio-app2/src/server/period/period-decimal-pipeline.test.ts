@@ -256,7 +256,7 @@ describe("Decimal monetary pipelines", () => {
     expect(
       assetClassHierarchy
         .find((node) => node.id === "asset-class:EQUITIES")
-        ?.children.find((node) => node.label === "Managed Portfolios"),
+        ?.children.find((node) => node.label === "Total Value Accounts"),
     ).toMatchObject({
       children: expect.arrayContaining([
         expect.objectContaining({

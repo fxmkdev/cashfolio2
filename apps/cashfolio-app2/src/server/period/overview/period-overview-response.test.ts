@@ -160,7 +160,7 @@ describe("period overview response", () => {
             explanation: null,
             investmentGroup: {
               key: "managed-portfolios",
-              label: "Managed Portfolios",
+              label: "Total Value Accounts",
             },
           },
         ],
@@ -330,7 +330,7 @@ describe("period overview response", () => {
         .hierarchy[0].children[0],
     ).toMatchObject({
       id: "allocation-investment:unclassified:managed-portfolios",
-      label: "Managed Portfolios",
+      label: "Total Value Accounts",
       children: [{ id: "account:asset-1", accountGroupPath: [] }],
     });
     expect(

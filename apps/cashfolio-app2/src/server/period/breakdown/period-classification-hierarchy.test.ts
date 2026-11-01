@@ -265,7 +265,7 @@ it("combines subclass ordering and investment roll-ups without duplicating direc
   });
   expect(scopes.find((scope) => scope.value === investmentScope)).toMatchObject(
     {
-      label: "Cash / Domestic / Managed Portfolios",
+      label: "Cash / Domestic / Total Value Accounts",
       parentValue: "asset-class:swiss",
     },
   );
@@ -280,6 +280,20 @@ it("combines subclass ordering and investment roll-ups without duplicating direc
   ).toBe("0");
   const deleted = calculate(classes.filter((node) => node.id !== "swiss"));
   expect(deleted.totalGainLoss.toString()).toBe("9");
+  expect(
+    deleted.hierarchy.find((node) => node.id === "asset-class:unclassified"),
+  ).toMatchObject({
+    children: expect.arrayContaining([
+      expect.objectContaining({
+        id: "gain-loss-investment:unclassified:managed-portfolios",
+        label: "Total Value Accounts",
+        children: [
+          expect.objectContaining({ id: "gain-loss-account:archived" }),
+          expect.objectContaining({ id: "gain-loss-account:managed" }),
+        ],
+      }),
+    ]),
+  });
   expect(
     buildHistoryGainLossScopeOptions({ hierarchy: deleted.hierarchy }).some(
       (option) => option.value === investmentScope,

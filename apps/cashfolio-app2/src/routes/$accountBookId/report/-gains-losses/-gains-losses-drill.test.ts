@@ -123,7 +123,7 @@ describe("asset-class drill paths", () => {
     const group = {
       ...hierarchy[0]!,
       id: "gain-loss-investment:EQUITIES:managed-portfolios",
-      label: "Managed Portfolios",
+      label: "Total Value Accounts",
     };
     const nested = [{ ...hierarchy[0]!, children: [group] }];
     const path = [nested[0]!.id, group.id];
@@ -141,7 +141,7 @@ describe("asset-class drill paths", () => {
     expect(state.breadcrumbs.map((crumb) => crumb.label)).toEqual([
       "All Gains/Losses",
       "Equities",
-      "Managed Portfolios",
+      "Total Value Accounts",
     ]);
     expect(state.currentNodes).toEqual(hierarchy[0]!.children);
   });
@@ -173,7 +173,7 @@ describe("asset-class drill paths", () => {
     const investment = {
       ...hierarchy[0]!,
       id: "gain-loss-investment:EQUITIES:managed-portfolios",
-      label: "Managed Portfolios",
+      label: "Total Value Accounts",
     };
     const moved = [
       {
@@ -199,7 +199,7 @@ describe("asset-class drill paths", () => {
         path: previousPath,
         rootLabel: "All",
       }).breadcrumbs.map((crumb) => crumb.label),
-    ).toEqual(["All", "Parent", "Renamed Equities", "Managed Portfolios"]);
+    ).toEqual(["All", "Parent", "Renamed Equities", "Total Value Accounts"]);
     expect(clampGainsLossesPath({ hierarchy: [], path: previousPath })).toEqual(
       [],
     );

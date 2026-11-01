@@ -105,14 +105,14 @@ export const ManagedPortfolioHistory: Story = {
           },
           {
             value: "gain-loss-investment:EQUITIES:managed-portfolios",
-            label: "Equities / Managed Portfolios",
-            treeLabel: "Managed Portfolios",
+            label: "Equities / Total Value Accounts",
+            treeLabel: "Total Value Accounts",
             kind: "gainLoss",
             parentValue: "asset-class:EQUITIES",
           },
           {
             value: "gain-loss-account:portfolio",
-            label: "Equities / Managed Portfolios / Portfolio",
+            label: "Equities / Total Value Accounts / Portfolio",
             treeLabel: "Portfolio",
             kind: "gainLoss",
             parentValue: "gain-loss-investment:EQUITIES:managed-portfolios",
@@ -125,7 +125,7 @@ export const ManagedPortfolioHistory: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("textbox", { name: "View" })).toHaveValue(
-      "Managed Portfolios",
+      "Total Value Accounts",
     );
     await expect(
       canvas.queryByText("Double-click a period to open ledger."),

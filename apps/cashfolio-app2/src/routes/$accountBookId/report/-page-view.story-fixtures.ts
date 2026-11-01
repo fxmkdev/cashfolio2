@@ -619,7 +619,7 @@ const originalOverview: Omit<Overview, "accountBreakdownsByGrouping"> &
           },
           {
             id: "gain-loss-investment:EQUITIES:managed-portfolios",
-            label: "Managed Portfolios",
+            label: "Total Value Accounts",
             realizedGainLoss: 60,
             unrealizedGainLoss: 0,
             totalGainLoss: 60,
@@ -744,7 +744,7 @@ const classAllocation = (
       for (const account of node.children) {
         const [key, label] =
           account.id === "account:account-etf"
-            ? ["managed-portfolios", "Managed Portfolios"]
+            ? ["managed-portfolios", "Total Value Accounts"]
             : account.id === "account:account-stocks"
               ? ["SECURITY:AAPL", "AAPL"]
               : ["CURRENCY:CHF", "CHF"];

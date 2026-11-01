@@ -10,7 +10,7 @@ const PERIOD_HISTORY_METRICS_CACHE_FAMILY = "period:history:metrics";
 export const PERIOD_BASE_CACHE_ENTRY_PREFIX = `${PERIOD_BASE_CACHE_FAMILY}:v12`;
 export const PERIOD_BASE_CACHE_INDEX_PREFIX = `${PERIOD_BASE_CACHE_INDEX_FAMILY}:v12`;
 export const PERIOD_CACHE_GENERATION_PREFIX = `${PERIOD_CACHE_GENERATION_FAMILY}:v1`;
-export const PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX = `${PERIOD_HISTORY_METRICS_CACHE_FAMILY}:v14`;
+export const PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX = `${PERIOD_HISTORY_METRICS_CACHE_FAMILY}:v15`;
 
 type BookCacheScope = { cacheEnv: string; accountBookId: string };
 type BookCacheGenerationScope = BookCacheScope & { generation: string };

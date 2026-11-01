@@ -18,7 +18,7 @@ export function getGainLossInvestmentGroup(identity: {
   symbol: string | null;
 }): GainLossInvestmentGroup {
   if (identity.trackingMethod === "TOTAL_PORTFOLIO_VALUE") {
-    return { key: "managed-portfolios", label: "Managed Portfolios" };
+    return { key: "managed-portfolios", label: "Total Value Accounts" };
   }
   const code = (
     identity.unit === "CURRENCY"

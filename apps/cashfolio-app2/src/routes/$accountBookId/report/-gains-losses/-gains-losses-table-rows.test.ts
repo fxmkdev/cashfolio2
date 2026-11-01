@@ -53,7 +53,7 @@ describe("asset-class table rows", () => {
     const group = {
       ...hierarchy[0]!,
       id: "gain-loss-investment:EQUITIES:managed-portfolios",
-      label: "Managed Portfolios",
+      label: "Total Value Accounts",
     };
     const rows = flattenGainsLossesHierarchyRows([
       { ...hierarchy[0]!, children: [group] },

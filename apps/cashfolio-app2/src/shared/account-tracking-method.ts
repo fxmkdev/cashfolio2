@@ -2,7 +2,7 @@ import { AccountTrackingMethod } from "../.prisma-client/enums";
 
 const trackingMethodLabels: Record<AccountTrackingMethod, string> = {
   INDIVIDUAL_UNITS: "Individual Units",
-  TOTAL_PORTFOLIO_VALUE: "Total Portfolio Value",
+  TOTAL_PORTFOLIO_VALUE: "Total Value",
 };
 
 export const accountTrackingMethodOptions = Object.values(
