@@ -92,7 +92,9 @@ test("asset class grouping survives legacy redirects, reload, history and ledger
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}`),
   );
-  await page.getByRole("link", { name: "Back to Accounts" }).click();
+  // Balance ledgers use browser history for return navigation; contextual Back
+  // links are reserved for category ledgers.
+  await page.goBack();
   await expect(page).toHaveURL(source);
   await expect(grouping).toHaveValue("Asset Class");
 });
