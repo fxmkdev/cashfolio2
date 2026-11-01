@@ -95,30 +95,21 @@ export const BulkSubtreeMoveAndUndo: Story = {
   },
 };
 
-export const FindAndArchivedSelection: Story = {
+export const ArchivedSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(
-      canvas.getByRole("textbox", { name: "Find Accounts or Groups" }),
-      "Old Fund",
+    const virtual = await row(canvasElement, "__archived__:group:investments");
+    await userEvent.click(
+      virtual.querySelector<HTMLElement>(".ag-group-contracted")!,
     );
     const archived = await row(canvasElement, "archived");
     await expect(archived).toBeVisible();
-    const unmarked = await row(canvasElement, "investments");
-    expect(getComputedStyle(archived).backgroundColor).not.toBe(
-      getComputedStyle(unmarked).backgroundColor,
-    );
-    const virtual = await row(canvasElement, "__archived__:group:investments");
     await expect(
       within(virtual).queryByRole("checkbox"),
     ).not.toBeInTheDocument();
     await select(canvasElement, "archived");
     await expect(canvas.getByRole("toolbar")).toHaveTextContent(
       "0 groups and 1 account selected",
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Next Match" }));
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Previous Match" }),
     );
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Selection" }),
@@ -255,8 +246,8 @@ export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
     await select(canvasElement, "checking");
     const source = await row(canvasElement, "investments");
     const target = await row(canvasElement, "destination");
-    let handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
-    let from = handle.getBoundingClientRect();
+    const handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
+    const from = handle.getBoundingClientRect();
     const to = target.getBoundingClientRect();
     await userEvent.pointer([
       {
@@ -289,32 +280,19 @@ export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
     await expect(await row(canvasElement, "nested")).toHaveClass(
       "ag-row-level-2",
     );
-    const root = within(canvasElement).getByLabelText("Top Level Drop Target");
-    const top = root.getBoundingClientRect();
-    handle = (
-      await row(canvasElement, "investments")
-    ).querySelector<HTMLElement>(".ag-row-drag")!;
-    from = handle.getBoundingClientRect();
-    await userEvent.pointer([
-      {
-        target: handle,
-        coords: { clientX: from.x + 5, clientY: from.y + 5 },
-        keys: "[MouseLeft>]",
-      },
-      {
-        target: root,
-        coords: { clientX: top.x + 180, clientY: top.y + top.height / 2 },
-      },
-      {
-        target: root,
-        coords: { clientX: top.x + 182, clientY: top.y + top.height / 2 },
-      },
-      {
-        target: root,
-        coords: { clientX: top.x + 182, clientY: top.y + top.height / 2 },
-        keys: "[/MouseLeft]",
-      },
-    ]);
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      within(canvas.getByRole("toolbar")).getByRole("button", {
+        name: "Move To…",
+      }),
+    );
+    const dialog = within(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+        name: "Move To…",
+      }),
+    );
+    await expect(dialog.getByLabelText("Destination")).toHaveValue("Top Level");
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
     await waitFor(async () =>
       expect(await row(canvasElement, "investments")).toHaveClass(
         "ag-row-level-0",

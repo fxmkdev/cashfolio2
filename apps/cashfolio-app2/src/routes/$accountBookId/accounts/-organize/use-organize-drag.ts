@@ -3,8 +3,6 @@ import type {
   GridApi,
   IRowNode,
   IsRowValidDropPositionParams,
-  RowDragEvent,
-  RowDropZoneParams,
 } from "ag-grid-enterprise";
 import { planAccountMove } from "@/shared/account-organize/move";
 import {
@@ -26,7 +24,7 @@ export function dragMove(
 ): OrganizeMove {
   if (target.isVirtualArchivedGroup)
     throw new Error(
-      "Archived is a display section. Choose a real group or Top Level.",
+      "Archived is a display section. Choose a real group or use the Move To dialog.",
     );
   if (position === "inside") {
     if (target.nodeType !== "accountGroup")
@@ -52,7 +50,6 @@ export function useOrganizeDrag({
   blocked: boolean;
   saveMove: (move: OrganizeMove) => Promise<boolean | undefined>;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const proposed = useRef<OrganizeMove | undefined>(undefined);
   const cancelled = useRef(false);
   const [hint, setHint] = useState("");
@@ -171,46 +168,19 @@ export function useOrganizeDrag({
       return false;
     }
   };
-  const handlers = useRef({ start, cancel, leave, finish, preview, itemsFor });
-  handlers.current = { start, cancel, leave, finish, preview, itemsFor };
+  const cancelRef = useRef(cancel);
+  cancelRef.current = cancel;
   useEffect(() => {
-    if (!api || !rootRef.current) return;
-    const showRoot = (event: RowDragEvent<OrganizeDisplayRow>) => {
-      try {
-        handlers.current.preview({
-          items: handlers.current.itemsFor(event.node),
-          parentId: null,
-          placement: "last",
-        });
-      } catch (error) {
-        proposed.current = undefined;
-        const value =
-          error instanceof Error ? error.message : "Invalid destination.";
-        hintRef.current = value;
-        setHint(value);
-      }
-    };
-    const dropZone: RowDropZoneParams = {
-      getContainer: () => rootRef.current!,
-      onDragEnter: showRoot,
-      onDragging: showRoot,
-      onDragLeave: () => handlers.current.leave(),
-      onDragStop: () => handlers.current.finish(),
-      onDragCancel: () => handlers.current.cancel(),
-    };
-    api.addRowDropZone(dropZone);
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") handlers.current.cancel();
+      if (event.key === "Escape") cancelRef.current();
     };
     document.addEventListener("keydown", escape);
     return () => {
-      if (!api.isDestroyed()) api.removeRowDropZone(dropZone);
       document.removeEventListener("keydown", escape);
       clearTimeout(hover.current?.timer);
     };
-  }, [api]);
+  }, []);
   return {
-    rootRef,
     hint,
     start,
     cancel,

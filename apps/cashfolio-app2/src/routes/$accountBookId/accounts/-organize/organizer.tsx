@@ -7,22 +7,15 @@ import {
   Group,
   Loader,
   Text,
-  TextInput,
   VisuallyHidden,
 } from "@mantine/core";
 import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-enterprise";
-import {
-  IconArrowBackUp,
-  IconArrowDown,
-  IconArrowUp,
-  IconSearch,
-} from "@tabler/icons-react";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import { DataGrid } from "@/components/grid/data-grid";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import {
   normalizeOrganizeSelection,
   organizeDisplayRows,
-  organizePath,
   type OrganizeDisplayRow,
 } from "@/shared/account-organize/tree";
 import type { OrganizeNodeRef } from "@/shared/account-organize/types";
@@ -46,8 +39,6 @@ export function AccountOrganizer({
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
   const [selected, setSelected] = useState<OrganizeNodeRef[]>([]);
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
-  const [find, setFind] = useState("");
-  const [matchIndex, setMatchIndex] = useState(0);
   const nodes = useMemo(
     () => organizer.snapshot?.nodes ?? [],
     [organizer.snapshot],
@@ -67,19 +58,6 @@ export function AccountOrganizer({
     blocked: organizer.blocked,
     saveMove: organizer.saveMove,
   });
-  const matches = useMemo(
-    () =>
-      find.trim()
-        ? rows.filter(
-            (row) =>
-              !row.isVirtualArchivedGroup &&
-              organizePath(nodes, row.id)
-                .toLocaleLowerCase()
-                .includes(find.trim().toLocaleLowerCase()),
-          )
-        : [],
-    [find, rows, nodes],
-  );
   const reveal = useCallback(
     (id: string, focus: boolean) => {
       const node = api?.getRowNode(id);
@@ -102,9 +80,6 @@ export function AccountOrganizer({
     });
     return () => cancelAnimationFrame(frame);
   }, [organizer.revealIds, rows, reveal]);
-  useEffect(() => {
-    if (matches.length) reveal(matches[matchIndex % matches.length].id, false);
-  }, [matches, matchIndex, reveal]);
   const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
     () => [
       {
@@ -222,69 +197,6 @@ export function AccountOrganizer({
           </Button>
         </Alert>
       )}
-      <Group mb="sm" gap="xs">
-        <TextInput
-          className={styles.find}
-          aria-label="Find Accounts or Groups"
-          placeholder="Find accounts or groups"
-          leftSection={<IconSearch size={16} />}
-          value={find}
-          onChange={(event) => {
-            setFind(event.currentTarget.value);
-            setMatchIndex(0);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              setMatchIndex((value) =>
-                matches.length
-                  ? (value + (event.shiftKey ? matches.length - 1 : 1)) %
-                    matches.length
-                  : 0,
-              );
-            }
-          }}
-        />
-        <Text size="sm" role="status">
-          {matches.length
-            ? `${(matchIndex % matches.length) + 1} of ${matches.length}`
-            : find
-              ? "No matches"
-              : ""}
-        </Text>
-        <Button
-          variant="default"
-          size="sm"
-          aria-label="Previous Match"
-          disabled={!matches.length}
-          onClick={() =>
-            setMatchIndex(
-              (value) => (value + matches.length - 1) % matches.length,
-            )
-          }
-        >
-          <IconArrowUp size={16} />
-        </Button>
-        <Button
-          variant="default"
-          size="sm"
-          aria-label="Next Match"
-          disabled={!matches.length}
-          onClick={() => setMatchIndex((value) => (value + 1) % matches.length)}
-        >
-          <IconArrowDown size={16} />
-        </Button>
-      </Group>
-      <Box
-        ref={drag.rootRef}
-        className={styles.rootTarget}
-        mb="sm"
-        aria-label="Top Level Drop Target"
-      >
-        <Text size="sm">
-          Top Level — drop here to move items out of their groups
-        </Text>
-      </Box>
       <Text size="sm" c="dimmed" mih={24} aria-live="polite">
         {drag.hint}
       </Text>
@@ -339,8 +251,6 @@ export function AccountOrganizer({
         onRowDragLeave={drag.leave}
         onRowDragCancel={drag.cancel}
         rowClassRules={{
-          [styles.match]: ({ data }) =>
-            !!data && matches.some((match) => match.id === data.id),
           [styles.recent]: ({ data }) =>
             !!data && organizer.revealIds.includes(data.id),
         }}
