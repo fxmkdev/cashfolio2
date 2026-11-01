@@ -16,66 +16,54 @@ vi.mock("@/server/accounts", () => ({
   updateAccountGroup: vi.fn(),
 }));
 
-import { createAccountsMutationActions } from "./-account-mutations";
+import {
+  createAccountsMutationActions,
+  type AccountsMutationApi,
+  type AccountsMutationState,
+} from "./-account-mutations";
 
-function createActions(args: {
-  state: unknown;
-  api: unknown;
-  invalidate: () => void;
-}) {
-  return createAccountsMutationActions({
+function createActions(overrides: Partial<AccountsMutationState> = {}) {
+  const invalidate = vi.fn();
+  const state = {
+    getEditingAccount: vi.fn<AccountsMutationState["getEditingAccount"]>(),
+    getEditingGroup: vi.fn<AccountsMutationState["getEditingGroup"]>(),
+    getDeletingRow: vi.fn<AccountsMutationState["getDeletingRow"]>(),
+    getArchivingRow: vi.fn<AccountsMutationState["getArchivingRow"]>(),
+    setCreateModalOpened: vi.fn(),
+    setEditModalOpen: vi.fn(),
+    setCreateGroupModalOpened: vi.fn(),
+    setEditGroupModalOpen: vi.fn(),
+    setDeletingRow: vi.fn<AccountsMutationState["setDeletingRow"]>(),
+    setArchivingRow: vi.fn<AccountsMutationState["setArchivingRow"]>(),
+    ...overrides,
+  } satisfies AccountsMutationState;
+  const api = {
+    createAccount: vi.fn<AccountsMutationApi["createAccount"]>(),
+    updateAccount: vi.fn<AccountsMutationApi["updateAccount"]>(),
+    createAccountGroup: vi.fn<AccountsMutationApi["createAccountGroup"]>(),
+    updateAccountGroup: vi.fn<AccountsMutationApi["updateAccountGroup"]>(),
+    deleteAccount: vi.fn<AccountsMutationApi["deleteAccount"]>(),
+    deleteAccountGroup: vi.fn<AccountsMutationApi["deleteAccountGroup"]>(),
+    archiveAccount: vi.fn<AccountsMutationApi["archiveAccount"]>(),
+    archiveAccountGroup: vi.fn<AccountsMutationApi["archiveAccountGroup"]>(),
+    unarchiveAccount: vi.fn<AccountsMutationApi["unarchiveAccount"]>(),
+    unarchiveAccountGroup:
+      vi.fn<AccountsMutationApi["unarchiveAccountGroup"]>(),
+    reorderAccountTreeItems:
+      vi.fn<AccountsMutationApi["reorderAccountTreeItems"]>(),
+  } satisfies AccountsMutationApi;
+  const actions = createAccountsMutationActions({
     accountBookId: "book-1",
-    invalidate: args.invalidate,
-    state: args.state as Parameters<
-      typeof createAccountsMutationActions
-    >[0]["state"],
-    api: args.api as Parameters<typeof createAccountsMutationActions>[0]["api"],
+    invalidate,
+    state,
+    api,
   });
+  return { actions, state, api, invalidate };
 }
 
 describe("createAccountsMutationActions", () => {
   test("creates an account, closes create modal, and invalidates", async () => {
-    const invalidate = vi.fn();
-
-    let deletingRow:
-      | { id: string; nodeType: "account" | "accountGroup"; name: string }
-      | undefined;
-    let archivingRow:
-      | { id: string; nodeType: "account" | "accountGroup"; name: string }
-      | undefined;
-
-    const state = {
-      getEditingAccount: () => undefined,
-      getEditingGroup: () => undefined,
-      getDeletingRow: () => deletingRow,
-      getArchivingRow: () => archivingRow,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn((opened: boolean) => opened),
-      setDeletingRow: vi.fn((row) => {
-        deletingRow = row;
-      }),
-      setArchivingRow: vi.fn((row) => {
-        archivingRow = row;
-      }),
-    };
-
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-
-    const actions = createActions({ invalidate, state, api });
+    const { actions, state, api, invalidate } = createActions();
 
     await actions.handleCreateAccount({
       name: "Cash",
@@ -113,33 +101,7 @@ describe("createAccountsMutationActions", () => {
   });
 
   test("creates an active group by default", async () => {
-    const invalidate = vi.fn();
-    const state = {
-      getEditingAccount: () => undefined,
-      getEditingGroup: () => undefined,
-      getDeletingRow: () => undefined,
-      getArchivingRow: () => undefined,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn(),
-      setDeletingRow: vi.fn(),
-      setArchivingRow: vi.fn(),
-    };
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-    const actions = createActions({ invalidate, state, api });
+    const { actions, state, api, invalidate } = createActions();
 
     await actions.handleCreateGroup({
       name: "Bank",
@@ -166,37 +128,7 @@ describe("createAccountsMutationActions", () => {
   });
 
   test("creates active category groups", async () => {
-    const invalidate = vi.fn();
-    const state = {
-      getEditingAccount: () => undefined,
-      getEditingGroup: () => undefined,
-      getDeletingRow: () => undefined,
-      getArchivingRow: () => undefined,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn(),
-      setDeletingRow: vi.fn(),
-      setArchivingRow: vi.fn(),
-    };
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-    const actions = createActions({
-      invalidate,
-      state,
-      api,
-    });
+    const { actions, state, api, invalidate } = createActions();
 
     await actions.handleCreateGroup({
       name: "New Expenses",
@@ -223,40 +155,10 @@ describe("createAccountsMutationActions", () => {
   });
 
   test("updates account only when editing state is present", async () => {
-    const invalidate = vi.fn();
-
-    let editingAccount:
-      { id: string; initialValues: Record<string, unknown> } | undefined =
-      undefined;
-
-    const state = {
+    let editingAccount: ReturnType<AccountsMutationState["getEditingAccount"]>;
+    const { actions, state, api, invalidate } = createActions({
       getEditingAccount: () => editingAccount,
-      getEditingGroup: () => undefined,
-      getDeletingRow: () => undefined,
-      getArchivingRow: () => undefined,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn(),
-      setDeletingRow: vi.fn(),
-      setArchivingRow: vi.fn(),
-    };
-
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-
-    const actions = createActions({ invalidate, state, api });
+    });
 
     await actions.handleUpdateAccount({
       name: "Updated",
@@ -276,7 +178,10 @@ describe("createAccountsMutationActions", () => {
     expect(api.updateAccount).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
 
-    editingAccount = { id: "account-1", initialValues: {} };
+    editingAccount = {
+      id: "account-1",
+      initialValues: { name: "Original", type: AccountType.BALANCE },
+    };
 
     await actions.handleUpdateAccount({
       name: "Updated",
@@ -314,45 +219,17 @@ describe("createAccountsMutationActions", () => {
   });
 
   test("deletes selected row and resets deletion state", async () => {
-    const invalidate = vi.fn();
-    let deletingRow:
-      | { id: string; nodeType: "account" | "accountGroup"; name: string }
-      | undefined = {
+    let deletingRow: ReturnType<AccountsMutationState["getDeletingRow"]> = {
       id: "group-1",
       nodeType: "accountGroup",
       name: "Group",
     };
-
-    const state = {
-      getEditingAccount: () => undefined,
-      getEditingGroup: () => undefined,
+    const { actions, state, api, invalidate } = createActions({
       getDeletingRow: () => deletingRow,
-      getArchivingRow: () => undefined,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn(),
       setDeletingRow: vi.fn((row) => {
         deletingRow = row;
       }),
-      setArchivingRow: vi.fn(),
-    };
-
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-
-    const actions = createActions({ invalidate, state, api });
+    });
 
     await actions.handleDelete();
 
@@ -368,36 +245,7 @@ describe("createAccountsMutationActions", () => {
   });
 
   test("reorders siblings by emitted index order and invalidates", async () => {
-    const invalidate = vi.fn();
-
-    const state = {
-      getEditingAccount: () => undefined,
-      getEditingGroup: () => undefined,
-      getDeletingRow: () => undefined,
-      getArchivingRow: () => undefined,
-      setCreateModalOpened: vi.fn(),
-      setEditModalOpen: vi.fn(),
-      setCreateGroupModalOpened: vi.fn(),
-      setEditGroupModalOpen: vi.fn(),
-      setDeletingRow: vi.fn(),
-      setArchivingRow: vi.fn(),
-    };
-
-    const api = {
-      createAccount: vi.fn().mockResolvedValue(undefined),
-      updateAccount: vi.fn().mockResolvedValue(undefined),
-      createAccountGroup: vi.fn().mockResolvedValue(undefined),
-      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
-      deleteAccount: vi.fn().mockResolvedValue(undefined),
-      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
-      archiveAccount: vi.fn().mockResolvedValue(undefined),
-      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
-      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
-      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
-    };
-
-    const actions = createActions({ invalidate, state, api });
+    const { actions, api, invalidate } = createActions();
 
     await actions.handleReorderSiblings([
       { id: "account-1", nodeType: "account" },
