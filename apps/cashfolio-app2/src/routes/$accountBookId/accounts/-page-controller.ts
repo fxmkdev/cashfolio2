@@ -11,6 +11,9 @@ import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
 import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
+  getAccountOrganizeData,
+  moveAccountTreeItems,
+  undoAccountTreeMove,
   setAccountsAssetClass,
   setAccountsTrackingMethod,
   archiveAccount,
@@ -25,6 +28,7 @@ import {
   updateAccount,
   updateAccountGroup,
 } from "@/server/accounts";
+import type { OrganizerApi } from "./-organize/use-organizer";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsGridRow,
@@ -278,6 +282,21 @@ export function useAccountsPageController(args: {
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
   const mode = args.mode ?? "active";
+  const organizerApi = useMemo<OrganizerApi>(
+    () => ({
+      load: () =>
+        getAccountOrganizeData({ data: { accountBookId: args.accountBookId } }),
+      move: (move, version) =>
+        moveAccountTreeItems({
+          data: { accountBookId: args.accountBookId, ...move, version },
+        }),
+      undo: (undo) =>
+        undoAccountTreeMove({
+          data: { accountBookId: args.accountBookId, undo },
+        }),
+    }),
+    [args.accountBookId],
+  );
   const showArchived = args.showArchived ?? false;
   const scopeKey = `${args.accountBookId}:${args.tab}:${mode}:${showArchived}`;
   const refreshAssetClasses = useRefreshAssetClasses();
@@ -509,6 +528,8 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    onOrganizeSaved: args.invalidate,
+    organizerApi,
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss,
