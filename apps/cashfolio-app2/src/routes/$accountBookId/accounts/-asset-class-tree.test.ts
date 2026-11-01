@@ -174,7 +174,7 @@ describe("asset class account projection", () => {
       "AAPL",
       "BTC",
       "BTC",
-      "Managed Portfolios",
+      "Total Value Accounts",
       "Unknown Unit",
       "USD",
     ]);

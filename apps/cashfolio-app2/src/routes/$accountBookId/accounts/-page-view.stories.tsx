@@ -1159,9 +1159,7 @@ export const AssetClassTrackingMethodRegrouping: Story = {
     );
     const dialog = within(await findVisibleDialog(body, "Set Tracking Method"));
     await userEvent.click(dialog.getByLabelText("Tracking Method"));
-    await userEvent.click(
-      body.getByRole("option", { name: "Total Portfolio Value" }),
-    );
+    await userEvent.click(body.getByRole("option", { name: "Total Value" }));
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(balance(managedId)).toHaveTextContent(checkingBefore!),
@@ -1170,7 +1168,7 @@ export const AssetClassTrackingMethodRegrouping: Story = {
       canvasElement.querySelector(
         `[row-id="${managedId}"] [col-id="ag-Grid-AutoColumn"]`,
       ),
-    ).toHaveTextContent("Managed Portfolios");
+    ).toHaveTextContent("Total Value Accounts");
     await expect(
       balance(REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID),
     ).toHaveTextContent(totalBefore!);

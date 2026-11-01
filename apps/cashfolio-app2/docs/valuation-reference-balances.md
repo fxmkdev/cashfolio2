@@ -70,7 +70,7 @@ Asset Class shows occupied classes and their ancestors, then a unit grouping
 level beneath each assigned class. Unassigned accounts appear under
 **Unclassified**, also grouped by unit. Unit identities are shared with Report:
 currency codes, cryptocurrency codes, and security symbols (combining trade
-currencies for the same symbol), with **Managed Portfolios** for portfolio-value
+currencies for the same symbol), with **Total Value Accounts** for total-value
 tracking and **Unknown Unit** for missing identities. Unit groups appear even
 for a single account and retain zero, negative, and unvalued accounts.
 Subclasses precede directly assigned unit groups; units and accounts sort

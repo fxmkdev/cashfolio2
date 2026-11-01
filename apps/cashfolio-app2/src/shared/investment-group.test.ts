@@ -53,7 +53,7 @@ describe("investment grouping shared by Report and Accounts", () => {
     );
   });
 
-  it("groups portfolio-value accounts independently of currency", () => {
+  it("groups total-value accounts independently of currency", () => {
     for (const currency of ["CHF", "USD"])
       expect(
         getGainLossInvestmentGroup({
@@ -61,7 +61,7 @@ describe("investment grouping shared by Report and Accounts", () => {
           currency,
           trackingMethod: "TOTAL_PORTFOLIO_VALUE",
         }),
-      ).toEqual({ key: "managed-portfolios", label: "Managed Portfolios" });
+      ).toEqual({ key: "managed-portfolios", label: "Total Value Accounts" });
   });
 
   it.each([
