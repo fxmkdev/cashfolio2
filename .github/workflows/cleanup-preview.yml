@@ -5,6 +5,9 @@ on:
 permissions:
   contents: read
   pull-requests: read
+env:
+  NODE_VERSION: 26
+
 jobs:
   cleanup-preview:
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -19,11 +22,9 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 26
-      - name: Install trusted tooling without PR caches
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install cleanup tooling
         run:
           pnpm --filter cashfolio-app2 install --frozen-lockfile
           --ignore-scripts

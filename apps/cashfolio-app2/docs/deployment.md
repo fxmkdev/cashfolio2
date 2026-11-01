@@ -177,8 +177,10 @@ the configured fixed hosts and databases.
 
 See [Synthetic staging data](../../../docs/staging-database-refresh.md) for
 staging setup and [Preview environments](../../../docs/preview-environments.md)
-for the required preview-only host, protected GitHub environment, credentials
-and existing-preview cutover.
+for the shared staging Neon host, existing preview GitHub environment,
+per-preview credentials and existing-preview cutover. Staging and previews share
+compute capacity but keep separate databases; exact database and role checks
+continue to prevent cross-environment seeding.
 
 ## Provider usage cleanup
 

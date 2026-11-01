@@ -108,6 +108,41 @@ test("deployment and main-branch cleanup share the existing environment and seri
   assert.match(cleanup, /ref: main/);
 });
 
+test("preview deployment and cleanup reuse setup, and preparation emits outputs only after success", () => {
+  const cleanup = read("workflows/cleanup-preview.yml");
+  for (const source of [preview, cleanup]) {
+    assert.match(source, /uses: \.\/\.github\/actions\/setup/);
+    assert.doesNotMatch(
+      source,
+      /uses: (?:pnpm\/action-setup|actions\/setup-node)/,
+    );
+  }
+  assert.match(cleanup, /NODE_VERSION: 26/);
+  const prepare = readFileSync(
+    new URL("./prepare.ts", import.meta.url),
+    "utf8",
+  );
+  assert.equal((prepare.match(/await appendFile\(/g) ?? []).length, 1);
+  assert.ok(
+    prepare.indexOf("final PR head validation") <
+      prepare.indexOf("await appendFile("),
+  );
+  assert.doesNotMatch(prepare, /image=\$\{image\}/);
+  assert.match(
+    preview,
+    /image: \$\{\{ needs.cashfolio-app2-build-push.outputs.preview_image \}\}/,
+  );
+  assert.doesNotMatch(
+    build,
+    /image: \$\{\{ steps.image-name.outputs.image \}\}/,
+  );
+  // The separate daily staging refresh still passes its own built image.
+  assert.match(
+    read("workflows/refresh-staging-db.yml"),
+    /cashfolio_app2_image: \$\{\{ needs.cashfolio-app2-build-push.outputs.image \}\}/,
+  );
+});
+
 test("ordinary staging and preview releases seed, while production stays migration-only", () => {
   const shared = read("workflows/deploy-version.yml").replace(/\s+/g, " ");
   assert.match(

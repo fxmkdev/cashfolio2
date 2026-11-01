@@ -107,7 +107,15 @@ test("cleanup removes the owned database before its roles, and refuses other nam
   const drop = calls.filter((sql) => sql.startsWith("DROP"));
   assert.match(drop[0], /^DROP DATABASE/);
   assert.equal(drop.length, 3);
-  const unsafe = fake({ database: "production" });
-  await assert.rejects(cleanupDatabase(unsafe.client, 42));
-  assert.ok(!unsafe.calls.some((sql) => sql.startsWith("DROP")));
+  for (const database of [
+    "production",
+    "staging",
+    "neondb",
+    "cashfolio_preview_control",
+    "pr-43-title-cashfolio-app2",
+  ]) {
+    const unsafe = fake({ database });
+    await assert.rejects(cleanupDatabase(unsafe.client, 42));
+    assert.ok(!unsafe.calls.some((sql) => sql.startsWith("DROP")));
+  }
 });
