@@ -63,7 +63,7 @@ function renderHook<T>(hook: () => T) {
   return result;
 }
 function render(api: OrganizerApi, onSaved = saved) {
-  const useController = () => useOrganizer("book", onSaved, api);
+  const useController = () => useOrganizer(onSaved, api);
   return renderHook(useController);
 }
 const saved = vi.fn();

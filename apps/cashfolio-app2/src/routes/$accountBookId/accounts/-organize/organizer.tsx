@@ -40,9 +40,9 @@ export function AccountOrganizer({
   accountBookId: string;
   onDone: () => void;
   onSaved: () => void;
-  api?: OrganizerApi;
+  api: OrganizerApi;
 }) {
-  const organizer = useOrganizer(accountBookId, onSaved, apiOverride);
+  const organizer = useOrganizer(onSaved, apiOverride);
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
   const [selected, setSelected] = useState<OrganizeNodeRef[]>([]);
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
@@ -154,6 +154,7 @@ export function AccountOrganizer({
     <Box
       component="section"
       aria-label="Organize Accounts"
+      data-account-book-id={accountBookId}
       style={{
         display: "flex",
         flexDirection: "column",

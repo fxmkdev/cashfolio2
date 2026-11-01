@@ -140,7 +140,12 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView(props: AccountsPageViewProps) {
-  return <AccountsPageContent key={props.accountBookId} {...props} />;
+  return (
+    <AccountsPageContent
+      key={`${props.accountBookId}:${props.managementContext ?? "accounts"}:${props.tab}`}
+      {...props}
+    />
+  );
 }
 
 function AccountsPageContent({
@@ -252,7 +257,7 @@ function AccountsPageContent({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
-      {!isCategories && (
+      {!isCategories && organizerApi && (
         <Button
           variant="default"
           leftSection={<IconArrowsMove size={16} />}
@@ -311,7 +316,7 @@ function AccountsPageContent({
         />
       )}
 
-      {organizing && !isCategories && (
+      {organizing && !isCategories && organizerApi && (
         <AccountOrganizer
           accountBookId={accountBookId}
           api={organizerApi}

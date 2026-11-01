@@ -157,7 +157,14 @@ export function useOrganizeDrag({
           : "below";
     try {
       preview(dragMove(itemsFor(params.source), row, position));
-      return { allowed: true, highlight: true, target, position };
+      return {
+        allowed: true,
+        highlight: true,
+        target,
+        position,
+        newParent: position === "inside" ? target : target.parent,
+        changed: true,
+      };
     } catch (error) {
       proposed.current = undefined;
       showHint(error instanceof Error ? error.message : "Invalid destination.");

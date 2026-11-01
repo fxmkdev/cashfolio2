@@ -1,9 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getAccountOrganizeData,
-  moveAccountTreeItems,
-  undoAccountTreeMove,
-} from "@/server/accounts";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
@@ -19,20 +14,8 @@ export type OrganizerApi = {
   undo: (undo: OrganizeUndo) => Promise<OrganizeSnapshot>;
 };
 
-export function useOrganizer(
-  accountBookId: string,
-  onSaved: () => void,
-  apiOverride?: OrganizerApi,
-) {
-  const api = useRef(
-    apiOverride ?? {
-      load: () => getAccountOrganizeData({ data: { accountBookId } }),
-      move: (move: OrganizeMove, version: string) =>
-        moveAccountTreeItems({ data: { accountBookId, ...move, version } }),
-      undo: (undo: OrganizeUndo) =>
-        undoAccountTreeMove({ data: { accountBookId, undo } }),
-    },
-  ).current;
+export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
+  const api = useRef(apiOverride).current;
   const [snapshot, setSnapshot] = useState<OrganizeSnapshot>();
   const confirmed = useRef<OrganizeSnapshot | undefined>(undefined);
   const [undo, setUndo] = useState<OrganizeUndo | null>(null);
