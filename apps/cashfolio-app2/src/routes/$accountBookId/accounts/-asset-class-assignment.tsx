@@ -1,8 +1,8 @@
 import { useAssetClasses } from "@/classification-context";
-import { Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
+import { Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 
-import { classificationOptions } from "@/shared/asset-class";
+import { AssetClassTreeSelect } from "@/components/controls/asset-class-tree-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import type { AccountBulkActionTarget } from "./-bulk-account-targets";
@@ -13,7 +13,7 @@ export function AssetClassAssignmentDialog(props: {
   onSubmit: (assetClassId: string | null) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
-  const assetClassOptions = classificationOptions(useAssetClasses());
+  const nodes = useAssetClasses();
   const [value, setValue] = useState<string | null>(null);
   const state = useDialogSubmitState({
     captureErrors: true,
@@ -49,15 +49,13 @@ export function AssetClassAssignmentDialog(props: {
             This replaces existing classifications and applies to all historical
             periods in Report and History.
           </Text>
-          <Select
+          <AssetClassTreeSelect
             openOnFocus={false}
             searchable
             label="Asset Class"
             placeholder="Select asset class"
-            data={[
-              { value: "unclassified", label: "Unclassified" },
-              ...assetClassOptions,
-            ]}
+            nodes={nodes}
+            unclassifiedValue="unclassified"
             value={value}
             onChange={(next) => {
               setValue(next);

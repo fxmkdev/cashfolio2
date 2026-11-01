@@ -116,7 +116,7 @@ test("edit unitless equity account from list and ledger", async ({ page }) => {
   const listEditDialog = page.getByRole("dialog", { name: "Edit Category" });
   await expect(listEditDialog).toBeVisible();
   await expect(
-    listEditDialog.getByRole("combobox", { name: "Asset Class" }),
+    listEditDialog.getByRole("textbox", { name: "Asset Class" }),
   ).toHaveCount(0);
   await listEditDialog.getByLabel("Name").fill(listUpdatedName);
   await listEditDialog.getByRole("button", { name: "Save" }).click();

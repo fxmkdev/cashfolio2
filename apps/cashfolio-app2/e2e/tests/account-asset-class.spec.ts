@@ -46,7 +46,7 @@ for (const type of ["BALANCE"] as const) {
         .getByRole("button", { name: "Edit", exact: true, disabled: false })
         .click();
       const dialog = page.getByRole("dialog", { name: "Edit Account" });
-      await dialog.getByRole("combobox", { name: "Asset Class" }).click();
+      await dialog.getByRole("textbox", { name: "Asset Class" }).click();
       const label = "Commodities & Precious Metals";
       await page.getByRole("option", { name: label, exact: true }).click();
       await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -122,7 +122,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   });
   const name = "Manually classified portfolio";
   await dialog.getByLabel("Name").fill(name);
-  const assetClassId = dialog.getByRole("combobox", { name: "Asset Class" });
+  const assetClassId = dialog.getByRole("textbox", { name: "Asset Class" });
   await expect(assetClassId).toHaveValue("");
   await expect(assetClassId).toHaveAttribute("placeholder", "Unclassified");
   const unit = dialog.getByRole("combobox", { name: "Unit", exact: true });
@@ -153,7 +153,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
     dialogName: "New Account",
   });
   await expect(
-    nextCreate.getByRole("combobox", { name: "Asset Class" }),
+    nextCreate.getByRole("textbox", { name: "Asset Class" }),
   ).toHaveValue("");
   await nextCreate.getByRole("button", { name: "Cancel", exact: true }).click();
   const account = await prisma.account
@@ -174,10 +174,10 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await expect(
     edit.getByRole("combobox", { name: "Unit", exact: true }),
   ).toBeDisabled();
-  await expect(edit.getByRole("combobox", { name: "Asset Class" })).toHaveValue(
+  await expect(edit.getByRole("textbox", { name: "Asset Class" })).toHaveValue(
     "Equities",
   );
-  await edit.getByRole("combobox", { name: "Asset Class" }).click();
+  await edit.getByRole("textbox", { name: "Asset Class" }).click();
   await page.getByRole("option", { name: "Other Assets", exact: true }).click();
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   await expect(edit).not.toBeVisible();
@@ -196,10 +196,10 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await page
     .getByRole("button", { name: "Edit", exact: true, disabled: false })
     .click();
-  await expect(edit.getByRole("combobox", { name: "Asset Class" })).toHaveValue(
+  await expect(edit.getByRole("textbox", { name: "Asset Class" })).toHaveValue(
     "Other Assets",
   );
-  await edit.getByRole("combobox", { name: "Asset Class" }).click();
+  await edit.getByRole("textbox", { name: "Asset Class" }).click();
   await page.getByRole("option", { name: "Unclassified", exact: true }).click();
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   await expect(edit).not.toBeVisible();
@@ -210,7 +210,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await page
     .getByRole("button", { name: "Edit", exact: true, disabled: false })
     .click();
-  await expect(edit.getByRole("combobox", { name: "Asset Class" })).toHaveValue(
+  await expect(edit.getByRole("textbox", { name: "Asset Class" })).toHaveValue(
     "",
   );
   const reloaded = await prisma.account

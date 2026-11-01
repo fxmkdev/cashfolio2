@@ -108,6 +108,8 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - Use the shared AG Grid `DataGrid` for all tables, including small, read-only,
   and modal tables. See the
   [table guidelines](apps/cashfolio-app2/docs/ui-patterns.md#tables).
+- Use tree selectors for hierarchical choices, following the
+  [hierarchical selection pattern](apps/cashfolio-app2/docs/ui-patterns.md#hierarchical-selection).
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).

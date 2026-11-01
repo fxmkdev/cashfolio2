@@ -105,6 +105,33 @@ Use native tree data for hierarchical records, with stable row IDs. Keep stored
 manual ordering authoritative when rows have explicit reorder actions. Follow
 the shared column and actions-cell conventions below.
 
+## Hierarchical Selection
+
+Use Mantine `TreeSelect` for hierarchical choices, including account groups and
+asset classes. Show the actual parent/child structure with expandable branches
+and indented node names rather than a flat list of path labels. Build the tree
+from stable IDs and parent IDs, preserve configured sibling order, and treat
+slashes in user-entered names as literal text.
+
+Make selectors searchable across full `Parent / Child` paths, ignoring case and
+surrounding whitespace, so duplicate names in different branches can be found.
+Display the selected node's name in the input. Expansion controls navigate the
+tree independently of selection; parents and leaves can both be selected when
+allowed by the field. Retain Mantine's keyboard navigation and portal behavior
+inside dialogs.
+
+Use domain wrappers for shared selection behavior: `GroupTreeSelect` for account
+groups and `AssetClassTreeSelect` for asset classes. Make field eligibility
+explicit: exclude an edited node and its descendants from parent choices, and
+exclude a deleted node from replacement choices. Optional fields can be cleared;
+explain their empty state with a placeholder such as Top Level or Unclassified.
+Actions that require an explicit choice, such as bulk assignment and deletion,
+offer Unclassified as a root option while keeping an untouched field unselected.
+
+When refreshed choices remove a selected node, preserve its ID and draft,
+display an unavailable-selection explanation, and prevent selecting the stale
+option. Let the user choose a valid replacement or clear an optional field.
+
 ## UI Copy
 
 - Keep labels short and action-oriented. Prefer concise commands such as
@@ -351,7 +378,7 @@ the start of each create/edit session. Its CSV editor stays mounted so
 collapsing it preserves drafts, and submitting an invalid CSV format opens the
 section to expose its validation error.
 
-The account editor offers an **Asset Class** selector for assets and
+The account editor offers an **Asset Class** tree selector for assets and
 liabilities, separate from Unit and valuation configuration. It remains editable
 for booked and archived accounts while instrument identity stays locked.
 Unclassified is the default; no classification is suggested or inferred from

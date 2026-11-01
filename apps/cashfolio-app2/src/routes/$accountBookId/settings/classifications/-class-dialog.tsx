@@ -1,17 +1,7 @@
-import {
-  Button,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 import { useState } from "react";
-import {
-  classificationOptions,
-  type ClassificationNode,
-} from "@/shared/asset-class";
+import type { ClassificationNode } from "@/shared/asset-class";
+import { AssetClassTreeSelect } from "@/components/controls/asset-class-tree-select";
 import { validateClassificationChange } from "@/shared/classification-rules";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
@@ -37,9 +27,8 @@ export function ClassDialog(props: {
     onRefreshConstraints: props.onRefresh,
   });
   const current = props.nodes.find((n) => n.id === props.draft.id);
-  const options = classificationOptions(props.nodes);
-  const parentOptions = options.filter((n) => {
-    let id: string | null = n.value;
+  const parentNodes = props.nodes.filter((n) => {
+    let id: string | null = n.id;
     const seen = new Set<string>();
     while (id && !seen.has(id)) {
       if (id === props.draft.id) return false;
@@ -95,17 +84,15 @@ export function ClassDialog(props: {
                 {current?.archivedCount ?? 0} archived accounts. This applies to
                 all historical reports.
               </Text>
-              <Select
+              <AssetClassTreeSelect
                 label="Replacement Asset Class"
                 placeholder="Choose a replacement"
                 openOnFocus={false}
                 searchable
                 value={replacement}
                 onChange={setReplacement}
-                data={[
-                  { value: "unclassified", label: "Unclassified" },
-                  ...options.filter((n) => n.value !== props.draft.id),
-                ]}
+                nodes={props.nodes.filter((n) => n.id !== props.draft.id)}
+                unclassifiedValue="unclassified"
                 disabled={state.isSubmitting}
               />
             </>
@@ -119,15 +106,16 @@ export function ClassDialog(props: {
                 required
                 data-autofocus
               />
-              <Select
+              <AssetClassTreeSelect
                 label="Parent Class"
                 placeholder="Top Level"
                 openOnFocus={false}
                 searchable
                 clearable
+                clearButtonProps={{ "aria-label": "Clear Parent Class" }}
                 value={parentId}
                 onChange={setParentId}
-                data={parentOptions}
+                nodes={parentNodes}
                 disabled={state.isSubmitting}
               />
             </>

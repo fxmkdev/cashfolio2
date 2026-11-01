@@ -37,7 +37,7 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
     const draftName = `Preserved ${entry} draft`;
     if (entry !== "bulk")
       await dialog.getByRole("textbox", { name: /^Name/ }).fill(draftName);
-    const selector = dialog.getByRole("combobox", {
+    const selector = dialog.getByRole("textbox", {
       name: "Asset Class",
       exact: true,
     });
@@ -78,6 +78,13 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
         draftName,
       );
     await selector.click();
+    await expect(
+      page.getByRole("option", {
+        name: "Equities (no longer available)",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await selector.fill("");
     await expect(
       page.getByRole("option", { name: "Equities", exact: true }),
     ).toHaveCount(0);

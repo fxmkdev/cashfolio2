@@ -94,8 +94,15 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   dialog = page.getByRole("dialog", { name: "Edit Account", exact: true });
   await dialog.getByLabel("Asset Class", { exact: true }).click();
   await page
-    .getByRole("option", { name: "Equities / Pension Equities", exact: true })
+    .getByRole("option", { name: "Expand Equities", exact: true })
+    .getByRole("button", { name: "Expand", exact: true })
     .click();
+  await page
+    .getByRole("option", { name: "Pension Equities", exact: true })
+    .click();
+  await expect(dialog.getByLabel("Asset Class", { exact: true })).toHaveValue(
+    "Pension Equities",
+  );
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await expect(row.locator('[col-id="assetClass"]')).toHaveText(

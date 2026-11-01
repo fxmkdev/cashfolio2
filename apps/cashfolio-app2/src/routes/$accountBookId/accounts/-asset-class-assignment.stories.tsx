@@ -75,9 +75,13 @@ export const CustomNestedClass: Story = {
       await body.findByRole("dialog", { name: "Set Asset Class" }),
     );
     await userEvent.click(dialog.getByLabelText("Asset Class"));
-    await userEvent.type(dialog.getByLabelText("Asset Class"), "Swiss");
-    await userEvent.click(
-      body.getByRole("option", { name: "Investments / Swiss Shares" }),
+    await userEvent.type(
+      dialog.getByLabelText("Asset Class"),
+      "investments / swiss",
+    );
+    await userEvent.click(body.getByRole("option", { name: "Swiss Shares" }));
+    await expect(dialog.getByLabelText("Asset Class")).toHaveValue(
+      "Swiss Shares",
     );
     await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
     await waitFor(() => expect(args.onSubmit).toHaveBeenCalledWith("custom"));
