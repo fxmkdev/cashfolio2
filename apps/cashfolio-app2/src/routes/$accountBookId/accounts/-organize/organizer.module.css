@@ -1,3 +1,8 @@
+.blocked :global(.ag-row-drag) {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .recent {
   animation: reveal 2s ease-out;
 }

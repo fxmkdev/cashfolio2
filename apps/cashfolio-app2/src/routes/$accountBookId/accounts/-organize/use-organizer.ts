@@ -55,37 +55,41 @@ export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
   });
   const pending = submitState.isSubmitting || submitState.isRefreshing;
   const needsRefresh = !!submitState.refreshError;
+  const { runSubmit } = submitState;
 
-  const saveMove = async (move: OrganizeMove) => {
-    const before = confirmed.current;
-    if (!before || pending || needsRefresh) return false;
-    return submitState.runSubmit(async () => {
-      attempted.current = { move, version: before.version };
-      const next = planAccountMove(before.nodes, move);
-      if (next === before.nodes) {
-        setMessage("The items are already in that position.");
-        return;
-      }
-      setSnapshot({ ...before, nodes: next });
-      try {
-        const result = await api.move(move, before.version);
-        if (!mounted.current) return;
-        confirmed.current = result.snapshot;
-        setSnapshot(result.snapshot);
-        if (result.undo) setUndo(result.undo);
-        setRevealIds(move.items.map((item) => item.id));
-        setMessage(
-          result.undo
-            ? "Move saved."
-            : "The items are already in that position.",
-        );
-        onSaved();
-      } catch (error) {
-        if (mounted.current) setSnapshot(before);
-        throw error;
-      }
-    });
-  };
+  const saveMove = useCallback(
+    async (move: OrganizeMove) => {
+      const before = confirmed.current;
+      if (!before || pending || needsRefresh) return false;
+      return runSubmit(async () => {
+        attempted.current = { move, version: before.version };
+        const next = planAccountMove(before.nodes, move);
+        if (next === before.nodes) {
+          setMessage("The items are already in that position.");
+          return;
+        }
+        setSnapshot({ ...before, nodes: next });
+        try {
+          const result = await api.move(move, before.version);
+          if (!mounted.current) return;
+          confirmed.current = result.snapshot;
+          setSnapshot(result.snapshot);
+          if (result.undo) setUndo(result.undo);
+          setRevealIds(move.items.map((item) => item.id));
+          setMessage(
+            result.undo
+              ? "Move saved."
+              : "The items are already in that position.",
+          );
+          onSaved();
+        } catch (error) {
+          if (mounted.current) setSnapshot(before);
+          throw error;
+        }
+      });
+    },
+    [api, needsRefresh, onSaved, pending, runSubmit],
+  );
   const undoMove = async () => {
     const before = confirmed.current;
     if (!before || !undo || pending || needsRefresh) return;

@@ -1441,13 +1441,16 @@ active/archived selections can move into a real group or to Top Level using
 First/Last placement.
 
 Drag handles provide before/after insertion indicators and inside-group drop
-highlighting. Rows remain stationary during dragging; hovering over a collapsed
-branch for 500 ms expands it. Escape or dropping outside a valid destination
-cancels. The keyboard-accessible **Move To…** dialog offers searchable
-destination selection and placement controls. Top Level remains available in
-that dialog and by dropping before/after a compatible root row; there is no
-separate Top Level drop area. Organize displays saved manual order, without
-search or sorting in the grid.
+highlighting. Real-row handles remain visible and reserve their layout space
+during dragging, saving, and recovery; blocked handles are dimmed and cannot
+start a drag. Keep grid configuration references stable as drag hints update.
+Rows remain stationary during dragging; hovering over a collapsed branch for 500
+ms expands it. Escape or dropping outside a valid destination cancels. The
+keyboard-accessible **Move To…** dialog offers searchable destination selection
+and placement controls. Top Level remains available in that dialog and by
+dropping before/after a compatible root row; there is no separate Top Level drop
+area. Organize displays saved manual order, without search or sorting in the
+grid.
 
 Moves inherit existing parent Cash Account rules, including subtree propagation
 and non-currency restrictions. Moving to Top Level preserves flags; reordering
