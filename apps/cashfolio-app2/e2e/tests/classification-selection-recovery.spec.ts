@@ -2,6 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "../support/fixtures";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
+import { selectClassificationOption } from "../support/classifications";
 import {
   agGridRowByText,
   clickGridRowSelectionCheckbox,
@@ -14,6 +15,18 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
     e2eExternalId,
   }) => {
     const book = await seedDatabase({ userExternalId: e2eExternalId });
+    const temporaryId = createId();
+    const temporaryLabel = "Temporary Sector";
+    await prisma.classificationNode.create({
+      data: {
+        id: temporaryId,
+        accountBookId: book.accountBookId,
+        schemeId: "assetClass",
+        name: temporaryLabel,
+        parentId: null,
+        sortOrder: 9,
+      },
+    });
     await page.goto(
       `/${book.accountBookId}/${entry === "ledger" ? book.cashAccount.id : "accounts"}`,
     );
@@ -42,7 +55,7 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
       exact: true,
     });
     await selector.click();
-    await page.getByRole("option", { name: "Equities", exact: true }).click();
+    await selectClassificationOption(page, temporaryLabel);
     // Simulate another client's taxonomy edit after this dialog loaded its choices.
     const replacementId = createId();
     await prisma.classificationNode.create({
@@ -52,13 +65,13 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
         schemeId: "assetClass",
         name: "New Sector",
         parentId: null,
-        sortOrder: 8,
+        sortOrder: 10,
       },
     });
     await prisma.classificationNode.delete({
       where: {
         id_schemeId_accountBookId: {
-          id: "EQUITIES",
+          id: temporaryId,
           accountBookId: book.accountBookId,
           schemeId: "assetClass",
         },
@@ -80,15 +93,15 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
     await selector.click();
     await expect(
       page.getByRole("option", {
-        name: "Equities (no longer available)",
+        name: `${temporaryLabel} (no longer available)`,
         exact: true,
       }),
     ).toHaveAttribute("aria-disabled", "true");
     await selector.fill("");
     await expect(
-      page.getByRole("option", { name: "Equities", exact: true }),
+      page.getByRole("option", { name: temporaryLabel, exact: true }),
     ).toHaveCount(0);
-    await page.getByRole("option", { name: "New Sector", exact: true }).click();
+    await selectClassificationOption(page, "New Sector");
     await submit.click();
     await expect(dialog).not.toBeVisible();
     const assignment = await prisma.accountClassification.findUniqueOrThrow({

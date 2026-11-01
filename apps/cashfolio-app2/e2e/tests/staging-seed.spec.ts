@@ -126,8 +126,8 @@ test("the default cash hierarchy rolls up populated sibling asset classes", asyn
   const physicalCash = row("PHYSICAL_CASH");
   await expect(deposits).toBeVisible();
   await expect(physicalCash).toBeVisible();
-  await expect(deposits).toHaveAttribute("aria-level", "2");
-  await expect(physicalCash).toHaveAttribute("aria-level", "2");
+  await expect(deposits).toHaveClass(/\bag-row-level-1\b/);
+  await expect(physicalCash).toHaveClass(/\bag-row-level-1\b/);
   const amount = async (target: typeof cash) =>
     new Decimal(
       (await agGridCellByColId(target, "value").innerText()).replace(

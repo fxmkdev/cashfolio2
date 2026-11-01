@@ -1,4 +1,15 @@
 import type { Prisma, PrismaClient } from "../../src/.prisma-client/client";
+import type { Page } from "./fixtures";
+
+/** Select the label, leaving a parent option's Expand/Collapse button alone. */
+export async function selectClassificationOption(page: Page, label: string) {
+  await page
+    .getByRole("option")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .getByText(label, { exact: true })
+    .click();
+}
+
 export async function createClassifiedAccounts(
   db: PrismaClient,
   accounts: Array<

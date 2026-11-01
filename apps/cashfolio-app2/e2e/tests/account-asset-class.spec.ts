@@ -13,6 +13,7 @@ import {
   expandArchivedGroups,
 } from "../support/grid";
 import { openDialogFromButton } from "../support/ui";
+import { selectClassificationOption } from "../support/classifications";
 
 let seeded: SeededData;
 test.beforeAll(async ({ e2eExternalId }) => {
@@ -48,7 +49,7 @@ for (const type of ["BALANCE"] as const) {
       const dialog = page.getByRole("dialog", { name: "Edit Account" });
       await dialog.getByRole("textbox", { name: "Asset Class" }).click();
       const label = "Commodities & Precious Metals";
-      await page.getByRole("option", { name: label, exact: true }).click();
+      await selectClassificationOption(page, label);
       await dialog.getByRole("button", { name: "Save", exact: true }).click();
       await expect(dialog).not.toBeVisible();
       const pill = page.getByTitle(`Asset Class: ${label}`, { exact: true });
@@ -130,7 +131,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await page.getByRole("option", { name: "Security", exact: true }).click();
   await expect(assetClassId).toHaveValue("");
   await assetClassId.click();
-  await page.getByRole("option", { name: "Equities", exact: true }).click();
+  await selectClassificationOption(page, "Equities");
   await unit.click();
   await page.getByRole("option", { name: "Currency", exact: true }).click();
   await expect(assetClassId).toHaveValue("Equities");
