@@ -308,6 +308,60 @@ describe("account list column value getters", () => {
 });
 
 describe("account tree Delete explanations", () => {
+  it.each([true, false])(
+    "protects synthetic headings and disables reorder in Asset Class view (active=%s)",
+    (isActive) => {
+      let render!: (params: {
+        data: TreeRow;
+      }) => ReactElement<{
+        reorderEnabled: boolean;
+        reorderLabel: string;
+        onEdit: () => void;
+      }> | null;
+      const onEdit = vi.fn();
+      function Harness() {
+        const columns = useAccountTreeColumnDefs({
+          grouping: "assetClass",
+          isEquityTab: false,
+          rowsByParentKey: new Map(),
+          referenceCurrency: "CHF",
+          isReferenceBalancesLoading: false,
+          balanceInReferenceCurrencyByGroupId: new Map(),
+          onEditRow: onEdit,
+          onUnarchiveRow: async () => {},
+          onArchiveRow: () => {},
+          onDeleteRow: () => {},
+          onReorderRow: () => {},
+        });
+        const actions = columns.find(
+          (column) => "colId" in column && column.colId === "actions",
+        );
+        if (!actions || !("cellRenderer" in actions))
+          throw new Error("Missing actions");
+        render = actions.cellRenderer;
+        return null;
+      }
+      renderToStaticMarkup(createElement(Harness));
+      for (const presentationKind of [
+        "assetClass",
+        "unclassified",
+        "archived",
+      ] as const) {
+        expect(
+          render({ data: { ...createGroupRow(), presentationKind, isActive } }),
+        ).toBeNull();
+      }
+      const account = createAccountRow({ isActive });
+      const action = render({ data: account })!;
+      expect(action.props.reorderEnabled).toBe(false);
+      expect(action.props.reorderLabel).toBe(
+        "Switch to Account Structure to reorder siblings",
+      );
+      action.props.onEdit();
+      expect(onEdit).toHaveBeenCalledWith(account);
+    },
+  );
+
   for (const isActive of [true, false]) {
     for (const isEquityTab of [true, false]) {
       it.each(["account", "accountGroup"] as const)(

@@ -38,7 +38,13 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
       throw redirect({
         to: "/$accountBookId/accounts",
         params,
-        search: { tab: "BALANCE", mode: "active" },
+        search: {
+          tab: "BALANCE",
+          mode: "active",
+          ...(search.grouping === "assetClass"
+            ? { grouping: search.grouping }
+            : {}),
+        },
         replace: true,
       });
     }
@@ -56,7 +62,7 @@ function AccountsPage() {
   const ledgerNavigationState = useLedgerNavigationState();
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab, mode } = Route.useSearch();
+  const { tab, mode, grouping } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
   const router = useRouter();
 
@@ -65,6 +71,9 @@ function AccountsPage() {
     accountBookId,
     tab,
     mode,
+    grouping,
+    onGroupingChange: (grouping) =>
+      void navigate({ search: (previous) => ({ ...previous, grouping }) }),
     invalidate: () => {
       router.invalidate();
     },

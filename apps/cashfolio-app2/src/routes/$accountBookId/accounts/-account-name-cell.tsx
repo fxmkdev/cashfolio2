@@ -1,5 +1,5 @@
 import { AccountType } from "@/.prisma-client/enums";
-import { Group, Text, Tooltip } from "@mantine/core";
+import { Group, Stack, Text, Tooltip } from "@mantine/core";
 import { IconArchive } from "@tabler/icons-react";
 import type {
   ICellRendererParams,
@@ -48,7 +48,20 @@ export function AccountNameCell({
   valueFormatted,
 }: ICellRendererParams<AccountsGridRow, string>) {
   if (!isVirtualArchivedGroup(data))
-    return valueFormatted ?? value ?? data?.name ?? null;
+    return data &&
+      "accountGroupPath" in data &&
+      data.accountGroupPath?.length ? (
+      <Stack gap={0} justify="center" h="100%">
+        <Text size="sm" lh={1.4}>
+          {data.name}
+        </Text>
+        <Text size="xs" c="dimmed" lh={1.4}>
+          {data.accountGroupPath.join(" / ")}
+        </Text>
+      </Stack>
+    ) : (
+      (valueFormatted ?? value ?? data?.name ?? null)
+    );
 
   return (
     <Tooltip

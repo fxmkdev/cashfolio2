@@ -1,4 +1,8 @@
 import { AssetClassAssignmentDialog } from "./-asset-class-assignment";
+import {
+  reportingGroupingOptions,
+  type ReportingGrouping,
+} from "@/shared/reporting-grouping";
 import { TrackingMethodAssignmentDialog } from "./-tracking-method-assignment";
 import { BulkAccountToolbar } from "./-bulk-account-toolbar";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
@@ -13,12 +17,14 @@ import {
   Button,
   Checkbox,
   Group,
+  Select,
   Tabs,
   Text,
   Title,
   VisuallyHidden,
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
@@ -68,6 +74,8 @@ type RowTarget = {
 export type AccountsPageViewProps = {
   bulkAccountActions?: BulkAccountActions;
   managementContext?: AccountManagementContext;
+  grouping?: ReportingGrouping;
+  onGroupingChange?: (grouping: ReportingGrouping) => void;
   gainLoss?: {
     data?: AccountGainLossSummaries;
     error?: string;
@@ -135,6 +143,8 @@ export type AccountsPageViewProps = {
 export function AccountsPageView({
   bulkAccountActions,
   managementContext = "accounts",
+  grouping = "accountStructure",
+  onGroupingChange,
   gainLoss,
   accountBookId,
   onRefreshConstraints,
@@ -223,13 +233,28 @@ export function AccountsPageView({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
-      <Button
-        variant="default"
-        leftSection={<IconPlus size={16} />}
-        onClick={onOpenCreateGroup}
-      >
-        Add Group
-      </Button>
+      {!isCategories && grouping === "assetClass" ? (
+        <Button
+          renderRoot={(props) => (
+            <Link
+              {...props}
+              to="/$accountBookId/settings/classifications"
+              params={{ accountBookId }}
+            />
+          )}
+          variant="default"
+        >
+          Manage Asset Classes
+        </Button>
+      ) : (
+        <Button
+          variant="default"
+          leftSection={<IconPlus size={16} />}
+          onClick={onOpenCreateGroup}
+        >
+          Add Group
+        </Button>
+      )}
       <Button
         leftSection={<IconPlus size={16} />}
         onClick={onOpenCreateAccount}
@@ -279,6 +304,20 @@ export function AccountsPageView({
         onRefreshConstraints={onRefreshConstraints}
       />
 
+      {!isCategories && (
+        <Group mb="sm">
+          <Select
+            label="Group By"
+            data={reportingGroupingOptions}
+            value={grouping}
+            allowDeselect={false}
+            onChange={(value) => {
+              if (value === "accountStructure" || value === "assetClass")
+                onGroupingChange?.(value);
+            }}
+          />
+        </Group>
+      )}
       {!isCategories && (
         <Text size="sm" c="dimmed" mb="sm">
           Totals include active and archived accounts, including collapsed
@@ -331,6 +370,14 @@ export function AccountsPageView({
             resizable: true,
             filter: "agTextColumnFilter",
             valueGetter: ({ data }) => data?.name,
+            filterValueGetter: ({ data }) =>
+              data && "accountGroupPath" in data
+                ? [...(data.accountGroupPath ?? []), data.name].join(" / ")
+                : data?.name,
+            tooltipValueGetter: ({ data }) =>
+              data && "accountGroupPath" in data
+                ? [...(data.accountGroupPath ?? []), data.name].join(" / ")
+                : data?.name,
             suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
             cellRendererParams: {
               suppressCount: true,
@@ -340,10 +387,19 @@ export function AccountsPageView({
           postSortRows={postSortAccountRows}
           treeData={true}
           treeDataParentIdField="parentId"
+          getRowHeight={({ data }) =>
+            data && "accountGroupPath" in data && data.accountGroupPath?.length
+              ? 54
+              : undefined
+          }
           pinnedBottomRowData={pinnedBottomRowData}
           onGridReady={(event) => {
             onGridReady?.(event);
             bulkAccountActions?.gridProps.onGridReady?.(event);
+          }}
+          onRowDataUpdated={(event) => {
+            bulkAccountActions?.gridProps.onRowDataUpdated?.(event);
+            event.api.resetRowHeights();
           }}
           isGroupOpenByDefault={isGroupOpenByDefault}
           onRowGroupOpened={onRowGroupOpened}

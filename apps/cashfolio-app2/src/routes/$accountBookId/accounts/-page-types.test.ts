@@ -25,7 +25,7 @@ describe("accounts page tab parsing", () => {
         tab: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`,
         mode: "active",
       }),
-    ).toEqual({ tab: "BALANCE", mode: "active" });
+    ).toEqual({ tab: "BALANCE", mode: "active", grouping: "accountStructure" });
   });
 
   it("preserves legacy category tab and archive selection for its redirect", () => {
@@ -37,6 +37,7 @@ describe("accounts page tab parsing", () => {
     ).toEqual({
       tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
       mode: "archived",
+      grouping: "accountStructure",
     });
   });
 
@@ -46,7 +47,27 @@ describe("accounts page tab parsing", () => {
       expect(parseAccountsSearch({ tab, mode: "archived" })).toEqual({
         tab: "BALANCE",
         mode: "active",
+        grouping: "accountStructure",
       });
+    },
+  );
+});
+
+describe("accounts grouping search", () => {
+  it.each([undefined, "unknown", null, 1])(
+    "defaults invalid grouping %s",
+    (grouping) => {
+      expect(parseAccountsSearch({ grouping }).grouping).toBe(
+        "accountStructure",
+      );
+    },
+  );
+  it.each(["assetClass", "accountStructure"])(
+    "preserves %s through legacy normalization",
+    (grouping) => {
+      expect(
+        parseAccountsSearch({ tab: "ASSET", mode: "archived", grouping }),
+      ).toEqual({ tab: "BALANCE", mode: "active", grouping });
     },
   );
 });

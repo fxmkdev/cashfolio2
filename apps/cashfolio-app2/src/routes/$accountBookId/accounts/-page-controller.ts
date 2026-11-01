@@ -1,4 +1,11 @@
-import { useRefreshAssetClasses } from "@/classification-context";
+import {
+  useAssetClasses,
+  useRefreshAssetClasses,
+} from "@/classification-context";
+import {
+  buildAssetClassTree,
+  projectAssetClassGainLoss,
+} from "./-asset-class-tree";
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
@@ -273,11 +280,18 @@ export function useAccountsPageController(args: {
   tab: AccountsPageViewProps["tab"];
   mode?: AccountsPageViewProps["mode"];
   showArchived?: boolean;
+  grouping?: AccountsPageViewProps["grouping"];
+  onGroupingChange?: AccountsPageViewProps["onGroupingChange"];
   onShowArchivedChange?: AccountsPageViewProps["onShowArchivedChange"];
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
   const mode = args.mode ?? "active";
+  const grouping =
+    args.managementContext === "categories"
+      ? "accountStructure"
+      : (args.grouping ?? "accountStructure");
+  const assetClasses = useAssetClasses();
   const showArchived = args.showArchived ?? false;
   const scopeKey = `${args.accountBookId}:${args.tab}:${mode}:${showArchived}`;
   const refreshAssetClasses = useRefreshAssetClasses();
@@ -336,12 +350,12 @@ export function useAccountsPageController(args: {
     load: loadGainLoss,
   });
 
-  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:active:${args.tab}`;
+  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:active:${args.tab}${grouping === "assetClass" ? ":assetClass" : ""}`;
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     storageKey,
     isVirtualArchivedGroup,
     args.managementContext === "categories" && !showArchived,
-    args.tab === "BALANCE"
+    args.tab === "BALANCE" && grouping === "accountStructure"
       ? [
           `cashfolio:expandedGroups:${args.accountBookId}:active:ASSET`,
           `cashfolio:expandedGroups:${args.accountBookId}:active:LIABILITY`,
@@ -349,18 +363,30 @@ export function useAccountsPageController(args: {
       : undefined,
   );
 
-  const rowsByParentKeyForGroupAggregation = useRowsByParentKey(
-    rowsWithAccountReferenceBalances,
+  const projectedRows = useMemo(
+    () =>
+      grouping === "assetClass"
+        ? buildAssetClassTree(rowsWithAccountReferenceBalances, assetClasses)
+        : rowsWithAccountReferenceBalances,
+    [grouping, rowsWithAccountReferenceBalances, assetClasses],
   );
+  const projectedGainLoss = useMemo(
+    () =>
+      grouping === "assetClass"
+        ? projectAssetClassGainLoss(gainLoss.data, projectedRows)
+        : gainLoss.data,
+    [grouping, gainLoss.data, projectedRows],
+  );
+  const rowsByParentKeyForGroupAggregation = useRowsByParentKey(projectedRows);
   const balanceInReferenceCurrencyByGroupId =
     useBalanceInReferenceCurrencyByGroupId(
       rowsByParentKeyForGroupAggregation,
-      rowsWithAccountReferenceBalances,
+      projectedRows,
       !isEquityTab,
     );
   const rowsWithGroupAssetClasses = useRowsWithGroupAssetClasses(
     rowsByParentKeyForGroupAggregation,
-    rowsWithAccountReferenceBalances,
+    projectedRows,
     !isEquityTab,
   );
   const rowsWithGroupTrackingMethods = useRowsWithGroupTrackingMethods(
@@ -466,7 +492,7 @@ export function useAccountsPageController(args: {
       ),
   });
   const bulkAccountActions = useBulkAccountActions({
-    scopeKey,
+    scopeKey: `${scopeKey}:${grouping}`,
     enabled: !isEquityTab,
     rows,
     submitAssetClass: (accountIds, assetClassId) =>
@@ -481,7 +507,8 @@ export function useAccountsPageController(args: {
     onRefreshConstraints,
   });
   const columnDefs = useAccountTreeColumnDefs({
-    gainLossData: gainLoss.data,
+    gainLossData: projectedGainLoss,
+    grouping,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,
     categoryType: args.tab === "EQUITY-INCOME" ? "INCOME" : "EXPENSE",
@@ -511,7 +538,9 @@ export function useAccountsPageController(args: {
   return {
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
-    gainLoss,
+    gainLoss: { ...gainLoss, data: projectedGainLoss },
+    grouping,
+    onGroupingChange: args.onGroupingChange,
     onRefreshConstraints,
     unarchiveRecovery,
     accountBookId: args.accountBookId,

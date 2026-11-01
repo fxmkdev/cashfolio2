@@ -1,4 +1,5 @@
 import { useAssetClasses } from "@/classification-context";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import type { ClassificationNode } from "@/shared/asset-class";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { buildAccountGainLossColumns } from "./-gain-loss-columns";
@@ -101,6 +102,7 @@ export function getAccountListBalanceValue(args: {
 }
 
 export function useAccountTreeColumnDefs(params: {
+  grouping?: ReportingGrouping;
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;
@@ -119,6 +121,7 @@ export function useAccountTreeColumnDefs(params: {
 }): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
   const assetClasses = useAssetClasses();
   const {
+    grouping = "accountStructure",
     gainLossData,
     isGainLossLoading,
     isEquityTab,
@@ -299,17 +302,21 @@ export function useAccountTreeColumnDefs(params: {
         cellRenderer: ({ data }: ICellRendererParams<AccountsGridRow>) => {
           if (!data) return null;
           if (isReferenceCurrencyTotalFooterRow(data)) return null;
-          if (data.isVirtualArchivedGroup) return null;
+          if (data.isVirtualArchivedGroup || data.presentationKind) return null;
 
           const parentKey = data.parentId ?? ROOT_PARENT_KEY;
           const siblingCount =
             (rowsByParentKeyRef.current
               .get(parentKey)
               ?.filter((row) => !row.isVirtualArchivedGroup).length ?? 0) - 1;
-          const hasSiblings = siblingCount >= 1;
-          const reorderLabel = hasSiblings
-            ? "Reorder Siblings"
-            : "Cannot reorder because this row has no siblings";
+          const hasSiblings =
+            grouping === "accountStructure" && siblingCount >= 1;
+          const reorderLabel =
+            grouping === "assetClass"
+              ? "Switch to Account Structure to reorder siblings"
+              : hasSiblings
+                ? "Reorder Siblings"
+                : "Cannot reorder because this row has no siblings";
 
           if (!data.isActive) {
             return (
@@ -395,6 +402,7 @@ export function useAccountTreeColumnDefs(params: {
       } satisfies ColDef<AccountsGridRow>,
     ];
   }, [
+    grouping,
     assetClasses,
     gainLossData,
     isGainLossLoading,

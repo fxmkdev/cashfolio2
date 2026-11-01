@@ -1,4 +1,13 @@
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
+import { useAssetClasses } from "@/classification-context";
+import { useExpandedGroups } from "@/hooks/use-expanded-groups";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import {
+  buildAssetClassTree,
+  projectAssetClassGainLoss,
+  assetClassRowId,
+  archivedClassRowId,
+} from "./-asset-class-tree";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
 
@@ -343,6 +352,8 @@ function AccountsPageStoryHarness({
   startWithCreateModal = false,
   startWithEditModal = false,
   routeSmoke = false,
+  initialGrouping = "accountStructure",
+  rememberExpansion = false,
 }: {
   bulkAssignment?: boolean;
   assignmentFailsOnce?: boolean;
@@ -355,7 +366,15 @@ function AccountsPageStoryHarness({
   startWithCreateModal?: boolean;
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
+  initialGrouping?: ReportingGrouping;
+  rememberExpansion?: boolean;
 }) {
+  const classes = useAssetClasses();
+  const [grouping, setGrouping] = useState<ReportingGrouping>(initialGrouping);
+  const expansion = useExpandedGroups(
+    `storybook:account-grouping:${grouping}`,
+    isVirtualArchivedGroup,
+  );
   const [assignmentScope, setAssignmentScope] = useState("first");
   const bulkApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const hasFailed = useRef(false);
@@ -448,11 +467,18 @@ function AccountsPageStoryHarness({
       ? sourceRows
       : buildUnifiedAccountTreeRows(sourceRows);
   }, [mode, tab, showArchived, rowsOverride, assetClasses, trackingMethods]);
-  const sourceRowsByParentKey = useRowsByParentKey(sourceRows);
+  const projectedRows = useMemo(
+    () =>
+      grouping === "assetClass"
+        ? buildAssetClassTree(sourceRows, classes)
+        : sourceRows,
+    [sourceRows, classes, grouping],
+  );
+  const sourceRowsByParentKey = useRowsByParentKey(projectedRows);
   const isEquityTab = tab.startsWith("EQUITY-");
   const rowsWithGroupAssetClasses = useRowsWithGroupAssetClasses(
     sourceRowsByParentKey,
-    sourceRows,
+    projectedRows,
     !isEquityTab,
   );
   const rows = useRowsWithGroupTrackingMethods(
@@ -512,7 +538,7 @@ function AccountsPageStoryHarness({
     },
   };
   const assignment = useBulkAccountActions({
-    scopeKey: `${assignmentScope}:${tab}:${mode}`,
+    scopeKey: `${assignmentScope}:${tab}:${mode}:${grouping}`,
     enabled: bulkAssignment && !isEquityTab,
     rows,
     submitAssetClass: async (accountIds, assetClassId) => {
@@ -543,10 +569,13 @@ function AccountsPageStoryHarness({
     },
   });
   const columnDefs = useAccountTreeColumnDefs({
+    grouping,
     gainLossData:
       isEquityTab || gainLossState === "loading" || gainLossState === "error"
         ? undefined
-        : gainLossData,
+        : grouping === "assetClass"
+          ? projectAssetClassGainLoss(gainLossData, rows)
+          : gainLossData,
     isGainLossLoading: gainLossState === "loading",
     isEquityTab,
     categoryType: tab === "EQUITY-INCOME" ? "INCOME" : "EXPENSE",
@@ -617,7 +646,7 @@ function AccountsPageStoryHarness({
               bulkApiRef.current?.setFilterModel({
                 "ag-Grid-AutoColumn": {
                   filterType: "text",
-                  type: "equals",
+                  type: grouping === "assetClass" ? "contains" : "equals",
                   filter: "Checking",
                 },
               })
@@ -654,6 +683,8 @@ function AccountsPageStoryHarness({
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
       <AccountsPageView
+        grouping={grouping}
+        onGroupingChange={setGrouping}
         bulkAccountActions={
           bulkAssignment && !isEquityTab ? assignment : undefined
         }
@@ -713,12 +744,17 @@ function AccountsPageStoryHarness({
           { mode, tab },
           referenceCurrencyBalanceTotal,
         )}
-        isGroupOpenByDefault={({ rowNode }) =>
-          isEquityTab && isVirtualArchivedGroup(rowNode.data)
-            ? false
-            : expandGroups || initialMode === "archived"
+        isGroupOpenByDefault={
+          rememberExpansion
+            ? expansion.isGroupOpenByDefault
+            : ({ rowNode }) =>
+                isEquityTab && isVirtualArchivedGroup(rowNode.data)
+                  ? false
+                  : expandGroups || initialMode === "archived"
         }
-        onRowGroupOpened={() => undefined}
+        onRowGroupOpened={
+          rememberExpansion ? expansion.onRowGroupOpened : () => undefined
+        }
         createAccountGroupId={creation.createAccountGroupId}
         createGroupParentId={creation.createGroupParentId}
         createModalOpened={createModalOpened}
@@ -817,6 +853,169 @@ async function openGainLossDetails(canvasElement: HTMLElement) {
 
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
+};
+
+async function chooseAccountGrouping(
+  canvasElement: HTMLElement,
+  label: "Asset Class" | "Account Structure",
+) {
+  await userEvent.click(within(canvasElement).getByLabelText("Group By"));
+  await userEvent.click(
+    within(canvasElement.ownerDocument.body).getByRole("option", {
+      name: label,
+    }),
+  );
+}
+
+export const AssetClassSwitchingAndExpansion: Story = {
+  beforeEach: () => {
+    sessionStorage.removeItem("storybook:account-grouping:accountStructure");
+    sessionStorage.removeItem("storybook:account-grouping:assetClass");
+  },
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      rememberExpansion
+      rowsOverride={bulkRows.map((row) =>
+        row.nodeType === "account" ? { ...row, assetClassId: "EQUITIES" } : row,
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const classId = assetClassRowId("EQUITIES");
+    const collapse = async (id: string) => {
+      const selector = `[row-id="${id}"] .ag-group-expanded`;
+      await waitFor(() =>
+        expect(canvasElement.querySelector(selector)).not.toBeNull(),
+      );
+      await userEvent.click(canvasElement.querySelector(selector)!);
+    };
+    await collapse("portfolio");
+    await chooseAccountGrouping(canvasElement, "Asset Class");
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector('[row-id="account-checking"]'),
+      ).not.toBeNull(),
+    );
+    await expect(
+      canvas.getByRole("link", { name: "Manage Asset Classes" }),
+    ).toHaveAttribute("href", "/storybook-book/settings/classifications");
+    await expect(
+      canvas.queryByRole("button", { name: "Add Group" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="account-checking"] [col-id="ag-Grid-AutoColumn"]',
+      ),
+    ).toHaveTextContent("Portfolio");
+    await expect(
+      canvasElement.querySelector(`[row-id="${classId}"] [col-id="actions"]`),
+    ).toBeEmptyDOMElement();
+    await expect(canvasElement.querySelector('[row-id="old"]')).toBeNull();
+    await expandAssignmentGroup(canvasElement, archivedClassRowId(classId));
+    await waitFor(() =>
+      expect(canvasElement.querySelector('[row-id="old"]')).not.toBeNull(),
+    );
+    for (const id of ["account-checking", "old"]) {
+      const actions = canvasElement.querySelector(
+        `[row-id="${id}"] [col-id="actions"]`,
+      )!;
+      await expect(
+        within(actions as HTMLElement).getByRole("button", {
+          name: "Reorder Siblings",
+        }),
+      ).toBeDisabled();
+      await expect(
+        within(actions as HTMLElement).getByRole("button", { name: "Edit" }),
+      ).toBeEnabled();
+    }
+    await collapse(classId);
+    await chooseAccountGrouping(canvasElement, "Account Structure");
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="portfolio"] .ag-group-contracted',
+        ),
+      ).not.toBeNull(),
+    );
+    await expandAssignmentGroup(canvasElement, "portfolio");
+    await chooseAccountGrouping(canvasElement, "Asset Class");
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          `[row-id="${classId}"] .ag-group-contracted`,
+        ),
+      ).not.toBeNull(),
+    );
+    await selectAssignmentAccount(canvasElement, classId);
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "2 accounts selected",
+    );
+    await chooseAccountGrouping(canvasElement, "Account Structure");
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+      ).not.toBeInTheDocument(),
+    );
+  },
+};
+
+export const AssetClassFilteredBulkAssignment: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialGrouping="assetClass"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows.map((row) =>
+        row.nodeType === "account" ? { ...row, assetClassId: "EQUITIES" } : row,
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Filter to Checking" }),
+    );
+    await selectAssignmentAccount(canvasElement, assetClassRowId("EQUITIES"));
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Asset Class" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Asset Class"));
+    await userEvent.click(dialog.getByLabelText("Asset Class"));
+    await userEvent.click(body.getByRole("option", { name: "Fixed Income" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(canvas.getByTestId("assignment-account-ids")).toHaveTextContent(
+        /^account-checking$/,
+      ),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Account Filters" }),
+    );
+    await waitFor(() =>
+      expect(
+        assetClassCell(canvasElement, "account-checking"),
+      ).toHaveTextContent("Fixed Income"),
+    );
+    await expect(
+      canvasElement.querySelector(
+        `[row-id="${assetClassRowId("FIXED_INCOME")}"]`,
+      ),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelector(`[row-id="${assetClassRowId("EQUITIES")}"]`),
+    ).not.toBeNull();
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+  },
 };
 
 export const ConstrainedWidthWithGainLoss: Story = {
