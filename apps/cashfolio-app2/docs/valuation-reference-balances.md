@@ -54,12 +54,25 @@ this view.
 
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.
-- Route orchestration for this page is in
-  `src/routes/$accountBookId/accounts/-page-controller.ts`, with focused helpers
-  in:
-  - `-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
-  - `-page-reference-balances.ts` (lazy reference-balance hydration and delayed
-    loading indicator state)
+- The route-local `-page-controller.ts` composes data loading/refresh,
+  presentation, grid lifecycle, and management actions through focused hooks.
+  `-account-mutations.ts` owns mutation payloads and the injectable API used by
+  its unit tests; `-page-modal-state.ts` owns editor/confirmation state, with
+  `-page-modal-props.ts` binding it to submission and close callbacks.
+- `-use-accounts-presentation.ts` derives hierarchy projections, group metadata,
+  reference balances, gain/loss, and footer rows without server requests. Both
+  the production controller and Storybook harness use this hook. Reference
+  balance hydration and its delayed loading indicator remain in
+  `-page-reference-balances.ts`.
+- `-page-view.tsx` composes typed header/navigation, grid, and dialog
+  components. The column hook assembles separate balance, metadata, and action
+  definitions; live refs keep loading indicators and sibling checks current
+  without rebuilding column definitions for each balance update.
+- The private `-stories/` folder contains shared fixtures, interaction helpers,
+  and a small harness backed by focused routing, modal, and assignment hooks.
+  Stories are grouped by behavior and retain the `Routes/AccountsPageView` title
+  and original story IDs. Presentation changes belong in the shared hook rather
+  than being duplicated in the harness.
 
 ## Archived groups and totals
 

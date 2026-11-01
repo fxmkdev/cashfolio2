@@ -16,7 +16,7 @@ vi.mock("@/server/accounts", () => ({
   updateAccountGroup: vi.fn(),
 }));
 
-import { createAccountsMutationActions } from "./-page-controller";
+import { createAccountsMutationActions } from "./-account-mutations";
 
 function createActions(args: {
   state: unknown;
