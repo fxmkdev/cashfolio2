@@ -1,4 +1,7 @@
-import { createClassifiedAccounts } from "../support/classifications";
+import {
+  createClassifiedAccounts,
+  selectClassificationOption,
+} from "../support/classifications";
 import {
   assetClassSelection,
   withAssetClassId,
@@ -94,9 +97,7 @@ for (const scenario of [
     });
     await expect(assetClassInput).toBeEnabled();
     await assetClassInput.click();
-    await page
-      .getByRole("option", { name: "Real Estate", exact: true })
-      .click();
+    await selectClassificationOption(page, "Real Estate");
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await expect(

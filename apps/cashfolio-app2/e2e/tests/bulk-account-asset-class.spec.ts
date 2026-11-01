@@ -1,4 +1,7 @@
-import { createClassifiedAccounts } from "../support/classifications";
+import {
+  createClassifiedAccounts,
+  selectClassificationOption,
+} from "../support/classifications";
 import {
   assetClassSelection,
   withAssetClassId,
@@ -21,7 +24,7 @@ async function applyClass(page: Page, label: string) {
   });
   await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
   await dialog.getByLabel("Asset Class").click();
-  await page.getByRole("option", { name: label, exact: true }).click();
+  await selectClassificationOption(page, label);
   await dialog.getByRole("button", { name: "Apply" }).click();
   await expect(dialog).not.toBeVisible();
 }

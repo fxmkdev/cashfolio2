@@ -21,6 +21,7 @@ import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
 import type { ApprovedSeedTarget } from "./target";
 import { generateStagingDataset } from "./dataset";
 import { replaceStagingData } from "./writer";
+import { defaultAssetClassNodes } from "../shared/asset-class";
 
 const run = promisify(execFile);
 const applicationTables = [
@@ -90,24 +91,96 @@ let databaseCreated = false;
 let roleCreated = false;
 
 async function snapshot() {
-  const [users, books, links, groups, accounts, transactions, bookings] =
-    await Promise.all([
-      fixture.user.findMany({ orderBy: { id: "asc" } }),
-      fixture.accountBook.findMany({ orderBy: { id: "asc" } }),
-      fixture.userAccountBookLink.findMany({
-        orderBy: [{ userId: "asc" }, { accountBookId: "asc" }],
+  const [
+    users,
+    books,
+    links,
+    groups,
+    accounts,
+    transactions,
+    bookings,
+    schemes,
+    nodes,
+    assignments,
+  ] = await Promise.all([
+    fixture.user.findMany({ orderBy: { id: "asc" } }),
+    fixture.accountBook.findMany({ orderBy: { id: "asc" } }),
+    fixture.userAccountBookLink.findMany({
+      orderBy: [{ userId: "asc" }, { accountBookId: "asc" }],
+    }),
+    fixture.accountGroup.findMany({ orderBy: { id: "asc" } }),
+    fixture.account
+      .findMany({
+        include: { classifications: assetClassSelection },
+        orderBy: { id: "asc" },
+      })
+      .then((accounts) => accounts.map(withAssetClassId)),
+    fixture.transaction.findMany({ orderBy: { id: "asc" } }),
+    fixture.booking.findMany({ orderBy: { id: "asc" } }),
+    fixture.classificationScheme.findMany({
+      orderBy: [{ accountBookId: "asc" }, { id: "asc" }],
+    }),
+    fixture.classificationNode.findMany({
+      orderBy: [{ accountBookId: "asc" }, { id: "asc" }],
+    }),
+    fixture.accountClassification.findMany({
+      orderBy: [{ accountBookId: "asc" }, { accountId: "asc" }],
+    }),
+  ]);
+  return {
+    users,
+    books,
+    links,
+    groups,
+    accounts,
+    transactions,
+    bookings,
+    schemes,
+    nodes,
+    assignments,
+  };
+}
+
+function expectDefaultClassifications(
+  current: Awaited<ReturnType<typeof snapshot>>,
+) {
+  expect(current.schemes).toHaveLength(dataset.books.length);
+  expect(current.nodes).toHaveLength(
+    dataset.books.length * defaultAssetClassNodes.length,
+  );
+  expect(current.assignments).toHaveLength(
+    dataset.books
+      .flatMap((book) => book.accounts)
+      .filter((account) => account.assetClassId !== null).length,
+  );
+  for (const book of current.books) {
+    expect(current.schemes).toContainEqual({
+      id: "assetClass",
+      accountBookId: book.id,
+      name: "Asset Class",
+    });
+    expect(
+      current.nodes
+        .filter((node) => node.accountBookId === book.id)
+        .map(({ id, name, parentId, sortOrder }) => ({
+          id,
+          name,
+          parentId,
+          sortOrder,
+        })),
+    ).toEqual(
+      defaultAssetClassNodes.toSorted((a, b) => a.id.localeCompare(b.id)),
+    );
+  }
+  for (const assignment of current.assignments) {
+    expect(current.nodes).toContainEqual(
+      expect.objectContaining({
+        id: assignment.nodeId,
+        schemeId: assignment.schemeId,
+        accountBookId: assignment.accountBookId,
       }),
-      fixture.accountGroup.findMany({ orderBy: { id: "asc" } }),
-      fixture.account
-        .findMany({
-          include: { classifications: assetClassSelection },
-          orderBy: { id: "asc" },
-        })
-        .then((accounts) => accounts.map(withAssetClassId)),
-      fixture.transaction.findMany({ orderBy: { id: "asc" } }),
-      fixture.booking.findMany({ orderBy: { id: "asc" } }),
-    ]);
-  return { users, books, links, groups, accounts, transactions, bookings };
+    );
+  }
 }
 
 describe("staging seed against disposable PostgreSQL", () => {
@@ -197,6 +270,7 @@ describe("staging seed against disposable PostgreSQL", () => {
     });
     const summary = await replaceStagingData(seed, config, dataset);
     const current = await snapshot();
+    expectDefaultClassifications(current);
 
     expect(current.users).toHaveLength(2);
     expect(current.users).toContainEqual(existingAdmin);
@@ -350,6 +424,8 @@ describe("staging seed against disposable PostgreSQL", () => {
     const first = await snapshot();
     const secondSummary = await replaceStagingData(seed, config, dataset);
     const second = await snapshot();
+    expectDefaultClassifications(first);
+    expectDefaultClassifications(second);
 
     for (const table of [
       "books",

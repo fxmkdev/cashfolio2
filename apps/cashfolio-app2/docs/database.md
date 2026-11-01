@@ -95,14 +95,23 @@ paths are relative to that app directory.
   only balance accounts may have assignments. A missing assignment means
   Unclassified, distinct from Other Assets. The fixed `AssetClass` enum and
   `Account.assetClass` column have been removed. Every book receives the
-  protected `assetClass` scheme and eight editable roots through a database
-  initialization trigger. Migrated roots retain their old enum keys as IDs,
-  preserving active and archived assignments and History links. New custom nodes
-  use CUID2 IDs. Parent classes can also have direct assignments. Classification
-  has no history; current names, hierarchy, and assignments apply to all
-  periods. Classification writes participate in period cache revision triggers.
-  Sibling names have a case-insensitive unique index; cycle checks run within
-  the serialized account-book mutation boundary.
+  protected `assetClass` scheme through a database initialization trigger. New
+  books receive nine editable roots and fifteen children, covering cash,
+  equities, fixed income, real estate, commodities, digital assets, alternative
+  investments, multi-asset investments, and other assets. The defaults have two
+  levels with sibling-specific ordering; parent classes remain selectable. Books
+  initialized before `20261101120000_hierarchical_default_asset_classes` retain
+  their original eight flat roots or their customized taxonomy. The migration
+  only replaces the initialization function: it does not add nodes, change
+  assignments, or invalidate caches for existing books. Staging resets recreate
+  demo books using the same initialization trigger. Default IDs are stable
+  uppercase keys; migrated roots retain their old enum keys as IDs, preserving
+  active and archived assignments and History links. New custom nodes use CUID2
+  IDs. Parent classes can also have direct assignments. Classification has no
+  history; current names, hierarchy, and assignments apply to all periods.
+  Classification writes participate in period cache revision triggers. Sibling
+  names have a case-insensitive unique index; cycle checks run within the
+  serialized account-book mutation boundary.
 
 - `AccountType`: `BALANCE`, `EQUITY`. Balance accounts and their groups use
   `BALANCE` regardless of whether their signed balances are owned or owed.

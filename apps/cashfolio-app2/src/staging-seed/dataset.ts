@@ -66,13 +66,13 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
     ...CHF,
     groupKey: "cash",
     isCashAccount: true,
-    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    assetClassId: defaultAssetClassIds.BANK_DEPOSITS,
   });
   addAccount(target, "eur", "Transfer account EUR", AccountType.BALANCE, {
     ...EUR,
     groupKey: "cash",
     isCashAccount: true,
-    assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+    assetClassId: defaultAssetClassIds.BANK_DEPOSITS,
   });
   addAccount(target, "opening", "Opening Balances", AccountType.EQUITY, {
     equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,

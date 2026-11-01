@@ -1,10 +1,13 @@
-import { assetClassOptions } from "./asset-class";
+import { defaultAssetClassNodes } from "./asset-class";
 import type {
   HistoryScopeOption,
   HistoryScopeSelection,
 } from "./history-scope";
 const GAIN_LOSS_ROOT_SCOPE_ORDER: HistoryScopeSelection[] = [
-  ...assetClassOptions.map((option) => `asset-class:${option.value}` as const),
+  ...defaultAssetClassNodes
+    .filter((node) => node.parentId === null)
+    .toSorted((a, b) => a.sortOrder - b.sortOrder)
+    .map((node) => `asset-class:${node.id}` as const),
   "asset-class:unclassified",
 ];
 

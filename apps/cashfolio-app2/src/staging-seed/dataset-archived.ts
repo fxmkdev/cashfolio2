@@ -59,7 +59,7 @@ export function archivedHouseholdAccounts(target: SeedBook) {
       groupKey,
       isActive: false,
       isCashAccount: true,
-      assetClassId: defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+      assetClassId: defaultAssetClassIds.BANK_DEPOSITS,
     });
   }
   for (const [key, name, groupKey, unit, assetClassId] of [
@@ -68,28 +68,28 @@ export function archivedHouseholdAccounts(target: SeedBook) {
       "Closed Apple position",
       "securities",
       AAPL,
-      defaultAssetClassIds.EQUITIES,
+      defaultAssetClassIds.LISTED_EQUITIES,
     ],
     [
       "closed-cs-aapl",
       "Apple shares",
       "credit-suisse-equities",
       AAPL,
-      defaultAssetClassIds.EQUITIES,
+      defaultAssetClassIds.LISTED_EQUITIES,
     ],
     [
       "closed-cs-msft",
       "Microsoft shares",
       "credit-suisse-equities",
       MSFT,
-      defaultAssetClassIds.EQUITIES,
+      defaultAssetClassIds.LISTED_EQUITIES,
     ],
     [
       "closed-cs-usd",
       "Settlement account USD",
       "credit-suisse",
       USD,
-      defaultAssetClassIds.CASH_AND_CASH_EQUIVALENTS,
+      defaultAssetClassIds.BANK_DEPOSITS,
     ],
   ] as const) {
     addAccount(target, key, name, AccountType.BALANCE, {
@@ -107,7 +107,6 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     {
       ...CHF,
       isActive: false,
-      assetClassId: defaultAssetClassIds.OTHER_ASSETS,
     },
   );
   addAccount(target, "closed-project", "One-off project", AccountType.EQUITY, {

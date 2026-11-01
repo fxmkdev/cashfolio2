@@ -5,6 +5,7 @@ import {
 } from "../support/db";
 import { prisma } from "../support/db-client";
 import { agGridRowByText, clickPinnedRowAction } from "../support/grid";
+import { selectClassificationOption } from "../support/classifications";
 test("creates, assigns, reports, reparents and deletes an asset class", async ({
   page,
   e2eExternalId,
@@ -31,8 +32,9 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await expect(
     page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
   ).toBeVisible();
+  // Open root reordering from the first root; later roots may be virtualized.
   await clickPinnedRowAction({
-    row: page.locator('[row-id="OTHER_ASSETS"]').first(),
+    row: page.locator('[row-id="CASH_AND_CASH_EQUIVALENTS"]').first(),
     actionLabel: "Reorder Siblings",
   });
   const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
@@ -124,7 +126,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   });
   dialog = page.getByRole("dialog", { name: "Edit Asset Class", exact: true });
   await dialog.getByLabel("Parent Class", { exact: true }).click();
-  await page.getByRole("option", { name: "Fixed Income", exact: true }).click();
+  await selectClassificationOption(page, "Fixed Income");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.goto(

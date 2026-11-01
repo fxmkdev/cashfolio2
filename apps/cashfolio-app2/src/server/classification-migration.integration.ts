@@ -9,6 +9,18 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import { defaultAssetClassNodes } from "../shared/asset-class";
 const run = promisify(execFile);
+// Historical enum values and flat defaults must not follow today's taxonomy.
+const legacyAssetClassNodes = Object.entries({
+  CASH_AND_CASH_EQUIVALENTS: "Cash & Cash Equivalents",
+  EQUITIES: "Equities",
+  FIXED_INCOME: "Fixed Income",
+  REAL_ESTATE: "Real Estate",
+  COMMODITIES_AND_PRECIOUS_METALS: "Commodities & Precious Metals",
+  DIGITAL_ASSETS: "Digital Assets",
+  ALTERNATIVE_INVESTMENTS: "Alternative Investments",
+  OTHER_ASSETS: "Other Assets",
+}).map(([id, name], sortOrder) => ({ id, name, parentId: null, sortOrder }));
+const hierarchyMigration = "20261101120000_hierarchical_default_asset_classes";
 const adminUrl = new URL(
   process.env.MUTATION_TEST_ADMIN_DATABASE_URL ??
     "postgresql://postgres:postgres@127.0.0.1:5433/postgres",
@@ -33,6 +45,24 @@ const db = new PrismaClient({
 });
 let created = false,
   directory: string | undefined;
+async function existingClassifications() {
+  return {
+    schemes: await db.classificationScheme.findMany({
+      orderBy: [{ accountBookId: "asc" }, { id: "asc" }],
+    }),
+    nodes: await db.classificationNode.findMany({
+      orderBy: [{ accountBookId: "asc" }, { id: "asc" }],
+    }),
+    assignments: await db.accountClassification.findMany({
+      orderBy: [{ accountBookId: "asc" }, { accountId: "asc" }],
+    }),
+    books: await db.accountBook.findMany({
+      orderBy: { id: "asc" },
+      select: { id: true, periodCacheRevision: true },
+    }),
+  };
+}
+let beforeHierarchy: Awaited<ReturnType<typeof existingClassifications>>;
 beforeAll(async () => {
   await admin.$executeRawUnsafe(`CREATE DATABASE "${name}"`);
   created = true;
@@ -72,12 +102,113 @@ beforeAll(async () => {
       startDate: new Date("2026-01-01"),
     },
   });
-  for (const node of defaultAssetClassNodes)
+  for (const node of legacyAssetClassNodes)
     for (const isActive of [true, false]) {
       const id = `${node.id}-${isActive}`;
       await db.$executeRaw`INSERT INTO "Account" ("id","accountBookId","name","type","unit","currency","assetClass","isActive","updatedAt") VALUES (${id},'book',${id},'BALANCE','CURRENCY','CHF',${node.id}::"AssetClass",${isActive},NOW())`;
     }
   await db.$executeRaw`INSERT INTO "Account" ("id","accountBookId","name","type","unit","currency","updatedAt") VALUES ('unclassified','book','Unclassified','BALANCE','CURRENCY','CHF',NOW())`;
+  // Apply the original classifications migration before testing the new defaults.
+  await cp("prisma", directory, {
+    recursive: true,
+    filter: (source) =>
+      !source
+        .split(/[\\/]/)
+        .some((part) => /^\d{14}_/.test(part) && part >= hierarchyMigration),
+  });
+  await run(
+    "pnpm",
+    [
+      "exec",
+      "prisma",
+      "migrate",
+      "deploy",
+      "--schema",
+      join(directory, "schema.prisma"),
+    ],
+    options,
+  );
+  await db.accountBook.create({
+    data: {
+      id: "customized",
+      name: "Customized Existing Book",
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01"),
+    },
+  });
+  await db.classificationScheme.update({
+    where: {
+      id_accountBookId: { id: "assetClass", accountBookId: "customized" },
+    },
+    data: { name: "My Asset Classes" },
+  });
+  await db.classificationNode.update({
+    where: {
+      id_schemeId_accountBookId: {
+        id: "EQUITIES",
+        schemeId: "assetClass",
+        accountBookId: "customized",
+      },
+    },
+    data: { name: "My Shares", sortOrder: 10 },
+  });
+  await db.classificationNode.update({
+    where: {
+      id_schemeId_accountBookId: {
+        id: "OTHER_ASSETS",
+        schemeId: "assetClass",
+        accountBookId: "customized",
+      },
+    },
+    data: {
+      name: "Collectibles",
+      parentId: "ALTERNATIVE_INVESTMENTS",
+      sortOrder: 4,
+    },
+  });
+  // Even a custom node colliding with a new default ID must remain untouched.
+  await db.classificationNode.create({
+    data: {
+      id: "BANK_DEPOSITS",
+      schemeId: "assetClass",
+      accountBookId: "customized",
+      name: "My Custom Holding",
+      parentId: "EQUITIES",
+      sortOrder: 3,
+    },
+  });
+  await db.classificationNode.delete({
+    where: {
+      id_schemeId_accountBookId: {
+        id: "REAL_ESTATE",
+        schemeId: "assetClass",
+        accountBookId: "customized",
+      },
+    },
+  });
+  for (const isActive of [true, false]) {
+    const id = `customized-${isActive}`;
+    await db.account.create({
+      data: {
+        id,
+        accountBookId: "customized",
+        name: id,
+        type: "BALANCE",
+        unit: "CURRENCY",
+        currency: "CHF",
+        isActive,
+      },
+    });
+    await db.accountClassification.create({
+      data: {
+        accountId: id,
+        accountBookId: "customized",
+        schemeId: "assetClass",
+        nodeId: isActive ? "BANK_DEPOSITS" : "OTHER_ASSETS",
+      },
+    });
+  }
+  beforeHierarchy = await existingClassifications();
   await run("pnpm", ["exec", "prisma", "migrate", "deploy"], options);
 });
 afterAll(async () => {
@@ -87,22 +218,27 @@ afterAll(async () => {
   await admin.$disconnect();
   if (directory) await rm(directory, { recursive: true, force: true });
 });
+it("preserves existing schemes, customized trees, assignments and cache revisions", async () => {
+  expect(await existingClassifications()).toEqual(beforeHierarchy);
+});
 it("backfills stable class IDs and preserves active and archived assignments", async () => {
-  expect(await db.classificationScheme.findMany()).toEqual([
-    { id: "assetClass", accountBookId: "book", name: "Asset Class" },
-  ]);
+  expect(
+    await db.classificationScheme.findMany({
+      where: { accountBookId: "book" },
+    }),
+  ).toEqual([{ id: "assetClass", accountBookId: "book", name: "Asset Class" }]);
   expect(
     await db.classificationNode.findMany({
       where: { accountBookId: "book" },
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, parentId: true, sortOrder: true },
     }),
-  ).toEqual(defaultAssetClassNodes);
+  ).toEqual(legacyAssetClassNodes);
   const assignments = await db.accountClassification.findMany({
     where: { accountBookId: "book" },
   });
   expect(assignments).toHaveLength(16);
-  for (const node of defaultAssetClassNodes)
+  for (const node of legacyAssetClassNodes)
     for (const isActive of [true, false])
       expect(assignments).toContainEqual({
         accountId: `${node.id}-${isActive}`,
@@ -126,8 +262,34 @@ it("initializes every new book, enforces uniqueness, book isolation and balance 
     },
   });
   expect(
-    await db.classificationNode.count({ where: { accountBookId: "second" } }),
-  ).toBe(8);
+    await db.classificationNode.findMany({
+      where: { accountBookId: "second" },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, parentId: true, sortOrder: true },
+    }),
+  ).toEqual(
+    defaultAssetClassNodes.toSorted((a, b) => a.id.localeCompare(b.id)),
+  );
+  await db.account.create({
+    data: {
+      id: "parent-assigned",
+      accountBookId: "second",
+      name: "Broad Equities",
+      type: "BALANCE",
+      unit: "CURRENCY",
+      currency: "CHF",
+    },
+  });
+  await expect(
+    db.accountClassification.create({
+      data: {
+        accountId: "parent-assigned",
+        accountBookId: "second",
+        schemeId: "assetClass",
+        nodeId: "EQUITIES",
+      },
+    }),
+  ).resolves.toMatchObject({ nodeId: "EQUITIES" });
   await expect(
     db.accountClassification.create({
       data: {
