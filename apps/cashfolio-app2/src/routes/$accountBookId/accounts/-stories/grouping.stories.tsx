@@ -98,7 +98,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
     );
     await expect(checkingName()).toHaveTextContent(/^Checking$/);
     await expect(
-      canvas.getByRole("columnheader", { name: /^Path$/ }),
+      canvas.getByRole("columnheader", { name: /^Account Group$/ }),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("columnheader", { name: /^Asset Class$/ }),
@@ -163,7 +163,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
       canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("columnheader", { name: /^Path$/ }),
+      canvas.queryByRole("columnheader", { name: /^Account Group$/ }),
     ).not.toBeInTheDocument();
     await chooseAccountGrouping(canvasElement, "Asset Class");
     await waitFor(() =>

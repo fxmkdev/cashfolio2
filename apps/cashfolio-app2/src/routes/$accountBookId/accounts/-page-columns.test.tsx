@@ -73,11 +73,11 @@ describe("account classification columns", () => {
     });
   });
 
-  it("replaces Asset Class with Path in the same position and keeps neighboring columns", () => {
+  it("replaces Asset Class with Account Group in the same position and keeps neighboring columns", () => {
     const columns = readColumns(false, "assetClass");
     expect(columns[3]).toMatchObject({
       colId: "path",
-      headerName: "Path",
+      headerName: "Account Group",
       width: 220,
       resizable: true,
       sortable: false,
@@ -92,14 +92,14 @@ describe("account classification columns", () => {
     expect(readColumns(true, "assetClass")).toHaveLength(1);
   });
 
-  it("uses original group paths for Path display, filtering and tooltips on active and archived accounts", () => {
+  it("uses original group paths for Account Group display, filtering and tooltips on active and archived accounts", () => {
     const column = readColumns(false, "assetClass")[3];
     if (
       !("valueGetter" in column) ||
       typeof column.valueGetter !== "function" ||
       typeof column.tooltipValueGetter !== "function"
     )
-      throw new Error("Missing Path getters");
+      throw new Error("Missing Account Group getters");
     const cases: Array<[AccountsGridRow | undefined, string | undefined]> = [
       [
         createAccountRow({ accountGroupPath: ["Cash", "Swissquote"] }),

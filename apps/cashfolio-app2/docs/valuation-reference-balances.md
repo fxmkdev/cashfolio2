@@ -87,13 +87,13 @@ currencies for the same symbol), with **Total Value Accounts** for total-value
 tracking and **Unknown Unit** for missing identities. Unit groups appear even
 for a single account and retain zero, negative, and unvalued accounts.
 Subclasses precede directly assigned unit groups; units and accounts sort
-alphabetically by default. The **Path** column replaces **Asset Class** in this
-view and shows each account's original account-group hierarchy, excluding its
-own name, with spaced `/` separators. Ungrouped accounts, headings, and the
-total row have blank Path cells. Path has its own text filter and full-path
-tooltip. Names remain single-line at the standard row height, with name-only
-filtering and tooltips. Account Structure retains the Asset Class column. Empty
-classes are omitted.
+alphabetically by default. The **Account Group** column replaces **Asset Class**
+in this view and shows each account's original account-group hierarchy,
+excluding its own name, with spaced `/` separators. Ungrouped accounts,
+headings, and the total row have blank Account Group cells. Account Group has
+its own text filter and full-path tooltip. Names remain single-line at the
+standard row height, with name-only filtering and tooltips. Account Structure
+retains the Asset Class column. Empty classes are omitted.
 
 In Asset Class, archived accounts appear in a collapsed **Archived** branch
 within their assigned unit group, regardless of their original group hierarchy.

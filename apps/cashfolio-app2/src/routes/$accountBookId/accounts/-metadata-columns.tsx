@@ -19,7 +19,7 @@ export function buildAccountMetadataColumns({
     grouping === "assetClass"
       ? ({
           colId: "path",
-          headerName: "Path",
+          headerName: "Account Group",
           width: 220,
           resizable: true,
           sortable: false,
