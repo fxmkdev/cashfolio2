@@ -315,6 +315,7 @@ export function LedgerPageView({
   );
   const splitCreateDialogText =
     getTransactionCreateDialogText(!!createSplitIsCopy);
+  const isImportPrimary = !statementImportDisabledReason;
 
   return (
     <PageShell>
@@ -385,15 +386,40 @@ export function LedgerPageView({
                   context,
                 ) ?? `Edit ${entityLabel}`
               }
-              disabled={!accountEditDisabledReason}
+              disabled={isImportPrimary || !accountEditDisabledReason}
             >
               <span>
                 <SplitButton
-                  leftSection={<IconPencil size={16} />}
+                  leftSection={
+                    isImportPrimary ? (
+                      <IconFileImport size={16} />
+                    ) : (
+                      <IconPencil size={16} />
+                    )
+                  }
                   menuLabel={`${entityLabel} Actions`}
-                  onClick={onOpenAccountEdit}
-                  primaryDisabled={!!accountEditDisabledReason}
+                  onClick={
+                    isImportPrimary ? onOpenImportPage : onOpenAccountEdit
+                  }
+                  primaryDisabled={
+                    !isImportPrimary && !!accountEditDisabledReason
+                  }
                   menuItems={[
+                    ...(isImportPrimary
+                      ? [
+                          {
+                            key: "edit",
+                            label: "Edit",
+                            disabledReason: getAccountConstraintMessage(
+                              accountEditDisabledReason,
+                              context,
+                            ),
+                            disabled: !!accountEditDisabledReason,
+                            leftSection: <IconPencil size={16} />,
+                            onClick: onOpenAccountEdit,
+                          },
+                        ]
+                      : []),
                     ...(onManageCategory
                       ? [
                           {
@@ -404,15 +430,19 @@ export function LedgerPageView({
                           },
                         ]
                       : []),
-                    {
-                      key: "import-statement",
-                      label: "Import Statement",
-                      disabledReason:
-                        statementImportDisabledReason ?? undefined,
-                      disabled: !!statementImportDisabledReason,
-                      leftSection: <IconFileImport size={16} />,
-                      onClick: onOpenImportPage,
-                    },
+                    ...(!isImportPrimary
+                      ? [
+                          {
+                            key: "import-statement",
+                            label: "Import Statement",
+                            disabledReason:
+                              statementImportDisabledReason ?? undefined,
+                            disabled: true,
+                            leftSection: <IconFileImport size={16} />,
+                            onClick: onOpenImportPage,
+                          },
+                        ]
+                      : []),
                     {
                       type: "divider",
                       key: "danger-actions-divider",
@@ -458,7 +488,7 @@ export function LedgerPageView({
                     },
                   ]}
                 >
-                  Edit
+                  {isImportPrimary ? "Import Statement" : "Edit"}
                 </SplitButton>
               </span>
             </Tooltip>

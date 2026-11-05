@@ -31,7 +31,8 @@ for (const entry of ["account", "ledger", "bulk"] as const) {
       `/${book.accountBookId}/${entry === "ledger" ? book.cashAccount.id : "accounts"}`,
     );
     if (entry === "ledger") {
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.getByRole("button", { name: "Account Actions" }).click();
+      await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
     } else {
       const row = agGridRowByText(page, book.cashAccount.name);
       if (entry === "bulk") {

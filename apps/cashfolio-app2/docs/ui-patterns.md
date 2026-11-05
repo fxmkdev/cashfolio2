@@ -1246,8 +1246,11 @@ creation and eligible edit of two-booking transactions from the ledger route
 
 ## Account Statement Import
 
-The account ledger exposes `Import Statement` in the account actions menu for
-asset and liability accounts with complete unit metadata. The action opens a
+The account ledger exposes `Import Statement` as the split button's main action
+for asset and liability accounts with complete unit metadata and a configured
+CSV format, including archived accounts. `Edit` is the first menu item. When
+importing is unavailable, `Edit` remains the main action and `Import Statement`
+stays in the menu, disabled with a reason tooltip. The import action opens a
 dedicated import page. The v1 importer accepts a strict CSV with a header row,
 but header names are ignored. The first six columns must be ordered as: `date`,
 `amount`, `original amount`, `original currency`, `exchange rate`, and

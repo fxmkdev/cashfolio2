@@ -44,8 +44,7 @@ async function upload(page: Page) {
 
 async function openReview(page: Page) {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
-  await page.getByRole("button", { name: "Account Actions" }).click();
-  await page.getByRole("menuitem", { name: "Import Statement" }).click();
+  await page.getByRole("button", { name: "Import Statement" }).click();
   await upload(page);
 }
 

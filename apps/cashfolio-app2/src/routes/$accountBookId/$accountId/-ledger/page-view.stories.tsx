@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text, Button } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -24,6 +24,7 @@ import {
   type PeriodMode,
 } from "@/shared/period-selector-model";
 import type { StatementImportCsvFormat } from "@/shared/statement-import-csv-format";
+import { getStatementImportDisabledReason } from "../-statement-import/draft/account-options";
 import { useLedgerColumnDefs } from "./page-columns";
 import type { SimpleTransactionEditInitialValues } from "./page-data";
 import { PeriodFilterAction } from "../../-period-filter-action";
@@ -151,6 +152,9 @@ function LedgerPageStoryHarness({
   equitySubtype,
   returnLabel,
   assetClassId = null,
+  hasStatementImportCsvFormat = true,
+  accountEditDisabledReason,
+  onOpenImportPage,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -163,6 +167,9 @@ function LedgerPageStoryHarness({
   equitySubtype?: EquityAccountSubtype;
   returnLabel?: string;
   assetClassId?: string | null;
+  hasStatementImportCsvFormat?: boolean;
+  accountEditDisabledReason?: string;
+  onOpenImportPage?: () => void;
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -264,6 +271,9 @@ function LedgerPageStoryHarness({
           type: accountType,
           isActive: accountActive,
           assetClassId,
+          statementImportCsvFormat: hasStatementImportCsvFormat
+            ? statementImportCsvFormat
+            : null,
           trackingMethod: "INDIVIDUAL_UNITS" as const,
         };
 
@@ -360,6 +370,7 @@ function LedgerPageStoryHarness({
         simpleModalOpened={simpleModalOpened}
         splitModalOpened={splitModalOpened}
         accountEditModalOpened={accountEditModalOpened}
+        accountEditDisabledReason={accountEditDisabledReason}
         accountEditInitialValues={{
           assetClassId: account.assetClassId,
           name: account.name,
@@ -418,11 +429,9 @@ function LedgerPageStoryHarness({
             ? "Cannot delete account because it has bookings"
             : "Delete"
         }
-        statementImportDisabledReason={
-          accountType === AccountType.EQUITY
-            ? "Statement imports are only available for asset and liability accounts."
-            : null
-        }
+        statementImportDisabledReason={getStatementImportDisabledReason(
+          account,
+        )}
         periodFilterControls={
           includePeriodFilterControls ? (
             <PeriodFilterAction
@@ -555,7 +564,7 @@ function LedgerPageStoryHarness({
         ) => {
           setSimpleModalOpened(false);
         }}
-        onOpenImportPage={() => undefined}
+        onOpenImportPage={onOpenImportPage ?? (() => undefined)}
         onCloseSplitModal={() => setSplitModalOpened(false)}
         onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
         onSubmitCreateTransaction={async (
@@ -689,18 +698,26 @@ export const EquityWithoutAssetClass: Story = {
 };
 
 export const AccountActionsMenu: Story = {
-  render: () => <LedgerPageStoryHarness />,
-  play: async ({ canvasElement }) => {
+  args: { onOpenImportPage: fn() },
+  render: (args) => (
+    <LedgerPageStoryHarness onOpenImportPage={args.onOpenImportPage} />
+  ),
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    );
+    await expect(args.onOpenImportPage).toHaveBeenCalledTimes(1);
+    await expect(
+      canvas.queryByRole("button", { name: "Edit" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Account Actions" }),
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
@@ -708,6 +725,23 @@ export const AccountActionsMenu: Story = {
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
     });
+    await expect(screen.getAllByRole("menuitem")[0]).toHaveTextContent("Edit");
+    await expect(
+      screen.queryByRole("menuitem", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit Account" });
+    await expect(dialog).toBeVisible();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    );
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    await expect(
+      await screen.findByRole("menuitem", { name: "Edit" }),
+    ).toBeVisible();
   },
 };
 
@@ -721,6 +755,9 @@ export const ArchivedAccountActionsMenu: Story = {
     ).toBeVisible();
     await expect(canvas.getByText("Archived")).toBeVisible();
     await expect(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    ).toBeEnabled();
+    await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
     await expect(
@@ -732,9 +769,7 @@ export const ArchivedAccountActionsMenu: Story = {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Unarchive" })).toBeVisible();
@@ -755,16 +790,91 @@ export const DisabledAccountActionsMenu: Story = {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeDisabled();
     });
     await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeDisabled();
     });
+  },
+};
+
+export const MissingStatementImportCsvFormat: Story = {
+  render: () => <LedgerPageStoryHarness hasStatementImportCsvFormat={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Edit" })).toBeEnabled();
+    await expect(
+      canvas.queryByRole("button", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    const importItem = await screen.findByRole("menuitem", {
+      name: "Import Statement",
+    });
+    await expect(importItem).toBeDisabled();
+    await userEvent.hover(importItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Statement imports require a CSV format configured on this account.",
+    );
+  },
+};
+
+export const CategoryActionsMenu: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.EXPENSE}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Edit" })).toBeEnabled();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Category Actions" }),
+    );
+    await expect(
+      await screen.findByRole("menuitem", { name: "Manage Category" }),
+    ).toBeEnabled();
+    const importItem = screen.getByRole("menuitem", {
+      name: "Import Statement",
+    });
+    await expect(importItem).toBeDisabled();
+    await userEvent.hover(importItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Statement imports are only available for accounts.",
+    );
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
+    await expect(
+      await screen.findByRole("dialog", { name: "Edit Category" }),
+    ).toBeVisible();
+  },
+};
+
+export const DisabledEditMenuAction: Story = {
+  render: () => (
+    <LedgerPageStoryHarness accountEditDisabledReason="This account cannot be edited." />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    ).toBeEnabled();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    const editItem = await screen.findByRole("menuitem", {
+      name: "Edit",
+    });
+    await expect(editItem).toBeDisabled();
+    await userEvent.hover(editItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "This account cannot be edited.",
+    );
   },
 };
 
