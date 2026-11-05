@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { mockColors } from "../../history/-chart-test-helpers";
 import { baseOverview } from "../-page-view.story-fixtures";
 import { usePeriodBreakdownChartOptions } from "./-breakdown-chart-options";
+import { useAllocationChartOptions } from "./-allocation-chart-options";
 import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
 
@@ -32,7 +33,7 @@ describe("report breakdown bar colors and legends", () => {
   );
 
   test.each(["asset", "liability"] as const)(
-    "%s allocation uses the category palette with a bottom legend",
+    "%s allocation uses a donut with a bottom legend",
     (selectedAllocationBreakdown) => {
       const options = renderChartOptions(
         () =>
@@ -40,7 +41,7 @@ describe("report breakdown bar colors and legends", () => {
             grouping: "accountStructure",
             ...commonArgs,
             selectedAllocationBreakdown,
-            selectedAllocationChartType: "bar",
+            selectedAllocationChartType: "donut",
             drillPathByAllocationBreakdown: {
               asset: [],
               liability:
@@ -51,7 +52,8 @@ describe("report breakdown bar colors and legends", () => {
             setDrillPathByAllocationBreakdown: vi.fn(),
           }).allocationChartOptions,
       );
-      expectCategoryColorsAndLegend(options);
+      expect(options.series?.[0]?.type).toBe("donut");
+      expect(options.legend).toMatchObject({ position: "bottom" });
     },
   );
 
@@ -162,7 +164,7 @@ describe("report breakdown bar colors and legends", () => {
     },
   );
 
-  test.each(["bar", "donut"] as const)(
+  test.each(["bar", "table"] as const)(
     "cash flow uses sign colors when the stored chart type is %s",
     (selectedChartType) => {
       const options = renderChartOptions(
@@ -197,8 +199,8 @@ describe("report breakdown bar colors and legends", () => {
       expect(series.map(({ fill, stroke }) => ({ fill, stroke }))).toEqual(
         [
           mockColors.positiveMarkerColor,
-          mockColors.negativeMarkerColor,
           mockColors.zeroLineColor,
+          mockColors.negativeMarkerColor,
         ].map((color) => ({ fill: color, stroke: color })),
       );
     },
@@ -217,15 +219,20 @@ describe("report breakdown bar colors and legends", () => {
         amountLabel: String(amount),
         percentageLabel: "0%",
       }));
-      const options = renderChartOptions(() =>
-        usePeriodBreakdownChartOptions({
-          chartData,
-          selectedChartType,
-          colors: mockColors,
-          totalBreakdownAmountLabel: "CHF 150",
-          onNodeDoubleClick: vi.fn(),
-        }),
-      );
+      const args = {
+        chartData,
+        colors: mockColors,
+        onNodeDoubleClick: vi.fn(),
+      };
+      const options =
+        selectedChartType === "bar"
+          ? renderChartOptions(() => usePeriodBreakdownChartOptions(args))
+          : renderChartOptions(() =>
+              useAllocationChartOptions({
+                ...args,
+                totalAmountLabel: "CHF 150",
+              }),
+            );
       if (selectedChartType === "bar") {
         expectCategoryColorsAndLegend(options);
       } else {
@@ -239,4 +246,53 @@ describe("report breakdown bar colors and legends", () => {
       }
     },
   );
+});
+
+test("horizontal bars rank amounts, allow scrolling, and retain full-name tooltips", () => {
+  const chartData = Array.from({ length: 20 }, (_, i) => ({
+    id: `account:${i}`,
+    label: `Long Category / Account ${i}`,
+    kind: "account" as const,
+    amount: i - 5,
+    percentage: i,
+    isDrillable: false,
+    amountLabel: `CHF ${i - 5}`,
+    percentageLabel: `${i}%`,
+  }));
+  const onOpen = vi.fn();
+  const options = renderChartOptions(() =>
+    usePeriodBreakdownChartOptions({
+      chartData,
+      colorBySign: true,
+      colors: mockColors,
+      onNodeDoubleClick: onOpen,
+    }),
+  );
+  const series = getBarSeries(options);
+  expect(series.every((item) => item.direction === "horizontal")).toBe(true);
+  expect(series.map((item) => item.data?.[0]?.amount)).toEqual(
+    [...chartData].reverse().map((item) => item.amount),
+  );
+  expect(options.height).toBeGreaterThan(440);
+  expect(options).toMatchObject({
+    axes: {
+      y: { type: "category", reverse: true },
+      x: { type: "number", crossLines: [{ value: 0 }] },
+    },
+  });
+  const first = series[0];
+  const renderer = first.tooltip!.renderer!;
+  expect(
+    renderer({ datum: first.data![0] } as Parameters<typeof renderer>[0]),
+  ).toEqual({
+    heading: "Long Category / Account 19",
+    data: [
+      { label: "Amount", value: "CHF 14" },
+      { label: "Share of Absolute Movement", value: "19%" },
+    ],
+  });
+  const listener = first.listeners!.seriesNodeDoubleClick!;
+  const event = new Event("dblclick");
+  listener({ datum: first.data![0], event } as Parameters<typeof listener>[0]);
+  expect(onOpen).toHaveBeenCalledWith(first.data![0], event);
 });

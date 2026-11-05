@@ -55,6 +55,9 @@ const meta = {
         [secondBookId, "group:investments"],
       ]) {
         const state = getDefaultReportPageSessionState();
+        state.selectedAllocationChartType =
+          bookId === firstBookId ? "table" : "donut";
+        state.selectedChartType = bookId === firstBookId ? "bar" : "table";
         state.drillPathsByGrouping.accountStructure.gainsLosses = [path];
         state.drillPathsByGrouping.assetClass.gainsLosses = [
           "asset-class:EQUITIES",
@@ -80,12 +83,34 @@ export const AccountBooksKeepIndependentPaths: Story = {
         .closest<HTMLElement>(".mantine-Card-root")!,
     );
     await expect(await card.findByText("Cash", { exact: true })).toBeVisible();
+    await expect(
+      within(canvas.getByLabelText("Allocation Chart Type")).getByRole(
+        "radio",
+        { name: "Table" },
+      ),
+    ).toBeChecked();
+    await expect(
+      within(canvas.getByLabelText("Breakdown Chart Type")).getByRole("radio", {
+        name: "Bar",
+      }),
+    ).toBeChecked();
     await userEvent.click(
       canvas.getByRole("button", { name: "Switch Account Book" }),
     );
     await expect(
       await card.findByText("Investments", { exact: true }),
     ).toBeVisible();
+    await expect(
+      within(canvas.getByLabelText("Allocation Chart Type")).getByRole(
+        "radio",
+        { name: "Donut" },
+      ),
+    ).toBeChecked();
+    await expect(
+      within(canvas.getByLabelText("Breakdown Chart Type")).getByRole("radio", {
+        name: "Table",
+      }),
+    ).toBeChecked();
     await waitFor(() => {
       const stored = JSON.parse(
         sessionStorage.getItem(`cashfolio:reportPageState:${secondBookId}`)!,
@@ -101,6 +126,17 @@ export const AccountBooksKeepIndependentPaths: Story = {
       canvas.getByRole("button", { name: "Switch Account Book" }),
     );
     await expect(await card.findByText("Cash", { exact: true })).toBeVisible();
+    await expect(
+      within(canvas.getByLabelText("Allocation Chart Type")).getByRole(
+        "radio",
+        { name: "Table" },
+      ),
+    ).toBeChecked();
+    await expect(
+      within(canvas.getByLabelText("Breakdown Chart Type")).getByRole("radio", {
+        name: "Bar",
+      }),
+    ).toBeChecked();
   },
 };
 

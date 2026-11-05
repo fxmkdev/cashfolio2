@@ -75,10 +75,7 @@ export function usePeriodBreakdownViewModel(args: {
     selectedBreakdown,
   ]);
 
-  const effectiveSelectedChartType =
-    selectedBreakdown === "cashFlow" && selectedChartType === "donut"
-      ? "bar"
-      : selectedChartType;
+  const effectiveSelectedChartType = selectedChartType;
   const breakdownTitle =
     selectedBreakdown === "expense"
       ? "Expenses Breakdown"
@@ -183,11 +180,6 @@ export function usePeriodBreakdownViewModel(args: {
     ],
   );
 
-  const totalBreakdownAmountLabel = useMemo(
-    () => currencyFormatter.format(currentBreakdownLevelTotalAmount),
-    [currentBreakdownLevelTotalAmount, currencyFormatter],
-  );
-
   const hasBreakdown = chartData.length > 0;
   const currentBreakdownNodeId =
     drillState.currentPathNodes[drillState.currentPathNodes.length - 1]?.id ??
@@ -244,10 +236,8 @@ export function usePeriodBreakdownViewModel(args: {
 
   const chartOptions = usePeriodBreakdownChartOptions({
     chartData,
-    selectedChartType: effectiveSelectedChartType,
     colorBySign: selectedBreakdown === "cashFlow",
     colors,
-    totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,
   });
 

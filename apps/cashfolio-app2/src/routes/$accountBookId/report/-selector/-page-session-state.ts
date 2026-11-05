@@ -5,6 +5,7 @@ import {
 } from "@/shared/reporting-grouping";
 import type {
   AllocationBreakdownType,
+  AllocationChartType,
   BreakdownChartType,
   BreakdownType,
   GainsLossesChartType,
@@ -37,7 +38,7 @@ export type ReportPageSessionState = {
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
   selectedAllocationBreakdown: AllocationBreakdownType;
-  selectedAllocationChartType: BreakdownChartType;
+  selectedAllocationChartType: AllocationChartType;
   selectedGainsLossesChartType: GainsLossesChartType;
   drillPathByBreakdown: DrillPathByBreakdown;
 };
@@ -53,7 +54,11 @@ function isAllocationBreakdownType(
 }
 
 function isBreakdownChartType(value: unknown): value is BreakdownChartType {
-  return value === "donut" || value === "bar" || value === "table";
+  return value === "bar" || value === "table";
+}
+
+function isAllocationChartType(value: unknown): value is AllocationChartType {
+  return value === "donut" || value === "table";
 }
 
 function isGainsLossesChartType(value: unknown): value is GainsLossesChartType {
@@ -81,7 +86,7 @@ export function getDefaultReportPageSessionState(): ReportPageSessionState {
       assetClass: { allocation: { asset: [], liability: [] }, gainsLosses: [] },
     },
     selectedBreakdown: "expense",
-    selectedChartType: "donut",
+    selectedChartType: "bar",
     selectedAllocationBreakdown: "asset",
     selectedAllocationChartType: "donut",
     selectedGainsLossesChartType: "waterfall",
@@ -156,7 +161,7 @@ export function parseStoredReportPageSessionState(
     )
       ? stored.selectedAllocationBreakdown
       : defaults.selectedAllocationBreakdown,
-    selectedAllocationChartType: isBreakdownChartType(
+    selectedAllocationChartType: isAllocationChartType(
       stored.selectedAllocationChartType,
     )
       ? stored.selectedAllocationChartType
@@ -251,7 +256,7 @@ export function useReportPageSessionState(accountBookId: string) {
   );
 
   const setSelectedAllocationChartType = useCallback(
-    (nextValue: BreakdownChartType) => {
+    (nextValue: AllocationChartType) => {
       setState((previousState) => ({
         ...previousState,
         selectedAllocationChartType: nextValue,

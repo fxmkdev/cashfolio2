@@ -588,11 +588,11 @@ callers to override it when needed.
 
 ## Period Breakdown Drill-Down Pattern
 
-- Income, expense, and allocation bars use the automatic category palette, like
-  donut sectors, with a bottom legend naming the categories at the current drill
-  level. Only Cash Flow bars opt into sign-based colors: green for positive
-  amounts, red for negative amounts, and gray for zero; they do not show a
-  category legend.
+- Income and expense bars and allocation donut sectors use the automatic
+  category palette, with a bottom legend naming the categories at the current
+  drill level. Only Cash Flow bars opt into sign-based colors: green for
+  positive amounts, red for negative amounts, and gray for zero; they do not
+  show a category legend.
 - Use each bar series' `yName` for its category legend text. Reserve
   `legendItemName` for intentionally linked series: AG Charts groups legend
   interactions by that name, so sibling accounts and groups with identical
@@ -609,10 +609,33 @@ callers to override it when needed.
 
 - Report route (`src/routes/$accountBookId/report/route.tsx`) supports
   drill-down in:
-  - Expense/Income charts (`Donut`, `Bar`)
-  - Assets/Liabilities Allocation charts (`Donut`, `Bar`)
+  - Expense/Income/Cash Flow charts (`Bar`)
+  - Assets/Liabilities Allocation charts (`Donut`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
+- Allocation offers Donut and Table only; Expenses, Income, and Cash Flow offer
+  Bar and Table only. Defaults are Donut for Allocation and Bar for Breakdown.
+  Existing per-book session storage remembers the chosen mode across reloads,
+  navigation, period changes, and grouping changes. Legacy Allocation Bar
+  choices become Donut; legacy Breakdown Donut choices become Bar. Table choices
+  and hierarchy drill paths are preserved.
+- Breakdown bars are horizontal and ranked by descending amount. Long category
+  lists scroll within a 440px chart viewport. Full names, locale-aware amounts,
+  and percentages remain available in tooltips. Cash Flow labels its percentage
+  as Share of Absolute Movement, using the sum of absolute amounts at the
+  current level as its denominator.
+- Allocation donuts show at most five slices at each drill level. Above five
+  categories, show the four largest plus Other last; ties retain source order.
+  Other combines the remaining displayed categories without changing hierarchy,
+  totals, or existing rounding warnings. The Table view retains the full
+  hierarchy.
+- Double-clicking Other or activating View Other Categories opens an Other
+  Allocation dialog using the shared DataGrid. Show names, amounts, shares of
+  the original chart-level total, and a subtotal. Row actions and double-clicks
+  retain group drill-down and account-ledger navigation. Close details before
+  navigation or whenever the period, book, grouping, side, mode, drill path, or
+  data changes. Other is a synthetic chart datum and never enters persisted
+  hierarchy paths.
 - Gains/Losses processes each native double-click once across the chart's node
   and single-item container handlers, including across rerenders. A unit with
   one account still opens the account chart; opening details requires a separate

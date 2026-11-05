@@ -1,7 +1,10 @@
 import { Center, SegmentedControl } from "@mantine/core";
 import { IconChartBar, IconChartDonut, IconTable } from "@tabler/icons-react";
 import type { ReactNode } from "react";
-import type { BreakdownChartType } from "../-breakdown/-breakdown-types";
+import type {
+  AllocationChartType,
+  BreakdownChartType,
+} from "../-breakdown/-breakdown-types";
 
 export type ChartTypeOption<TValue extends string> = {
   value: TValue;
@@ -9,22 +12,22 @@ export type ChartTypeOption<TValue extends string> = {
   icon: ReactNode;
 };
 
-export const DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS = [
+export const ALLOCATION_CHART_TYPE_OPTIONS = [
   {
     value: "donut",
     label: "Donut",
     icon: <IconChartDonut size={16} />,
   },
   {
-    value: "bar",
-    label: "Bar",
-    icon: <IconChartBar size={16} />,
-  },
-  {
     value: "table",
     label: "Table",
     icon: <IconTable size={16} />,
   },
+] as const satisfies readonly ChartTypeOption<AllocationChartType>[];
+
+export const BREAKDOWN_CHART_TYPE_OPTIONS = [
+  { value: "bar", label: "Bar", icon: <IconChartBar size={16} /> },
+  { value: "table", label: "Table", icon: <IconTable size={16} /> },
 ] as const satisfies readonly ChartTypeOption<BreakdownChartType>[];
 
 type ChartTypeSegmentedControlProps<TValue extends string> = {

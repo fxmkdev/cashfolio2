@@ -1,10 +1,14 @@
-import { Flex, SegmentedControl, Text } from "@mantine/core";
+import { Button, Flex, SegmentedControl, Text } from "@mantine/core";
 import type { ReactNode, MouseEventHandler } from "react";
-import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
+import type {
+  PeriodBreakdownChartOptions,
+  PeriodBreakdownChartDatum,
+} from "./-breakdown-chart-options";
+import { AllocationOtherDialog } from "./-allocation-other-dialog";
 import { BreakdownTable } from "./-breakdown-table";
 import {
   ChartTypeSegmentedControl,
-  DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS,
+  ALLOCATION_CHART_TYPE_OPTIONS,
 } from "../-selector/-chart-type-segmented-control";
 import type {
   BreakdownBreadcrumb,
@@ -12,14 +16,14 @@ import type {
 } from "./-breakdown-drill";
 import type {
   AllocationBreakdownType,
-  BreakdownChartType,
+  AllocationChartType,
 } from "./-breakdown-types";
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 
 type PeriodAllocationBreakdownCardProps = {
   totalAmount?: number;
   selectedBreakdown: AllocationBreakdownType;
-  selectedChartType: BreakdownChartType;
+  selectedChartType: AllocationChartType;
   tableExpandedGroupsStorageKey?: string;
   breakdownTitle: string;
   breakdownSubtitle: string;
@@ -32,11 +36,17 @@ type PeriodAllocationBreakdownCardProps = {
   breakdownHierarchy: BreakdownHierarchyNode[];
   chartOptions: PeriodBreakdownChartOptions;
   onSelectedBreakdownChange: (value: AllocationBreakdownType) => void;
-  onSelectedChartTypeChange: (value: BreakdownChartType) => void;
+  onSelectedChartTypeChange: (value: AllocationChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
   onChartContainerDoubleClick?: MouseEventHandler<HTMLDivElement> | null;
   footer?: ReactNode;
+  otherRows?: PeriodBreakdownChartDatum[];
+  otherSubtotal?: PeriodBreakdownChartDatum;
+  isOtherDetailsOpen?: boolean;
+  onOpenOtherDetails?: () => void;
+  onCloseOtherDetails?: () => void;
+  onOtherRowOpen?: (datum: PeriodBreakdownChartDatum) => void;
 };
 
 function isAllocationBreakdownType(
@@ -66,6 +76,12 @@ export function PeriodAllocationBreakdownCard({
   onBreakdownAccountDoubleClick,
   onChartContainerDoubleClick,
   footer,
+  otherRows = [],
+  otherSubtotal,
+  isOtherDetailsOpen = false,
+  onOpenOtherDetails,
+  onCloseOtherDetails,
+  onOtherRowOpen,
 }: PeriodAllocationBreakdownCardProps) {
   const isTableView = selectedChartType === "table";
   const hasTableBreakdown = breakdownHierarchy.length > 0;
@@ -105,7 +121,7 @@ export function PeriodAllocationBreakdownCard({
           <ChartTypeSegmentedControl
             ariaLabel="Allocation Chart Type"
             value={selectedChartType}
-            options={DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS}
+            options={ALLOCATION_CHART_TYPE_OPTIONS}
             onChange={onSelectedChartTypeChange}
           />
           <SegmentedControl
@@ -126,6 +142,25 @@ export function PeriodAllocationBreakdownCard({
       }
       footer={
         <>
+          {!isTableView && otherRows.length > 0 ? (
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              mt="sm"
+              onClick={onOpenOtherDetails}
+            >
+              View Other Categories
+            </Button>
+          ) : null}
+          {otherSubtotal && onCloseOtherDetails && onOtherRowOpen ? (
+            <AllocationOtherDialog
+              opened={isOtherDetailsOpen}
+              onClose={onCloseOtherDetails}
+              rows={otherRows}
+              subtotal={otherSubtotal}
+              onRowOpen={onOtherRowOpen}
+            />
+          ) : null}
           <Text size="sm" c="dimmed" mt="md">
             {selectedBreakdown === "asset"
               ? "Assets include positive account balances at period end, regardless of account type."

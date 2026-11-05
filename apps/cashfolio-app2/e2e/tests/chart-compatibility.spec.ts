@@ -73,11 +73,11 @@ for (const colorScheme of ["light", "dark"] as const) {
       ]) {
         await selectSegmentedControlOption(
           page.getByRole("radiogroup", { name: controlName }),
-          "Bar",
+          "Table",
         );
       }
       await page.screenshot({
-        path: testInfo.outputPath("report-bar.png"),
+        path: testInfo.outputPath("report-tables.png"),
         fullPage: true,
       });
 

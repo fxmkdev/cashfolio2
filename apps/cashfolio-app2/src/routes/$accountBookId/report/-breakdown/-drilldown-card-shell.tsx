@@ -152,7 +152,7 @@ export function DrilldownCardShell({
         {hasData ? (
           displayMode === "chart" ? (
             <div
-              className={classes.chartContainer}
+              className={`${classes.chartContainer} ${classes.chartViewport}`}
               data-testid={chartContainerTestId}
               onDoubleClick={onChartContainerDoubleClick ?? undefined}
             >
