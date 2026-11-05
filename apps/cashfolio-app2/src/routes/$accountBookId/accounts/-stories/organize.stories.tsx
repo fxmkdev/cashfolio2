@@ -1,8 +1,9 @@
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../-page-view";
 import { AccountsPageStoryHarness } from "./harness";
 import { createOrganizerStoryApi } from "../-organize/story-fixtures";
+import { chooseAccountGrouping } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
@@ -121,7 +122,7 @@ export const OrganizeEntryFailureAndRetry: Story = {
   play: deferredEntryScenario(true),
 };
 
-export const OrganizeFromAssetClassGrouping: Story = {
+export const OrganizeOnlyForAccountStructure: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -134,24 +135,81 @@ export const OrganizeFromAssetClassGrouping: Story = {
     const canvas = within(canvasElement);
     const financialGrid = await canvas.findByRole("treegrid");
     await expect(canvas.getByLabelText("Group By")).toHaveValue("Asset Class");
-    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
-    const organizer = within(
-      await canvas.findByRole("region", { name: "Organize Accounts" }),
-    );
     await expect(
-      await organizer.findByText("Investments", { exact: true }),
-    ).toBeVisible();
-    await expect(canvas.queryByLabelText("Group By")).not.toBeInTheDocument();
-    await expect(financialGrid).not.toBeVisible();
-    await waitFor(() =>
-      expect(canvas.getByRole("button", { name: "Done" })).toBeEnabled(),
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
-    await expect(canvas.getByRole("treegrid")).toBe(financialGrid);
-    await expect(financialGrid).toBeVisible();
-    await expect(canvas.getByLabelText("Group By")).toHaveValue("Asset Class");
+      canvas.queryByRole("button", { name: "Organize" }),
+    ).not.toBeInTheDocument();
     await expect(
       canvas.getByRole("link", { name: "Manage Asset Classes" }),
     ).toBeVisible();
+    await chooseAccountGrouping(canvasElement, "Account Structure");
+    await expect(
+      canvas.getByRole("button", { name: "Organize" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Add Group" }),
+    ).toBeVisible();
+    await chooseAccountGrouping(canvasElement, "Asset Class");
+    await expect(
+      canvas.queryByRole("button", { name: "Organize" }),
+    ).not.toBeInTheDocument();
+    await expect(canvas.getByRole("treegrid")).toBe(financialGrid);
+    await expect(financialGrid).toBeVisible();
+  },
+};
+
+export const GroupingChangeCancelsOrganizeEntry: Story = {
+  args: { organizerApi: createOrganizerStoryApi() },
+  render: (args) => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      organizerApi={args.organizerApi}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const financialGrid = await canvas.findByRole("treegrid");
+    const original = args.organizerApi!.load;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const load = fn(original).mockImplementationOnce(async () => {
+      await gate;
+      return original();
+    });
+    args.organizerApi!.load = load;
+    try {
+      await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+      await expect(
+        canvas.getByRole("button", { name: "Organize" }),
+      ).toBeDisabled();
+      await chooseAccountGrouping(canvasElement, "Asset Class");
+      await expect(
+        canvas.queryByRole("button", { name: "Organize" }),
+      ).not.toBeInTheDocument();
+      await expect(financialGrid).toBeVisible();
+      await chooseAccountGrouping(canvasElement, "Account Structure");
+      await expect(
+        canvas.getByRole("button", { name: "Organize" }),
+      ).toBeEnabled();
+      release();
+      await load.mock.results[0]!.value;
+      await userEvent.hover(canvas.getByRole("heading", { name: "Accounts" }));
+      await expect(
+        canvas.queryByRole("region", { name: "Organize Accounts" }),
+      ).not.toBeInTheDocument();
+      await expect(canvas.getByRole("treegrid")).toBe(financialGrid);
+      await expect(financialGrid).toBeVisible();
+      await expect(load).toHaveBeenCalledTimes(1);
+      await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+      await expect(
+        await canvas.findByRole("region", { name: "Organize Accounts" }),
+      ).toBeVisible();
+      await expect(load).toHaveBeenCalledTimes(2);
+      await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    } finally {
+      release();
+      args.organizerApi!.load = original;
+    }
   },
 };

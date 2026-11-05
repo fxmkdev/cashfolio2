@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GridApi, GridState } from "ag-grid-enterprise";
 import { Alert, Box, Button, Text } from "@mantine/core";
 import { AccountOrganizer } from "./-organize/organizer";
@@ -34,17 +34,28 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     managementContext = "accounts",
   } = props;
   const isCategories = managementContext === "categories";
+  const grouping = props.grouping ?? "accountStructure";
+  const canOrganize =
+    !isCategories && grouping === "accountStructure" && !!props.organizerApi;
   const [organizing, setOrganizing] = useState(false);
+  const isOrganizing = organizing && canOrganize;
   const organizer = useOrganizer(
     props.onOrganizeSaved ?? (() => {}),
     props.organizerApi,
     false,
   );
   useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
+  const { reset } = organizer;
+  useEffect(() => {
+    if (!canOrganize) {
+      reset();
+      setOrganizing(false);
+    }
+  }, [canOrganize, reset]);
   const normalGrid = useRef<GridApi<AccountsGridRow> | null>(null);
   const normalGridState = useRef<GridState | undefined>(undefined);
   const openOrganizer = async () => {
-    if (organizing || !(await organizer.load())) return;
+    if (!canOrganize || organizing || !(await organizer.load())) return;
     normalGridState.current = normalGrid.current?.getState();
     bulkAccountActions?.clearSelection();
     setOrganizing(true);
@@ -62,14 +73,18 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     <PageShell>
       <AccountsPageHeader
         {...props}
-        organizing={organizing}
-        onOrganize={props.organizerApi ? openOrganizer : undefined}
+        organizing={isOrganizing}
+        onOrganize={canOrganize ? openOrganizer : undefined}
+        onGroupingChange={(next) => {
+          if (next !== grouping) organizer.reset();
+          props.onGroupingChange?.(next);
+        }}
         organizePending={organizer.loading}
         organizerActions={
           <OrganizerActions organizer={organizer} onDone={closeOrganizer} />
         }
       />
-      {organizing && !isCategories && props.organizerApi && (
+      {isOrganizing && (
         <AccountOrganizer
           accountBookId={props.accountBookId}
           organizer={organizer}
@@ -77,13 +92,13 @@ function AccountsPageContent(props: AccountsPageViewProps) {
       )}
       <Box
         style={{
-          display: organizing ? "none" : "flex",
+          display: isOrganizing ? "none" : "flex",
           flexDirection: "column",
           flex: 1,
           minHeight: 0,
         }}
       >
-        {organizer.loadError && (
+        {canOrganize && organizer.loadError && (
           <Alert color="red" role="alert">
             {organizer.loadError}
             <Button variant="subtle" onClick={() => void openOrganizer()}>

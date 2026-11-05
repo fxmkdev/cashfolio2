@@ -1513,17 +1513,19 @@ global progress bar while the financial grid remains visible. Activate only
 after success; on failure retain the financial grid with retry feedback. Hide
 the financial grid while organizing. **Done** returns to it. Categories and
 Asset Classes retain their existing management interactions and sibling dialog.
-Organize always displays the account structure, including when entered from
-Asset Class grouping. The Group By control is hidden until Done restores the
-financial grid and its existing grouping.
+Organize is available only under Account Structure grouping, not Asset Class
+grouping. Changing grouping while entry is loading cancels that entry attempt
+and releases its loading state. The Group By control is hidden while organizing;
+Done restores the financial grid.
 
-Keep **Accounts** as the heading with an **Organizing** badge and subtle header
-accent. **Done** and, when available, **Undo** use the same right-aligned header
-toolbar as the normal management actions. Selection actions appear only after
-selection, replacing the instruction row without shifting the grid. Keep drag
-and save status in reserved space; avoid standalone loading spinners. Use global
-progress for initial hierarchy loading and recovery, and shared local feedback
-for mutations. Announce mode entry and movement results accessibly.
+Keep **Accounts** as the heading with an **Organizing** badge and standard
+header spacing, without a mode-specific background. **Done** and, when
+available, **Undo** use the same right-aligned header toolbar as the normal
+management actions. Selection actions appear only after selection, replacing the
+instruction row without shifting the grid. Keep drag and save status in reserved
+space; avoid standalone loading spinners. Use global progress for initial
+hierarchy loading and recovery, and shared local feedback for mutations.
+Announce mode entry and movement results accessibly.
 
 Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;
