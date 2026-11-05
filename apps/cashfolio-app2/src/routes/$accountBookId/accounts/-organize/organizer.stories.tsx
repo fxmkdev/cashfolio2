@@ -90,7 +90,11 @@ async function chooseMove(
   );
   const dialog = within(await body.findByRole("dialog", { name: "Move To…" }));
   await userEvent.click(dialog.getByLabelText("Destination"));
-  await userEvent.click(await body.findByRole("option", { name: destination }));
+  const option = (await body.findAllByRole("option")).find((item) =>
+    within(item).queryByText(destination, { exact: true }),
+  );
+  if (!option) throw new Error(`Missing destination ${destination}`);
+  await userEvent.click(within(option).getByText(destination, { exact: true }));
   return dialog;
 }
 
@@ -386,8 +390,7 @@ export const ArchivedVisibilityAndSelection: Story = {
     await select(canvasElement, "checking");
     const anchors = await chooseMove(canvasElement, "Investments");
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(anchors.getByLabelText("Position"));
-    await userEvent.click(body.getByRole("option", { name: "Before" }));
+    await userEvent.click(anchors.getByRole("radio", { name: "Before" }));
     await userEvent.click(anchors.getByLabelText("Sibling"));
     await expect(body.getByRole("option", { name: "Brokerage" })).toBeVisible();
     await expect(
@@ -478,8 +481,7 @@ export const RelativePlacementAndCashPreview: Story = {
     );
     await userEvent.click(toolbar.getByRole("button", { name: "Move To…" }));
     const next = within(await body.findByRole("dialog"));
-    await userEvent.click(next.getByLabelText("Position"));
-    await userEvent.click(body.getByRole("option", { name: "Before" }));
+    await userEvent.click(next.getByRole("radio", { name: "Before" }));
     await userEvent.click(next.getByLabelText("Sibling"));
     await userEvent.click(body.getByRole("option", { name: "Investments" }));
     await userEvent.click(next.getByRole("button", { name: "Move" }));
@@ -488,6 +490,58 @@ export const RelativePlacementAndCashPreview: Story = {
         "ag-row-level-0",
       ),
     );
+  },
+};
+
+export const DestinationTreeAndSegmentedPosition: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Move Checking" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Move To…" }),
+    );
+    const destination = dialog.getByLabelText("Destination");
+    const position = within(
+      dialog.getByRole("radiogroup", { name: "Position" }),
+    );
+    await expect(destination).toHaveValue("Top Level");
+    await expect(position.getByRole("radio", { name: "Last" })).toBeChecked();
+    await userEvent.click(destination);
+    const parent = body
+      .getAllByRole("option")
+      .find((option) =>
+        within(option).queryByText("Investments", { exact: true }),
+      )!;
+    await expect(parent).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(
+      within(parent).getByRole("button", { name: "Expand" }),
+    );
+    const nested = body.getByRole("option", { name: "Brokerage" });
+    await expect(nested).toHaveAttribute("aria-level", "2");
+    await userEvent.click(nested);
+    await expect(destination).toHaveValue("Brokerage");
+    await userEvent.click(position.getByRole("radio", { name: "Last" }));
+    await userEvent.keyboard("{ArrowRight}");
+    await expect(position.getByRole("radio", { name: "Before" })).toBeChecked();
+    await userEvent.click(dialog.getByLabelText("Sibling"));
+    await userEvent.click(body.getByRole("option", { name: "Fund" }));
+    await expect(dialog.getByRole("button", { name: "Move" })).toBeEnabled();
+    await userEvent.click(destination);
+    await userEvent.click(body.getByRole("option", { name: "Empty Group" }));
+    await expect(
+      position.getByRole("radio", { name: "Before" }),
+    ).toBeDisabled();
+    await expect(position.getByRole("radio", { name: "After" })).toBeDisabled();
+    await userEvent.click(position.getByRole("radio", { name: "Last" }));
+    await expect(dialog.queryByLabelText("Sibling")).not.toBeInTheDocument();
+    await userEvent.click(destination);
+    await userEvent.type(destination, "  INVESTMENTS / brokerage  ");
+    await userEvent.click(body.getByRole("option", { name: "Brokerage" }));
+    await expect(destination).toHaveValue("Brokerage");
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
 };
 

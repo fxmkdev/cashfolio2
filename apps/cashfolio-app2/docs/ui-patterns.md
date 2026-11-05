@@ -1558,11 +1558,14 @@ during dragging, saving, and recovery; blocked handles are dimmed and cannot
 start a drag. Keep grid configuration references stable as drag hints update.
 Rows remain stationary during dragging; hovering over a collapsed branch for 500
 ms expands it. Escape or dropping outside a valid destination cancels. The
-keyboard-accessible **Move To…** dialog offers searchable destination selection
-and placement controls. Top Level remains available in that dialog and by
-dropping before/after a compatible root row; there is no separate Top Level drop
-area. Organize displays saved manual order, without search or sorting in the
-grid.
+keyboard-accessible **Move To…** dialog uses the shared searchable
+`GroupTreeSelect` for destinations, with an explicit Top Level option, real
+group IDs, saved sibling order, and full-path search. Use a labeled segmented
+control for First/Last/Before/After placement; disable Before/After when no
+compatible anchors exist. The Sibling field remains a flat searchable choice
+within one parent. Top Level remains available in that dialog and by dropping
+before/after a compatible root row; there is no separate Top Level drop area.
+Organize displays saved manual order, without search or sorting in the grid.
 
 Moves inherit existing parent Cash Account rules, including subtree propagation
 and non-currency restrictions. Moving to Top Level preserves flags; reordering

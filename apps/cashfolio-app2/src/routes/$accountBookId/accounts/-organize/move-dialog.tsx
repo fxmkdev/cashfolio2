@@ -2,17 +2,23 @@ import {
   Alert,
   Button,
   Group,
+  Input,
   Modal,
   Select,
+  SegmentedControl,
   Stack,
   Text,
 } from "@mantine/core";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { GroupTreeSelect } from "@/components/account-tree/group-tree-select";
+import {
+  moveDestinationGroups,
+  TOP_LEVEL_DESTINATION,
+} from "./move-destinations";
 import {
   descendants,
   compareOrganizeNodes,
   normalizeOrganizeSelection,
-  organizePath,
 } from "@/shared/account-organize/tree";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
@@ -46,6 +52,7 @@ export function MoveDialog({
   onClose: () => void;
   onMove: (move: OrganizeMove) => Promise<boolean | undefined>;
 }) {
+  const positionLabelId = useId();
   const [parent, setParent] = useState<string | null>(null);
   const [placement, setPlacement] = useState<OrganizePlacement>("last");
   const [anchorId, setAnchorId] = useState<string | null>(null);
@@ -75,34 +82,10 @@ export function MoveDialog({
     placement: position,
     ...(anchor ? { anchorId: anchor } : {}),
   });
-  const destinations = [
-    { value: "__top_level__", label: "Top Level" },
-    ...nodes
-      .filter(
-        (node) =>
-          node.nodeType === "accountGroup" &&
-          !included.has(node.id) &&
-          (showArchived || node.isActive),
-      )
-      .map((node) => ({
-        value: node.id,
-        label: `${organizePath(nodes, node.id)}${node.isActive ? "" : " (Archived)"}`,
-      })),
-  ].filter((option) => {
-    try {
-      planAccountMove(
-        nodes,
-        makeMove(
-          option.value === "__top_level__" ? null : option.value,
-          "last",
-          null,
-        ),
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  });
+  const destinations = useMemo(
+    () => moveDestinationGroups(nodes, items, showArchived),
+    [nodes, items, showArchived],
+  );
   const anchors = nodes
     .filter(
       (node) =>
@@ -158,34 +141,37 @@ export function MoveDialog({
           {included.size - roots.length} included descendants
           {archivedDescendants ? ` (${archivedDescendants} archived)` : ""}.
         </Text>
-        <Select
+        <GroupTreeSelect
           label="Destination"
           searchable
           allowDeselect={false}
-          data={destinations}
-          value={parent ?? "__top_level__"}
+          groups={destinations}
+          value={parent ?? TOP_LEVEL_DESTINATION}
           disabled={pending}
           onChange={(value) => {
-            setParent(value === "__top_level__" ? null : value);
+            setParent(value === TOP_LEVEL_DESTINATION ? null : value);
             setAnchorId(null);
           }}
         />
-        <Select
-          label="Position"
-          allowDeselect={false}
-          value={placement}
-          disabled={pending}
-          data={[
-            { value: "first", label: "First" },
-            { value: "last", label: "Last" },
-            { value: "before", label: "Before", disabled: !anchors.length },
-            { value: "after", label: "After", disabled: !anchors.length },
-          ]}
-          onChange={(value) => {
-            setPlacement(value as OrganizePlacement);
-            setAnchorId(null);
-          }}
-        />
+        <Stack gap={4}>
+          <Input.Label id={positionLabelId}>Position</Input.Label>
+          <SegmentedControl<OrganizePlacement>
+            aria-labelledby={positionLabelId}
+            fullWidth
+            value={placement}
+            disabled={pending}
+            data={[
+              { value: "first", label: "First" },
+              { value: "last", label: "Last" },
+              { value: "before", label: "Before", disabled: !anchors.length },
+              { value: "after", label: "After", disabled: !anchors.length },
+            ]}
+            onChange={(value) => {
+              setPlacement(value);
+              setAnchorId(null);
+            }}
+          />
+        </Stack>
         {(placement === "before" || placement === "after") && (
           <Select
             label="Sibling"
