@@ -23,7 +23,16 @@ import {
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react";
-import { Badge, Button, Group, Modal, Title, Tooltip } from "@mantine/core";
+import {
+  Badge,
+  Box,
+  Button,
+  Group,
+  Modal,
+  Text,
+  Title,
+  Tooltip,
+} from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
@@ -64,6 +73,7 @@ import {
 import { createLedgerAccountEditModalProps } from "./account-edit-modal-props";
 import type { loadLedgerPageData } from "./page-loader";
 import type { LedgerRow } from "./page-types";
+import headerClasses from "./page-header.module.css";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
@@ -344,7 +354,19 @@ export function LedgerPageView({
         </Anchor>
       )}
       <TopPageHeader
+        layout="responsive"
         heading={<Title order={2}>{account.name}</Title>}
+        description={
+          account.type === AccountType.BALANCE ? (
+            <Text
+              size="sm"
+              c="dimmed"
+              title={`Asset Class: ${assetClassLabel}`}
+            >
+              Asset Class: {assetClassLabel}
+            </Text>
+          ) : undefined
+        }
         headingAccessory={
           <>
             <Badge
@@ -359,16 +381,6 @@ export function LedgerPageView({
                 {unitLabel}
               </Badge>
             ) : null}
-            {account.type === AccountType.BALANCE ? (
-              <Badge
-                size="lg"
-                color="gray"
-                variant={account.assetClassId == null ? "outline" : "light"}
-                title={`Asset Class: ${assetClassLabel}`}
-              >
-                {assetClassLabel}
-              </Badge>
-            ) : null}
             {!account.isActive ? (
               <Badge size="lg" color="gray">
                 Archived
@@ -377,137 +389,153 @@ export function LedgerPageView({
           </>
         }
         actions={
-          <Group gap="sm">
-            {periodFilterControls}
-            <Tooltip
-              label={
-                getAccountConstraintMessage(
-                  accountEditDisabledReason,
-                  context,
-                ) ?? `Edit ${entityLabel}`
-              }
-              disabled={isImportPrimary || !accountEditDisabledReason}
+          <Group
+            gap="sm"
+            justify="space-between"
+            wrap="nowrap"
+            className={headerClasses.toolbar}
+            role="group"
+            aria-label="Ledger Controls"
+          >
+            {periodFilterControls && (
+              <Box className={headerClasses.period}>{periodFilterControls}</Box>
+            )}
+            <Group
+              gap="sm"
+              wrap="nowrap"
+              ml="auto"
+              className={headerClasses.commands}
             >
-              <span>
-                <SplitButton
-                  leftSection={
-                    isImportPrimary ? (
-                      <IconFileImport size={16} />
-                    ) : (
-                      <IconPencil size={16} />
-                    )
-                  }
-                  menuLabel={`${entityLabel} Actions`}
-                  onClick={
-                    isImportPrimary ? onOpenImportPage : onOpenAccountEdit
-                  }
-                  primaryDisabled={
-                    !isImportPrimary && !!accountEditDisabledReason
-                  }
-                  menuItems={[
-                    ...(isImportPrimary
-                      ? [
-                          {
-                            key: "edit",
-                            label: "Edit",
+              <Tooltip
+                label={
+                  getAccountConstraintMessage(
+                    accountEditDisabledReason,
+                    context,
+                  ) ?? `Edit ${entityLabel}`
+                }
+                disabled={isImportPrimary || !accountEditDisabledReason}
+              >
+                <span className={headerClasses.action}>
+                  <SplitButton
+                    leftSection={
+                      isImportPrimary ? (
+                        <IconFileImport size={16} />
+                      ) : (
+                        <IconPencil size={16} />
+                      )
+                    }
+                    menuLabel={`${entityLabel} Actions`}
+                    onClick={
+                      isImportPrimary ? onOpenImportPage : onOpenAccountEdit
+                    }
+                    primaryDisabled={
+                      !isImportPrimary && !!accountEditDisabledReason
+                    }
+                    menuItems={[
+                      ...(isImportPrimary
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Edit",
+                              disabledReason: getAccountConstraintMessage(
+                                accountEditDisabledReason,
+                                context,
+                              ),
+                              disabled: !!accountEditDisabledReason,
+                              leftSection: <IconPencil size={16} />,
+                              onClick: onOpenAccountEdit,
+                            },
+                          ]
+                        : []),
+                      ...(onManageCategory
+                        ? [
+                            {
+                              key: "manage-category",
+                              label: "Manage Category",
+                              leftSection: <IconSettings size={16} />,
+                              onClick: onManageCategory,
+                            },
+                          ]
+                        : []),
+                      ...(!isImportPrimary
+                        ? [
+                            {
+                              key: "import-statement",
+                              label: "Import Statement",
+                              disabledReason:
+                                statementImportDisabledReason ?? undefined,
+                              disabled: true,
+                              leftSection: <IconFileImport size={16} />,
+                              onClick: onOpenImportPage,
+                            },
+                          ]
+                        : []),
+                      {
+                        type: "divider",
+                        key: "danger-actions-divider",
+                      },
+                      account.isActive
+                        ? {
+                            key: "archive",
+                            label: "Archive",
                             disabledReason: getAccountConstraintMessage(
-                              accountEditDisabledReason,
+                              accountArchiveLabel,
                               context,
                             ),
-                            disabled: !!accountEditDisabledReason,
-                            leftSection: <IconPencil size={16} />,
-                            onClick: onOpenAccountEdit,
+                            disabled: !accountArchivable,
+                            color: "yellow",
+                            leftSection: <IconArchive size={16} />,
+                            onClick: onOpenArchiveAccount,
+                          }
+                        : {
+                            key: "unarchive",
+                            label: "Unarchive",
+                            disabledReason: getAccountConstraintMessage(
+                              accountUnarchiveLabel,
+                              context,
+                            ),
+                            disabled:
+                              !accountUnarchivable ||
+                              unarchiveRecovery?.isPending,
+                            color: "blue",
+                            leftSection: <IconArchiveOff size={16} />,
+                            onClick: () => void onUnarchiveAccount(),
                           },
-                        ]
-                      : []),
-                    ...(onManageCategory
-                      ? [
-                          {
-                            key: "manage-category",
-                            label: "Manage Category",
-                            leftSection: <IconSettings size={16} />,
-                            onClick: onManageCategory,
-                          },
-                        ]
-                      : []),
-                    ...(!isImportPrimary
-                      ? [
-                          {
-                            key: "import-statement",
-                            label: "Import Statement",
-                            disabledReason:
-                              statementImportDisabledReason ?? undefined,
-                            disabled: true,
-                            leftSection: <IconFileImport size={16} />,
-                            onClick: onOpenImportPage,
-                          },
-                        ]
-                      : []),
-                    {
-                      type: "divider",
-                      key: "danger-actions-divider",
-                    },
-                    account.isActive
-                      ? {
-                          key: "archive",
-                          label: "Archive",
-                          disabledReason: getAccountConstraintMessage(
-                            accountArchiveLabel,
-                            context,
-                          ),
-                          disabled: !accountArchivable,
-                          color: "yellow",
-                          leftSection: <IconArchive size={16} />,
-                          onClick: onOpenArchiveAccount,
-                        }
-                      : {
-                          key: "unarchive",
-                          label: "Unarchive",
-                          disabledReason: getAccountConstraintMessage(
-                            accountUnarchiveLabel,
-                            context,
-                          ),
-                          disabled:
-                            !accountUnarchivable ||
-                            unarchiveRecovery?.isPending,
-                          color: "blue",
-                          leftSection: <IconArchiveOff size={16} />,
-                          onClick: () => void onUnarchiveAccount(),
-                        },
-                    {
-                      key: "delete",
-                      label: "Delete",
-                      disabledReason: getAccountConstraintMessage(
-                        accountDeleteLabel,
-                        context,
-                      ),
-                      disabled: !accountDeletable,
-                      color: "red",
-                      leftSection: <IconTrash size={16} />,
-                      onClick: onOpenDeleteAccount,
-                    },
-                  ]}
-                >
-                  {isImportPrimary ? "Import Statement" : "Edit"}
-                </SplitButton>
-              </span>
-            </Tooltip>
-            <Tooltip
-              label={
-                simpleTransactionDisabledReason
-                  ? `${simpleTransactionDisabledReason} Split editor will open instead.`
-                  : "Quick two-booking entry"
-              }
-            >
-              <span>
-                <Button
-                  leftSection={<IconBolt size={16} />}
-                  onClick={onAddTransactionClick}
-                >
-                  Add Transaction
-                </Button>
-              </span>
-            </Tooltip>
+                      {
+                        key: "delete",
+                        label: "Delete",
+                        disabledReason: getAccountConstraintMessage(
+                          accountDeleteLabel,
+                          context,
+                        ),
+                        disabled: !accountDeletable,
+                        color: "red",
+                        leftSection: <IconTrash size={16} />,
+                        onClick: onOpenDeleteAccount,
+                      },
+                    ]}
+                  >
+                    {isImportPrimary ? "Import Statement" : "Edit"}
+                  </SplitButton>
+                </span>
+              </Tooltip>
+              <Tooltip
+                label={
+                  simpleTransactionDisabledReason
+                    ? `${simpleTransactionDisabledReason} Split editor will open instead.`
+                    : "Quick two-booking entry"
+                }
+              >
+                <span className={headerClasses.action}>
+                  <Button
+                    leftSection={<IconBolt size={16} />}
+                    onClick={onAddTransactionClick}
+                  >
+                    Add Transaction
+                  </Button>
+                </span>
+              </Tooltip>
+            </Group>
           </Group>
         }
       />

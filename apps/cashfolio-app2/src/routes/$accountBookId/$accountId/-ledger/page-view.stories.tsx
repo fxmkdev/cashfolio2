@@ -1,8 +1,9 @@
 import { defaultAssetClassIds } from "../../../../shared/asset-class";
+import { AssetClassContext } from "@/classification-context";
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Box, Text, Button } from "@mantine/core";
+import { Box, Text, Button, Group } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import {
@@ -155,6 +156,7 @@ function LedgerPageStoryHarness({
   hasStatementImportCsvFormat = true,
   accountEditDisabledReason,
   onOpenImportPage,
+  accountName,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -170,6 +172,7 @@ function LedgerPageStoryHarness({
   hasStatementImportCsvFormat?: boolean;
   accountEditDisabledReason?: string;
   onOpenImportPage?: () => void;
+  accountName?: string;
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -255,11 +258,12 @@ function LedgerPageStoryHarness({
           ...assetAccount,
           id: "account-equity",
           name:
-            equitySubtype === EquityAccountSubtype.EXPENSE
+            accountName ??
+            (equitySubtype === EquityAccountSubtype.EXPENSE
               ? "Groceries"
               : equitySubtype === EquityAccountSubtype.INCOME
                 ? "Salary"
-                : "System Activity",
+                : "System Activity"),
           equityAccountSubtype: equitySubtype ?? null,
           isActive: accountActive,
           type: AccountType.EQUITY,
@@ -268,6 +272,7 @@ function LedgerPageStoryHarness({
         }
       : {
           ...assetAccount,
+          name: accountName ?? assetAccount.name,
           type: accountType,
           isActive: accountActive,
           assetClassId,
@@ -635,7 +640,7 @@ export const HappyPath: Story = {
     await expect(canvas.getByText("CHF")).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
-    ).toHaveAttribute("data-variant", "outline");
+    ).toHaveTextContent("Asset Class: Unclassified");
     await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
@@ -656,7 +661,7 @@ export const ClassifiedAsset: Story = {
       within(canvasElement).getByTitle(
         "Asset Class: Commodities & Precious Metals",
       ),
-    ).toHaveAttribute("data-variant", "light");
+    ).toHaveTextContent("Asset Class: Commodities & Precious Metals");
   },
 };
 
@@ -667,7 +672,7 @@ export const UnclassifiedLiability: Story = {
     await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
-    ).toHaveAttribute("data-variant", "outline");
+    ).toHaveTextContent("Asset Class: Unclassified");
   },
 };
 
@@ -684,7 +689,7 @@ export const ArchivedClassifiedLiability: Story = {
     await expect(canvas.getByText("Archived", { exact: true })).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Fixed Income"),
-    ).toHaveAttribute("data-variant", "light");
+    ).toHaveTextContent("Asset Class: Fixed Income");
   },
 };
 
@@ -694,6 +699,230 @@ export const EquityWithoutAssetClass: Story = {
     await expect(
       within(canvasElement).queryByTitle(/^Asset Class:/),
     ).not.toBeInTheDocument();
+  },
+};
+
+const longAccountName =
+  "EverydayaccountCHFWithAnUnusuallyLongUnbrokenName".repeat(3);
+const longAssetClassNodes = [
+  {
+    id: "long-parent",
+    name: "Institutional Cash Reserves and Long-Term Liquidity Management",
+    parentId: null,
+    sortOrder: 0,
+  },
+  {
+    id: "long-child",
+    name: "VeryLongUnbrokenClassificationName".repeat(3),
+    parentId: "long-parent",
+    sortOrder: 0,
+  },
+];
+
+function ResponsiveLedgerHeaderHarness({
+  initialWidth = 1408,
+  longContent = false,
+  resizable = false,
+  onOpenImportPage,
+}: {
+  initialWidth?: number;
+  longContent?: boolean;
+  resizable?: boolean;
+  onOpenImportPage?: () => void;
+}) {
+  const [width, setWidth] = useState(initialWidth);
+  const ledger = (
+    <LedgerPageStoryHarness
+      accountName={longContent ? longAccountName : "Everyday account CHF"}
+      assetClassId={
+        longContent ? "long-child" : defaultAssetClassIds.BANK_DEPOSITS
+      }
+      includePeriodFilterControls
+      onOpenImportPage={onOpenImportPage}
+    />
+  );
+  return (
+    <Box style={{ overflowX: "auto" }}>
+      {resizable && (
+        <Group mb="sm">
+          <Button onClick={() => setWidth(1280)}>Wide Boundary</Button>
+          <Button onClick={() => setWidth(960)}>Narrow Container</Button>
+          <Button onClick={() => setWidth(768)}>Tablet Boundary</Button>
+          <Button onClick={() => setWidth(342)}>Phone Container</Button>
+        </Group>
+      )}
+      <Box w={width} data-testid="ledger-header-container">
+        {longContent ? (
+          <AssetClassContext.Provider value={longAssetClassNodes}>
+            {ledger}
+          </AssetClassContext.Provider>
+        ) : (
+          ledger
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const container = canvas.getByTestId("ledger-header-container");
+  const heading = canvas.getByRole("heading", { level: 2 });
+  const metadata = canvas.getByTitle(/^Asset Class:/);
+  const toolbar = canvas.getByRole("group", { name: "Ledger Controls" });
+  const period = canvas.getByRole("button", {
+    name: "Previous Period",
+  }).parentElement!;
+  const menu = canvas.getByRole("button", { name: "Account Actions" });
+  const split = menu.parentElement!;
+  const add = canvas.getByRole("button", { name: "Add Transaction" });
+
+  await waitFor(() => {
+    const bounds = container.getBoundingClientRect();
+    const header = heading
+      .closest(".cf-page-shell")!
+      .firstElementChild!.getBoundingClientRect();
+    for (const element of [heading, metadata, toolbar, period, split, add]) {
+      const rect = element.getBoundingClientRect();
+      expect(rect.left).toBeGreaterThanOrEqual(bounds.left - 1);
+      expect(rect.right).toBeLessThanOrEqual(bounds.right + 1);
+      expect(rect.bottom).toBeLessThanOrEqual(header.bottom + 1);
+    }
+    expect(container.scrollWidth).toBeLessThanOrEqual(
+      container.clientWidth + 1,
+    );
+    expect(metadata.scrollWidth).toBeLessThanOrEqual(metadata.clientWidth + 1);
+    if (bounds.width >= 1280) {
+      expect(toolbar.getBoundingClientRect().top).toBeCloseTo(header.top, 0);
+      expect(heading.getBoundingClientRect().right).toBeLessThanOrEqual(
+        toolbar.getBoundingClientRect().left,
+      );
+    } else {
+      expect(toolbar.getBoundingClientRect().top).toBeGreaterThan(
+        metadata.getBoundingClientRect().bottom,
+      );
+    }
+    if (bounds.width < 768) {
+      expect(split.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        period.getBoundingClientRect().bottom,
+      );
+      expect(add.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        split.getBoundingClientRect().bottom,
+      );
+      for (const element of [period, split, add]) {
+        expect(element.getBoundingClientRect().width).toBeCloseTo(
+          bounds.width,
+          0,
+        );
+      }
+      expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(40);
+      for (const element of [
+        menu,
+        canvas.getByRole("button", { name: "Next Period" }),
+      ]) {
+        expect(element.getBoundingClientRect().right).toBeCloseTo(
+          bounds.right,
+          0,
+        );
+      }
+    } else {
+      expect(period.getBoundingClientRect().left).toBeCloseTo(
+        toolbar.getBoundingClientRect().left,
+        0,
+      );
+      expect(add.getBoundingClientRect().right).toBeCloseTo(
+        toolbar.getBoundingClientRect().right,
+        0,
+      );
+      expect(period.getBoundingClientRect().top).toBeCloseTo(
+        add.getBoundingClientRect().top,
+        0,
+      );
+    }
+  });
+}
+
+export const ResponsiveHeaderWide: Story = {
+  render: () => <ResponsiveLedgerHeaderHarness />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(
+        "Asset Class: Cash & Cash Equivalents / Bank Deposits",
+      ),
+    ).toBeVisible();
+    await checkResponsiveLedgerHeader(canvasElement);
+  },
+};
+
+export const ResponsiveHeaderIntermediate: Story = {
+  render: () => <ResponsiveLedgerHeaderHarness initialWidth={960} />,
+  play: async ({ canvasElement }) => checkResponsiveLedgerHeader(canvasElement),
+};
+
+export const ResponsiveHeaderPhone: Story = {
+  args: { onOpenImportPage: fn() },
+  render: (args) => (
+    <ResponsiveLedgerHeaderHarness
+      initialWidth={342}
+      onOpenImportPage={args.onOpenImportPage}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await checkResponsiveLedgerHeader(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    );
+    await expect(args.onOpenImportPage).toHaveBeenCalledTimes(1);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    await expect(
+      await screen.findByRole("menuitem", { name: "Edit" }),
+    ).toBeEnabled();
+    await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const ResponsiveHeaderContainerResize: Story = {
+  render: () => <ResponsiveLedgerHeaderHarness resizable />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewportWidth = window.innerWidth;
+    await checkResponsiveLedgerHeader(canvasElement);
+    for (const name of [
+      "Wide Boundary",
+      "Narrow Container",
+      "Tablet Boundary",
+      "Phone Container",
+    ]) {
+      await userEvent.click(canvas.getByRole("button", { name }));
+      await checkResponsiveLedgerHeader(canvasElement);
+      await expect(window.innerWidth).toBe(viewportWidth);
+    }
+  },
+};
+
+export const ResponsiveHeaderLongContent: Story = {
+  render: () => <ResponsiveLedgerHeaderHarness longContent resizable />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: longAccountName }),
+    ).toBeVisible();
+    await expect(canvas.getByTitle(/^Asset Class:/)).toHaveTextContent(
+      `Asset Class: ${longAssetClassNodes[0].name} / ${longAssetClassNodes[1].name}`,
+    );
+    await checkResponsiveLedgerHeader(canvasElement);
+    for (const name of [
+      "Wide Boundary",
+      "Narrow Container",
+      "Tablet Boundary",
+      "Phone Container",
+    ]) {
+      await userEvent.click(canvas.getByRole("button", { name }));
+      await checkResponsiveLedgerHeader(canvasElement);
+    }
   },
 };
 

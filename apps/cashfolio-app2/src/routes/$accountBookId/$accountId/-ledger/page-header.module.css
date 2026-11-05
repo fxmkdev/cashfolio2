@@ -1,0 +1,33 @@
+.toolbar {
+  min-width: 0;
+}
+
+.period,
+.commands {
+  flex-shrink: 0;
+}
+
+.action {
+  display: block;
+}
+
+@container top-page-header (width < 48rem) {
+  .toolbar,
+  .commands {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .period > :global(.mantine-ButtonGroup-group),
+  .action > :global(.mantine-ButtonGroup-group),
+  .action > :global(.mantine-Button-root) {
+    width: 100%;
+  }
+
+  .period > :global(.mantine-ButtonGroup-group) > :nth-child(2),
+  .action > :global(.mantine-ButtonGroup-group) > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+}
