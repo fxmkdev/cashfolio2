@@ -27,8 +27,9 @@ const hierarchy = [500, 400, 300, 200, 100, 50].map((amount, index) => ({
 }));
 function withAllocation(
   grouping: typeof baseOverview.accountBreakdownsByGrouping.accountStructure,
+  nodes = hierarchy,
 ) {
-  const items = hierarchy.map(({ id, label, kind, amount }) => ({
+  const items = nodes.map(({ id, label, kind, amount }) => ({
     id,
     label,
     kind,
@@ -39,13 +40,13 @@ function withAllocation(
     ...grouping,
     assetBreakdown: {
       ...grouping.assetBreakdown,
-      hierarchy,
+      hierarchy: nodes,
       totalAmount: 1550,
       items,
     },
     liabilityBreakdown: {
       ...grouping.liabilityBreakdown,
-      hierarchy,
+      hierarchy: nodes,
       totalAmount: 1550,
       items,
     },
@@ -297,4 +298,57 @@ export const OtherSliceOpensDetails: Story = {
 
 export const NarrowLayout: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+};
+
+const syntheticHierarchy = hierarchy.map((node) =>
+  node.id === "account:other-5"
+    ? {
+        ...node,
+        id: "account:virtual:transfer-clearing:account:currency:USD",
+        label: "USD Transfer Clearing",
+      }
+    : node,
+);
+
+export const SyntheticBalancesHaveNoLedger: Story = {
+  args: {
+    overview: {
+      ...overview,
+      accountBreakdownsByGrouping: {
+        accountStructure: withAllocation(
+          baseOverview.accountBreakdownsByGrouping.accountStructure,
+          syntheticHierarchy,
+        ),
+        assetClass: withAllocation(
+          baseOverview.accountBreakdownsByGrouping.assetClass,
+          syntheticHierarchy,
+        ),
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const dialog = await openOther(canvasElement);
+    const balance = dialog.getByText("USD Transfer Clearing", { exact: true });
+    await expect(balance).toBeVisible();
+    await expect(
+      dialog.queryByRole("button", {
+        name: "Open Ledger: USD Transfer Clearing",
+      }),
+    ).not.toBeInTheDocument();
+    await expect(dialog.getByText("9.7%", { exact: true })).toBeVisible();
+    await userEvent.dblClick(balance);
+    await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
+    await expect(balance).toBeVisible();
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Drill Down: Smaller Group" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Other Allocation" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      within(canvasElement).getByText("Smaller Group", { exact: true }),
+    ).toBeVisible();
+  },
 };

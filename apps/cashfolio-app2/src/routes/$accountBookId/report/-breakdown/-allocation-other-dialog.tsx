@@ -4,6 +4,7 @@ import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import type { PeriodBreakdownChartDatum } from "./-breakdown-chart-options";
+import { getAllocationOtherAction } from "./-allocation-other-actions";
 
 export function AllocationOtherDialog({
   opened,
@@ -51,14 +52,9 @@ export function AllocationOtherDialog({
           data,
           node,
         }: ICellRendererParams<PeriodBreakdownChartDatum>) => {
-          if (
-            !data ||
-            node.rowPinned ||
-            data.kind === "other" ||
-            (data.kind === "group" && !data.isDrillable)
-          )
-            return null;
-          const label = data.kind === "group" ? "Drill Down" : "Open Ledger";
+          if (!data || node.rowPinned) return null;
+          const label = getAllocationOtherAction(data);
+          if (!label) return null;
           return (
             <Button
               variant="subtle"
@@ -88,7 +84,7 @@ export function AllocationOtherDialog({
         <Text size="sm" c="dimmed">
           Shares are percentages of the allocation total at the current chart
           level, including categories outside Other. Double-click a group to
-          drill down or an account to open its ledger.
+          drill down or an eligible account to open its ledger.
         </Text>
         <DataGrid
           containerStyle={{ height: 360 }}
@@ -98,11 +94,7 @@ export function AllocationOtherDialog({
           defaultColDef={{ sortable: false, suppressHeaderMenuButton: true }}
           getRowId={({ data }) => data.id}
           onRowDoubleClicked={({ data, node }) => {
-            if (
-              data &&
-              !node.rowPinned &&
-              (data.kind === "account" || data.isDrillable)
-            )
+            if (data && !node.rowPinned && getAllocationOtherAction(data))
               onRowOpen(data);
           }}
         />

@@ -3,7 +3,6 @@ import {
   useCallback,
   useMemo,
   useRef,
-  useState,
   type MouseEventHandler,
   type MouseEvent,
 } from "react";
@@ -21,6 +20,8 @@ import {
 } from "./-breakdown-chart-options";
 import { useAllocationChartOptions } from "./-allocation-chart-options";
 import { simplifyAllocationDonut } from "./-allocation-donut-data";
+import { getAllocationOtherAction } from "./-allocation-other-actions";
+import { useAllocationOtherDetails } from "./-use-allocation-other-details";
 import type {
   AllocationBreakdownType,
   AllocationChartType,
@@ -192,20 +193,11 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     allocationDrillState.clampedPath,
     allocationChartData,
   ]);
-  const [otherDetails, setOtherDetails] = useState({
-    context: otherContext,
-    opened: false,
-  });
-  // Reset synchronously so returning to an earlier context cannot reopen stale details.
-  if (otherDetails.context !== otherContext) {
-    setOtherDetails({ context: otherContext, opened: false });
-  }
-  const openOtherDetails = useCallback(() => {
-    setOtherDetails({ context: otherContext, opened: true });
-  }, [otherContext]);
-  const closeOtherDetails = useCallback(() => {
-    setOtherDetails({ context: otherContext, opened: false });
-  }, [otherContext]);
+  const {
+    opened: isOtherDetailsOpen,
+    open: openOtherDetails,
+    close: closeOtherDetails,
+  } = useAllocationOtherDetails(otherContext);
 
   const hasAllocationBreakdown = allocationChartData.length > 0;
   const currentAllocationBreakdownNodeId =
@@ -286,6 +278,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
   });
   const onOtherRowOpen = useCallback(
     (datum: PeriodBreakdownChartDatum) => {
+      if (!getAllocationOtherAction(datum)) return;
       closeOtherDetails();
       handleAllocationNodeDoubleClick(datum, new Event("dblclick"));
     },
@@ -329,8 +322,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     otherRows,
     otherSubtotal,
     isOtherDetailsOpen:
-      otherDetails.context === otherContext &&
-      otherDetails.opened &&
+      isOtherDetailsOpen &&
       selectedAllocationChartType === "donut" &&
       otherRows.length > 0,
     openOtherDetails,

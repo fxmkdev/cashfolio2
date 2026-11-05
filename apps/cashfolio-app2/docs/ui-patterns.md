@@ -637,6 +637,8 @@ callers to override it when needed.
   navigation or whenever the period, book, grouping, side, mode, drill path, or
   data changes. Other is a synthetic chart datum and never enters persisted
   hierarchy paths.
+- Synthetic transfer-clearing balances remain visible in Other details and its
+  subtotal, but have no ledger action or double-click navigation.
 - Gains/Losses processes each native double-click once across the chart's node
   and single-item container handlers, including across rerenders. A unit with
   one account still opens the account chart; opening details requires a separate
