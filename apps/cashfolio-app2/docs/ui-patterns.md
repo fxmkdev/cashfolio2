@@ -1500,6 +1500,9 @@ dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 keeping the normal financial grid mounted and hidden, preserving its columns,
 filters, scrolling, and expansion. **Done** returns to it. Categories and Asset
 Classes retain their existing management interactions and sibling dialog.
+Organize always displays the account structure, including when entered from
+Asset Class grouping. The Group By control is hidden until Done restores the
+financial grid and its existing grouping.
 
 Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;

@@ -131,6 +131,7 @@ export function useAccountsPageController(args: {
 
   return {
     onOrganizeSaved: args.invalidate,
+    organizerApi,
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss: { ...gainLoss, data: projectedGainLoss },
