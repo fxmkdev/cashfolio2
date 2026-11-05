@@ -704,13 +704,16 @@ export const AccountActionsMenu: Story = {
   ),
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
+    );
 
     await userEvent.click(
       canvas.getByRole("button", { name: "Import Statement" }),
     );
     await expect(args.onOpenImportPage).toHaveBeenCalledTimes(1);
     await expect(
-      canvas.queryByRole("button", { name: "Edit" }),
+      actionButtons.queryByRole("button", { name: "Edit" }),
     ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Account Actions" }),
@@ -731,7 +734,7 @@ export const AccountActionsMenu: Story = {
     ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit Account" });
-    await expect(dialog).toBeVisible();
+    await waitFor(() => expect(dialog).toBeVisible());
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Cancel" }),
     );
@@ -739,9 +742,9 @@ export const AccountActionsMenu: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "Account Actions" }),
     );
-    await expect(
-      await screen.findByRole("menuitem", { name: "Edit" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
+    });
   },
 };
 
@@ -805,7 +808,12 @@ export const MissingStatementImportCsvFormat: Story = {
   render: () => <LedgerPageStoryHarness hasStatementImportCsvFormat={false} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Edit" })).toBeEnabled();
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
+    );
+    await expect(
+      actionButtons.getByRole("button", { name: "Edit" }),
+    ).toBeEnabled();
     await expect(
       canvas.queryByRole("button", { name: "Import Statement" }),
     ).not.toBeInTheDocument();
@@ -832,7 +840,12 @@ export const CategoryActionsMenu: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Edit" })).toBeEnabled();
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Category Actions" }).parentElement!,
+    );
+    await expect(
+      actionButtons.getByRole("button", { name: "Edit" }),
+    ).toBeEnabled();
     await userEvent.click(
       canvas.getByRole("button", { name: "Category Actions" }),
     );
@@ -848,10 +861,9 @@ export const CategoryActionsMenu: Story = {
       "Statement imports are only available for accounts.",
     );
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
-    await expect(
-      await screen.findByRole("dialog", { name: "Edit Category" }),
-    ).toBeVisible();
+    await userEvent.click(actionButtons.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit Category" });
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };
 
