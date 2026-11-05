@@ -63,6 +63,8 @@ async function row(canvasElement: HTMLElement, id: string) {
   await waitFor(() => {
     found = canvasElement.querySelector<HTMLElement>(`.ag-row[row-id="${id}"]`);
     expect(found).not.toBeNull();
+    expect(found).toBeVisible();
+    expect(found!.querySelector(".ag-group-value")).not.toBeNull();
   });
   return found!;
 }
