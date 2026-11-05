@@ -619,11 +619,12 @@ callers to override it when needed.
   navigation, period changes, and grouping changes. Legacy Allocation Bar
   choices become Donut; legacy Breakdown Donut choices become Bar. Table choices
   and hierarchy drill paths are preserved.
-- Breakdown bars are horizontal and ranked by descending amount. Long category
-  lists scroll within a 440px chart viewport. Full names, locale-aware amounts,
-  and percentages remain available in tooltips. Cash Flow labels its percentage
-  as Share of Absolute Movement, using the sum of absolute amounts at the
-  current level as its denominator.
+- Breakdown bars are horizontal and ranked by descending amount, with the
+  largest value at the top. Cash Flow uses signed numeric order; ties retain
+  source order. Long category lists scroll within a 440px chart viewport. Full
+  names, locale-aware amounts, and percentages remain available in tooltips.
+  Cash Flow labels its percentage as Share of Absolute Movement, using the sum
+  of absolute amounts at the current level as its denominator.
 - Allocation donuts show at most five slices at each drill level. Above five
   categories, show the four largest plus Other last; ties retain source order.
   Other combines the remaining displayed categories without changing hierarchy,

@@ -276,7 +276,7 @@ test("horizontal bars rank amounts, allow scrolling, and retain full-name toolti
   expect(options.height).toBeGreaterThan(440);
   expect(options).toMatchObject({
     axes: {
-      y: { type: "category", reverse: true },
+      y: { type: "category", reverse: false },
       x: { type: "number", crossLines: [{ value: 0 }] },
     },
   });

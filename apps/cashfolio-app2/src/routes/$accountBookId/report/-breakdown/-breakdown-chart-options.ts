@@ -121,7 +121,7 @@ export function usePeriodBreakdownChartOptions(args: {
       axes: {
         y: {
           type: "category",
-          reverse: true,
+          reverse: false,
           label: {
             formatter: ({ value }) =>
               labelById.get(String(value)) ?? String(value),
