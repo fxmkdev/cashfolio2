@@ -7,6 +7,10 @@ import {
 import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
 import type { AccountManagementContext } from "@/shared/account-presentation";
+import {
+  isReportingGrouping,
+  type ReportingGrouping,
+} from "@/shared/reporting-grouping";
 
 export const tabs = [
   { value: "BALANCE", label: "Accounts", type: "BALANCE" },
@@ -72,6 +76,9 @@ export type GroupAssetClassSummary = string | null | "Mixed";
 export type TreeRow = Awaited<
   ReturnType<typeof getAccountTreeData>
 >["rows"][number] & {
+  /** Synthetic headings never represent persisted account groups. */
+  presentationKind?: "assetClass" | "unclassified" | "unit" | "archived";
+  accountGroupPath?: string[];
   /** Presentation only; undefined means the group has no account descendants. */
   groupAssetClass?: GroupAssetClassSummary;
   /** Presentation only; undefined means the group has no account descendants. */
@@ -131,10 +138,14 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
   tab: TabValue;
   mode: AccountsMode;
   showArchived?: boolean;
+  grouping?: ReportingGrouping;
 } {
   const tab = isTabValue(search.tab) ? search.tab : "BALANCE";
   return {
     tab,
+    ...(isReportingGrouping(search.grouping)
+      ? { grouping: search.grouping }
+      : {}),
     ...(tab.startsWith("EQUITY-") && typeof search.showArchived === "boolean"
       ? { showArchived: search.showArchived }
       : {}),

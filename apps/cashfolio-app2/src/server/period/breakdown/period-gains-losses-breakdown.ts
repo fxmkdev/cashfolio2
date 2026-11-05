@@ -18,7 +18,7 @@ import {
   getGainLossInvestmentGroup,
   UNKNOWN_GAIN_LOSS_UNIT,
   type GainLossInvestmentGroup,
-} from "./period-gain-loss-investment-group";
+} from "../../../shared/investment-group";
 
 export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";

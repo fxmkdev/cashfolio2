@@ -65,6 +65,47 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 });
 
+test("asset class grouping survives legacy redirects, reload, history and ledger return", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived&grouping=assetClass`,
+  );
+  const grouping = page.getByRole("combobox", { name: "Group By" });
+  await expect(grouping).toHaveValue("Asset Class");
+  await expect(page).toHaveURL(/grouping=assetClass/);
+  await page.reload();
+  await expect(grouping).toHaveValue("Asset Class");
+  await grouping.click();
+  await page
+    .getByRole("option", { name: "Account Structure", exact: true })
+    .click();
+  await expect(grouping).toHaveValue("Account Structure");
+  await page.goBack();
+  await expect(grouping).toHaveValue("Asset Class");
+  const source = page.url();
+  const chfUnit = page
+    .locator('[row-id^="__asset_class_unit__:"]')
+    .filter({ hasText: "CHF" })
+    .first();
+  await expect(chfUnit).toHaveAttribute("aria-expanded", "false");
+  await chfUnit.locator(".ag-group-contracted").click();
+  await expect(page.locator(".ag-row.ag-opacity-zero")).toHaveCount(0);
+  await page
+    .locator(
+      `.ag-row:not(.ag-opacity-zero)[row-id="${seeded.cashAccount.id}"] [col-id="ag-Grid-AutoColumn"]`,
+    )
+    .dblclick();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}`),
+  );
+  // Balance ledgers use browser history for return navigation; contextual Back
+  // links are reserved for category ledgers.
+  await page.goBack();
+  await expect(page).toHaveURL(source);
+  await expect(grouping).toHaveValue("Asset Class");
+});
+
 test("admin shell exposes the global valuation cache", async ({ page }) => {
   await page.goto("/admin");
 

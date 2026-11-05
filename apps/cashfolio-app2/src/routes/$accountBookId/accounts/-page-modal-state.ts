@@ -52,7 +52,7 @@ export function useAccountsPageModalState(scopeKey?: string) {
   >();
 
   const handleEditRow = useCallback((data: TreeRow) => {
-    if (data.isVirtualArchivedGroup) return;
+    if (data.isVirtualArchivedGroup || data.presentationKind) return;
     if (data.nodeType === "account") {
       setEditingAccount({
         id: data.id,

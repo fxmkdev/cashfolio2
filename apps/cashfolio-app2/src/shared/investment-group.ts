@@ -1,7 +1,4 @@
-import type {
-  AccountTrackingMethod,
-  Unit,
-} from "../../../.prisma-client/enums";
+import type { AccountTrackingMethod, Unit } from "../.prisma-client/enums";
 
 export type GainLossInvestmentGroup = { key: string; label: string };
 

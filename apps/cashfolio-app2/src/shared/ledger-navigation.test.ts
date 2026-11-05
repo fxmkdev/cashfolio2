@@ -16,6 +16,7 @@ describe("ledger return navigation", () => {
       "Categories",
     ],
     ["/book/accounts?tab=LIABILITY", "Accounts"],
+    ["/book/accounts?tab=BALANCE&mode=active&grouping=assetClass", "Accounts"],
     ["/book/cash?period=2026-01", "Checking"],
   ])("captures the immediate source %s", (href, label) => {
     expect(
