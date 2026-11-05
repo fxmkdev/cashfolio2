@@ -538,6 +538,7 @@ export const DestinationTreeAndSegmentedPosition: Story = {
     await userEvent.click(position.getByRole("radio", { name: "Last" }));
     await expect(dialog.queryByLabelText("Sibling")).not.toBeInTheDocument();
     await userEvent.click(destination);
+    await userEvent.clear(destination);
     await userEvent.type(destination, "  INVESTMENTS / brokerage  ");
     await userEvent.click(body.getByRole("option", { name: "Brokerage" }));
     await expect(destination).toHaveValue("Brokerage");
