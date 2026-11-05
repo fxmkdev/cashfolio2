@@ -62,8 +62,8 @@ function renderHook<T>(hook: () => T) {
   harness.effects.splice(0).forEach((effect) => effect());
   return result;
 }
-function render(api: OrganizerApi, onSaved = saved) {
-  const useController = () => useOrganizer(onSaved, api);
+function render(api: OrganizerApi, onSaved = saved, autoLoad = true) {
+  const useController = () => useOrganizer(onSaved, api, autoLoad);
   return renderHook(useController);
 }
 const saved = vi.fn();
@@ -91,6 +91,55 @@ afterEach(() => {
 });
 
 describe("organizer controller", () => {
+  it("loads on explicit entry only, guards duplicate entry, and discards a cancelled session's response", async () => {
+    const api = createOrganizerStoryApi();
+    const original = api.load;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const load = vi.spyOn(api, "load").mockImplementationOnce(async () => {
+      await gate;
+      return original();
+    });
+    const organizer = render(api, saved, false);
+    expect(load).not.toHaveBeenCalled();
+    const pending = organizer.load();
+    expect(await organizer.load()).toBe(false);
+    expect(render(api, saved, false).loading).toBe(true);
+    organizer.reset();
+    release();
+    expect(await pending).toBe(false);
+    expect(render(api, saved, false).snapshot).toBeUndefined();
+    expect(await render(api, saved, false).load()).toBe(true);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(render(api, saved, false).snapshot).toBeDefined();
+  });
+  it("does not activate an entry that finishes after unmount", async () => {
+    const api = createOrganizerStoryApi();
+    const organizer = render(api, saved, false);
+    const pending = organizer.load();
+    harness.cleanups.forEach((cleanup) => cleanup());
+    expect(await pending).toBe(false);
+    expect(render(api, saved, false).snapshot).toBeUndefined();
+  });
+  it("clears Undo, selection-reveal feedback and recovery errors before reentry", async () => {
+    const api = createOrganizerStoryApi();
+    await (await ready(api)).saveMove(move);
+    vi.spyOn(api, "move").mockRejectedValueOnce(
+      new TypeError("Failed to fetch"),
+    );
+    vi.spyOn(api, "load").mockRejectedValueOnce(new Error("Offline"));
+    await render(api).saveMove({ ...move, parentId: null });
+    expect(render(api).submitState.refreshError).toBeTruthy();
+    render(api).reset();
+    expect(render(api).undo).toBeNull();
+    expect(render(api).revealIds).toEqual([]);
+    expect(render(api).message).toBe("");
+    expect(render(api).submitState.refreshError).toBeNull();
+    expect(await render(api).load()).toBe(true);
+    expect(render(api).blocked).toBe(false);
+  });
   it("loads once, saves optimistically and exposes a single-use Undo", async () => {
     const api = createOrganizerStoryApi();
     const load = vi.spyOn(api, "load");

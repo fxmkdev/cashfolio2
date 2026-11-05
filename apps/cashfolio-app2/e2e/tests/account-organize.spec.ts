@@ -69,6 +69,13 @@ test("organizes an account and complete group subtree, persists ordering, and un
   await page.getByRole("button", { name: "Organize", exact: true }).click();
   const organizer = page.getByRole("region", { name: "Organize Accounts" });
   await expect(organizer.locator(`.ag-row[row-id="${source}"]`)).toBeVisible();
+  await expect(
+    organizer.locator(`.ag-row[row-id="${archived}"]`),
+  ).toBeVisible();
+  await organizer.getByRole("checkbox", { name: "Show Archived" }).uncheck();
+  await expect(organizer.locator(`.ag-row[row-id="${archived}"]`)).toHaveCount(
+    0,
+  );
   for (const id of [source, free])
     await clickGridRowSelectionCheckbox(
       organizer.locator(`.ag-row[row-id="${id}"]`),
@@ -122,8 +129,11 @@ test("organizes an account and complete group subtree, persists ordering, and un
   await page.reload();
   await page.getByRole("button", { name: "Organize", exact: true }).click();
   await expect(
-    organizer.getByRole("button", { name: "Undo", exact: true }),
-  ).toBeDisabled();
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    organizer.getByRole("checkbox", { name: "Show Archived" }),
+  ).toBeChecked();
   await expect(organizer.locator(`.ag-row[row-id="${source}"]`)).toBeVisible();
   expect(await accountState()).toEqual(persisted);
   await organizer
@@ -146,7 +156,7 @@ test("organizes an account and complete group subtree, persists ordering, and un
         ).parentGroupId,
     )
     .toBeNull();
-  await organizer.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect
     .poll(
       async () =>
@@ -162,7 +172,7 @@ test("organizes an account and complete group subtree, persists ordering, and un
         ).parentGroupId,
     )
     .toBe(destination);
-  await organizer.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Add Account", exact: true }),
   ).toBeVisible();

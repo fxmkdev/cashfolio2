@@ -14,41 +14,35 @@ export type OrganizerApi = {
   undo: (undo: OrganizeUndo) => Promise<OrganizeSnapshot>;
 };
 
-export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
+export function useOrganizer(
+  onSaved: () => void,
+  apiOverride?: OrganizerApi,
+  autoLoad = true,
+) {
   const api = useRef(apiOverride).current;
   const [snapshot, setSnapshot] = useState<OrganizeSnapshot>();
   const confirmed = useRef<OrganizeSnapshot | undefined>(undefined);
   const [undo, setUndo] = useState<OrganizeUndo | null>(null);
   const [loadError, setLoadError] = useState<string>();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(autoLoad);
   const [message, setMessage] = useState("");
   const [revealIds, setRevealIds] = useState<string[]>([]);
   const mounted = useRef(true);
+  const generation = useRef(0);
+  const loadInFlight = useRef<number | undefined>(undefined);
   const attempted = useRef<
     { move?: OrganizeMove; undo?: OrganizeUndo; version: string } | undefined
   >(undefined);
   const refresh = useCallback(async () => {
+    if (!api) throw new Error("Organize is unavailable.");
+    const current = generation.current;
     const next = await api.load();
-    if (!mounted.current) return;
+    if (!mounted.current || current !== generation.current) return;
     if (confirmed.current?.version !== next.version) setUndo(null);
     confirmed.current = next;
     setSnapshot(next);
     setLoadError(undefined);
   }, [api]);
-  useEffect(() => {
-    mounted.current = true;
-    void refresh()
-      .catch(() => {
-        if (mounted.current)
-          setLoadError("Could not load the account hierarchy.");
-      })
-      .finally(() => {
-        if (mounted.current) setLoading(false);
-      });
-    return () => {
-      mounted.current = false;
-    };
-  }, [refresh]);
   const submitState = useDialogSubmitState({
     captureErrors: true,
     onRefreshConstraints: refresh,
@@ -56,11 +50,59 @@ export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
   const pending = submitState.isSubmitting || submitState.isRefreshing;
   const needsRefresh = !!submitState.refreshError;
   const { runSubmit } = submitState;
+  const { clearSubmissionError, clearRefreshError } = submitState;
+  const load = useCallback(async () => {
+    if (!api || loadInFlight.current !== undefined) return false;
+    const current = generation.current;
+    loadInFlight.current = current;
+    setLoading(true);
+    setLoadError(undefined);
+    clearSubmissionError();
+    clearRefreshError();
+    try {
+      await refresh();
+      return mounted.current && current === generation.current;
+    } catch {
+      if (mounted.current && current === generation.current)
+        setLoadError("Could not load the account hierarchy.");
+      return false;
+    } finally {
+      if (current === generation.current) {
+        loadInFlight.current = undefined;
+        if (mounted.current) setLoading(false);
+      }
+    }
+  }, [api, clearRefreshError, clearSubmissionError, refresh]);
+  const invalidateLoad = useCallback(() => {
+    generation.current++;
+    loadInFlight.current = undefined;
+  }, []);
+  const reset = useCallback(() => {
+    invalidateLoad();
+    confirmed.current = undefined;
+    attempted.current = undefined;
+    setSnapshot(undefined);
+    setUndo(null);
+    setLoading(false);
+    setLoadError(undefined);
+    setMessage("");
+    setRevealIds([]);
+    clearSubmissionError();
+    clearRefreshError();
+  }, [clearRefreshError, clearSubmissionError, invalidateLoad]);
+  useEffect(() => {
+    mounted.current = true;
+    if (autoLoad) void load();
+    return () => {
+      mounted.current = false;
+      invalidateLoad();
+    };
+  }, [autoLoad, invalidateLoad, load]);
 
   const saveMove = useCallback(
     async (move: OrganizeMove) => {
       const before = confirmed.current;
-      if (!before || pending || needsRefresh) return false;
+      if (!api || !before || pending || needsRefresh) return false;
       return runSubmit(async () => {
         attempted.current = { move, version: before.version };
         const next = planAccountMove(before.nodes, move);
@@ -92,7 +134,7 @@ export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
   );
   const undoMove = async () => {
     const before = confirmed.current;
-    if (!before || !undo || pending || needsRefresh) return;
+    if (!api || !before || !undo || pending || needsRefresh) return;
     await submitState.runSubmit(async () => {
       attempted.current = { undo, version: before.version };
       const result = await api.undo(undo);
@@ -115,6 +157,8 @@ export function useOrganizer(onSaved: () => void, apiOverride: OrganizerApi) {
     else if (attempted.current?.undo) void undoMove();
   };
   return {
+    load,
+    reset,
     snapshot,
     loading,
     loadError,

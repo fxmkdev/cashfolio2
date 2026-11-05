@@ -5,7 +5,7 @@ export type OrganizeNodeRef = {
   nodeType: "account" | "accountGroup";
 };
 
-/** Real relationships only. Virtual Archived rows belong to the presentation. */
+/** Real relationships only, including archived accounts and groups. */
 export type OrganizeNode = OrganizeNodeRef & {
   name: string;
   parentId: string | null;

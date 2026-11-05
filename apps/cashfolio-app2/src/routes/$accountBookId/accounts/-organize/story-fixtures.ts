@@ -95,8 +95,9 @@ export const organizeStoryNodes: OrganizeNode[] = [
 
 export function createOrganizerStoryApi(
   failure?: "busy" | "network" | "load",
+  initialNodes: OrganizeNode[] = organizeStoryNodes,
 ): OrganizerApi {
-  let nodes = structuredClone(organizeStoryNodes);
+  let nodes = structuredClone(initialNodes);
   let failed = false;
   const snapshot = (): OrganizeSnapshot => ({
     nodes: structuredClone(nodes),

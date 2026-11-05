@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Badge,
   Box,
   Button,
+  Checkbox,
   Group,
-  Loader,
   Text,
   VisuallyHidden,
 } from "@mantine/core";
@@ -17,7 +16,6 @@ import type {
   ICellRendererParams,
   SelectionChangedEvent,
 } from "ag-grid-enterprise";
-import { IconArrowBackUp } from "@tabler/icons-react";
 import { DataGrid } from "@/components/grid/data-grid";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import {
@@ -27,47 +25,43 @@ import {
 } from "@/shared/account-organize/tree";
 import type { OrganizeNodeRef } from "@/shared/account-organize/types";
 import { MoveDialog } from "./move-dialog";
-import { useOrganizer, type OrganizerApi } from "./use-organizer";
+import type { Organizer } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
 
 // Hint updates must not reconfigure the tree column or recreate its controls.
 const gridOptions: GridOptions<OrganizeDisplayRow> = {
+  suppressNoRowsOverlay: true,
   defaultColDef: { sortable: false, filter: false, resizable: true },
   autoGroupColumnDef: {
     headerName: "Name",
     field: "name",
     flex: 1,
     minWidth: 280,
-    rowDrag: ({ data }) => !!data && !data.isVirtualArchivedGroup,
+    rowDrag: ({ data }) => !!data,
     cellRendererParams: { suppressCount: true },
   },
   getRowId: ({ data }) => data.id,
-  isGroupOpenByDefault: ({ rowNode }) =>
-    !rowNode.data?.isVirtualArchivedGroup && rowNode.level === 0,
   rowSelection: {
     mode: "multiRow",
     groupSelects: "self",
     headerCheckbox: false,
     enableClickSelection: false,
-    isRowSelectable: (node) => !node.data?.isVirtualArchivedGroup,
-    checkboxes: ({ data }) => !!data && !data.isVirtualArchivedGroup,
   },
   selectionColumnDef: { pinned: "left", width: 48, resizable: false },
 };
 
 export function AccountOrganizer({
   accountBookId,
-  onDone,
-  onSaved,
-  api: apiOverride,
+  organizer,
 }: {
   accountBookId: string;
-  onDone: () => void;
-  onSaved: () => void;
-  api: OrganizerApi;
+  organizer: Organizer;
 }) {
-  const organizer = useOrganizer(onSaved, apiOverride);
+  const [showArchived, setShowArchived] = useState(true);
+  const [selectionNotice, setSelectionNotice] = useState("");
+  const expansion = useRef(new Map<string, boolean>());
+  const region = useRef<HTMLElement>(null);
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
   const [selected, setSelected] = useState<OrganizeNodeRef[]>([]);
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
@@ -75,7 +69,10 @@ export function AccountOrganizer({
     () => organizer.snapshot?.nodes ?? [],
     [organizer.snapshot],
   );
-  const rows = useMemo(() => organizeDisplayRows(nodes), [nodes]);
+  const rows = useMemo(
+    () => organizeDisplayRows(nodes, showArchived),
+    [nodes, showArchived],
+  );
   const roots = useMemo(
     () =>
       normalizeOrganizeSelection(
@@ -92,8 +89,13 @@ export function AccountOrganizer({
   });
   const reveal = useCallback(
     (id: string, focus: boolean) => {
-      const node = api?.getRowNode(id);
-      if (!api || !node) return;
+      let node = api?.getRowNode(id);
+      let current = nodes.find((item) => item.id === id);
+      while (!node && current?.parentId) {
+        current = nodes.find((item) => item.id === current?.parentId);
+        if (current) node = api?.getRowNode(current.id);
+      }
+      if (!api || !node) return false;
       let parent = node.parent;
       while (parent && parent.level >= 0) {
         parent.setExpanded(true, undefined, true);
@@ -102,13 +104,18 @@ export function AccountOrganizer({
       api.ensureNodeVisible(node, "middle");
       if (focus && node.rowIndex !== null)
         api.setFocusedCell(node.rowIndex, "ag-Grid-AutoColumn");
+      return true;
     },
-    [api],
+    [api, nodes],
   );
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       for (const id of organizer.revealIds) reveal(id, false);
-      if (organizer.revealIds[0]) reveal(organizer.revealIds[0], true);
+      if (
+        organizer.revealIds.length &&
+        !organizer.revealIds.some((id) => reveal(id, true))
+      )
+        region.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [organizer.revealIds, rows, reveal]);
@@ -118,17 +125,13 @@ export function AccountOrganizer({
         headerName: "Type",
         width: 135,
         valueGetter: ({ data }) =>
-          data?.isVirtualArchivedGroup
-            ? ""
-            : data?.nodeType === "accountGroup"
-              ? "Group"
-              : "Account",
+          data?.nodeType === "accountGroup" ? "Group" : "Account",
       },
       {
         headerName: "Status",
         width: 125,
         cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data && !data.isVirtualArchivedGroup && !data.isActive ? (
+          data && !data.isActive ? (
             <Badge color="gray" variant="light">
               Archived
             </Badge>
@@ -138,7 +141,7 @@ export function AccountOrganizer({
         headerName: "Actions",
         width: 120,
         cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data && !data.isVirtualArchivedGroup ? (
+          data ? (
             <Button
               size="compact-xs"
               variant="subtle"
@@ -163,9 +166,7 @@ export function AccountOrganizer({
   );
   const onSelectionChanged = useCallback(
     ({ api }: SelectionChangedEvent<OrganizeDisplayRow>) =>
-      setSelected(
-        api.getSelectedRows().filter((row) => !row.isVirtualArchivedGroup),
-      ),
+      setSelected(api.getSelectedRows()),
     [],
   );
   const rowClassRules = useMemo<
@@ -174,11 +175,53 @@ export function AccountOrganizer({
     () => ({
       [styles.recent]: ({ data }) =>
         !!data && organizer.revealIds.includes(data.id),
+      [styles.archived]: ({ data }) => !!data && !data.isActive,
     }),
     [organizer.revealIds],
   );
+  const isGroupOpenByDefault = useCallback<
+    NonNullable<GridOptions<OrganizeDisplayRow>["isGroupOpenByDefault"]>
+  >(
+    ({ rowNode }) => expansion.current.get(rowNode.id!) ?? rowNode.level === 0,
+    [],
+  );
+  const onRowGroupOpened = useCallback<
+    NonNullable<GridOptions<OrganizeDisplayRow>["onRowGroupOpened"]>
+  >(({ node }) => {
+    if (node.id) expansion.current.set(node.id, !!node.expanded);
+  }, []);
+  useEffect(() => {
+    api?.forEachNode((node) => {
+      const expanded = expansion.current.get(node.id!);
+      if (node.group && expanded !== undefined && node.expanded !== expanded)
+        node.setExpanded(expanded);
+    });
+  }, [api, rows]);
+  const changeArchivedVisibility = (value: boolean) => {
+    if (!value) {
+      const hidden = selected.filter(
+        (item) => !nodes.find((node) => node.id === item.id)?.isActive,
+      );
+      for (const item of hidden) api?.getRowNode(item.id)?.setSelected(false);
+      setSelected(
+        selected.filter((item) => !hidden.some((node) => node.id === item.id)),
+      );
+      setSelectionNotice(
+        hidden.length
+          ? `${hidden.length} hidden archived ${hidden.length === 1 ? "item was" : "items were"} deselected.`
+          : "",
+      );
+    } else setSelectionNotice("");
+    setShowArchived(value);
+  };
+  const hiddenResults = organizer.revealIds.filter(
+    (id) =>
+      !showArchived && nodes.some((node) => node.id === id && !node.isActive),
+  ).length;
   return (
     <Box
+      ref={region}
+      tabIndex={-1}
       component="section"
       aria-label="Organize Accounts"
       className={organizer.blocked ? styles.blocked : undefined}
@@ -190,72 +233,84 @@ export function AccountOrganizer({
         minHeight: 0,
       }}
     >
-      <Group justify="space-between" mb="sm">
-        <Group role="toolbar" aria-label="Organize Account Actions" gap="xs">
-          <Text size="sm">
-            {groups} {groups === 1 ? "group" : "groups"} and {accounts}{" "}
-            {accounts === 1 ? "account" : "accounts"} selected
+      <Group justify="space-between" mb="sm" className={styles.selectionBar}>
+        {selected.length ? (
+          <Group role="toolbar" aria-label="Organize Account Actions" gap="xs">
+            <Text size="sm" role="status">
+              {groups} {groups === 1 ? "group" : "groups"} and {accounts}{" "}
+              {accounts === 1 ? "account" : "accounts"} selected
+            </Text>
+            <Button
+              size="sm"
+              disabled={!roots.length || organizer.blocked}
+              onClick={() => setDialogItems(roots)}
+            >
+              Move To…
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
+              disabled={!selected.length || organizer.blocked}
+              onClick={() => {
+                api?.deselectAll();
+                setSelected([]);
+              }}
+            >
+              Clear Selection
+            </Button>
+          </Group>
+        ) : (
+          <Text size="sm" c="dimmed" flex={1}>
+            Drag to move or reorder. Groups move with all descendants. Changes
+            save automatically.
           </Text>
-          <Button
-            size="sm"
-            disabled={!roots.length || organizer.blocked}
-            onClick={() => setDialogItems(roots)}
-          >
-            Move To…
-          </Button>
-          <Button
-            size="sm"
-            variant="subtle"
-            disabled={!selected.length || organizer.blocked}
-            onClick={() => {
-              api?.deselectAll();
-              setSelected([]);
-            }}
-          >
-            Clear Selection
-          </Button>
-          <Button
-            size="sm"
-            variant="default"
-            leftSection={<IconArrowBackUp size={16} />}
-            disabled={!organizer.undo || organizer.blocked}
-            onClick={() => void organizer.undoMove()}
-          >
-            Undo
-          </Button>
-        </Group>
-        <Button variant="default" disabled={organizer.pending} onClick={onDone}>
-          Done
-        </Button>
+        )}
+        <Checkbox
+          label="Show Archived"
+          checked={showArchived}
+          disabled={organizer.blocked || drag.dragging || !!dialogItems}
+          onChange={(event) =>
+            changeArchivedVisibility(event.currentTarget.checked)
+          }
+        />
       </Group>
-      <Text size="sm" c="dimmed" mb="sm">
-        Select accounts or groups to move. Groups keep all descendants,
-        including archived items. Changes save automatically.
-      </Text>
       <MutationSubmitFeedback
-        state={organizer.submitState}
+        state={{ ...organizer.submitState, isWaiting: false }}
         onRefreshConstraints={organizer.refresh}
         onRetry={organizer.retry}
         retryDisabled={organizer.retryDisabled}
       />
-      {organizer.loading && <Loader size="sm" />}
-      {organizer.loadError && (
-        <Alert color="red">
-          {organizer.loadError}
-          <Button
-            variant="subtle"
-            onClick={() => void organizer.submitState.refreshConstraints()}
-          >
-            Refresh Choices
-          </Button>
-        </Alert>
-      )}
       <Text size="sm" c="dimmed" mih={24} aria-live="polite">
-        {drag.hint}
+        {drag.hint ||
+          (organizer.pending
+            ? organizer.submitState.isWaiting
+              ? "Waiting for another change to finish…"
+              : "Saving…"
+            : organizer.message)}
       </Text>
       <VisuallyHidden role="status" aria-live="polite">
-        {organizer.message}
+        Organize mode. {selectionNotice}{" "}
+        {hiddenResults > 0 &&
+          `${hiddenResults} affected archived items are hidden. Enable Show Archived to view them.`}
       </VisuallyHidden>
+      {!rows.length && (
+        <Text size="sm" c="dimmed">
+          {showArchived ? (
+            "There are no accounts or groups to organize."
+          ) : (
+            <>
+              There are no active accounts or groups.{" "}
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                onClick={() => changeArchivedVisibility(true)}
+              >
+                Show Archived
+              </Button>
+            </>
+          )}
+        </Text>
+      )}
       <DataGrid
         {...gridOptions}
         containerStyle={{ flex: 1, minHeight: 200 }}
@@ -264,6 +319,8 @@ export function AccountOrganizer({
         treeData
         treeDataParentIdField="parentId"
         groupDefaultExpanded={1}
+        isGroupOpenByDefault={isGroupOpenByDefault}
+        onRowGroupOpened={onRowGroupOpened}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
         rowDragMultiRow
@@ -280,6 +337,7 @@ export function AccountOrganizer({
       {dialogItems && (
         <MoveDialog
           nodes={nodes}
+          showArchived={showArchived}
           items={dialogItems}
           pending={organizer.pending}
           onClose={() => setDialogItems(undefined)}

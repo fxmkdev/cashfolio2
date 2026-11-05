@@ -2,6 +2,9 @@ import { useRef, useState } from "react";
 import type { GridApi, GridState } from "ag-grid-enterprise";
 import { Alert, Box, Button, Text } from "@mantine/core";
 import { AccountOrganizer } from "./-organize/organizer";
+import { OrganizerActions } from "./-organize/organizer-actions";
+import { useOrganizer } from "./-organize/use-organizer";
+import { useGlobalLoading } from "@/components/navigation/global-loading";
 import type { AccountsGridRow } from "./-page-types";
 import { PageShell } from "@/components/layout/page-shell";
 import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
@@ -32,15 +35,23 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   } = props;
   const isCategories = managementContext === "categories";
   const [organizing, setOrganizing] = useState(false);
+  const organizer = useOrganizer(
+    props.onOrganizeSaved ?? (() => {}),
+    props.organizerApi,
+    false,
+  );
+  useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
   const normalGrid = useRef<GridApi<AccountsGridRow> | null>(null);
   const normalGridState = useRef<GridState | undefined>(undefined);
-  const openOrganizer = () => {
+  const openOrganizer = async () => {
+    if (organizing || !(await organizer.load())) return;
     normalGridState.current = normalGrid.current?.getState();
     bulkAccountActions?.clearSelection();
     setOrganizing(true);
   };
   const closeOrganizer = () => {
     setOrganizing(false);
+    organizer.reset();
     requestAnimationFrame(() => {
       if (normalGridState.current && !normalGrid.current?.isDestroyed()) {
         normalGrid.current?.setState(normalGridState.current, ["rowSelection"]);
@@ -53,13 +64,15 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         {...props}
         organizing={organizing}
         onOrganize={props.organizerApi ? openOrganizer : undefined}
+        organizePending={organizer.loading}
+        organizerActions={
+          <OrganizerActions organizer={organizer} onDone={closeOrganizer} />
+        }
       />
       {organizing && !isCategories && props.organizerApi && (
         <AccountOrganizer
           accountBookId={props.accountBookId}
-          api={props.organizerApi}
-          onDone={closeOrganizer}
-          onSaved={() => props.onOrganizeSaved?.()}
+          organizer={organizer}
         />
       )}
       <Box
@@ -70,6 +83,14 @@ function AccountsPageContent(props: AccountsPageViewProps) {
           minHeight: 0,
         }}
       >
+        {organizer.loadError && (
+          <Alert color="red" role="alert">
+            {organizer.loadError}
+            <Button variant="subtle" onClick={() => void openOrganizer()}>
+              Try Again
+            </Button>
+          </Alert>
+        )}
         <UnarchiveMutationFeedback
           listLabel={isCategories ? "category list" : "account list"}
           recovery={props.unarchiveRecovery}

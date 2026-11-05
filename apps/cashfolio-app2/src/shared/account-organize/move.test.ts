@@ -46,10 +46,7 @@ function move(
 }
 const order = (nodes: OrganizeNode[], parentId: string | null) =>
   organizeDisplayRows(nodes)
-    .filter(
-      (row) =>
-        row.persistedParentId === parentId && !row.isVirtualArchivedGroup,
-    )
+    .filter((row) => (row.parentId ?? null) === parentId)
     .map((row) => row.id);
 
 describe("structural account selection", () => {
@@ -88,12 +85,16 @@ describe("structural account selection", () => {
       expect(() => normalizeOrganizeSelection(nodes, items)).toThrow();
     }
   });
-  it("projects archived rows without replacing the persisted parent", () => {
+  it("renders archived items under their real parents and filters only their visibility", () => {
     const archived = organizeDisplayRows(nodes).find(
       (n) => n.id === "archived",
     )!;
-    expect(archived.parentId).toBe("__archived__:group:child");
-    expect(archived.persistedParentId).toBe("child");
+    expect(archived.parentId).toBe("child");
+    expect(organizeDisplayRows(nodes)).toHaveLength(nodes.length);
+    expect(
+      organizeDisplayRows(nodes, false).map((row) => row.id),
+    ).not.toContain("archived");
+    expect(descendants(nodes, "parent")).toContain("archived");
     expect(organizePath(nodes, "archived")).toBe("parent / child / archived");
   });
 });
@@ -186,7 +187,7 @@ describe("account movement", () => {
       nodes,
     );
   });
-  it("permits a mixed active/archived move into a real group but rejects ambiguous relative placement", () => {
+  it("inserts mixed active/archived roots as a block beside a real sibling", () => {
     const nodes = [
       node("d"),
       leaf("a"),
@@ -199,16 +200,53 @@ describe("account movement", () => {
     );
     expect(next[1].parentId).toBe("d");
     expect(next[2].parentId).toBe("d");
-    expect(() =>
+    const relative = planAccountMove(
+      nodes,
+      move([nodes[1], nodes[2]], {
+        parentId: "d",
+        placement: "before",
+        anchorId: "anchor",
+      }),
+    );
+    expect(order(relative, "d")).toEqual(["a", "b", "anchor"]);
+  });
+  it("places items against full sibling boundaries without changing hidden siblings' relative order", () => {
+    const nodes = [
+      leaf("old1", null, { isActive: false, sortOrder: 0 }),
+      leaf("active", null, { sortOrder: 1 }),
+      leaf("old2", null, { isActive: false, sortOrder: 2 }),
+      leaf("moved", null, { sortOrder: 3 }),
+    ];
+    const next = planAccountMove(
+      nodes,
+      move([nodes[3]], { placement: "before", anchorId: "active" }),
+    );
+    expect(order(next, null)).toEqual(["old1", "moved", "active", "old2"]);
+    expect(organizeDisplayRows(next, false).map((row) => row.id)).toEqual([
+      "moved",
+      "active",
+    ]);
+    expect(restoreAccountMove(next, organizeChanges(next, nodes))).toEqual(
+      nodes,
+    );
+    expect(
       planAccountMove(
-        nodes,
-        move([nodes[1], nodes[2]], {
-          parentId: "d",
-          placement: "before",
-          anchorId: "anchor",
-        }),
+        next,
+        move([next[3]], { placement: "before", anchorId: "active" }),
       ),
-    ).toThrow("displayed separately");
+    ).toBe(next);
+    expect(
+      order(
+        planAccountMove(nodes, move([nodes[3]], { placement: "first" })),
+        null,
+      )[0],
+    ).toBe("moved");
+    expect(
+      order(
+        planAccountMove(nodes, move([nodes[1]], { placement: "last" })),
+        null,
+      ).at(-1),
+    ).toBe("active");
   });
   it("reorders archived siblings using their real parent", () => {
     const nodes = [

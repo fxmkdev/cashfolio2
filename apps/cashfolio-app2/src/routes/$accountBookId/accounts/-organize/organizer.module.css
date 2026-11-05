@@ -1,3 +1,17 @@
+.header {
+  background-color: var(--mantine-color-blue-light);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: 0 0 0 6px var(--mantine-color-blue-light);
+}
+
+.archived :global(.ag-group-value) {
+  color: var(--mantine-color-dimmed);
+}
+
+.selectionBar {
+  min-height: 36px;
+}
+
 .blocked :global(.ag-row-drag) {
   opacity: 0.4;
   pointer-events: none;

@@ -1,6 +1,8 @@
 import { reportingGroupingOptions } from "@/shared/reporting-grouping";
 import { getAccountManagementPath } from "@/shared/account-presentation";
 import {
+  Badge,
+  Box,
   Button,
   Checkbox,
   Group,
@@ -16,6 +18,8 @@ import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { getAccountsPageTitle } from "./-page-types";
 import type { AccountsPageViewProps } from "./-page-view-types";
+import type { ReactNode } from "react";
+import styles from "./-organize/organizer.module.css";
 export function AccountsPageHeader({
   managementContext = "accounts",
   grouping = "accountStructure",
@@ -29,6 +33,8 @@ export function AccountsPageHeader({
   onOpenCreateAccount,
   organizing = false,
   onOrganize,
+  organizePending,
+  organizerActions,
 }: Pick<
   AccountsPageViewProps,
   | "managementContext"
@@ -41,7 +47,12 @@ export function AccountsPageHeader({
   | "tabs"
   | "onOpenCreateGroup"
   | "onOpenCreateAccount"
-> & { organizing?: boolean; onOrganize?: () => void }) {
+> & {
+  organizing?: boolean;
+  onOrganize?: () => void;
+  organizePending?: boolean;
+  organizerActions?: ReactNode;
+}) {
   const isCategories = managementContext === "categories";
   const managementPath = getAccountManagementPath(managementContext);
   const managementTabs = (
@@ -75,6 +86,7 @@ export function AccountsPageHeader({
           variant="default"
           leftSection={<IconArrowsMove size={16} />}
           onClick={onOrganize}
+          disabled={organizePending}
         >
           Organize
         </Button>
@@ -138,28 +150,35 @@ export function AccountsPageHeader({
           </Group>
         </>
       ) : (
-        <TopPageHeader
-          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
-          headingAccessory={
-            organizing ? undefined : (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">Group By</Text>
-                <Select
-                  aria-label="Group By"
-                  w={180}
-                  data={reportingGroupingOptions}
-                  value={grouping}
-                  allowDeselect={false}
-                  onChange={(value) => {
-                    if (value === "accountStructure" || value === "assetClass")
-                      onGroupingChange?.(value);
-                  }}
-                />
-              </Group>
-            )
-          }
-          actions={organizing ? undefined : managementActions}
-        />
+        <Box className={organizing ? styles.header : undefined}>
+          <TopPageHeader
+            heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+            headingAccessory={
+              organizing ? (
+                <Badge variant="light">Organizing</Badge>
+              ) : (
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm">Group By</Text>
+                  <Select
+                    aria-label="Group By"
+                    w={180}
+                    data={reportingGroupingOptions}
+                    value={grouping}
+                    allowDeselect={false}
+                    onChange={(value) => {
+                      if (
+                        value === "accountStructure" ||
+                        value === "assetClass"
+                      )
+                        onGroupingChange?.(value);
+                    }}
+                  />
+                </Group>
+              )
+            }
+            actions={organizing ? organizerActions : managementActions}
+          />
+        </Box>
       )}
     </>
   );

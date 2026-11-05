@@ -1,4 +1,3 @@
-import { projectArchivedAccountHierarchy } from "../archived-account-hierarchy";
 import type { OrganizeNode, OrganizeNodeRef } from "./types";
 
 export function compareOrganizeNodes(
@@ -33,36 +32,17 @@ export function descendants(nodes: OrganizeNode[], id: string) {
   return result;
 }
 
-export function organizeDisplayRows(nodes: OrganizeNode[]) {
-  const real = nodes.map((node) => ({
-    ...node,
-    parentId: node.parentId ?? undefined,
-    persistedParentId: node.parentId,
-    isVirtualArchivedGroup: false,
-  }));
-  const projection = projectArchivedAccountHierarchy(real);
-  return [
-    ...real.map((node) => ({
+export function organizeDisplayRows(
+  nodes: OrganizeNode[],
+  showArchived = true,
+) {
+  return nodes
+    .filter((node) => showArchived || node.isActive)
+    .map((node) => ({
       ...node,
-      parentId: projection.parentIdById.get(node.id),
-    })),
-    ...projection.archivedGroups.map(({ id, parentId }) => ({
-      id,
-      parentId,
-      persistedParentId: parentId ?? null,
-      nodeType: "accountGroup" as const,
-      name: "Archived",
-      isActive: false,
-      isCashAccount: false,
-      unit: null,
-      sortOrder: null,
-      isVirtualArchivedGroup: true,
-    })),
-  ].sort(
-    (a, b) =>
-      Number(a.isVirtualArchivedGroup) - Number(b.isVirtualArchivedGroup) ||
-      compareOrganizeNodes(a, b),
-  );
+      parentId: node.parentId ?? undefined,
+    }))
+    .sort(compareOrganizeNodes);
 }
 
 export type OrganizeDisplayRow = ReturnType<typeof organizeDisplayRows>[number];

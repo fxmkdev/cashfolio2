@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from "react";
 import {
   descendants,
+  compareOrganizeNodes,
   normalizeOrganizeSelection,
   organizePath,
 } from "@/shared/account-organize/tree";
@@ -32,12 +33,14 @@ export function moveSummary(nodes: OrganizeNode[], next: OrganizeNode[]) {
 
 export function MoveDialog({
   nodes,
+  showArchived = true,
   items,
   pending,
   onClose,
   onMove,
 }: {
   nodes: OrganizeNode[];
+  showArchived?: boolean;
   items: OrganizeNodeRef[];
   pending: boolean;
   onClose: () => void;
@@ -56,6 +59,12 @@ export function MoveDialog({
   const included = new Set(
     roots.flatMap((node) => [...descendants(nodes, node.id)]),
   );
+  const archivedDescendants = nodes.filter(
+    (node) =>
+      included.has(node.id) &&
+      !roots.some((root) => root.id === node.id) &&
+      !node.isActive,
+  ).length;
   const makeMove = (
     parentId: string | null,
     position = placement,
@@ -70,7 +79,10 @@ export function MoveDialog({
     { value: "__top_level__", label: "Top Level" },
     ...nodes
       .filter(
-        (node) => node.nodeType === "accountGroup" && !included.has(node.id),
+        (node) =>
+          node.nodeType === "accountGroup" &&
+          !included.has(node.id) &&
+          (showArchived || node.isActive),
       )
       .map((node) => ({
         value: node.id,
@@ -92,7 +104,13 @@ export function MoveDialog({
     }
   });
   const anchors = nodes
-    .filter((node) => node.parentId === parent && !included.has(node.id))
+    .filter(
+      (node) =>
+        node.parentId === parent &&
+        !included.has(node.id) &&
+        (showArchived || node.isActive),
+    )
+    .sort(compareOrganizeNodes)
     .filter((node) => {
       try {
         planAccountMove(nodes, makeMove(parent, "before", node.id));
@@ -137,7 +155,8 @@ export function MoveDialog({
       <Stack>
         <Text>
           {roots.length} selected {roots.length === 1 ? "item" : "items"};{" "}
-          {included.size - roots.length} included descendants.
+          {included.size - roots.length} included descendants
+          {archivedDescendants ? ` (${archivedDescendants} archived)` : ""}.
         </Text>
         <Select
           label="Destination"

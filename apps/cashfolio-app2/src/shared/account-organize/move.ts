@@ -81,24 +81,6 @@ export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
     index = siblings.findIndex((node) => node.id === move.anchorId);
     if (index < 0)
       throw new Error("Select an available sibling for placement.");
-    const rows = organizeDisplayRows(nodes);
-    const anchor = rows.find((node) => node.id === move.anchorId)!;
-    // Compare the section each root would occupy at its proposed destination.
-    const projected = organizeDisplayRows(
-      nodes.map((node) =>
-        rootIds.has(node.id) ? { ...node, parentId: move.parentId } : node,
-      ),
-    );
-    if (
-      roots.some(
-        (root) =>
-          projected.find((row) => row.id === root.id)?.parentId !==
-          anchor.parentId,
-      )
-    )
-      throw new Error(
-        "Active and archived items are displayed separately. Choose First or Last, or drop into a group.",
-      );
     if (move.placement === "after") index++;
   }
   const ordered = [

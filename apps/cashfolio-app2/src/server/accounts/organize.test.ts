@@ -253,7 +253,7 @@ describe("organize server boundary", () => {
     const result = await save({
       items: [initial[2]],
       parentId: "group",
-      placement: "first",
+      placement: "last",
     });
     expect(result.undo).toBeNull();
     expect(mocks.accountWrite).not.toHaveBeenCalled();

@@ -1161,6 +1161,16 @@ Use Mantine components for generic controls and layouts. The details UI uses
 `Group`, `Stack`, `Flex`, `Box`, and `VisuallyHidden`; its custom components
 compose transaction behavior and the existing AG Grid wrappers.
 
+## Contextual Grid Bulk Actions
+
+Show a bulk-action toolbar only while at least one row is selected. Include the
+affected count, relevant selection actions, and **Clear Selection**. Do not show
+zero-selection status text or disabled bulk buttons before selection. Where
+layout stability matters, replace same-height instruction or utility content
+with the selection toolbar. Keep persistent mode controls and history actions,
+such as **Done** and **Undo**, separate from selection actions. Apply this
+pattern to all grids, including account management and transaction lists.
+
 ## Bulk Transaction Actions
 
 - Account ledgers support bulk Rebook and Delete; the Transactions page supports
@@ -1497,12 +1507,23 @@ dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 ### Account List Organize Mode
 
 **Organize** switches the Account List to a compact, separate `DataGrid` while
-keeping the normal financial grid mounted and hidden, preserving its columns,
-filters, scrolling, and expansion. **Done** returns to it. Categories and Asset
-Classes retain their existing management interactions and sibling dialog.
+keeping the normal financial grid mounted, preserving its columns, filters,
+scrolling, and expansion. Entry loads one fresh structural snapshot using the
+global progress bar while the financial grid remains visible. Activate only
+after success; on failure retain the financial grid with retry feedback. Hide
+the financial grid while organizing. **Done** returns to it. Categories and
+Asset Classes retain their existing management interactions and sibling dialog.
 Organize always displays the account structure, including when entered from
 Asset Class grouping. The Group By control is hidden until Done restores the
 financial grid and its existing grouping.
+
+Keep **Accounts** as the heading with an **Organizing** badge and subtle header
+accent. **Done** and, when available, **Undo** use the same right-aligned header
+toolbar as the normal management actions. Selection actions appear only after
+selection, replacing the instruction row without shifting the grid. Keep drag
+and save status in reserved space; avoid standalone loading spinners. Use global
+progress for initial hierarchy loading and recovery, and shared local feedback
+for mutations. Announce mode entry and movement results accessibly.
 
 Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;
@@ -1511,12 +1532,23 @@ selection is separate from the normal account-property bulk selection and starts
 empty on entry. Creation, editing, archiving, deletion, and property bulk
 actions are hidden while organizing.
 
-Virtual Archived sections keep their normal presentation and expand/collapse
-behavior but are never selected, dragged, or persisted as parents. Organizing
-uses the real `persistedParentId` relationship. Before/after insertion is
-offered only within a compatible displayed sibling section. Mixed
-active/archived selections can move into a real group or to Top Level using
-First/Last placement.
+Organize displays real persisted parents and manual order, including archived
+items, without virtual Archived branches. Archived rows have a status badge and
+subdued readable styling. **Show Archived** starts enabled on each entry and
+affects visibility only. Turning it off deselects hidden archived rows while
+retaining active selections; selected groups still move every descendant. Keep
+expansion across toggles. Freeze the toggle during dragging, an open Move To
+dialog, and in-flight operations. The normal financial grid retains its virtual
+Archived presentation.
+
+Mixed active/archived roots can use all placement options where the resulting
+hierarchy is valid. Before/After means immediately beside the real anchor in the
+complete sibling order; First/Last uses the complete list's boundaries, even
+with archived items hidden. Untouched siblings retain their relative order.
+Dialog destinations and anchors follow archived visibility; previews include
+archived-descendant counts. Preserve the visibility choice after moves and Undo,
+focus a visible affected item or ancestor, and announce hidden results. Offer
+Show Archived when the active-only tree is empty.
 
 Drag handles provide before/after insertion indicators and inside-group drop
 highlighting. Real-row handles remain visible and reserve their layout space

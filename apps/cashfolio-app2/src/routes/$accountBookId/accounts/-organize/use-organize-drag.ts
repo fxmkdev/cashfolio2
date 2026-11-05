@@ -7,6 +7,7 @@ import type {
 import { planAccountMove } from "@/shared/account-organize/move";
 import {
   normalizeOrganizeSelection,
+  descendants,
   organizePath,
   type OrganizeDisplayRow,
 } from "@/shared/account-organize/tree";
@@ -22,10 +23,6 @@ export function dragMove(
   target: OrganizeDisplayRow,
   position: "above" | "inside" | "below",
 ): OrganizeMove {
-  if (target.isVirtualArchivedGroup)
-    throw new Error(
-      "Archived is a display section. Choose a real group or use the Move To dialog.",
-    );
   if (position === "inside") {
     if (target.nodeType !== "accountGroup")
       throw new Error("Accounts cannot contain other items.");
@@ -33,7 +30,7 @@ export function dragMove(
   }
   return {
     items,
-    parentId: target.persistedParentId,
+    parentId: target.parentId ?? null,
     placement: position === "above" ? "before" : "after",
     anchorId: target.id,
   };
@@ -52,6 +49,7 @@ export function useOrganizeDrag({
 }) {
   const proposed = useRef<OrganizeMove | undefined>(undefined);
   const cancelled = useRef(false);
+  const [dragging, setDragging] = useState(false);
   const [hint, setHint] = useState("");
   const hintRef = useRef("");
   const previewCache = useRef<
@@ -75,10 +73,7 @@ export function useOrganizeDrag({
         : source.data
           ? [source.data]
           : [];
-      return normalizeOrganizeSelection(
-        nodes,
-        selected.filter((row) => !row.isVirtualArchivedGroup),
-      );
+      return normalizeOrganizeSelection(nodes, selected);
     },
     [api, nodes],
   );
@@ -102,19 +97,31 @@ export function useOrganizeDrag({
       const relative = move.anchorId
         ? `${move.placement} ${nodes.find((node) => node.id === move.anchorId)?.name} in `
         : "into ";
+      const included = new Set(
+        move.items.flatMap((item) => [...descendants(nodes, item.id)]),
+      );
+      const archivedDescendants = nodes.filter(
+        (node) =>
+          included.has(node.id) &&
+          !node.isActive &&
+          !move.items.some((item) => item.id === node.id),
+      ).length;
+      const count = included.size - move.items.length;
       proposed.current = move;
       const message =
-        `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${moveSummary(nodes, next)}`.trim();
+        `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${count} included descendants (${archivedDescendants} archived). ${moveSummary(nodes, next)}`.trim();
       previewCache.current = { nodes, key, message };
       showHint(message);
     },
     [blocked, nodes, showHint],
   );
   const start = useCallback(() => {
+    setDragging(!blocked);
     cancelled.current = blocked;
     proposed.current = undefined;
   }, [blocked]);
   const cancel = useCallback(() => {
+    setDragging(false);
     cancelled.current = true;
     proposed.current = undefined;
     clearHover();
@@ -128,12 +135,14 @@ export function useOrganizeDrag({
     showHint("");
   }, [api, clearHover, showHint]);
   const finish = useCallback(() => {
+    setDragging(false);
     const move = proposed.current;
     leave();
     if (move && !cancelled.current && !blocked) void saveMove(move);
   }, [blocked, leave, saveMove]);
   const validateDrop = useCallback(
     (params: IsRowValidDropPositionParams<OrganizeDisplayRow>) => {
+      if (!blocked && !cancelled.current) setDragging(true);
       const target = params.overNode;
       const row = target?.data;
       if (!row) {
@@ -174,7 +183,7 @@ export function useOrganizeDrag({
         return false;
       }
     },
-    [clearHover, itemsFor, preview, showHint],
+    [blocked, clearHover, itemsFor, preview, showHint],
   );
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
@@ -183,8 +192,13 @@ export function useOrganizeDrag({
       if (event.key === "Escape") cancelRef.current();
     };
     document.addEventListener("keydown", escape);
+    const released = () => setDragging(false);
+    document.addEventListener("pointerup", released);
+    document.addEventListener("mouseup", released);
     return () => {
       document.removeEventListener("keydown", escape);
+      document.removeEventListener("pointerup", released);
+      document.removeEventListener("mouseup", released);
       clearTimeout(hover.current?.timer);
     };
   }, []);
@@ -193,6 +207,7 @@ export function useOrganizeDrag({
     [],
   );
   return {
+    dragging,
     hint,
     start,
     cancel,

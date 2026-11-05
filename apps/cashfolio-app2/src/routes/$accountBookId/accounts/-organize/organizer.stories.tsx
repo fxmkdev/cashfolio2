@@ -1,27 +1,52 @@
 import { useState } from "react";
-import { Box } from "@mantine/core";
+import { Alert, Box, Button } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AccountOrganizer } from "./organizer";
-import { createOrganizerStoryApi } from "./story-fixtures";
+import { createOrganizerStoryApi, organizeStoryNodes } from "./story-fixtures";
+import { useOrganizer, type OrganizerApi } from "./use-organizer";
+import { OrganizerActions } from "./organizer-actions";
+import { useGlobalLoading } from "@/components/navigation/global-loading";
 
 function Harness({
   failure,
+  useProvidedApi = false,
   ...props
-}: React.ComponentProps<typeof AccountOrganizer> & {
+}: {
+  accountBookId: string;
+  api: OrganizerApi;
+  onSaved: () => void;
+  onDone: () => void;
+  useProvidedApi?: boolean;
   failure?: "busy" | "network" | "load";
 }) {
-  const [api] = useState(() => createOrganizerStoryApi(failure));
+  const [api] = useState(() =>
+    useProvidedApi ? props.api : createOrganizerStoryApi(failure),
+  );
+  const organizer = useOrganizer(props.onSaved, api);
+  useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
   return (
-    <Box h={650} style={{ display: "flex" }}>
-      <AccountOrganizer {...props} api={api} />
+    <Box h={650} style={{ display: "flex", flexDirection: "column" }}>
+      <OrganizerActions organizer={organizer} onDone={props.onDone} />
+      {organizer.loadError && (
+        <Alert role="alert">
+          {organizer.loadError}
+          <Button onClick={() => void organizer.load()}>Refresh Choices</Button>
+        </Alert>
+      )}
+      {organizer.snapshot && (
+        <AccountOrganizer
+          accountBookId={props.accountBookId}
+          organizer={organizer}
+        />
+      )}
     </Box>
   );
 }
 
 const meta = {
   title: "Routes/Accounts/Organize",
-  component: AccountOrganizer,
+  component: Harness,
   args: {
     accountBookId: "story-book",
     onDone: fn(),
@@ -29,7 +54,7 @@ const meta = {
     api: createOrganizerStoryApi(),
   },
   render: (args) => <Harness {...args} />,
-} satisfies Meta<typeof AccountOrganizer>;
+} satisfies Meta<typeof Harness>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -55,7 +80,9 @@ async function chooseMove(
   const canvas = within(canvasElement);
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(
-    within(canvas.getByRole("toolbar")).getByRole("button", {
+    within(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    ).getByRole("button", {
       name: "Move To…",
     }),
   );
@@ -71,7 +98,7 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
     const source = await row(canvasElement, "checking");
     const target = await row(canvasElement, "investments");
     const destination = await row(canvasElement, "destination");
-    const archived = await row(canvasElement, "__archived__:group:investments");
+    const archived = await row(canvasElement, "archived");
     const baseline = [source, target, destination].map((element) => ({
       id: element.getAttribute("row-id")!,
       handle: element.querySelector<HTMLElement>(".ag-row-drag")!,
@@ -90,7 +117,7 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
       }
       const archivedHandle =
         archived.querySelector<HTMLElement>(".ag-row-drag")!;
-      await expect(archivedHandle).not.toBeVisible();
+      await expect(archivedHandle).toBeVisible();
       await expect(
         archivedHandle.getBoundingClientRect().width,
       ).toBeGreaterThan(0);
@@ -145,7 +172,12 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
       await assertStable();
       await user.pointer([point(archived, true), point(archived, true)]);
       await expect(
-        canvas.getByText(/Archived is a display section/),
+        canvas.getByText(/Move 1 item after Old Fund/),
+      ).toBeVisible();
+      await assertStable();
+      await user.pointer([point(source), point(source)]);
+      await expect(
+        canvas.getByText(/Select an available sibling/),
       ).toBeVisible();
       await assertStable();
       await user.pointer([point(target), point(target)]);
@@ -230,21 +262,13 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
 
 export const StableHandlesDuringDragAndSave: Story = {
   args: { api: createOrganizerStoryApi() },
-  render: (args) => (
-    <Box h={650} style={{ display: "flex" }}>
-      <AccountOrganizer {...args} />
-    </Box>
-  ),
+  render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(),
 };
 
 export const StableHandlesDuringRecovery: Story = {
   args: { api: createOrganizerStoryApi("network") },
-  render: (args) => (
-    <Box h={650} style={{ display: "flex" }}>
-      <AccountOrganizer {...args} />
-    </Box>
-  ),
+  render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(true),
 };
 
@@ -253,9 +277,9 @@ export const BulkSubtreeMoveAndUndo: Story = {
     await select(canvasElement, "investments");
     await select(canvasElement, "checking");
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("toolbar")).toHaveTextContent(
-      "1 group and 1 account selected",
-    );
+    await expect(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    ).toHaveTextContent("1 group and 1 account selected");
     const dialog = await chooseMove(canvasElement);
     await expect(dialog.getByText(/3 included descendants/)).toBeVisible();
     await userEvent.click(dialog.getByRole("button", { name: "Move" }));
@@ -274,33 +298,162 @@ export const BulkSubtreeMoveAndUndo: Story = {
         "ag-row-level-0",
       ),
     );
-    await expect(canvas.getByRole("button", { name: "Undo" })).toBeDisabled();
+    await expect(
+      canvas.queryByRole("button", { name: "Undo" }),
+    ).not.toBeInTheDocument();
   },
 };
 
 export const ArchivedSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const virtual = await row(canvasElement, "__archived__:group:investments");
-    await userEvent.click(
-      virtual.querySelector<HTMLElement>(".ag-group-contracted")!,
-    );
     await waitFor(async () =>
       expect(await row(canvasElement, "archived")).toBeVisible(),
     );
-    await expect(
-      within(virtual).queryByRole("checkbox"),
-    ).not.toBeInTheDocument();
     await select(canvasElement, "archived");
-    await expect(canvas.getByRole("toolbar")).toHaveTextContent(
-      "0 groups and 1 account selected",
-    );
+    await expect(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    ).toHaveTextContent("0 groups and 1 account selected");
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Selection" }),
     );
     await select(canvasElement, "empty");
-    await expect(canvas.getByRole("toolbar")).toHaveTextContent(
-      "1 group and 0 accounts selected",
+    await expect(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    ).toHaveTextContent("1 group and 0 accounts selected");
+  },
+};
+
+export const ArchivedVisibilityAndSelection: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const nested = await row(canvasElement, "nested");
+    await userEvent.click(
+      nested.querySelector<HTMLElement>(".ag-group-contracted")!,
+    );
+    await expect(await row(canvasElement, "holding")).toBeVisible();
+    const gridTop = canvas.getByRole("treegrid").getBoundingClientRect().top;
+    await select(canvasElement, "archived");
+    await select(canvasElement, "empty");
+    await expect(
+      canvas.getByRole("treegrid").getBoundingClientRect().top,
+    ).toBeCloseTo(gridTop, 0);
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await waitFor(() =>
+      expect(canvasElement.querySelector('[row-id="archived"]')).toBeNull(),
+    );
+    await expect(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    ).toHaveTextContent("1 group and 0 accounts selected");
+    await expect(
+      canvas.getByText(/1 hidden archived item was deselected/),
+    ).toBeInTheDocument();
+    await expect(await row(canvasElement, "holding")).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await expect(
+      (await row(canvasElement, "archived")).querySelector(
+        ".ag-selection-checkbox input",
+      ),
+    ).not.toBeChecked();
+    await expect(await row(canvasElement, "holding")).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Selection" }),
+    );
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Organize Account Actions" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await select(canvasElement, "investments");
+    const dialog = await chooseMove(canvasElement);
+    await expect(
+      dialog.getByText(/3 included descendants \(1 archived\)/),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Selection" }),
+    );
+    await select(canvasElement, "checking");
+    const anchors = await chooseMove(canvasElement, "Investments");
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(anchors.getByLabelText("Position"));
+    await userEvent.click(body.getByRole("option", { name: "Before" }));
+    await userEvent.click(anchors.getByLabelText("Sibling"));
+    await expect(body.getByRole("option", { name: "Brokerage" })).toBeVisible();
+    await expect(
+      body.queryByRole("option", { name: "Old Fund (Archived)" }),
+    ).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(anchors.getByRole("button", { name: "Cancel" }));
+  },
+};
+
+export const ArchivedOnlyEmptyState: Story = {
+  args: {
+    api: createOrganizerStoryApi(
+      undefined,
+      organizeStoryNodes
+        .filter((node) => !node.isActive)
+        .map((node) => ({ ...node, parentId: null })),
+    ),
+  },
+  render: (args) => <Harness {...args} useProvidedApi />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await row(canvasElement, "archived")).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await expect(
+      canvas.getByText(/There are no active accounts or groups/),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show Archived" }),
+    );
+    await expect(await row(canvasElement, "archived")).toBeVisible();
+  },
+};
+
+export const UndoRevealsHiddenArchivedResults: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await select(canvasElement, "archived");
+    const dialog = await chooseMove(canvasElement);
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+    await waitFor(() =>
+      expect(
+        within(canvasElement.ownerDocument.body).queryByRole("dialog"),
+      ).not.toBeInTheDocument(),
+    );
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("button", { name: "Undo" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    ).not.toBeChecked();
+    await expect(
+      canvas.getByText(/affected archived items are hidden/),
+    ).toBeInTheDocument();
+    await waitFor(async () =>
+      expect(
+        (await row(canvasElement, "investments")).querySelector(
+          '[col-id="ag-Grid-AutoColumn"]',
+        ),
+      ).toHaveFocus(),
     );
   },
 };
@@ -318,7 +471,9 @@ export const RelativePlacementAndCashPreview: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    const toolbar = within(canvas.getByRole("toolbar"));
+    const toolbar = within(
+      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+    );
     await userEvent.click(toolbar.getByRole("button", { name: "Move To…" }));
     const next = within(await body.findByRole("dialog"));
     await userEvent.click(next.getByLabelText("Position"));
@@ -398,8 +553,8 @@ export const DragReorderAndCancel: Story = {
     await user.pointer({ target, keys: "[/MouseLeft]" });
     await expect(source).toHaveAttribute("row-index", "5");
     await expect(
-      within(canvasElement).getByRole("button", { name: "Undo" }),
-    ).toBeDisabled();
+      within(canvasElement).queryByRole("button", { name: "Undo" }),
+    ).not.toBeInTheDocument();
     await user.pointer([
       {
         target: handle,
@@ -466,7 +621,9 @@ export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
     );
     const canvas = within(canvasElement);
     await userEvent.click(
-      within(canvas.getByRole("toolbar")).getByRole("button", {
+      within(
+        canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
+      ).getByRole("button", {
         name: "Move To…",
       }),
     );

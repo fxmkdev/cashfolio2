@@ -9,8 +9,10 @@ import { getStoryViewProps } from "./view-props";
 import type { AccountsStoryOptions } from "./types";
 
 export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
-  const [organizerApi] = useState(() =>
-    options.organize ? createOrganizerStoryApi() : undefined,
+  const [organizerApi] = useState(
+    () =>
+      options.organizerApi ??
+      (options.organize ? createOrganizerStoryApi() : undefined),
   );
   const model = useAccountsStoryModel(options);
   const { routing } = model;
