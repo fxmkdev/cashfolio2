@@ -271,7 +271,9 @@ deployment; adding it to the seed source does not reset staging immediately.
 
 Staging and previews use the same Neon API helper. Configure `NEON_API_KEY` and
 `NEON_PROJECT_ID`, plus `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS`
-in their existing GitHub environments. See
+as shared repository settings or in their existing GitHub environments. The API
+key and tester/admin IDs are secrets; the project ID is a variable. Environment
+settings override repository defaults. See
 [Nonproduction configuration and cutover](preview-environments.md#configuration).
 The helper discovers the default Neon branch and existing database owner,
 creates or reuses the current Git branch's exact database, then stages
@@ -326,8 +328,12 @@ No legacy role or privilege changes happen automatically.
 
 Configured testers preserve their IDs, locales and roles. Newly added testers
 receive no administrator role unless explicitly configured for bootstrap in a
-fully empty database. Authentication/session tables and Logto identities are not
-modified by replacement. Shared market-rate caches remain intact.
+fully empty database. Sessions belonging to retained testers and anonymous
+sign-in sessions are preserved. Deleting nonconfigured users also deletes their
+sessions through the existing foreign-key cascade. Permanent authentication
+revocation markers and Logto identities are untouched. Preview deployments
+rotate their session encryption secret, so testers must sign in again after a
+preview release. Shared market-rate caches remain intact.
 
 ## Preview lifecycle and verification
 

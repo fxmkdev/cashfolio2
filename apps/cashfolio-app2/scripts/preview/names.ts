@@ -1,7 +1,4 @@
-import { databaseName } from "../nonproduction/names.ts";
 import { createHash } from "node:crypto";
-import { appendFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
 
 export function prNumber(value: unknown): number {
   if (
@@ -37,32 +34,7 @@ export function previewNames(number: number, headRef: string) {
   const flyApp = `${prefix}${truncate(slug(tail.replaceAll("github", "gh"), "branch"), 63 - prefix.length)}`;
   return {
     flyApp,
-    flyAppLegacy: `cashfolio-app2-pr-${number}`,
     previewUrl: `https://${flyApp}.fly.dev/`,
     hostname: `${flyApp}.fly.dev`,
-    database: databaseName(headRef),
   };
-}
-
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
-  const names = previewNames(
-    Number(process.env.PR_NUMBER),
-    process.env.HEAD_REF ?? "",
-  );
-  if (!process.env.GITHUB_OUTPUT) throw new Error("GITHUB_OUTPUT is required.");
-  await appendFile(
-    process.env.GITHUB_OUTPUT,
-    Object.entries({
-      fly_app: names.flyApp,
-      fly_app_legacy: names.flyAppLegacy,
-      preview_url: names.previewUrl,
-      preview_hostname: names.hostname,
-      database_name: names.database,
-    })
-      .map(([key, value]) => `${key}=${value}\n`)
-      .join(""),
-  );
 }

@@ -219,6 +219,7 @@ describe("staging seed against disposable PostgreSQL", () => {
   });
 
   beforeEach(async () => {
+    await fixture.authSubjectRevocation.deleteMany();
     await fixture.$executeRawUnsafe(
       `TRUNCATE ${applicationTables.map((table) => `"${table}"`).join(", ")} CASCADE`,
     );
@@ -452,6 +453,38 @@ describe("staging seed against disposable PostgreSQL", () => {
       createRole: false,
       createDatabase: false,
     });
+  });
+
+  it("preserves retained and anonymous sessions and permanent revocations while removed users lose sessions", async () => {
+    await fixture.authSession.createMany({
+      data: [
+        { id: "retained-session", userId: "existing-admin-id" },
+        { id: "removed-session", userId: "real-identity-id" },
+        { id: "anonymous-session", userId: null },
+      ].map(({ id, userId }) => ({
+        id,
+        userId,
+        tokenHash: `synthetic-${id}`,
+        encryptedData: "synthetic-encrypted-payload",
+        expiresAt: new Date("2030-01-02T00:00:00Z"),
+        idleExpiresAt: new Date("2030-01-01T00:00:00Z"),
+      })),
+    });
+    const sessions = await fixture.authSession.findMany({
+      orderBy: { id: "asc" },
+    });
+    const revocation = await fixture.authSubjectRevocation.create({
+      data: { subjectHash: "a".repeat(64) },
+    });
+    await replaceStagingData(seed, config, dataset);
+    expect(
+      await fixture.authSession.findMany({ orderBy: { id: "asc" } }),
+    ).toEqual(
+      sessions.filter((session) => session.userId !== "real-identity-id"),
+    );
+    expect(await fixture.authSubjectRevocation.findMany()).toEqual([
+      revocation,
+    ]);
   });
 
   it("refuses replacement when the configured testers omit the existing administrator", async () => {

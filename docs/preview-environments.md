@@ -114,10 +114,12 @@ resolved by an operator before deployment.
 
 Keep these existing application settings:
 
-- In both nonproduction GitHub environments, secrets `SEED_USER_EXTERNAL_IDS`
-  and `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated Logto IDs. Every
-  administrator must also be a configured tester. These are application access
-  configuration, not Neon provisioning settings.
+- Repository secrets `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS`:
+  nonempty comma-separated Logto IDs, shared by staging and previews. Every
+  administrator must also be a configured tester; a single administrator can
+  appear in both lists. Environment secrets can override these shared defaults.
+  Use Secrets rather than Variables so identifiers are masked in workflow logs.
+  These are application access configuration, not Neon provisioning settings.
 - Existing preview secrets `LOGTO_APP_SECRET`,
   `LOGTO_MANAGEMENT_API_APP_SECRET`, `CURRENCYLAYER_API_KEY`,
   `COINLAYER_API_KEY`, `MARKETSTACK_API_KEY`, `STAGING_REDIS_URL`, plus the

@@ -167,20 +167,30 @@ shared runner with the generated Prisma client and accounting conventions;
 Docker copies the complete output directory and query compiler chunks into the
 slim release payload. The command needs no workspace install in that image.
 
-Staging keeps its existing `DATABASE_URL` and adds `SEED_TARGET`,
-`SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS` as operator-configured
-Fly secrets. Previews use that same nonproduction login with their own database
-name. Provisioning creates databases only; no roles, passwords or access grants
-are managed. Same-repository contributors are trusted with this shared login.
-Production uses a separate project and credentials. Exact Neon identity checks
-continue to protect the approved database before migrations and replacement.
+Staging and previews use the same Neon API provisioning helper before
+deployment. Configure repository secret `NEON_API_KEY` and repository variable
+`NEON_PROJECT_ID` for the nonproduction project. The helper discovers its
+default branch, endpoint and existing owner, creates or reuses the database for
+the current Git branch, and stages generated `DATABASE_URL` and `SEED_TARGET`
+settings into Fly. Staging releases from tags use the default Git branch.
+Staging switches to a new, freshly seeded database at cutover; existing
+synthetic data is not migrated.
 
-See [Synthetic staging data](../../../docs/staging-database-refresh.md) for
-staging setup and [Preview environments](../../../docs/preview-environments.md)
-for the shared staging Neon host, existing preview GitHub environment, shared
-nonproduction credentials and existing-preview cutover. Staging and previews
-share compute capacity but keep separate databases; exact database and role
-checks continue to prevent cross-environment seeding.
+Configure `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS` as repository
+secrets shared by staging and previews, or override them in the existing GitHub
+environments. Admin IDs must be included among tester IDs. GitHub secret masking
+keeps these identifiers out of workflow logs. No manual Fly target JSON or
+separate seed connection is required. Provisioning manages databases only; no
+roles, passwords or access grants are created. Same-repository contributors are
+trusted with the nonproduction API key and existing Fly token. Production uses a
+separate project and credentials, and exact Neon identity checks protect the
+generated destination before migrations and replacement.
+
+See [Synthetic staging data](../../../docs/staging-database-refresh.md) and
+[Nonproduction databases](../../../docs/preview-environments.md) for
+configuration, naming, daily cleanup and cutover. Staging and previews
+intentionally share privileges and compute capacity, while each Git branch keeps
+its own database.
 
 ## Provider usage cleanup
 
