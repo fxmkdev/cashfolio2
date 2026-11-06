@@ -1,11 +1,8 @@
 import { RESOURCE_LIMITS } from "@/shared/resource-limits";
 import {
   Button,
-  Divider,
   Group,
-  Modal,
   Stack,
-  Text,
   TextInput,
   Title,
   VisuallyHidden,
@@ -13,8 +10,8 @@ import {
 import { DateInput } from "@mantine/dates";
 import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { type FormEvent, useEffect, useRef, useState } from "react";
-import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
+import { useEffect, useRef } from "react";
+import { IconCheck } from "@tabler/icons-react";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
 import { CurrencySelect } from "@/components/controls/unit-select";
@@ -58,23 +55,6 @@ function showSettingsSavedNotification() {
     message: "Settings saved.",
     withBorder: true,
   });
-}
-
-function showAccountBookDeletedNotification() {
-  notifications.show({
-    color: "green",
-    icon: <IconCheck size={16} />,
-    title: "Deleted",
-    message: "Account book deleted.",
-    withBorder: true,
-  });
-}
-
-export function isDeleteAccountBookConfirmationMatch(args: {
-  confirmationName: string;
-  accountBookName: string;
-}): boolean {
-  return args.confirmationName.trim() === args.accountBookName;
 }
 
 function SettingsFormFields(args: {
@@ -135,133 +115,6 @@ function SettingsFormFields(args: {
   );
 }
 
-function DeleteAccountBookModal(args: {
-  opened: boolean;
-  accountBookName: string;
-  onClose: () => void;
-  onConfirm: (values: { confirmationName: string }) => Promise<void>;
-  onRefreshConstraints?: () => Promise<void>;
-}) {
-  const submitState = useDialogSubmitState({
-    captureErrors: true,
-    onRefreshConstraints: args.onRefreshConstraints,
-  });
-  const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
-  const [confirmationName, setConfirmationName] = useState("");
-  const confirmationMatches = isDeleteAccountBookConfirmationMatch({
-    confirmationName,
-    accountBookName: args.accountBookName,
-  });
-
-  useEffect(() => {
-    if (!args.opened) {
-      setConfirmationName("");
-      clearSubmissionError();
-    }
-  }, [args.opened, clearSubmissionError]);
-
-  const handleClose = () => {
-    if (isSubmitting) return;
-    args.onClose();
-  };
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!confirmationMatches) return;
-
-    clearSubmissionError();
-    await runSubmit(async () => {
-      await args.onConfirm({ confirmationName });
-      showAccountBookDeletedNotification();
-    });
-  }
-
-  return (
-    <Modal
-      opened={args.opened}
-      onClose={handleClose}
-      title="Delete Account Book"
-      closeOnEscape={!isSubmitting}
-      closeOnClickOutside={!isSubmitting}
-      withCloseButton={!isSubmitting}
-    >
-      <form onSubmit={handleSubmit}>
-        <Stack gap="md">
-          <Text>
-            This will permanently delete the account book{" "}
-            <Text component="span" fw={700}>
-              {args.accountBookName}
-            </Text>{" "}
-            and all of its accounts, transactions, bookings, and user access.
-          </Text>
-          <Text size="sm" c="dimmed">
-            Type the account book name to confirm.
-          </Text>
-          <TextInput
-            label="Account Book Name"
-            value={confirmationName}
-            onChange={(event) => setConfirmationName(event.currentTarget.value)}
-            disabled={isSubmitting}
-            data-autofocus
-          />
-
-          <MutationSubmitFeedback
-            state={submitState}
-            onRefreshConstraints={args.onRefreshConstraints}
-          />
-
-          <Group justify="flex-end">
-            <Button
-              variant="subtle"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              type="submit"
-              loading={isSubmitting}
-              disabled={isSubmitting || !confirmationMatches}
-              leftSection={<IconTrash size={16} />}
-            >
-              Delete Account Book
-            </Button>
-          </Group>
-        </Stack>
-      </form>
-    </Modal>
-  );
-}
-
-function DangerZone(args: { disabled: boolean; onDeleteClick: () => void }) {
-  return (
-    <Stack gap="md" mt="xl">
-      <Divider />
-      <Group justify="space-between" align="flex-start" gap="lg">
-        <Stack gap={4}>
-          <Group gap="xs">
-            <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
-            <Title order={3}>Danger Zone</Title>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Permanently delete this account book and all data inside it.
-          </Text>
-        </Stack>
-        <Button
-          color="red"
-          variant="outline"
-          leftSection={<IconTrash size={16} />}
-          onClick={args.onDeleteClick}
-          disabled={args.disabled}
-        >
-          Delete Account Book
-        </Button>
-      </Group>
-    </Stack>
-  );
-}
-
 export function SettingsPageView(args: {
   accountBookId: string;
   settings: SettingsPageData;
@@ -270,7 +123,6 @@ export function SettingsPageView(args: {
     referenceCurrency: string;
     startDate: string;
   }) => Promise<void>;
-  onDelete: (values: { confirmationName: string }) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const { settings } = args;
@@ -280,7 +132,6 @@ export function SettingsPageView(args: {
     onRefreshConstraints: args.onRefreshConstraints,
   });
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
 
   const form = useForm<SettingsFormValues>({
     mode: "controlled",
@@ -350,19 +201,6 @@ export function SettingsPageView(args: {
           settings={settings}
         />
       </form>
-
-      <DangerZone
-        disabled={!isHydrated || isSubmitting}
-        onDeleteClick={() => setDeleteModalOpened(true)}
-      />
-
-      <DeleteAccountBookModal
-        opened={deleteModalOpened}
-        accountBookName={settings.name}
-        onClose={() => setDeleteModalOpened(false)}
-        onConfirm={args.onDelete}
-        onRefreshConstraints={args.onRefreshConstraints}
-      />
     </NarrowPageShell>
   );
 }

@@ -3,6 +3,7 @@ import { Box } from "@mantine/core";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { SettingsPageView } from "./-page-view";
 import { SettingsNavigation } from "./-settings-navigation";
+import { SettingsActions } from "./-settings-actions";
 
 const meta = {
   title: "Routes/SettingsPageView",
@@ -20,13 +21,18 @@ const meta = {
       unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
     },
     onSubmit: fn(async () => undefined),
-    onDelete: fn(async () => undefined),
   },
   render: (args) => (
     <Box p="md">
       <SettingsNavigation
         accountBookId={args.accountBookId}
         categories={false}
+        actions={
+          <SettingsActions
+            accountBookName={args.settings.name}
+            onDelete={fn(async () => undefined)}
+          />
+        }
       />
       <SettingsPageView {...args} />
     </Box>
@@ -50,7 +56,16 @@ export const General: Story = {
       "Household",
     );
     await expect(
-      canvas.getByRole("heading", { name: "Danger Zone" }),
+      canvas.queryByRole("heading", { name: "Danger Zone" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("button", { name: "Delete Account Book" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      tabs.queryByRole("tab", { name: "Danger Zone" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "More Account Book Actions" }),
     ).toBeVisible();
   },
 };
@@ -67,30 +82,6 @@ export const Save: Story = {
       referenceCurrency: "CHF",
       startDate: "2026-01-01T00:00:00.000Z",
     });
-  },
-};
-
-export const DeleteConfirmation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Delete Account Book" }),
-    );
-    const dialog = within(
-      await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-        name: "Delete Account Book",
-      }),
-    );
-    const deletion = dialog.getByRole("button", {
-      name: "Delete Account Book",
-    });
-    await expect(deletion).toBeDisabled();
-    await userEvent.type(
-      dialog.getByLabelText("Account Book Name"),
-      "Household",
-    );
-    await expect(deletion).not.toBeDisabled();
-    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
 };
 

@@ -229,16 +229,65 @@ test("General settings saves without a visible page header", async ({
     name: "Account Book Name",
     exact: true,
   });
+  const persistedName = await name.inputValue();
   await name.fill("E2E Settings Updated");
+  const more = page.getByRole("button", { name: "More Account Book Actions" });
+  const deletion = page.getByRole("dialog", { name: "Delete Account Book" });
+  await more.click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+  await expect(
+    deletion.getByText(persistedName, { exact: true }),
+  ).toBeVisible();
+  await deletion.getByRole("button", { name: "Cancel" }).click();
+  await expect(deletion).toBeHidden();
+  await expect(more).toBeFocused();
+  await expect(page).toHaveURL(`/${seeded.accountBookId}/settings`);
+  await expect(name).toHaveValue("E2E Settings Updated");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByText("Settings saved.", { exact: true }),
   ).toBeVisible();
+  await more.click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+  await expect(
+    deletion.getByText("E2E Settings Updated", { exact: true }),
+  ).toBeVisible();
+  await deletion.getByRole("button", { name: "Cancel" }).click();
+  await expect(deletion).toBeHidden();
   await page.reload();
   await expect(name).toHaveValue("E2E Settings Updated");
+  await expect(page.getByRole("heading", { name: "Danger Zone" })).toHaveCount(
+    0,
+  );
   await expect(
-    page.getByRole("heading", { name: "Danger Zone" }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Delete Account Book" }),
+  ).toHaveCount(0);
+});
+
+test("settings More menu opens deletion across all settings tabs without changing the URL", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/settings`);
+  const settingsTabs = page.getByRole("tablist", {
+    name: "Account Book Settings",
+  });
+  const more = page.getByRole("button", { name: "More Account Book Actions" });
+  await expect(settingsTabs.getByRole("tab")).toHaveCount(3);
+  for (const tab of ["General", "Categories", "Asset Classes"]) {
+    await settingsTabs.getByRole("tab", { name: tab, exact: true }).click();
+    await expect(
+      settingsTabs.getByRole("tab", { name: tab, exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    const currentUrl = page.url();
+    await more.click();
+    await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+    const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(more).toBeFocused();
+    await expect(page).toHaveURL(currentUrl);
+  }
 });
 
 for (const colorScheme of ["light", "dark"] as const) {

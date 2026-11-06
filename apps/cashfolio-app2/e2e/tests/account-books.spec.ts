@@ -137,10 +137,13 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   const accountBookId = getAccountBookIdFromAccountsUrl(page.url());
   await page.goto(`/${accountBookId}/settings`);
 
-  await page
-    .getByRole("button", { name: "Delete Account Book" })
-    .first()
-    .click();
+  await expect(
+    page.getByRole("button", { name: "Delete Account Book" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Danger Zone" })).toHaveCount(0);
+  await page.getByRole("button", { name: "More Account Book Actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+  await expect(page).toHaveURL(`/${accountBookId}/settings`);
   const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
   await expect(dialog).toBeVisible();
 

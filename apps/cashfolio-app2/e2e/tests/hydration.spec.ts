@@ -72,7 +72,6 @@ test("settings stay disabled until hydration and preserve the first edit", async
     exact: true,
   });
   const save = page.getByRole("button", { name: "Save", exact: true });
-  const deleteBook = page.getByRole("button", { name: "Delete Account Book" });
   await beforeHydration(page, async () => {
     // The document has committed, but every client module (including the lazy
     // settings view) is still held. These assertions inspect the real SSR UI.
@@ -84,11 +83,9 @@ test("settings stay disabled until hydration and preserve the first edit", async
     await expect(page.getByLabel("Reference Currency")).toBeDisabled();
     await expect(page.getByLabel("Start Date")).toBeDisabled();
     await expect(save).toBeDisabled();
-    await expect(deleteBook).toBeDisabled();
   });
 
   await expect(name).toBeEnabled();
-  await expect(deleteBook).toBeEnabled();
   await name.fill("Hydrated First Edit");
   await save.click();
   await expect(
@@ -97,6 +94,33 @@ test("settings stay disabled until hydration and preserve the first edit", async
   await page.reload();
   await expect(name).toBeEnabled();
   await expect(name).toHaveValue("Hydrated First Edit");
+});
+
+test("settings More menu stays disabled until hydration and opens deletion on the first selection", async ({
+  page,
+}) => {
+  const more = page.getByRole("button", { name: "More Account Book Actions" });
+  await beforeHydration(page, async () => {
+    await page.goto(`/${seeded.accountBookId}/settings`, {
+      waitUntil: "commit",
+    });
+    await expect(more).toBeVisible();
+    await expect(more).toBeDisabled();
+  });
+
+  await expect(more).toBeEnabled();
+  await more.click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Delete Account Book" }),
+  ).toBeDisabled();
+  await expect(
+    dialog.getByRole("textbox", { name: "Account Book Name" }),
+  ).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(more).toBeFocused();
 });
 
 test("statement upload stays disabled until hydration and accepts the first file", async ({

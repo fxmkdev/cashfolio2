@@ -180,10 +180,14 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   booking rows. The explicit month/year period filter includes a full
   transaction when any of its bookings intersects the selected period.
 - `$accountBookId/settings/route.tsx` - account-book settings layout with local
-  General/Categories navigation and an outlet. The primary sidebar is unchanged.
+  General, Categories, and Asset Classes navigation and an outlet. A neutral
+  **More** menu at the right exposes **Delete Account Book…** on every settings
+  tab. It opens the typed-name confirmation directly without navigation or
+  discarding an unsaved General draft. The layout loads the persisted book name
+  and refreshes it after saves and deletion errors; successful deletion clears
+  the book-options cache and navigates to `/`. The primary sidebar is unchanged.
 - `$accountBookId/settings/index.tsx` - General settings at the existing
-  `/settings` URL: account book name, reference currency, start date, and the
-  typed-name danger-zone delete flow.
+  `/settings` URL: account book name, reference currency, and start date.
 - `$accountBookId/settings/categories/route.tsx` - Income/Expenses category and
   category-group management, including nested groups, ordering, and optional
   archived items within the grid. Its typed `showArchived` search boolean

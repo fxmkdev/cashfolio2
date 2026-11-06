@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDeleteAccountBookConfirmationMatch } from "./-page-view";
+import { isDeleteAccountBookConfirmationMatch } from "./-delete-account-book-modal";
 
 describe("isDeleteAccountBookConfirmationMatch", () => {
   it("requires the account book name to match exactly", () => {

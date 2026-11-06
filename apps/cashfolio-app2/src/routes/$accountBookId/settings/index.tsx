@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { loadSettingsPageData } from "./-page-loader";
 import { Suspense, lazy } from "react";
@@ -31,9 +27,6 @@ function SettingsPage() {
       loadSettingsPageData({ accountBookId }),
     );
   const router = useRouter();
-  const navigate = useNavigate({
-    from: "/$accountBookId/settings/",
-  });
 
   return (
     <Suspense fallback={null}>
@@ -57,19 +50,6 @@ function SettingsPage() {
 
           invalidateCachedUserAccountBooks();
           await router.invalidate();
-        }}
-        onDelete={async (values) => {
-          const { deleteAccountBook } = await import("@/server/account-books");
-
-          await deleteAccountBook({
-            data: {
-              accountBookId,
-              confirmationName: values.confirmationName,
-            },
-          });
-
-          invalidateCachedUserAccountBooks();
-          await navigate({ to: "/" });
         }}
       />
     </Suspense>
