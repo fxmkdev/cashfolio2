@@ -1,19 +1,10 @@
-import { ActionIcon, Menu, Tooltip, VisuallyHidden } from "@mantine/core";
+import { ActionIcon, Menu, Tooltip } from "@mantine/core";
 import { IconDotsVertical } from "@tabler/icons-react";
 import type { ColDef } from "ag-grid-enterprise";
-import { Fragment, useId, useRef, useState, type ReactNode } from "react";
-import classes from "./row-actions-menu.module.css";
+import { useRef, useState } from "react";
+import { RowActionMenuItem, type RowAction } from "./row-action-menu-item";
 
-export type RowAction = {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  onClick: () => void;
-  color?: string;
-  disabled?: boolean;
-  disabledReason?: string;
-  separatorBefore?: boolean;
-};
+export type { RowAction } from "./row-action-menu-item";
 
 /** Grid events must leave the renderer's buttons and portalled menu in control. */
 export const rowActionsColumnProps = {
@@ -63,7 +54,6 @@ export function RowActionsMenu({
   const [opened, setOpened] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const id = useId();
   return (
     <Menu
       opened={opened}
@@ -102,42 +92,15 @@ export function RowActionsMenu({
         onKeyDown={(event) => event.stopPropagation()}
       >
         {actions.map((action) => (
-          <Fragment key={action.id}>
-            {action.separatorBefore && <Menu.Divider />}
-            <Tooltip
-              label={action.disabledReason}
-              disabled={!action.disabled || !action.disabledReason}
-              events={{ hover: true, focus: true, touch: false }}
-              multiline
-              maw={300}
-              position="left"
-              withinPortal
-            >
-              <Menu.Item
-                aria-label={action.label}
-                aria-disabled={action.disabled || undefined}
-                aria-describedby={
-                  action.disabled && action.disabledReason
-                    ? `${id}-${action.id}`
-                    : undefined
-                }
-                className={classes.item}
-                leftSection={action.icon}
-                color={action.color}
-                closeMenuOnClick={!action.disabled}
-                onClick={() => {
-                  if (!action.disabled) action.onClick();
-                }}
-              >
-                {action.label}
-              </Menu.Item>
-            </Tooltip>
-            {action.disabled && action.disabledReason && (
-              <VisuallyHidden id={`${id}-${action.id}`}>
-                {action.disabledReason}
-              </VisuallyHidden>
-            )}
-          </Fragment>
+          <RowActionMenuItem
+            key={action.id}
+            action={action}
+            onSelect={() => {
+              // Let dialogs capture a return target that survives menu exit.
+              triggerRef.current?.focus({ preventScroll: true });
+              action.onClick();
+            }}
+          />
         ))}
       </Menu.Dropdown>
     </Menu>

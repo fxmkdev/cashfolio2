@@ -868,7 +868,8 @@ sign; debt amounts are positive magnitudes in those reports.
   - a disabled-reason string (e.g. `deleteDisabledReason`,
     `archiveDisabledReason`, `unarchiveDisabledReason`)
 - In the UI, always render the action and wire availability to
-  `ActionIcon.disabled`.
+  `ActionIcon.disabled` for direct buttons or `aria-disabled` with guarded
+  activation for menu items.
 - The tooltip label should use the disabled reason when unavailable, otherwise a
   default action label.
 - Enforce rules server-side as well; UI availability is an affordance, not an
@@ -895,7 +896,10 @@ sign; debt amounts are positive magnitudes in those reports.
 - Menus render in a portal, aligned bottom-end with viewport collision handling.
   Menu interactions must not select rows or start grid editing. Preserve
   keyboard navigation and return focus on dismissal without stealing focus from
-  a dialog opened by an action.
+  a dialog opened by an action. Focus the stable row trigger immediately before
+  invoking an enabled action so a newly opened dialog captures it as its return
+  target. Keep focus inside the dialog until it closes, then return to that
+  trigger if it is still mounted.
 - Reuse this class in modal grids too (for example `EditTransactionModal`'s
   actions column) to keep action affordances consistent across the app
 - Wrap a direct action plus the menu trigger in a

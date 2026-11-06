@@ -155,3 +155,60 @@ export const SelfDeletionDisabled: Story = {
     );
   },
 };
+
+async function openRolesFromRowMenu(
+  canvasElement: HTMLElement,
+  activation: "keyboard" | "pointer",
+) {
+  const body = within(canvasElement.ownerDocument.body);
+  const trigger = await within(canvasElement).findByRole("button", {
+    name: "More Actions for Current Admin",
+  });
+  if (activation === "keyboard") {
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+  } else {
+    await userEvent.click(trigger);
+  }
+  await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+  const item = body.getByRole("menuitem", { name: "Manage Roles" });
+  if (activation === "keyboard") {
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(item).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+  } else {
+    await userEvent.click(item);
+  }
+  const dialog = await body.findByRole("dialog", { name: "Manage Roles" });
+  await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(dialog.contains(document.activeElement)).toBe(true),
+  );
+  return { trigger, dialog };
+}
+
+export const DialogFocusReturn: Story = {
+  play: async ({ canvasElement, args }) => {
+    for (const dismissal of ["Escape", "Cancel", "Save"] as const) {
+      const { trigger, dialog } = await openRolesFromRowMenu(
+        canvasElement,
+        dismissal === "Cancel" ? "pointer" : "keyboard",
+      );
+      if (dismissal === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else {
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: dismissal }),
+        );
+      }
+      await waitFor(() => expect(dialog).not.toBeInTheDocument());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      if (dismissal === "Save") {
+        await expect(args.onSubmitRoles).toHaveBeenCalledWith({
+          userId: "actor",
+          roles: [UserRole.ADMIN],
+        });
+      }
+    }
+  },
+};
