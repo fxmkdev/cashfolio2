@@ -334,6 +334,7 @@ test("G/L request failure can be retried without blocking the accounts page", as
   page,
   e2eExternalId,
 }) => {
+  await page.setViewportSize({ width: 2200, height: 1080 });
   const book = await seedDatabase({ userExternalId: e2eExternalId });
   let endpoint: string | undefined;
   page.on("response", async (response) => {
@@ -354,10 +355,6 @@ test("G/L request failure can be retried without blocking the accounts page", as
     await route.abort();
   });
   await page.reload();
-  // G/L cells are virtualised until their columns are scrolled into view.
-  await page.locator(".ag-grid-viewport").evaluate((element) => {
-    element.scrollLeft = element.scrollWidth;
-  });
   await expect(
     page
       .locator('.ag-cell[col-id="totalGainLoss"] .mantine-Loader-root')
