@@ -60,9 +60,13 @@ export const ExpenseCategories: Story = {
       if (!row) throw new Error(`Missing ${name} row`);
       const actions = await openRowActionsMenu(row);
       const deleteItem = actions.getByRole("menuitem", { name: "Delete" });
-      await expect(deleteItem).toBeDisabled();
+      await expect(deleteItem).toHaveAttribute("aria-disabled", "true");
       await expect(deleteItem).toHaveAccessibleDescription(reason);
-      await expect(actions.getByText(reason)).toBeVisible();
+      await userEvent.hover(deleteItem);
+      await waitFor(() =>
+        expect(body.getByRole("tooltip")).toHaveTextContent(reason),
+      );
+      await userEvent.unhover(deleteItem);
       await userEvent.keyboard("{Escape}");
       await waitFor(() =>
         expect(body.queryByRole("menu")).not.toBeInTheDocument(),

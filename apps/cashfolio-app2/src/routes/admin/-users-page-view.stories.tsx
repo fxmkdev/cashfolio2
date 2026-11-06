@@ -64,11 +64,12 @@ export const PendingDeletion: Story = {
     );
     await expect(
       await body.findByRole("menuitem", { name: "Manage Roles" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
+    await userEvent.hover(body.getByRole("menuitem", { name: "Manage Roles" }));
     await waitFor(() =>
-      expect(
-        body.getByText("Deletion pending; role changes unavailable"),
-      ).toBeVisible(),
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Deletion pending; role changes unavailable",
+      ),
     );
     await userEvent.click(
       body.getByRole("menuitem", { name: "Retry Deletion" }),
@@ -137,9 +138,12 @@ export const SelfDeletionDisabled: Story = {
     );
     await expect(
       await body.findByRole("menuitem", { name: "Delete" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
+    await userEvent.hover(body.getByRole("menuitem", { name: "Delete" }));
     await waitFor(() =>
-      expect(body.getByText("You cannot delete yourself")).toBeVisible(),
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "You cannot delete yourself",
+      ),
     );
     await userEvent.click(body.getByRole("menuitem", { name: "Manage Roles" }));
     const dialog = await body.findByRole("dialog");

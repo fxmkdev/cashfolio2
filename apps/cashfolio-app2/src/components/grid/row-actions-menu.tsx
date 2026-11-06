@@ -1,7 +1,8 @@
-import { ActionIcon, Menu, Stack, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Menu, Tooltip, VisuallyHidden } from "@mantine/core";
 import { IconDotsVertical } from "@tabler/icons-react";
 import type { ColDef } from "ag-grid-enterprise";
 import { Fragment, useId, useRef, useState, type ReactNode } from "react";
+import classes from "./row-actions-menu.module.css";
 
 export type RowAction = {
   id: string;
@@ -85,7 +86,7 @@ export function RowActionsMenu({
           <ActionIcon
             ref={triggerRef}
             variant="subtle"
-            size={32}
+            size="sm"
             aria-label={`More Actions for ${rowLabel}`}
             data-row-actions-trigger
             data-row-actions-open={opened || undefined}
@@ -103,27 +104,39 @@ export function RowActionsMenu({
         {actions.map((action) => (
           <Fragment key={action.id}>
             {action.separatorBefore && <Menu.Divider />}
-            <Menu.Item
-              aria-label={action.label}
-              aria-describedby={
-                action.disabled && action.disabledReason
-                  ? `${id}-${action.id}`
-                  : undefined
-              }
-              leftSection={action.icon}
-              color={action.color}
-              disabled={action.disabled}
-              onClick={action.onClick}
+            <Tooltip
+              label={action.disabledReason}
+              disabled={!action.disabled || !action.disabledReason}
+              events={{ hover: true, focus: true, touch: false }}
+              multiline
+              maw={300}
+              position="left"
+              withinPortal
             >
-              <Stack gap={2}>
-                <span>{action.label}</span>
-                {action.disabled && action.disabledReason && (
-                  <Text component="span" size="xs" id={`${id}-${action.id}`}>
-                    {action.disabledReason}
-                  </Text>
-                )}
-              </Stack>
-            </Menu.Item>
+              <Menu.Item
+                aria-label={action.label}
+                aria-disabled={action.disabled || undefined}
+                aria-describedby={
+                  action.disabled && action.disabledReason
+                    ? `${id}-${action.id}`
+                    : undefined
+                }
+                className={classes.item}
+                leftSection={action.icon}
+                color={action.color}
+                closeMenuOnClick={!action.disabled}
+                onClick={() => {
+                  if (!action.disabled) action.onClick();
+                }}
+              >
+                {action.label}
+              </Menu.Item>
+            </Tooltip>
+            {action.disabled && action.disabledReason && (
+              <VisuallyHidden id={`${id}-${action.id}`}>
+                {action.disabledReason}
+              </VisuallyHidden>
+            )}
           </Fragment>
         ))}
       </Menu.Dropdown>

@@ -98,7 +98,7 @@ export const Actions: Story = {
     await expect(cellBounds.width).toBe(88);
     for (const button of within(gridRow).getAllByRole("button")) {
       const bounds = button.getBoundingClientRect();
-      await expect(bounds.width).toBe(32);
+      await expect(bounds.width).toBe(22);
       await expect(bounds.left).toBeGreaterThanOrEqual(cellBounds.left);
       await expect(bounds.right).toBeLessThanOrEqual(cellBounds.right);
     }
@@ -196,7 +196,7 @@ export const OpeningBalances: Story = {
     await userEvent.click(trigger);
     for (const name of ["Copy", "Rebook", "Delete"]) {
       const item = await body.findByRole("menuitem", { name });
-      await expect(item).toBeDisabled();
+      await expect(item).toHaveAttribute("aria-disabled", "true");
       await expect(item).toHaveAccessibleDescription(
         OPENING_BALANCES_MANAGEMENT_MESSAGE,
       );

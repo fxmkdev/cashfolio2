@@ -514,9 +514,13 @@ showing only applicable actions. Multi-action rows use the shared
 `RowActionsMenu` with labelled menu items and the same icons. Separate
 Archive/Delete from the preceding actions; preserve Unarchive on archived rows.
 Use the shared grid action-cell styles so actions appear on row hover and
-keyboard focus. Disabled menu items show their reason beneath the label,
-associated as an accessible description; disabled direct buttons retain an
-explanatory tooltip. Pending mutations prevent duplicate submission.
+keyboard focus. Disabled menu items show their reason in a multiline tooltip on
+whole-item hover and keyboard focus, using the global tooltip delay. A visually
+hidden description keeps the reason accessible while the tooltip is closed. Use
+`aria-disabled`, preserve arrow-key focus, and guard activation and menu
+closing; style disabled items with the shared CSS module. Disabled direct
+buttons retain an explanatory tooltip. Pending mutations prevent duplicate
+submission.
 
 ## Contextual Child Creation
 
@@ -872,16 +876,17 @@ sign; debt amounts are positive magnitudes in those reports.
 
 ## Data Grid Actions Column
 
-- Use the shared `RowActionsMenu` for multiple row actions. Its 32px
-  vertical-dots trigger has a **More Actions** tooltip and a row-specific
-  accessible name. Keep a single action as a direct button. Ledger keeps
-  **Edit** directly beside the menu containing **Copy**, **Rebook**, and
+- Use the shared `RowActionsMenu` for multiple row actions. Its compact
+  `size="sm"` (22px) vertical-dots trigger has a **More Actions** tooltip and a
+  row-specific accessible name. Keep a single action as a direct button. Ledger
+  keeps **Edit** directly beside the menu containing **Copy**, **Rebook**, and
   **Delete**; Edit is not duplicated in that menu.
 - Spread `rowActionsColumnProps` into menu column definitions: blank header,
   fixed 56px width, no sorting/filtering/resizing/header menu, grid event
   isolation, keyboard access to renderer buttons, and
   `cellClass: "actions-cell"`. Ledger overrides width/minWidth/maxWidth to 88px.
-  Preserve existing column pinning.
+  Preserve existing column pinning. Ledger Edit also uses `size="sm"`. Both
+  controls retain 16px icons.
 - Action controls appear on whole-row hover and keyboard focus, including pinned
   cells, and stay revealed while their menu is open (styled in
   `src/components/grid/grid-theme.css`). Neither the dots nor Ledger Edit are

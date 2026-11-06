@@ -101,11 +101,11 @@ export const Hierarchy: Story = {
     ).toBeEnabled();
     await expect(
       actions.getByRole("menuitem", { name: "Delete" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     const swiss = await rowActions(canvasElement, "swiss");
     await expect(
       swiss.getByRole("menuitem", { name: "Reorder Siblings" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
   },
 };
 export const CreateChild: Story = {
@@ -137,7 +137,7 @@ export const DeleteAssignedLeaf: Story = {
     const parent = await rowActions(canvasElement, "equities");
     await expect(
       parent.getByRole("menuitem", { name: "Delete" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     const actions = await rowActions(canvasElement, "swiss");
     await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
     const dialog = within(

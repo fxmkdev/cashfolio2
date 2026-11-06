@@ -1,0 +1,15 @@
+.item {
+  white-space: nowrap;
+}
+
+/* aria-disabled keeps explanations reachable through menu arrow navigation. */
+.item[aria-disabled="true"] {
+  color: var(--mantine-color-disabled-color);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.item[aria-disabled="true"]:hover,
+.item[aria-disabled="true"]:focus {
+  background-color: transparent;
+}

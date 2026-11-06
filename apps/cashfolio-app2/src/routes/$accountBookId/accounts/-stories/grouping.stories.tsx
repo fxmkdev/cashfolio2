@@ -135,7 +135,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
       );
       await expect(
         actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-      ).toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "true");
       await expect(
         actions.getByRole("menuitem", { name: "Reorder Siblings" }),
       ).toHaveAccessibleDescription(

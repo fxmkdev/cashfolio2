@@ -33,7 +33,7 @@ export function LedgerActionsCell({
         <span style={{ display: "inline-flex" }}>
           <ActionIcon
             variant="subtle"
-            size={32}
+            size="sm"
             disabled={disabled}
             aria-label="Edit"
             onClick={() => {

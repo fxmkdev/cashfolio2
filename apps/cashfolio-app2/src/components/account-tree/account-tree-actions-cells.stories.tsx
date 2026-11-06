@@ -198,21 +198,75 @@ export const DisabledExplanations: Story = {
   args: { archivable: false, deletable: false, reorderEnabled: false },
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      within(canvasElement).getByRole("button", {
-        name: "More Actions for Cash",
-      }),
+    const trigger = within(canvasElement).getByRole("button", {
+      name: "More Actions for Cash",
+    });
+    await expect(trigger.getBoundingClientRect().width).toBe(22);
+    await userEvent.click(trigger);
+    const menu = await body.findByRole("menu");
+    const deleteItem = body.getByRole("menuitem", { name: "Delete" });
+    await expect(deleteItem).toHaveAttribute("aria-disabled", "true");
+    await expect(deleteItem).toHaveTextContent(/^Delete$/);
+    await expect(deleteItem).toHaveAccessibleDescription(
+      "Cannot delete this row",
     );
-    await expect(
-      await body.findByRole("menuitem", { name: "Delete" }),
-    ).toBeDisabled();
-    await waitFor(() =>
-      expect(body.getByText("Cannot delete this row")).toBeVisible(),
-    );
-    await waitFor(() =>
-      expect(body.getByText("Cannot archive this row")).toBeVisible(),
-    );
+    await expect(body.queryByRole("tooltip")).not.toBeInTheDocument();
+    await userEvent.hover(deleteItem);
+    await waitFor(() => {
+      expect(body.getByRole("tooltip")).toBeVisible();
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot delete this row",
+      );
+    });
+    await userEvent.click(deleteItem);
+    await expect(menu).toBeVisible();
     await expect(args.onDelete).not.toHaveBeenCalled();
+    await userEvent.unhover(deleteItem);
+    await waitFor(() =>
+      expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    await expect(deleteItem).toHaveAccessibleDescription(
+      "Cannot delete this row",
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(menu).not.toBeInTheDocument());
+    await expect(trigger).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+    await userEvent.keyboard("{ArrowDown}");
+    const reorder = body.getByRole("menuitem", { name: "Reorder Siblings" });
+    await expect(reorder).toHaveFocus();
+    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onReorder).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(body.getByRole("menuitem", { name: "Edit" })).toHaveFocus();
+    await waitFor(() =>
+      expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    await userEvent.keyboard("{ArrowDown}");
+    const archive = body.getByRole("menuitem", { name: "Archive" });
+    await expect(archive).toHaveFocus();
+    await waitFor(() => {
+      expect(body.getByRole("tooltip")).toBeVisible();
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot archive this row",
+      );
+    });
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onArchive).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(body.getByRole("menuitem", { name: "Delete" })).toHaveFocus();
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot delete this row",
+      ),
+    );
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onDelete).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
   },
 };
 
@@ -227,7 +281,12 @@ export const UnarchivePending: Story = {
     );
     await expect(
       await body.findByRole("menuitem", { name: "Unarchive" }),
-    ).toBeDisabled();
-    await waitFor(() => expect(body.getByText("Unarchiving…")).toBeVisible());
+    ).toHaveAttribute("aria-disabled", "true");
+    const unarchive = body.getByRole("menuitem", { name: "Unarchive" });
+    await expect(unarchive).toHaveAccessibleDescription("Unarchiving…");
+    await userEvent.hover(unarchive);
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent("Unarchiving…"),
+    );
   },
 };
