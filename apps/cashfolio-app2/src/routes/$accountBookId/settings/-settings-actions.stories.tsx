@@ -94,13 +94,22 @@ export const MoreMenu: Story = {
     const deletion = await body.findByRole("menuitem", {
       name: "Delete Account Book…",
     });
-    await expect(deletion).toBeVisible();
+    await waitFor(() => expect(deletion).toBeVisible());
     const [itemRed, itemGreen, itemBlue] = getComputedStyle(deletion)
       .color.match(/[\d.]+/g)!
       .map(Number);
     await expect(itemRed).toBeGreaterThan(itemGreen);
     await expect(itemRed).toBeGreaterThan(itemBlue);
+    const menu = body.getByRole("menu");
+    await waitFor(() =>
+      expect(menu.contains(canvasElement.ownerDocument.activeElement)).toBe(
+        true,
+      ),
+    );
     await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(body.queryByRole("menu")).not.toBeInTheDocument(),
+    );
     await waitFor(() => expect(more).toHaveFocus());
   },
 };

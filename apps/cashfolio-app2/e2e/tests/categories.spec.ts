@@ -239,6 +239,7 @@ test("General settings saves without a visible page header", async ({
     deletion.getByText(persistedName, { exact: true }),
   ).toBeVisible();
   await deletion.getByRole("button", { name: "Cancel" }).click();
+  await expect(deletion).toBeHidden();
   await expect(more).toBeFocused();
   await expect(page).toHaveURL(`/${seeded.accountBookId}/settings`);
   await expect(name).toHaveValue("E2E Settings Updated");
@@ -252,6 +253,7 @@ test("General settings saves without a visible page header", async ({
     deletion.getByText("E2E Settings Updated", { exact: true }),
   ).toBeVisible();
   await deletion.getByRole("button", { name: "Cancel" }).click();
+  await expect(deletion).toBeHidden();
   await page.reload();
   await expect(name).toHaveValue("E2E Settings Updated");
   await expect(page.getByRole("heading", { name: "Danger Zone" })).toHaveCount(
@@ -282,6 +284,7 @@ test("settings More menu opens deletion across all settings tabs without changin
     const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
     await expect(more).toBeFocused();
     await expect(page).toHaveURL(currentUrl);
   }
