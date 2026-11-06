@@ -72,7 +72,6 @@ test("settings stay disabled until hydration and preserve the first edit", async
     exact: true,
   });
   const save = page.getByRole("button", { name: "Save", exact: true });
-  const deleteBook = page.getByRole("button", { name: "Delete Account Book" });
   await beforeHydration(page, async () => {
     // The document has committed, but every client module (including the lazy
     // settings view) is still held. These assertions inspect the real SSR UI.
@@ -84,11 +83,9 @@ test("settings stay disabled until hydration and preserve the first edit", async
     await expect(page.getByLabel("Reference Currency")).toBeDisabled();
     await expect(page.getByLabel("Start Date")).toBeDisabled();
     await expect(save).toBeDisabled();
-    await expect(deleteBook).toBeDisabled();
   });
 
   await expect(name).toBeEnabled();
-  await expect(deleteBook).toBeEnabled();
   await name.fill("Hydrated First Edit");
   await save.click();
   await expect(
@@ -97,6 +94,27 @@ test("settings stay disabled until hydration and preserve the first edit", async
   await page.reload();
   await expect(name).toBeEnabled();
   await expect(name).toHaveValue("Hydrated First Edit");
+});
+
+test("account-book deletion stays disabled until hydration and opens on the first click", async ({
+  page,
+}) => {
+  const deleteBook = page.getByRole("button", { name: "Delete Account Book" });
+  await beforeHydration(page, async () => {
+    await page.goto(`/${seeded.accountBookId}/settings/danger-zone`, {
+      waitUntil: "commit",
+    });
+    await expect(deleteBook).toBeVisible();
+    await expect(deleteBook).toBeDisabled();
+  });
+
+  await expect(deleteBook).toBeEnabled();
+  await deleteBook.click();
+  const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Delete Account Book" }),
+  ).toBeDisabled();
 });
 
 test("statement upload stays disabled until hydration and accepts the first file", async ({

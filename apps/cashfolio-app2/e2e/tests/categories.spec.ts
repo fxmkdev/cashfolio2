@@ -236,9 +236,12 @@ test("General settings saves without a visible page header", async ({
   ).toBeVisible();
   await page.reload();
   await expect(name).toHaveValue("E2E Settings Updated");
+  await expect(page.getByRole("heading", { name: "Danger Zone" })).toHaveCount(
+    0,
+  );
   await expect(
-    page.getByRole("heading", { name: "Danger Zone" }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Delete Account Book" }),
+  ).toHaveCount(0);
 });
 
 for (const colorScheme of ["light", "dark"] as const) {
