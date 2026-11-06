@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { Button, Stack } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState, type ComponentProps } from "react";
@@ -13,8 +14,7 @@ async function gridRow(canvasElement: HTMLElement, id: string) {
 }
 async function rowActions(canvasElement: HTMLElement, id: string) {
   const row = await gridRow(canvasElement, id);
-  await userEvent.hover(row);
-  return within(row);
+  return openRowActionsMenu(row);
 }
 
 const meta = {
@@ -97,14 +97,14 @@ export const Hierarchy: Story = {
     await expect(equities).toHaveAttribute("aria-expanded", "true");
     const actions = await rowActions(canvasElement, "equities");
     await expect(
-      actions.getByRole("button", { name: "Reorder Siblings" }),
+      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
     ).toBeEnabled();
     await expect(
-      actions.getByRole("button", { name: "Delete Equities" }),
+      actions.getByRole("menuitem", { name: "Delete" }),
     ).toBeDisabled();
     const swiss = await rowActions(canvasElement, "swiss");
     await expect(
-      swiss.getByRole("button", { name: "Reorder Siblings" }),
+      swiss.getByRole("menuitem", { name: "Reorder Siblings" }),
     ).toBeDisabled();
   },
 };
@@ -112,9 +112,7 @@ export const CreateChild: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("button", { name: "Add Child to Equities" }),
-    );
+    await userEvent.click(actions.getByRole("menuitem", { name: "Add Child" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "New Asset Class" }),
     );
@@ -138,12 +136,10 @@ export const DeleteAssignedLeaf: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const parent = await rowActions(canvasElement, "equities");
     await expect(
-      parent.getByRole("button", { name: "Delete Equities" }),
+      parent.getByRole("menuitem", { name: "Delete" }),
     ).toBeDisabled();
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(
-      actions.getByRole("button", { name: "Delete Swiss Equities" }),
-    );
+    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -165,9 +161,7 @@ export const ParentSelectionExcludesSubtree: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("button", { name: "Edit Equities" }),
-    );
+    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -193,9 +187,7 @@ export const ClearParentToTopLevel: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(
-      actions.getByRole("button", { name: "Edit Swiss Equities" }),
-    );
+    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -250,7 +242,7 @@ export const NestedReplacementSelection: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "cash");
-    await userEvent.click(actions.getByRole("button", { name: "Delete Cash" }));
+    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -296,9 +288,7 @@ export const EditAndReorder: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     let actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(
-      actions.getByRole("button", { name: "Edit Swiss Equities" }),
-    );
+    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -318,7 +308,7 @@ export const EditAndReorder: Story = {
     );
     actions = await rowActions(canvasElement, "equities");
     await userEvent.click(
-      actions.getByRole("button", { name: "Reorder Siblings" }),
+      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
     );
     const reorder = within(
       await body.findByRole("dialog", { name: "Reorder Siblings" }),
@@ -470,7 +460,7 @@ export const ReorderFailureRestoresConfirmedOrder: Story = {
     );
     const actions = await rowActions(canvasElement, "equities");
     await userEvent.click(
-      actions.getByRole("button", { name: "Reorder Siblings" }),
+      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
     );
     const dialog = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",

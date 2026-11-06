@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { findVisibleDialog } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
@@ -57,17 +58,14 @@ export const ExpenseCategories: Story = {
         .getByText(name, { exact: true })
         .closest<HTMLElement>(".ag-row");
       if (!row) throw new Error(`Missing ${name} row`);
-      const deleteButton = within(row).getByRole("button", { name: "Delete" });
-      await expect(deleteButton).toBeDisabled();
-      const trigger = deleteButton.parentElement!;
-      trigger.scrollIntoView({ block: "nearest", inline: "nearest" });
-      await userEvent.hover(trigger);
+      const actions = await openRowActionsMenu(row);
+      const deleteItem = actions.getByRole("menuitem", { name: "Delete" });
+      await expect(deleteItem).toBeDisabled();
+      await expect(deleteItem).toHaveAccessibleDescription(reason);
+      await expect(actions.getByText(reason)).toBeVisible();
+      await userEvent.keyboard("{Escape}");
       await waitFor(() =>
-        expect(body.getByRole("tooltip")).toHaveTextContent(reason),
-      );
-      await userEvent.unhover(trigger);
-      await waitFor(() =>
-        expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+        expect(body.queryByRole("menu")).not.toBeInTheDocument(),
       );
     }
     await userEvent.click(
