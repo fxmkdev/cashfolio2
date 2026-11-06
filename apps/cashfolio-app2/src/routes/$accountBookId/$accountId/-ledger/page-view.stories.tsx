@@ -242,8 +242,12 @@ export const MissingStatementImportCsvFormat: Story = {
     });
     await expect(importItem).toBeDisabled();
     await userEvent.hover(importItem.parentElement!);
-    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "Statement imports require a CSV format configured on this account.",
+    await waitFor(() =>
+      expect(
+        screen.getByRole("tooltip", {
+          name: "Statement imports require a CSV format configured on this account.",
+        }),
+      ).toBeVisible(),
     );
   },
 };
@@ -301,8 +305,12 @@ export const DisabledEditMenuAction: Story = {
     });
     await expect(editItem).toBeDisabled();
     await userEvent.hover(editItem.parentElement!);
-    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "This account cannot be edited.",
+    await waitFor(() =>
+      expect(
+        screen.getByRole("tooltip", {
+          name: "This account cannot be edited.",
+        }),
+      ).toBeVisible(),
     );
   },
 };
