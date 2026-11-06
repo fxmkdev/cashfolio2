@@ -1,0 +1,25 @@
+.archived :global(.ag-group-value) {
+  color: var(--mantine-color-dimmed);
+}
+
+.selectionBar {
+  min-height: 36px;
+}
+
+.blocked :global(.ag-row-drag) {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.recent {
+  animation: reveal 2s ease-out;
+}
+
+@keyframes reveal {
+  from {
+    background-color: var(--mantine-color-blue-light);
+  }
+  to {
+    background-color: transparent;
+  }
+}

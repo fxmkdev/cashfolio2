@@ -153,6 +153,25 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   archived-mode links, with replacement navigation. Legacy Income/Expense tab
   links redirect to settings category management, preserving their tab, mapping
   archived mode to `showArchived=true`, and replacing the history entry.
+  - Optional `organize=true` opens Account Structure organization. Normal mode
+    omits it. Asset Class grouping removes it with replacement navigation;
+    legacy Accounts normalization preserves valid requests, but category
+    redirects do not carry it into Settings.
+  - Organize pushes one entry immediately, before hierarchy loading. Back
+    cancels loading or exits; Forward, reload, and direct links start fresh
+    organizer sessions. Entry failures keep the requested URL; retry does not
+    push another entry. `organize` is not a financial loader dependency or page
+    key, so the mounted financial grid retains its state.
+  - Done traverses back only to the adjacent normal Accounts origin recorded in
+    history state for the same book and URL. Missing or invalid origin state
+    uses replacement navigation to normal Accounts. Moves add no history
+    entries. Selection, archived visibility, expansion, and dialogs remain
+    session-local and clear on exit. Back/Forward never undo or replay a move.
+  - During move, archive, unarchive, delete, and recovery requests, a
+    route-scoped blocker queues one navigation attempt and continues after the
+    request settles. Rejected repeated Back/Forward attempts first restore the
+    original entry; retain and replay the first traversal after restoration.
+    Settled sessions do not prompt about unsaved changes.
   - The loader fetches the unified balance-account hierarchy. The shared
     account-management loader fetches only the selected category subtype for
     settings category tabs.

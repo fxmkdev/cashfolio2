@@ -102,6 +102,7 @@ export function useDialogSubmitState({
   }, []);
 
   const clearSubmissionError = useCallback(() => setSubmissionError(null), []);
+  const clearRefreshError = useCallback(() => setRefreshError(null), []);
   return {
     isSubmitting,
     isWaiting,
@@ -110,6 +111,7 @@ export function useDialogSubmitState({
     isRefreshing,
     refreshConstraints,
     clearSubmissionError,
+    clearRefreshError,
     runSubmit,
   };
 }

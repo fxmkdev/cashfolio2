@@ -13,6 +13,7 @@ export function ConfirmDeleteModal({
   onRefreshConstraints,
   formatErrorMessage,
   onExitTransitionEnd,
+  submitState: providedSubmitState,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -23,12 +24,14 @@ export function ConfirmDeleteModal({
   description?: ReactNode;
   onConfirm: () => void | Promise<void>;
   onExitTransitionEnd?: () => void;
+  submitState?: ReturnType<typeof useDialogSubmitState>;
 }) {
-  const submitState = useDialogSubmitState({
+  const internalSubmitState = useDialogSubmitState({
     captureErrors: true,
     formatErrorMessage,
     onRefreshConstraints,
   });
+  const submitState = providedSubmitState ?? internalSubmitState;
   const { isSubmitting, runSubmit } = submitState;
   const handleClose = () => {
     if (isSubmitting) return;

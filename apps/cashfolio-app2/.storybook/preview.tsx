@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-router";
 import "../src/mantine";
 import { theme } from "../src/theme";
+import { GlobalLoadingProvider } from "../src/components/navigation/global-loading";
 
 type RouterStoryParameters = {
   colorScheme?: "light" | "dark";
@@ -83,9 +84,11 @@ const preview: Preview = {
             (context.parameters as RouterStoryParameters).colorScheme
           }
         >
-          <StoryContext.Provider value={Story}>
-            <RouterProvider router={context.loaded.storyRouter} />
-          </StoryContext.Provider>
+          <GlobalLoadingProvider>
+            <StoryContext.Provider value={Story}>
+              <RouterProvider router={context.loaded.storyRouter} />
+            </StoryContext.Provider>
+          </GlobalLoadingProvider>
         </MantineProvider>
       </div>
     ),

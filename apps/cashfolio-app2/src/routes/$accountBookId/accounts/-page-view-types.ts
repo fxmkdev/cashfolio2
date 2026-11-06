@@ -1,4 +1,5 @@
 import { type ReportingGrouping } from "@/shared/reporting-grouping";
+import type { OrganizerApi } from "./-organize/use-organizer";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
 import { type AccountManagementContext } from "@/shared/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
@@ -25,6 +26,9 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  organizerApi?: OrganizerApi;
+  organize?: boolean;
+  onOrganizeSaved?: () => void;
   bulkAccountActions?: BulkAccountActions;
   managementContext?: AccountManagementContext;
   grouping?: ReportingGrouping;

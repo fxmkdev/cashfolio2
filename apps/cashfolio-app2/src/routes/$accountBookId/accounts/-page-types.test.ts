@@ -7,8 +7,57 @@ import {
   getManagementTabs,
   parseCategoriesSearch,
   parseAccountsSearch,
+  getCanonicalAccountsSearch,
   tabs,
 } from "./-page-types";
+
+describe("organize search and canonical Accounts URLs", () => {
+  it.each([undefined, false, "true", "false", 1, null, []])(
+    "omits invalid organizer requests %j",
+    (organize) => {
+      expect(parseAccountsSearch({ organize }).organize).toBeUndefined();
+    },
+  );
+  it("accepts only balance Account Structure requests", () => {
+    expect(parseAccountsSearch({ organize: true }).organize).toBe(true);
+    expect(
+      parseAccountsSearch({ organize: true, grouping: "assetClass" }).organize,
+    ).toBeUndefined();
+    expect(
+      parseAccountsSearch({ organize: true, tab: "EQUITY-INCOME" }).organize,
+    ).toBeUndefined();
+  });
+  it("preserves a valid organizer request through legacy normalization", () => {
+    expect(
+      getCanonicalAccountsSearch(
+        "?mode=archived&organize=true",
+        parseAccountsSearch({ mode: "archived", organize: true }),
+      ),
+    ).toEqual({ tab: "BALANCE", mode: "active", organize: true });
+  });
+  it("removes incompatible and invalid requests with a canonical replacement", () => {
+    expect(
+      getCanonicalAccountsSearch(
+        "?tab=BALANCE&mode=active&grouping=assetClass&organize=true",
+        parseAccountsSearch({ grouping: "assetClass", organize: true }),
+      ),
+    ).toEqual({ tab: "BALANCE", mode: "active", grouping: "assetClass" });
+    expect(
+      getCanonicalAccountsSearch(
+        "?tab=BALANCE&mode=active&organize=false",
+        parseAccountsSearch({ organize: false }),
+      ),
+    ).toEqual({ tab: "BALANCE", mode: "active" });
+  });
+  it("does not redirect an already canonical organizer URL", () => {
+    expect(
+      getCanonicalAccountsSearch(
+        "?tab=BALANCE&mode=active&organize=true",
+        parseAccountsSearch({ organize: true }),
+      ),
+    ).toBeUndefined();
+  });
+});
 
 describe("accounts page tab parsing", () => {
   it("does not expose the gain/loss tab", () => {

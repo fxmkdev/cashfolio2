@@ -24,6 +24,7 @@ function render(
           refreshError: null,
           refreshConstraints: refresh,
           clearSubmissionError: vi.fn(),
+          clearRefreshError: vi.fn(),
           runSubmit: vi.fn(async () => true),
           ...overrides,
         }}

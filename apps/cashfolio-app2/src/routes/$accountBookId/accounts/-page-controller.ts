@@ -1,4 +1,16 @@
 import { getAccountsModalViewProps } from "./-page-modal-props";
+import { useMemo } from "react";
+import {
+  getAccountOrganizeData,
+  moveAccountTreeItems,
+  archiveAccount,
+  archiveAccountGroup,
+  unarchiveAccount,
+  unarchiveAccountGroup,
+  deleteAccount,
+  deleteAccountGroup,
+} from "@/server/accounts";
+import type { OrganizerApi } from "./-organize/use-organizer";
 import { getManagementTabs } from "./-page-types";
 import { useSelectedSiblingRows } from "./-page-data";
 import { useAccountsPageModalState } from "./-page-modal-state";
@@ -19,6 +31,7 @@ export function useAccountsPageController(args: {
   tab: AccountsPageViewProps["tab"];
   mode?: AccountsPageViewProps["mode"];
   showArchived?: boolean;
+  organize?: boolean;
   grouping?: AccountsPageViewProps["grouping"];
   onGroupingChange?: AccountsPageViewProps["onGroupingChange"];
   onShowArchivedChange?: AccountsPageViewProps["onShowArchivedChange"];
@@ -26,6 +39,31 @@ export function useAccountsPageController(args: {
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
   const mode = args.mode ?? "active";
+  const organizerApi = useMemo<OrganizerApi>(
+    () => ({
+      load: () =>
+        getAccountOrganizeData({ data: { accountBookId: args.accountBookId } }),
+      move: (move, version) =>
+        moveAccountTreeItems({
+          data: { accountBookId: args.accountBookId, ...move, version },
+        }),
+      archive: (target) =>
+        (target.nodeType === "account" ? archiveAccount : archiveAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
+        }),
+      unarchive: (target) =>
+        (target.nodeType === "account"
+          ? unarchiveAccount
+          : unarchiveAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
+        }),
+      delete: (target) =>
+        (target.nodeType === "account" ? deleteAccount : deleteAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
+        }),
+    }),
+    [args.accountBookId],
+  );
   const grouping =
     args.managementContext === "categories"
       ? "accountStructure"
@@ -108,6 +146,9 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    onOrganizeSaved: args.invalidate,
+    organize: args.organize,
+    organizerApi,
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss: { ...gainLoss, data: projectedGainLoss },
