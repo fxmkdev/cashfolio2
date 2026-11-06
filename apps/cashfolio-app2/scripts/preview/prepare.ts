@@ -1,20 +1,15 @@
 import { appendFile } from "node:fs/promises";
-import { provisionDatabase } from "./database.ts";
+import { prepareDatabase } from "../nonproduction/prepare.ts";
+import { previewNames } from "./names.ts";
 import {
   githubApi,
   validatePr,
   validatePreviewImage,
   type PullRequest,
 } from "./github.ts";
-import {
-  command,
-  databaseUrl,
-  verifiedProvisioner,
-  serializeFlySecrets,
-} from "./runtime.ts";
+import { command, maskSecrets, serializeFlySecrets } from "./runtime.ts";
 import { prNumber } from "./names.ts";
 import {
-  parseApprovedTarget,
   readExternalIds,
   requireValue,
 } from "../../src/staging-seed/target.ts";
@@ -55,76 +50,60 @@ try {
   requireValue(process.env, "FLY_API_TOKEN");
   requireValue(process.env, "FLY_ORG");
   serializeFlySecrets({ ...appSecrets, REDIS_URL: redisUrl });
-  phase = "host verification";
-  const { client, target: host, password } = await verifiedProvisioner();
-  try {
-    phase = "database provisioning";
-    const preview = await provisionDatabase(client, {
-      number,
-      headRef: pr.head.ref,
-      title: pr.title,
-      host,
-    });
-    const target = parseApprovedTarget(
-      JSON.stringify({
-        ...host,
-        environment: "preview",
-        flyApp: preview.flyApp,
-        database: preview.database,
-      }),
-    );
-    // List first so a failed status request cannot accidentally create an app.
-    phase = "Fly app setup";
-    const apps = JSON.parse(await command(["apps", "list", "--json"])) as {
-      Name: string;
-      name?: string;
-    }[];
-    if (!apps.some((app) => (app.Name ?? app.name) === preview.flyApp))
-      await command([
-        "apps",
-        "create",
-        preview.flyApp,
-        "--org",
-        requireValue(process.env, "FLY_ORG"),
-      ]);
-    const mask = (value: string) =>
-      console.log(
-        `::add-mask::${value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A")}`,
-      );
-    mask(password);
-    for (const id of [...testerIds, ...adminIds]) mask(id);
-    const { randomBytes } = await import("node:crypto");
-    const secrets = {
-      ...appSecrets,
-      DATABASE_URL: databaseUrl(target, password),
-      SEED_TARGET: JSON.stringify(target),
-      SEED_USER_EXTERNAL_IDS: testerIds.join(","),
-      SEED_ADMIN_EXTERNAL_IDS: adminIds.join(","),
-      REDIS_URL: redisUrl,
-      SESSION_SECRET: randomBytes(32).toString("hex"),
-    };
-    mask(secrets.SESSION_SECRET);
-    mask(secrets.DATABASE_URL);
-    // stdin avoids putting values in command arguments or workflow outputs.
-    const dotenv = serializeFlySecrets(secrets);
-    phase = "preview credential staging";
-    await command(
-      ["secrets", "import", "--app", preview.flyApp, "--stage"],
-      dotenv,
-    );
-    phase = "final PR head validation";
-    validatePr(
-      await api<PullRequest>(`/pulls/${number}`),
-      process.env.GITHUB_REPOSITORY!,
-      pr.head.sha,
-    );
-    await appendFile(
-      process.env.GITHUB_OUTPUT!,
-      `fly_app=${preview.flyApp}\npreview_hostname=${preview.hostname}\npreview_url=${preview.previewUrl}\ndatabase=${preview.database}\n`,
-    );
-  } finally {
-    await client.end();
-  }
+  const preview = previewNames(number, pr.head.ref);
+  phase = "database provisioning";
+  const prepared = await prepareDatabase(
+    {
+      branch: pr.head.ref,
+      environment: "preview",
+      flyApp: preview.flyApp,
+      sha: pr.head.sha,
+    },
+    process.env,
+  );
+  // List first so a failed status request cannot accidentally create an app.
+  phase = "Fly app setup";
+  const apps = JSON.parse(await command(["apps", "list", "--json"])) as {
+    Name: string;
+    name?: string;
+  }[];
+  if (!apps.some((app) => (app.Name ?? app.name) === preview.flyApp))
+    await command([
+      "apps",
+      "create",
+      preview.flyApp,
+      "--org",
+      requireValue(process.env, "FLY_ORG"),
+    ]);
+  maskSecrets([...testerIds, ...adminIds, ...Object.values(prepared.secrets)]);
+  const { randomBytes } = await import("node:crypto");
+  const secrets = {
+    ...appSecrets,
+    ...prepared.secrets,
+    REDIS_URL: redisUrl,
+    SESSION_SECRET: randomBytes(32).toString("hex"),
+  };
+  maskSecrets([secrets.SESSION_SECRET]);
+  // stdin avoids putting values in command arguments or workflow outputs.
+  const dotenv = serializeFlySecrets(secrets);
+  phase = "preview credential staging";
+  await command(
+    ["secrets", "import", "--app", preview.flyApp, "--stage"],
+    dotenv,
+  );
+  phase = "final PR head validation";
+  validatePr(
+    await api<PullRequest>(`/pulls/${number}`),
+    process.env.GITHUB_REPOSITORY!,
+    pr.head.sha,
+  );
+  await appendFile(
+    process.env.GITHUB_OUTPUT!,
+    `fly_app=${preview.flyApp}\npreview_hostname=${preview.hostname}\npreview_url=${preview.previewUrl}\n` +
+      Object.entries(prepared.outputs)
+        .map(([key, value]) => `${key}=${value}\n`)
+        .join(""),
+  );
 } catch {
   console.error(
     `Preview preparation failed during ${phase}. Inspect resources with operator access; raw provider diagnostics are suppressed.`,

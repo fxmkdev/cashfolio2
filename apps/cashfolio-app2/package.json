@@ -39,7 +39,7 @@
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
     "build:e2e": "vite build --mode e2e",
     "test:build-boundary": "node --test scripts/build-boundary.test.ts",
-    "test:preview": "node --test scripts/preview/*.test.ts",
+    "test:preview": "node --test scripts/preview/*.test.ts scripts/nonproduction/*.test.ts",
     "seed:nonproduction": "node dist/staging-seed/seed.mjs"
   },
   "dependencies": {

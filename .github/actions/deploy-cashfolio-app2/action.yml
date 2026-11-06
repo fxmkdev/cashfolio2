@@ -55,12 +55,37 @@ inputs:
     required: false
     default:
       "sh apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh"
+  database_project_id:
+    description: Nonproduction Neon project resolved by provisioning
+    default: ""
+  database_branch_id:
+    description: Nonproduction Neon branch resolved by provisioning
+    default: ""
+  database_name:
+    description: Nonproduction database resolved by provisioning
+    default: ""
+  deploy_sha:
+    description: Exact deployed commit
+    default: ""
   fly_api_token:
     description: Fly API token
     required: true
 runs:
   using: composite
   steps:
+    - name: Require nonproduction database metadata
+      if: inputs.app_environment != 'prod'
+      shell: bash
+      run: |
+        : "${DB_PROJECT:?Database project is required}"
+        : "${DB_BRANCH:?Database branch is required}"
+        : "${DB_NAME:?Database name is required}"
+        : "${DEPLOY_SHA:?Deployment commit is required}"
+      env:
+        DB_PROJECT: ${{ inputs.database_project_id }}
+        DB_BRANCH: ${{ inputs.database_branch_id }}
+        DB_NAME: ${{ inputs.database_name }}
+        DEPLOY_SHA: ${{ inputs.deploy_sha }}
     - name: Prepare configuration file
       shell: bash
       run: |
@@ -72,6 +97,10 @@ runs:
         cat apps/cashfolio-app2/fly.generated.toml
       env:
         APP_ENVIRONMENT: ${{ inputs.app_environment }}
+        CASHFOLIO_DATABASE_PROJECT_ID: ${{ inputs.database_project_id }}
+        CASHFOLIO_DATABASE_BRANCH_ID: ${{ inputs.database_branch_id }}
+        CASHFOLIO_DATABASE_NAME: ${{ inputs.database_name }}
+        CASHFOLIO_DEPLOY_SHA: ${{ inputs.deploy_sha }}
         RELEASE_COMMAND: ${{ inputs.release_command }}
         FLY_APP: ${{ inputs.fly_app }}
         FLY_PRIMARY_REGION: ${{ inputs.fly_primary_region }}

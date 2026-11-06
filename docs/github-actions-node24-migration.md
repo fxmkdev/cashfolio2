@@ -7,9 +7,10 @@ This repository already upgraded directly controllable action references to Node
 
 ## Neon actions removed
 
-Preview deployments now create independent databases on the fixed staging host;
-creation and cleanup no longer invoke Neon branching actions. The previous Node
-24-compatible delete-action pin
+Staging and preview deployments now create databases through the Neon API on the
+nonproduction project's discovered default branch; creation and cleanup no
+longer invoke Neon branching actions. The previous Node 24-compatible
+delete-action pin
 [`aed9ab1ec86e380312c7b0a9e29942e41349adf6`](https://github.com/neondatabase/delete-branch-action/commit/aed9ab1ec86e380312c7b0a9e29942e41349adf6)
 and its tagged-release follow-up are therefore obsolete. See
 [Preview environments](preview-environments.md) for replacement provisioning,

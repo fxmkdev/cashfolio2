@@ -1,3 +1,4 @@
+import { databaseName } from "../nonproduction/names.ts";
 import { createHash } from "node:crypto";
 import { appendFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
@@ -27,22 +28,19 @@ function truncate(value: string, length: number): string {
   const hash = createHash("sha1").update(value).digest("hex").slice(0, 6);
   return `${value.slice(0, length - 7).replace(/-+$/, "") || "b"}-${hash}`;
 }
-export function previewNames(number: number, headRef: string, title: string) {
+export function previewNames(number: number, headRef: string) {
   prNumber(number);
-  if (!headRef || !title || /[\r\n\0]/.test(headRef + title))
+  if (!headRef || /[\r\n\0]/.test(headRef))
     throw new Error("Invalid preview name inputs.");
   const prefix = `cashfolio-app2-pr-${number}-`;
   const tail = slug(headRef.split("/").at(-1)!, "branch");
   const flyApp = `${prefix}${truncate(slug(tail.replaceAll("github", "gh"), "branch"), 63 - prefix.length)}`;
-  const databasePrefix = `pr-${number}-`;
-  const databaseSuffix = "-cashfolio-app2";
-  const database = `${databasePrefix}${truncate(slug(title, "preview"), 63 - databasePrefix.length - databaseSuffix.length)}${databaseSuffix}`;
   return {
     flyApp,
     flyAppLegacy: `cashfolio-app2-pr-${number}`,
     previewUrl: `https://${flyApp}.fly.dev/`,
     hostname: `${flyApp}.fly.dev`,
-    database,
+    database: databaseName(headRef),
   };
 }
 
@@ -53,7 +51,6 @@ if (
   const names = previewNames(
     Number(process.env.PR_NUMBER),
     process.env.HEAD_REF ?? "",
-    process.env.PR_TITLE ?? "",
   );
   if (!process.env.GITHUB_OUTPUT) throw new Error("GITHUB_OUTPUT is required.");
   await appendFile(

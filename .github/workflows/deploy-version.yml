@@ -50,8 +50,9 @@ jobs:
     if: ${{ inputs.deploy-cashfolio-app2 }}
     concurrency:
       group:
-        cashfolio-app2-deploy-${{ inputs.environment }}-${{ inputs.fly_app ||
-        'shared' }}
+        ${{ inputs.environment == 'prod' &&
+        format('cashfolio-app2-deploy-prod-{0}', inputs.fly_app || 'shared') ||
+        'cashfolio-app2-nonproduction' }}
       cancel-in-progress: false
     environment:
       name:
@@ -63,10 +64,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - name: Setup nonproduction tooling
+        if: inputs.environment == 'staging'
+        uses: ./.github/actions/setup
+      - name: Install nonproduction tooling
+        if: inputs.environment == 'staging'
+        run:
+          pnpm --filter cashfolio-app2 install --frozen-lockfile
+          --ignore-scripts
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
+      - name: Provision staging database and stage seed settings
+        if: inputs.environment == 'staging'
+        id: database
+        run: node apps/cashfolio-app2/scripts/nonproduction/stage.ts
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          SOURCE_BRANCH:
+            ${{ github.ref_type == 'branch' && github.ref_name ||
+            github.event.repository.default_branch }}
+          DEPLOY_SHA: ${{ inputs.sha }}
+          FLY_APP: ${{ inputs.fly_app || vars.FLY_APP }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
+          SEED_ADMIN_EXTERNAL_IDS: ${{ secrets.SEED_ADMIN_EXTERNAL_IDS }}
       - name: Deploy cashfolio-app2
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
@@ -74,6 +98,10 @@ jobs:
             ${{ inputs.cashfolio_app2_image ||
             format('registry.fly.io/{0}:v{1}',
             vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
+          database_project_id: ${{ steps.database.outputs.database_project_id }}
+          database_branch_id: ${{ steps.database.outputs.database_branch_id }}
+          database_name: ${{ steps.database.outputs.database }}
+          deploy_sha: ${{ inputs.sha }}
           high_availability: ${{ inputs.high_availability }}
           app_environment: ${{ inputs.environment }}
           release_command:
@@ -111,12 +139,16 @@ jobs:
             echo "### $DEPLOY_ENV deployment"
             echo "Commit: $DEPLOY_SHA"
             echo "Application: $DEPLOY_URL"
+            echo "Database: ${DEPLOY_DATABASE:-unavailable}"
             echo "Outcome: $OUTCOME"
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           DEPLOY_ENV: ${{ inputs.environment }}
           DEPLOY_SHA: ${{ inputs.sha }}
           DEPLOY_URL: ${{ inputs.base_url || vars.BASE_URL }}
+          DEPLOY_DATABASE:
+            ${{ inputs.environment == 'prod' && 'existing production database'
+            || steps.database.outputs.database }}
           OUTCOME: ${{ job.status }}
 
   cashfolio-redis-deploy:

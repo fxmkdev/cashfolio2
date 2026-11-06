@@ -15,10 +15,10 @@ const target: ApprovedSeedTarget = {
   projectId: "test-project",
   branchId: "br-staging",
   endpointId: "ep-seed-example",
-  database: "neondb",
+  database: "cashfolio-app2-main-aaaaaaaa",
   role: "owner",
 };
-const url = `postgresql://${target.role}:secret@${target.hostname}/neondb?sslmode=verify-full`;
+const url = `postgresql://${target.role}:secret@${target.hostname}/cashfolio-app2-main-aaaaaaaa?sslmode=verify-full`;
 const env = {
   APP_ENVIRONMENT: "staging",
   FLY_APP_NAME: "cashfolio-staging",
@@ -84,6 +84,8 @@ describe("staging seed configuration", () => {
       hostname: "ep-production.eu-central-1.aws.neon.tech",
     }),
     JSON.stringify({ ...target, database: "db/options" }),
+    JSON.stringify({ ...target, database: "neondb" }),
+    JSON.stringify({ ...target, flyApp: "cashfolio-app2-pr-42-topic" }),
     JSON.stringify({
       ...target,
       endpointId: "ep-seed-example-pooler",
@@ -111,7 +113,7 @@ describe("staging connection restrictions", () => {
       port: 5432,
       user: target.role,
       password: "secret",
-      database: "neondb",
+      database: "cashfolio-app2-main-aaaaaaaa",
       ssl: { rejectUnauthorized: true },
       options: " ",
       enableChannelBinding: true,
@@ -132,9 +134,15 @@ describe("staging connection restrictions", () => {
     url.replace("ep-seed-example", "ep-production"),
     url.replace("neon.tech", "neon.tech.evil.example"),
     url.replace("ep-seed-example", "ep-seed-example-pooler"),
-    url.replace("/neondb", ":5433/neondb"),
-    url.replace("/neondb", "/otherdb"),
-    url.replace("/neondb", "/neondb/other"),
+    url.replace(
+      "/cashfolio-app2-main-aaaaaaaa",
+      ":5433/cashfolio-app2-main-aaaaaaaa",
+    ),
+    url.replace("/cashfolio-app2-main-aaaaaaaa", "/otherdb"),
+    url.replace(
+      "/cashfolio-app2-main-aaaaaaaa",
+      "/cashfolio-app2-main-aaaaaaaa/other",
+    ),
     url.replace("owner", "other"),
     url.replace(":secret", ""),
     url.replace("secret", "%ZZ"),
@@ -222,7 +230,7 @@ describe("preview target isolation", () => {
     ...target,
     environment: "preview",
     flyApp: "cashfolio-app2-pr-42-topic",
-    database: "pr-42-improve-seed-cashfolio-app2",
+    database: "cashfolio-app2-topic-bbbbbbbb",
   };
   it("accepts a separate preview database with the shared owner on staging’s exact host", () => {
     expect(
@@ -276,12 +284,12 @@ describe("preview target isolation", () => {
   });
   it.each([
     { environment: "prod" },
-    { flyApp: "cashfolio-app2-pr-43-topic" },
+    { flyApp: "cashfolio-staging" },
     { database: "production" },
     { role: "bad/role" },
-    { migrationRole: "neondb_owner" },
+    { migrationRole: "cashfolio-app2-main-aaaaaaaa_owner" },
     { database: "pr-43-topic-cashfolio-app2" },
-  ])("rejects cross-environment and cross-PR targets %j", (overrides) => {
+  ])("rejects cross-environment and unmanaged targets %j", (overrides) => {
     expect(() =>
       parseApprovedTarget(JSON.stringify({ ...previewTarget, ...overrides })),
     ).toThrow();

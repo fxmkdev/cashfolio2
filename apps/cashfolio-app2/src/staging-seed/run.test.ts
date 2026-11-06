@@ -36,7 +36,7 @@ const target = {
   projectId: "test-project",
   branchId: "br-staging",
   endpointId: "ep-staging",
-  database: "neondb",
+  database: "cashfolio-app2-main-aaaaaaaa",
   role: "owner",
 };
 const env = {
@@ -45,7 +45,7 @@ const env = {
   SEED_ADMIN_EXTERNAL_IDS: "tester",
   SEED_TARGET: JSON.stringify(target),
   SEED_USER_EXTERNAL_IDS: "tester",
-  DATABASE_URL: `postgresql://owner:secret@${target.hostname}/neondb?sslmode=require`,
+  DATABASE_URL: `postgresql://owner:secret@${target.hostname}/cashfolio-app2-main-aaaaaaaa?sslmode=require`,
 };
 
 beforeEach(() => {

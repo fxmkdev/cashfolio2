@@ -1,148 +1,162 @@
-# Preview environments
+# Nonproduction databases and preview environments
 
-Staging and previews share the existing nonproduction Neon project, host and
-database-owner login. Every open, same-repository PR gets a separate database so
-its schema and test data can evolve independently. These databases are equally
-trusted: there is no permission boundary between staging and previews.
-Production uses a separate project and credentials.
+Staging and previews use the same Neon provisioning flow. They share the
+nonproduction project's default branch, direct endpoint and existing database
+owner. Each Git branch gets its own database; there is intentionally no
+permission boundary between staging and previews. Production uses a separate
+project and credentials and remains migration-only.
 
 ## Deployment lifecycle
 
-1. The normal `Build` workflow builds the exact PR head on Fly/Depot using the
-   existing `FLY_CASHFOLIO_APP_STAGING_APP` and `FLY_API_TOKEN`. PR image tags
-   include the head SHA, run ID and attempt. The build resolves an immutable
-   digest, with bounded retries while the image becomes available, and passes it
-   directly to the preview deployment job. Forks cannot publish or deploy.
-2. After a successful image build, deployment validates the current open,
-   same-repository PR and exact head SHA. Other CI checks run independently.
-3. Using the approved staging connection, it finds or creates that PR's empty
-   database with the existing owner login. No roles, passwords, control
-   database, access grants or Neon branches are created or changed.
-4. It stages the application settings with a `DATABASE_URL` for the preview
-   database, rechecks the PR head and deploys the exact image digest.
-5. The release command verifies the approved destination read-only, applies
-   migrations, then transactionally replaces application data using that image's
-   seed code. Verification repeats inside the replacement transaction. Any
-   failure stops the release before web Machines update.
+1. The normal `Build` workflow builds the exact PR head on Fly/Depot using
+   `FLY_CASHFOLIO_APP_STAGING_APP` and `FLY_API_TOKEN`. Distinct PR image tags
+   include the head SHA, run ID and attempt. Bounded registry retries resolve an
+   immutable digest, passed directly to deployment. Forks cannot publish or
+   deploy. Same-repository contributors are trusted with these credentials and
+   the nonproduction Neon API key.
+2. Preview deployment validates the current open, same-repository PR and exact
+   head SHA before preparation and again before deployment. Unrelated CI checks
+   run independently of deployment.
+3. A shared helper uses `NEON_API_KEY` and `NEON_PROJECT_ID` to discover exactly
+   one default Neon branch and read-write endpoint. It requires one existing
+   owner across application databases, excluding `postgres`, `template0` and
+   `template1`. Missing or ambiguous ownership fails for operator review; no
+   roles are created or selected by guesswork.
+4. It calculates the database name from the full Git branch, looks up only that
+   exact name, creates it if absent, verifies ownership and waits for Neon
+   operations. It obtains a direct connection URI from Neon and generates the
+   app's `DATABASE_URL` and `SEED_TARGET`. The API key stays in GitHub and never
+   enters Fly apps.
+5. Deployment stages those settings and deploys the image. The release command
+   verifies the exact destination read-only, applies migrations, then
+   transactionally replaces application data using the deployed image's seed
+   code. Verification repeats inside the replacement transaction. Failures stop
+   the release before web Machines update.
 
-The existing required check is `Deploy to preview / cashfolio-app2: Deploy`. Its
-summary identifies the PR, exact commit, URL and outcome. Missing configuration
-fails deployment rather than skipping seeding. Staging and production continue
-to deploy the shared release image independently; production is migration-only.
+Staging releases and the daily refresh use this same helper. Their Git branch
+selects the database; staging deployments from tags use the repository's default
+Git branch. Staging and production continue to deploy the shared release image
+independently. Production bypasses provisioning and seeding.
 
-## Databases and cleanup
+The required preview check remains `Deploy to preview / cashfolio-app2: Deploy`.
+Summaries identify the environment, PR where applicable, exact commit, URL and
+outcome. Missing configuration fails visibly instead of silently skipping seed.
 
-Database names retain the existing shape:
-`pr-<PR_NUMBER>-<SANITIZED_PR_TITLE>-cashfolio-app2`. Titles are lowercased;
-non-ASCII-alphanumeric characters become dashes, repeated dashes collapse, and
-empty titles use `preview`. Names over PostgreSQL's 63-byte limit are truncated
-with a six-character SHA-1 suffix.
+## Naming and reuse
 
-The initial title determines the name. Later deployments find the existing
-database by its exact PR prefix and database-name pattern, so title changes do
-not recreate it. Multiple matches or unexpected ownership fail for operator
-review.
+Database names are `cashfolio-app2-<sanitized-full-branch>-<8-character-hash>`.
+The full branch name is lowercased, non-ASCII-alphanumeric characters become
+collapsed dashes, and an empty slug becomes `branch`. The slug is bounded to 39
+characters; the hash is the first eight hexadecimal characters of SHA-256 of the
+original branch name. Names fit PostgreSQL's 63-character limit, and different
+branches that sanitize alike remain distinct.
 
-Fly names and URLs retain the branch-tail convention:
-`cashfolio-app2-pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>.fly.dev`. The last branch-name
+Every deployment reuses the exact named database and runs migrations plus seed;
+it does not recreate or reset it. PR titles have no effect. Renaming a branch
+creates a new database, with old resources handled by cleanup.
+
+Preview URLs retain the existing branch-tail convention:
+`cashfolio-app2-pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>.fly.dev`. The last branch
 segment is sanitized and truncated, replacing `github` with `gh` for Fly.
 
-Closing a PR invokes cleanup from `main`, deleting only its validated preview
-database and Fly app. Cleanup checks the PR naming pattern and expected owner,
-and explicitly refuses the configured staging database. Missing resources are
-harmless; failures require operator attention. There is no branch-expiry
-fallback. Reopened PRs get a fresh database on their next deployment.
+Preview and staging edits are disposable: each deployment replaces application
+data. Configured tester identities and roles are retained; an entirely empty
+database bootstraps only explicitly configured administrators. Classification
+schemes and assignments are replaced transactionally. Shared market-rate caches
+are preserved, while fresh book IDs and cache revisions prevent stale calculated
+results. See [Synthetic staging data](staging-database-refresh.md).
 
-Deployment and cleanup share a noncancelling per-PR concurrency group. Database
-operations also use a per-PR advisory lock. Preview edits are disposable: every
-deployment replaces application data. Tester identities and roles are retained,
-and empty databases bootstrap only explicitly configured administrators.
+## Cleanup and coordination
 
-Staging and previews share compute capacity and availability. A busy preview can
-affect staging. They also share staging Redis for market rates; seeding
-preserves those caches. Fresh book IDs and cache revisions prevent stale
-calculations.
+Staging releases, preview releases and cleanup share the noncancelling
+`cashfolio-app2-nonproduction` concurrency group on the actual deployment or
+cleanup job. Calling workflows do not acquire that lock again. GitHub may
+supersede pending jobs; an active release is not cancelled.
 
-## One-time configuration
+`Cleanup nonproduction databases` runs from `main` on PR closure, daily at 04:30
+UTC, or via manual dispatch on `main`. It inventories open same-repository PRs
+and staging/preview Fly Machines. Each new deployment records these nonsecret
+environment markers on its Machines:
 
-Use staging's existing PostgreSQL 17+ direct connection and database-owner login
-with `CREATEDB`. The
-[normal Neon owner role](https://neon.com/docs/manage/roles) is supported; no
-`CREATEROLE` permission, new role, control database, SQL bootstrap or privilege
-changes are required. The password must be exclusive to the nonproduction
-project: production must reject these credentials even if its role has the same
-name. Never clone nonproduction credentials into production or provide
-production credentials to preview workflows/apps.
+- `CASHFOLIO_DATABASE_PROJECT_ID`
+- `CASHFOLIO_DATABASE_BRANCH_ID`
+- `CASHFOLIO_DATABASE_NAME`
+- `CASHFOLIO_DEPLOY_SHA`
 
-Configure the existing `preview-cashfolio-app` GitHub environment:
+Cleanup reads those references without accessing database passwords. It retains
+databases for the default Git branch, current same-repository PR branches and
+all deployed Machine references, including stopped and suspended Machines. A
+failed deployment therefore cannot discard the old deployment's database.
 
-- Secret `PREVIEW_DATABASE_ADMIN_URL`: staging's existing database connection,
-  using its direct endpoint and `sslmode=verify-full`.
-- Variable `PREVIEW_DATABASE_TARGET`: independently reviewed staging host,
-  project, branch, endpoint, database and owner role, as below.
-- Secrets `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS`:
-  comma-separated Logto IDs. Administrators must be a nonempty subset of
-  testers.
-- Existing app secrets: `LOGTO_APP_SECRET`, `LOGTO_MANAGEMENT_API_APP_SECRET`,
-  `CURRENCYLAYER_API_KEY`, `COINLAYER_API_KEY`, `MARKETSTACK_API_KEY`,
-  `STAGING_REDIS_URL`; the existing `FLY_API_TOKEN` remains available from the
-  repository or environment.
+Closed-PR apps can be removed directly. After a branch rename, an old preview
+app is retired only when the current app has the expected database and exact PR
+commit metadata and its URL responds successfully. The Machine inventory is
+refreshed after app retirement and before database deletion.
 
-```json
-{
-  "hostname": "ep-approved-staging.eu-central-1.aws.neon.tech",
-  "projectId": "approved-project-id",
-  "branchId": "br-approved-staging",
-  "endpointId": "ep-approved-staging",
-  "database": "neondb",
-  "role": "neondb_owner"
-}
-```
+Only databases in the new naming namespace, owned by the discovered owner on the
+resolved default Neon branch, created at least 24 hours ago and without any
+retained reference can be deleted. Incomplete GitHub, Fly or Neon inventories
+stop database deletion. Missing deployment metadata also blocks deletion until
+the app is upgraded or retired. Legacy databases, roles and Neon branches remain
+for operator cleanup. No workflow creates, resets or deletes Neon branches.
 
-The workflow verifies this target through the connected server before creating
-or dropping databases. Each app receives a `SEED_TARGET` for its exact database,
-environment, Fly app and shared role. Verified TLS, server-reported identity,
-strict connection options and database-name checks protect against accidental
-misrouting. Production protection also depends on separate credentials; these
-checks are not a security boundary against trusted contributors changing PR
-code.
+## Configuration
 
-Retain the existing deployment variables: `FLY_ORG`, `FLY_PRIMARY_REGION`,
-`FLY_MIN_MACHINES_RUNNING`, `FLY_MEMORY`, `FLY_CPU_KIND`, `FLY_CPUS`,
-`LOGTO_ENDPOINT`, `LOGTO_APP_ID`, `LOGTO_MANAGEMENT_API_ENDPOINT`,
-`LOGTO_MANAGEMENT_API_RESOURCE`, `LOGTO_MANAGEMENT_API_APP_ID`. Keep the
-repository variable `FLY_CASHFOLIO_APP_STAGING_APP` for the shared image
-repository.
+Configure one secret `NEON_API_KEY` and one variable `NEON_PROJECT_ID`,
+available to `staging-cashfolio-app` and `preview-cashfolio-app` (repository
+settings can serve both). Use an API key scoped to the nonproduction project. A
+project ID does **not** restrict an account-wide key; see
+[Neon API key scopes](https://neon.com/docs/manage/api-keys). No manually
+configured branch, endpoint, owner, database password or destination JSON is
+required. The default Neon branch must already have an application database with
+its normal owner and a read-write endpoint. Multiple application owners must be
+resolved by an operator before deployment.
 
-The environment must allow PR deployments and `main` cleanup. Same-repository
-contributors are trusted with the existing Fly token and the shared
-nonproduction login. No new GitHub environment, manual reviewer gate, Fly
-organization or token is required.
+Keep these existing application settings:
+
+- In both nonproduction GitHub environments, secrets `SEED_USER_EXTERNAL_IDS`
+  and `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated Logto IDs. Every
+  administrator must also be a configured tester. These are application access
+  configuration, not Neon provisioning settings.
+- Existing preview secrets `LOGTO_APP_SECRET`,
+  `LOGTO_MANAGEMENT_API_APP_SECRET`, `CURRENCYLAYER_API_KEY`,
+  `COINLAYER_API_KEY`, `MARKETSTACK_API_KEY`, `STAGING_REDIS_URL`, plus the
+  existing `FLY_API_TOKEN`. Staging keeps its existing application secrets.
+- Existing deployment variables `FLY_ORG`, `FLY_PRIMARY_REGION`,
+  `FLY_MIN_MACHINES_RUNNING`, `FLY_MEMORY`, `FLY_CPU_KIND`, `FLY_CPUS`,
+  `LOGTO_ENDPOINT`, `LOGTO_APP_ID`, `LOGTO_MANAGEMENT_API_ENDPOINT`,
+  `LOGTO_MANAGEMENT_API_RESOURCE`, `LOGTO_MANAGEMENT_API_APP_ID`, staging's
+  `FLY_APP`/URL settings, and repository `FLY_CASHFOLIO_APP_STAGING_APP` for the
+  shared image repository and staging app inventory.
+
+The preview environment must allow PR deployments and cleanup from `main`. No
+new GitHub environment, reviewer gate, Fly organization or Fly token is
+required. Staging and previews share privileges, compute capacity and
+availability; a busy preview can affect staging. The shared owner credentials
+must be exclusive to nonproduction, and production must reject them. Destination
+checks remain mandatory but do not isolate equally trusted nonproduction code.
 
 ## Cutover and operation
 
-Install staging's simplified `SEED_TARGET` and tester/admin settings before the
-first new release; see [Synthetic staging data](staging-database-refresh.md).
-The runner uses the app's existing `DATABASE_URL` for migrations and seeding.
-The daily staging refresh remains at 03:30 Europe/Zurich.
+An operator configures the API key, project ID and tester/admin IDs before the
+first release. Staging switches to a new branch-derived, freshly seeded
+database. Existing synthetic data is disposable and is not migrated. Push an
+open same-repository PR or rerun Build to switch a preview in the same way. The
+daily staging refresh remains at 03:30 Europe/Zurich. Cleanup requires the new
+workflow on `main` and complete deployment markers before deleting unused
+databases. Manual cleanup dispatch inventories all resources; it is not a
+force-delete command.
 
-Push to an open same-repository PR or rerun its Build workflow after
-configuration. Existing previews switch to empty, seeded databases; old test
-data is disposable and is not copied. Cleanup must land on `main` before it
-handles closures under the new database setup.
-
-If earlier setup instructions were applied, retire obsolete
-`PREVIEW_DATABASE_PASSWORD_KEY`, `SEED_DATABASE_URL`, `STAGING_SEED_*` and
-`STAGING_SEED_ENABLED` settings after the new releases succeed. Earlier preview
-roles, the dedicated seed/provisioner roles and control database are
-unnecessary; remove them only after confirming no deployed images or other
-consumers use them. The workflow does not migrate their ownership or delete
-these legacy resources. An existing preview with an unexpected owner requires
-operator cleanup before retry.
-
-Inventory and remove old per-PR Neon branches separately after cutover, then
-remove obsolete `NEON_API_KEY`, `NEON_STAGING_PROJECT_ID`,
+After successful cutover, remove obsolete `PREVIEW_DATABASE_ADMIN_URL`,
+`PREVIEW_DATABASE_TARGET`, `PREVIEW_DATABASE_PASSWORD_KEY`, `SEED_DATABASE_URL`,
+`STAGING_SEED_*`, `STAGING_SEED_ENABLED`, `NEON_STAGING_PROJECT_ID`,
 `NEON_STAGING_BRANCH_ID`, `NEON_DATABASE_NAME` and `NEON_ROLE_NAME` settings.
-Production isolation and live configuration are operator rollout work;
-implementation tests use disposable local PostgreSQL and do not run live
-provisioning or deployment.
+Retain `NEON_API_KEY` for the new helper, scoped appropriately. Generated
+`SEED_TARGET` replaces any manually installed target.
+
+Inventory old title/PR-based databases, dedicated preview/seed/provisioner
+roles, control databases and per-PR Neon branches separately. Remove them only
+after confirming no deployed image or other consumer uses them. The workflow
+does not migrate ownership or delete resources outside its new namespace.
+Infrastructure, credential separation and legacy cleanup remain operator rollout
+work; tests do not provision, seed or deploy live resources.

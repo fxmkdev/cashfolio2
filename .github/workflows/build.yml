@@ -437,7 +437,7 @@ jobs:
       name: preview-cashfolio-app
       url: ${{ steps.prepare.outputs.preview_url }}
     concurrency:
-      group: cashfolio-app2-preview-pr-${{ github.event.pull_request.number }}
+      group: cashfolio-app2-nonproduction
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v5
@@ -466,8 +466,8 @@ jobs:
             ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           FLY_ORG: ${{ vars.FLY_ORG }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
-          PREVIEW_DATABASE_TARGET: ${{ vars.PREVIEW_DATABASE_TARGET }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
           SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
           SEED_ADMIN_EXTERNAL_IDS: ${{ secrets.SEED_ADMIN_EXTERNAL_IDS }}
           LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}
@@ -481,6 +481,10 @@ jobs:
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
           image: ${{ needs.cashfolio-app2-build-push.outputs.preview_image }}
+          database_project_id: ${{ steps.prepare.outputs.database_project_id }}
+          database_branch_id: ${{ steps.prepare.outputs.database_branch_id }}
+          database_name: ${{ steps.prepare.outputs.database }}
+          deploy_sha: ${{ steps.prepare.outputs.deploy_sha }}
           high_availability: "false"
           app_environment: preview
           release_command:

@@ -160,15 +160,19 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     );
   if (environment === "staging" && flyApp.startsWith("cashfolio-app2-pr-"))
     throw new SeedSafetyError("Staging requires its own Fly app.");
-  if (environment === "preview") {
-    const pr = /^pr-([1-9][0-9]*)-[a-z0-9-]+-cashfolio-app2$/.exec(
+  if (
+    !/^cashfolio-app2-[a-z0-9]+(?:-[a-z0-9]+)*-[a-f0-9]{8}$/.test(
       value.database,
-    )?.[1];
-    if (!pr || !flyApp.startsWith(`cashfolio-app2-pr-${pr}-`))
-      throw new SeedSafetyError(
-        "The preview database and app must identify the same PR.",
-      );
-  }
+    )
+  )
+    throw new SeedSafetyError(
+      "The seed requires an application-managed database.",
+    );
+  if (
+    environment === "preview" &&
+    !/^cashfolio-app2-pr-[1-9][0-9]*-[a-z0-9-]+$/.test(flyApp)
+  )
+    throw new SeedSafetyError("Preview requires a preview Fly app.");
   return value;
 }
 

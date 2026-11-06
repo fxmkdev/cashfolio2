@@ -267,48 +267,37 @@ accumulated G/L.
 The scenario becomes available through the normal enabled staging refresh or
 deployment; adding it to the seed source does not reset staging immediately.
 
-## Configure the approved target
+## Configure provisioning and tester access
 
-Before deploying the shared release runner, keep the staging app's existing
-`DATABASE_URL` and install these Fly secrets using a protected file (mode
-`0600`) and `flyctl secrets import --stage` with stdin:
+Staging and previews use the same Neon API helper. Configure `NEON_API_KEY` and
+`NEON_PROJECT_ID`, plus `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS`
+in their existing GitHub environments. See
+[Nonproduction configuration and cutover](preview-environments.md#configuration).
+The helper discovers the default Neon branch and existing database owner,
+creates or reuses the current Git branch's exact database, then stages
+`DATABASE_URL`, `SEED_TARGET` and tester/admin IDs before deployment. Staging
+releases from tags use the repository's default Git branch.
 
-- `SEED_TARGET`: independently reviewed nonproduction destination metadata
-  below, including staging's actual Fly app, database and existing
-  database-owner role.
-- `SEED_USER_EXTERNAL_IDS`: nonempty comma-separated tester Logto external IDs.
-- `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated administrator IDs, all in
-  the tester list. These bootstrap only entirely empty application databases.
-  Existing data requires a retained active administrator; another tester is
-  never promoted during replacement.
+No manual target JSON, seed connection, permission-grant phase, database role or
+SQL bootstrap is required. `DATABASE_URL` serves application access, migrations
+and seeding. Staging switches to a new branch-derived database on cutover; old
+synthetic data is not migrated.
 
-```json
-{
-  "environment": "staging",
-  "flyApp": "your-staging-fly-app",
-  "hostname": "ep-approved-staging.eu-central-1.aws.neon.tech",
-  "projectId": "approved-project-id",
-  "branchId": "br-approved-staging",
-  "endpointId": "ep-approved-staging",
-  "database": "neondb",
-  "role": "neondb_owner"
-}
-```
-
-The existing `DATABASE_URL` is used for application access, migrations and
-seeding. There is no separate seed connection or permission-grant phase. No
-dedicated seed role, new database privileges or SQL bootstrap is required.
-Staging and previews intentionally share the existing owner login on the
-nonproduction Neon project.
+Tester and administrator IDs are nonempty comma-separated Logto external IDs.
+Administrators must be included among testers. Explicit administrator settings
+bootstrap only entirely empty application databases. Existing data requires a
+retained active administrator; another tester is never promoted during
+replacement.
 
 ## Destination protection
 
 The approved environment and Fly app must match `APP_ENVIRONMENT` and
 `FLY_APP_NAME`. The URL and server-reported project, branch, endpoint, database
-and role must exactly match the reviewed target. This read-only verification
-runs before migrations and again inside the replacement transaction. Missing or
-mismatched configuration fails deployment. Production remains migration-only,
-and the seed CLI rejects production environments before any connection or write.
+and role must exactly match the API-generated target. This read-only
+verification runs before migrations and again inside the replacement
+transaction. Missing or mismatched configuration fails deployment. Production
+remains migration-only, and the seed CLI rejects production environments before
+any connection or write.
 
 A direct application URL can use `sslmode=verify-full` or `sslmode=require`; a
 pooled URL must identify the same approved endpoint. The `pg` client verifies
@@ -328,12 +317,12 @@ Server identity settings are defined by the
 and its
 [compute configuration](https://github.com/neondatabase/neon/blob/main/compute_tools/src/config.rs).
 
-Update `SEED_TARGET` to the format above before deploying the new runner; the
-old `migrationRole` field is no longer accepted. After staging and preview
-releases succeed, retire obsolete `SEED_DATABASE_URL`, `STAGING_SEED_*` and
-`STAGING_SEED_ENABLED` settings. Remove legacy seed/provisioner roles only after
-confirming no deployed images or other consumers use them. No legacy role or
-privilege changes happen automatically.
+The target is generated on every deployment from Neon metadata, including the
+exact environment, Fly app, host, project, branch, endpoint, database and role.
+The API key never enters the app. Retire old manual target/provisioning settings
+and legacy roles only after successful cutover and confirming they are unused;
+see the [cutover instructions](preview-environments.md#cutover-and-operation).
+No legacy role or privilege changes happen automatically.
 
 Configured testers preserve their IDs, locales and roles. Newly added testers
 receive no administrator role unless explicitly configured for bootstrap in a

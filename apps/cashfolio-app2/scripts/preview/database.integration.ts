@@ -7,7 +7,8 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { PrismaClient } from "../../src/.prisma-client/client";
 import { generateStagingDataset } from "../../src/staging-seed/dataset";
 import { replaceStagingData } from "../../src/staging-seed/writer";
-import { provisionDatabase, cleanupDatabase, identifier } from "./database.ts";
+import { databaseName } from "../nonproduction/names.ts";
+const identifier = (value: string) => `"${value}"`;
 
 // These fixtures create and drop only disposable databases on local PostgreSQL.
 const maintenance = new URL(
@@ -27,23 +28,17 @@ const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
 const sharedRole = `preview_test_owner_${suffix}`;
 const password = randomUUID().replaceAll("-", "");
 const stagingDatabase = `preview_test_staging_${suffix}`;
-const host = { database: stagingDatabase, role: sharedRole };
 const numbers = [
   randomInt(100_000_000, 500_000_000),
   randomInt(500_000_001, 900_000_000),
 ];
-const input = {
-  number: numbers[0],
-  headRef: "feature/test",
-  title: `Integration ${suffix}`,
-  host,
-};
 const connections: Client[] = [];
 let roleCreated = false;
 let stagingCreated = false;
 let staging: Client;
-let first: Awaited<ReturnType<typeof provisionDatabase>>;
-let second: typeof first;
+const first = { database: databaseName(`test/${suffix}/${numbers[0]}`) };
+const second = { database: databaseName(`test/${suffix}/${numbers[1]}`) };
+const created: string[] = [];
 let originalStaging: Awaited<ReturnType<typeof stagingSnapshot>>;
 
 function databaseUrl(database: string) {
@@ -110,8 +105,10 @@ beforeAll(async () => {
     "INSERT INTO staging_fixture VALUES (1, 'retained staging data')",
   );
   originalStaging = await stagingSnapshot();
-  first = await provisionDatabase(staging, input);
-  second = await provisionDatabase(staging, { ...input, number: numbers[1] });
+  for (const db of [first.database, second.database]) {
+    await staging.query(`CREATE DATABASE ${identifier(db)} TEMPLATE template0`);
+    created.push(db);
+  }
 });
 
 afterAll(async () => {
@@ -127,8 +124,10 @@ afterAll(async () => {
     await attempt(() => client.end());
   // Local root can recover fixtures even if setup or an assertion failed midway.
   if (roleCreated) {
-    for (const number of numbers)
-      await attempt(() => cleanupDatabase(root, number, host));
+    for (const db of created)
+      await attempt(() =>
+        root.query(`DROP DATABASE IF EXISTS ${identifier(db)} WITH (FORCE)`),
+      );
   }
   if (stagingCreated)
     await attempt(() =>
@@ -141,12 +140,7 @@ afterAll(async () => {
     throw new AggregateError(errors, "Preview fixture cleanup failed.");
 });
 
-it("creates empty databases with the existing owner, preserves staging grants and reuses title changes", async () => {
-  const again = await provisionDatabase(staging, {
-    ...input,
-    title: "Changed title",
-  });
-  expect(again).toEqual(first);
+it("creates empty databases with the existing owner, preserves staging data and grants", async () => {
   const preview = await connect(first.database);
   expect(
     (
@@ -223,22 +217,5 @@ it("allows the same login to access other trusted nonproduction databases", asyn
   } finally {
     await other.end();
   }
-  await verifyStagingUnchanged();
-});
-
-it("guards staging, cleans up idempotently and leaves the other preview intact", async () => {
-  await expect(
-    cleanupDatabase(staging, numbers[0], { ...host, database: first.database }),
-  ).rejects.toThrow("Unexpected preview");
-  await cleanupDatabase(staging, numbers[1], host);
-  await cleanupDatabase(staging, numbers[1], host);
-  expect(
-    (
-      await root.query(
-        "SELECT datname FROM pg_database WHERE datname=ANY($1)",
-        [[first.database, second.database]],
-      )
-    ).rows,
-  ).toEqual([{ datname: first.database }]);
   await verifyStagingUnchanged();
 });

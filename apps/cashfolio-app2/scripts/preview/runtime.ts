@@ -1,12 +1,4 @@
 import { spawn } from "node:child_process";
-import { Client } from "pg";
-import {
-  parseNeonTarget,
-  parseVerifiedConnection,
-  requireValue,
-  type NeonTarget,
-} from "../../src/staging-seed/target.ts";
-
 export async function command(args: string[], input?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn("flyctl", args, {
@@ -31,61 +23,12 @@ export async function command(args: string[], input?: string): Promise<string> {
   });
 }
 
-export async function verifiedProvisioner(): Promise<{
-  client: Client;
-  target: NeonTarget;
-  password: string;
-}> {
-  const target = parseNeonTarget(
-    requireValue(process.env, "PREVIEW_DATABASE_TARGET"),
-  );
-  if (process.env.PGOPTIONS?.trim()) throw new Error("PGOPTIONS is forbidden.");
-  const connection = parseVerifiedConnection(
-    requireValue(process.env, "PREVIEW_DATABASE_ADMIN_URL"),
-    target,
-  );
-  const client = new Client(connection);
-  try {
-    await client.connect();
-    await verifyProvisionerServer(client, target);
-    return { client, target, password: connection.password };
-  } catch {
-    await client.end();
-    throw new Error("Preview provisioning target verification failed.");
-  }
-}
-
-export async function verifyProvisionerServer(
-  client: Pick<Client, "query">,
-  target: NeonTarget,
-): Promise<void> {
-  const { rows } =
-    await client.query(`SELECT current_setting('neon.project_id', true) AS "projectId",
-      current_setting('neon.branch_id', true) AS "branchId", current_setting('neon.endpoint_id', true) AS "endpointId",
-      current_database() AS database, current_user AS role`);
-  if (
-    rows.length !== 1 ||
-    (["projectId", "branchId", "endpointId", "database", "role"] as const).some(
-      (key) => !rows[0][key] || rows[0][key] !== target[key],
-    )
-  )
-    throw new Error("Provisioning reached an unapproved server.");
-  const permissions = await client.query(
-    "SELECT rolcreatedb FROM pg_roles WHERE rolname = current_user",
-  );
-  if (permissions.rows.length !== 1 || permissions.rows[0].rolcreatedb !== true)
-    throw new Error(
-      "The nonproduction login must be able to create databases.",
+export function maskSecrets(values: string[]) {
+  for (const value of values) {
+    console.log(
+      `::add-mask::${value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A")}`,
     );
-}
-
-export function databaseUrl(target: NeonTarget, password: string): string {
-  const url = new URL(
-    `postgresql://${target.hostname}/${target.database}?sslmode=verify-full&channel_binding=require`,
-  );
-  url.username = target.role;
-  url.password = password;
-  return url.href;
+  }
 }
 
 /** flyctl 0.4.115 strips quote delimiters but does not JSON-unescape values. */

@@ -12,10 +12,6 @@ env:
   NODE_VERSION: 26
   FLYCTL_VERSION: 0.4.115
 
-concurrency:
-  group: refresh-staging-db
-  cancel-in-progress: false
-
 permissions:
   contents: read
 

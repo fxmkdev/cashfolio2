@@ -1,40 +1,40 @@
-import { readFile } from "node:fs/promises";
-import { cleanupDatabase } from "./database.ts";
-import { githubApi, validatePr, type PullRequest } from "./github.ts";
-import { command, verifiedProvisioner } from "./runtime.ts";
-import { previewNames } from "./names.ts";
+import { appendFile } from "node:fs/promises";
+import { Neon } from "../nonproduction/neon.ts";
+import { openPullRequests, sweep } from "../nonproduction/cleanup.ts";
+import { flyInventory, healthyPreview } from "../nonproduction/fly.ts";
+import { githubApi } from "./github.ts";
+import { command } from "./runtime.ts";
+import { requireValue } from "../../src/staging-seed/target.ts";
 
 try {
-  const event = JSON.parse(
-    await readFile(process.env.GITHUB_EVENT_PATH!, "utf8"),
-  );
-  const api = githubApi(
-    process.env.GITHUB_REPOSITORY!,
-    process.env.GITHUB_TOKEN!,
-  );
-  const number: unknown = event.pull_request?.number;
-  if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1)
-    throw new Error("Invalid PR number.");
-  const pr = await api<PullRequest>(`/pulls/${number}`);
-  validatePr(pr, process.env.GITHUB_REPOSITORY!, undefined, true);
-  const names = previewNames(number, pr.head.ref, pr.title);
-  const { client, target } = await verifiedProvisioner();
-  try {
-    const apps = JSON.parse(await command(["apps", "list", "--json"])) as {
-      Name: string;
-      name?: string;
-    }[];
-    for (const name of [names.flyApp, names.flyAppLegacy])
-      if (apps.some((app) => (app.Name ?? app.name) === name))
-        await command(["apps", "destroy", name, "--yes"]);
-    await cleanupDatabase(client, number, target);
-  } finally {
-    await client.end();
-  }
-  console.log(`Preview resources removed for PR #${number}.`);
+  const repository = requireValue(process.env, "GITHUB_REPOSITORY");
+  const api = githubApi(repository, requireValue(process.env, "GITHUB_TOKEN"));
+  const repo = await api<{ default_branch: string }>("");
+  if (typeof repo.default_branch !== "string" || !repo.default_branch)
+    throw new Error("Missing default Git branch.");
+  const prs = await openPullRequests(api, repository);
+  const neon = new Neon(process.env);
+  const stagingApp = requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP");
+  requireValue(process.env, "FLY_API_TOKEN");
+  const result = await sweep({
+    prs,
+    defaultBranch: repo.default_branch,
+    now: Date.now(),
+    neon,
+    inventory: () => flyInventory(stagingApp),
+    retire: (name) => command(["apps", "destroy", name, "--yes"]),
+    healthy: healthyPreview,
+  });
+  const summary = `Retired ${result.apps} preview apps and ${result.databases} unused databases.`;
+  console.log(summary);
+  if (process.env.GITHUB_STEP_SUMMARY)
+    await appendFile(
+      process.env.GITHUB_STEP_SUMMARY,
+      `### Nonproduction cleanup\n${summary}\n`,
+    );
 } catch {
   console.error(
-    "Preview cleanup failed; inspect the preview app, database with operator access.",
+    "Nonproduction cleanup failed; no database deletion is attempted with incomplete inventories. Raw provider diagnostics are suppressed.",
   );
   process.exitCode = 1;
 }
