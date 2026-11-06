@@ -15,6 +15,15 @@ export function agGridPinnedBottomRow(page: Page): Locator {
   return page.locator(".ag-grid-pinned-bottom-rows .ag-row-pinned").first();
 }
 
+export async function scrollGridToRight(root: Page | Locator) {
+  await root
+    .locator(".ag-grid-viewport")
+    .first()
+    .evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
+}
+
 export async function expandArchivedGroups(page: Page) {
   const expanders = page.locator(
     '[row-id^="__archived__:"] .ag-group-contracted:visible',

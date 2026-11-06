@@ -4,7 +4,11 @@ import {
   seedExplicitGainLossDrilldownScenario,
 } from "../support/db";
 import { prisma } from "../support/db-client";
-import { agGridRowByText, clickPinnedRowAction } from "../support/grid";
+import {
+  agGridRowByText,
+  clickPinnedRowAction,
+  scrollGridToRight,
+} from "../support/grid";
 import { selectClassificationOption } from "../support/classifications";
 test("creates, assigns, reports, reparents and deletes an asset class", async ({
   page,
@@ -107,6 +111,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   );
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).not.toBeVisible();
+  await scrollGridToRight(page);
   await expect(row.locator('[col-id="assetClass"]')).toHaveText(
     "Equities / Pension Equities",
   );

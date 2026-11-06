@@ -15,6 +15,7 @@ import {
   agGridCellByColId,
   agGridPinnedBottomRow,
   agGridRowByText,
+  scrollGridToRight,
   setGridAccountTreeCellValue,
 } from "../support/grid";
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
@@ -211,6 +212,7 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   await expect(investments).toBeVisible();
   const expander = investments.locator(".ag-group-contracted");
   if (await expander.isVisible()) await expander.click();
+  await scrollGridToRight(page);
   await expect(
     agGridCellByColId(
       agGridRowByText(page, "Managed Portfolio CHF"),
@@ -393,6 +395,7 @@ test("configured testers can switch to empty and valuation edge-case books", asy
     .getByRole("menuitem", { name: edgeCases.name, exact: true })
     .click();
   await page.goto(`/${edgeCases.id}/accounts?tab=ASSET`);
+  await scrollGridToRight(page);
   await expect(
     agGridCellByColId(
       agGridRowByText(page, "Unlisted investment (valuation unavailable)"),
@@ -498,6 +501,7 @@ test("archived synthetic accounts remain available for archive workflows", async
     .click();
   await expandArchivedGroups(page);
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
+  await scrollGridToRight(page);
   await expect(
     agGridCellByColId(
       agGridRowByText(page, "Closed bank account CHF"),

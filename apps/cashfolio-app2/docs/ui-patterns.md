@@ -805,14 +805,14 @@ sign; debt amounts are positive magnitudes in those reports.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
-  `Balance (<referenceCurrency>)`, `Asset Class`, `Tracking Method`, G/L, and
+  `Balance (<referenceCurrency>)`, G/L, `Asset Class`, `Tracking Method`, and
   row actions in that order.
 - `Ccy./Symbol` starts at 180px and can be resized and filtered. It shows
   foreign currency codes, cryptocurrency tickers, or security symbols; security
   trade currencies are omitted. Group, virtual Archived, and total rows stay
   blank.
-- `Asset Class` follows the Balance columns, starts at 220px, and can be
-  resized. Its text filter and tooltip use the full display label. Unset
+- `Asset Class` follows the G/L Since Start column group, starts at 220px, and
+  can be resized. Its text filter and tooltip use the full display label. Unset
   accounts show muted `Unclassified`. Real groups and virtual Archived groups
   summarize all descendant accounts, including archived accounts, regardless of
   collapse or grid filters: one distinct value shows its label; multiple values

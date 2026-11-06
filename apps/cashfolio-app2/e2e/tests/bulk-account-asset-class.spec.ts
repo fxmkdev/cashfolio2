@@ -14,6 +14,7 @@ import { seedDatabase } from "../support/db";
 import {
   clickGridRowSelectionCheckbox,
   expandArchivedGroups,
+  scrollGridToRight,
 } from "../support/grid";
 import { expect, test, type Page } from "../support/fixtures";
 
@@ -103,6 +104,7 @@ test("assigns selected active and archived accounts, replaces existing classes, 
       ).map((account) => account.assetClassId),
     )
     .toEqual([defaultAssetClassIds.EQUITIES, defaultAssetClassIds.EQUITIES]);
+  await scrollGridToRight(page);
   for (const id of ids) {
     const row = page.locator(`.ag-row[row-id="${id}"]`).first();
     await expect(row.locator('[col-id="assetClass"]')).toHaveText("Equities");

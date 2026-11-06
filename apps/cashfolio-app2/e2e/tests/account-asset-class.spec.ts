@@ -11,6 +11,7 @@ import {
   agGridRowByText,
   clickRowAction,
   expandArchivedGroups,
+  scrollGridToRight,
 } from "../support/grid";
 import { openDialogFromButton } from "../support/ui";
 import { selectClassificationOption } from "../support/classifications";
@@ -76,13 +77,14 @@ for (const type of ["BALANCE"] as const) {
         await expandArchivedGroups(page);
       }
       const row = agGridRowByText(page, account.name);
+      await scrollGridToRight(page);
       await expect(agGridCellByColId(row, "assetClass")).toHaveText(label);
       await expect(
         page.getByRole("columnheader", { name: "Name", exact: true }),
       ).toHaveAttribute("aria-colindex", "2");
       await expect(
         page.getByRole("columnheader", { name: "Asset Class", exact: true }),
-      ).toHaveAttribute("aria-colindex", "6");
+      ).toHaveAttribute("aria-colindex", "9");
       expect(
         (
           await page
@@ -143,6 +145,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
   const row = agGridRowByText(page, name);
   await expect(row).toBeVisible();
+  await scrollGridToRight(page);
   await expect(agGridCellByColId(row, "assetClass")).toHaveText("Equities");
   const classifiedTypography = await agGridCellByColId(
     row,
@@ -184,12 +187,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await page.getByRole("option", { name: "Other Assets", exact: true }).click();
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   await expect(edit).not.toBeVisible();
-  await page
-    .locator(".ag-grid-viewport")
-    .first()
-    .evaluate((element) => {
-      element.scrollLeft = 0;
-    });
+  await scrollGridToRight(page);
   await expect(agGridCellByColId(row, "assetClass")).toHaveText("Other Assets");
 
   await page.goto(`/${seeded.accountBookId}/${account.id}`);
@@ -241,6 +239,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   ).toEqual(bookings);
   await edit.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET`);
+  await scrollGridToRight(page);
   const unclassifiedCell = agGridCellByColId(
     agGridRowByText(page, name),
     "assetClass",
