@@ -445,3 +445,23 @@ current path after reparenting; only paths with no surviving ancestor reset to
 the root. Invalid History scopes fall back to Total. Asset/liability allocation
 retains the Account Structure / Asset Class grouping lens; the latter uses the
 current class hierarchy and sibling order.
+
+### Shared Hierarchy Organizer Navigation
+
+Accounts, Settings Categories, and Settings Asset Classes accept optional
+`organize=true`. The parameter is separate from normal loader dependencies and
+grid identity. All three use the shared organizer navigation/session hooks.
+Entering pushes one history entry before metadata loading; Back cancels loading
+or exits, Forward/reload opens a fresh session, and retries/mutations add no
+entries. Done returns to an adjacent verified same-book, same-page normal origin
+(including the same category tab and normal archived visibility), or replaces a
+direct organizer URL with the normal page. Pending mutations and recovery queue
+navigation until settled; settled sessions have no confirmation.
+
+Categories scopes snapshots and moves to the selected Income or Expenses tab.
+Category tab links omit `organize`, so switching tabs exits rather than
+transferring the session. Category legacy-mode redirects preserve valid Organize
+requests on that page. Accounts remains restricted to Account Structure
+grouping. Asset Classes has no archived visibility state. Each exit clears
+organizer selection, dialogs, expansion, and visibility; normal grids retain
+their state.

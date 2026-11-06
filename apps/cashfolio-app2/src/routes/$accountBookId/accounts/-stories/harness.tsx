@@ -1,6 +1,6 @@
 import { Box, Text } from "@mantine/core";
 import { useState } from "react";
-import { createOrganizerStoryApi } from "../-organize/story-fixtures";
+import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { SettingsNavigation } from "../../settings/-settings-navigation";
 import { AccountsPageView } from "../-page-view";
 import { StoryControls } from "./controls";

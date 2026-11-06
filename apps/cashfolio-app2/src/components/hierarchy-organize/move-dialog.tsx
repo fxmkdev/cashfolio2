@@ -22,14 +22,14 @@ import {
   descendants,
   compareOrganizeNodes,
   normalizeOrganizeSelection,
-} from "@/shared/account-organize/tree";
-import { planAccountMove } from "@/shared/account-organize/move";
+} from "@/shared/hierarchy-organize/tree";
+import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
 import type {
   OrganizeMove,
   OrganizeNode,
   OrganizeNodeRef,
   OrganizePlacement,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 
 type MoveDialogProps = {
   nodes: OrganizeNode[];
@@ -91,7 +91,7 @@ function MoveDialogContent({
     (node) =>
       included.has(node.id) &&
       !roots.some((root) => root.id === node.id) &&
-      !node.isActive,
+      node.isActive === false,
   ).length;
   const makeMove = (
     parentId: string | null,
@@ -112,12 +112,12 @@ function MoveDialogContent({
       (node) =>
         node.parentId === parent &&
         !included.has(node.id) &&
-        (showArchived || node.isActive),
+        (showArchived || node.isActive !== false),
     )
     .sort(compareOrganizeNodes)
     .filter((node) => {
       try {
-        planAccountMove(nodes, makeMove(parent, "before", node.id));
+        planOrganizeMove(nodes, makeMove(parent, "before", node.id));
         return true;
       } catch {
         return false;
@@ -125,7 +125,7 @@ function MoveDialogContent({
     })
     .map((node) => ({
       value: node.id,
-      label: `${node.name}${node.isActive ? "" : " (Archived)"}`,
+      label: `${node.name}${node.isActive === false ? " (Archived)" : ""}`,
     }));
   const preview = useMemo(() => {
     try {
@@ -133,7 +133,7 @@ function MoveDialogContent({
         throw new Error(
           "A selected item is no longer available. Close this dialog and select the updated items.",
         );
-      const next = planAccountMove(nodes, {
+      const next = planOrganizeMove(nodes, {
         items,
         parentId: parent,
         placement,

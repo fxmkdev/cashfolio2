@@ -1,7 +1,7 @@
 import { useCallback, useEffect, type RefObject } from "react";
 import type { GridApi } from "ag-grid-enterprise";
-import type { OrganizeNode } from "@/shared/account-organize/types";
-import type { OrganizeDisplayRow } from "@/shared/account-organize/tree";
+import type { OrganizeNode } from "@/shared/hierarchy-organize/types";
+import type { OrganizeDisplayRow } from "@/shared/hierarchy-organize/tree";
 import type { Organizer } from "./use-organizer";
 
 export function useOrganizeReveal({

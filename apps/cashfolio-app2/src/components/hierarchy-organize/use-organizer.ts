@@ -4,21 +4,25 @@ import {
   organizeLifecycleAvailability,
 } from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { planAccountMove } from "@/shared/account-organize/move";
+import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
 import type {
   OrganizeMove,
   OrganizeMoveResult,
   OrganizeSnapshot,
   OrganizeNodeRef,
   OrganizeLifecycleAction,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 
 export type OrganizerApi = {
+  kind?: "accounts" | "categories" | "assetClasses";
   load: () => Promise<OrganizeSnapshot>;
   move: (move: OrganizeMove, version: string) => Promise<OrganizeMoveResult>;
-  archive: (target: OrganizeNodeRef) => Promise<unknown>;
-  unarchive: (target: OrganizeNodeRef) => Promise<unknown>;
-  delete: (target: OrganizeNodeRef) => Promise<unknown>;
+  archive?: (target: OrganizeNodeRef) => Promise<unknown>;
+  unarchive?: (target: OrganizeNodeRef) => Promise<unknown>;
+  delete: (
+    target: OrganizeNodeRef,
+    replacementId?: string | null,
+  ) => Promise<unknown>;
 };
 
 export function useOrganizer(
@@ -43,6 +47,7 @@ export function useOrganizer(
         lifecycle?: {
           action: OrganizeLifecycleAction;
           target: OrganizeNodeRef;
+          replacementId?: string | null;
         };
         version: string;
       }
@@ -78,7 +83,7 @@ export function useOrganizer(
       return mounted.current && current === generation.current;
     } catch {
       if (mounted.current && current === generation.current)
-        setLoadError("Could not load the account hierarchy.");
+        setLoadError("Could not load the hierarchy.");
       return false;
     } finally {
       if (current === generation.current) {
@@ -119,7 +124,7 @@ export function useOrganizer(
       if (!api || !before || pending || needsRefresh) return false;
       return runSubmit(async () => {
         attempted.current = { move, version: before.version };
-        const next = planAccountMove(before.nodes, move);
+        const next = planOrganizeMove(before.nodes, move);
         if (next === before.nodes) {
           setMessage("The items are already in that position.");
           return;
@@ -152,6 +157,7 @@ export function useOrganizer(
     action: OrganizeLifecycleAction,
     target: OrganizeNodeRef,
     onCommitted?: () => void,
+    replacementId?: string | null,
   ) => {
     const before = confirmed.current;
     const node = before?.nodes.find(
@@ -166,10 +172,13 @@ export function useOrganizer(
       );
     }
     attempted.current = {
-      lifecycle: { action, target },
+      lifecycle: { action, target, replacementId },
       version: before.version,
     };
-    await api[action](target);
+    const operation = api[action];
+    if (!operation)
+      throw new Error("This action is unavailable for this hierarchy.");
+    await operation(target, replacementId);
     // A confirmed commit is never retried, even if its subsequent refresh fails.
     attempted.current = undefined;
     if (!mounted.current) return;
@@ -200,11 +209,14 @@ export function useOrganizer(
     if (!submitState.submissionError?.isBusy || !isRetryValid()) return;
     if (attempted.current?.move) void saveMove(attempted.current.move);
     else if (attempted.current?.lifecycle) {
-      const { action, target } = attempted.current.lifecycle;
-      void runSubmit(() => performLifecycle(action, target));
+      const { action, target, replacementId } = attempted.current.lifecycle;
+      void runSubmit(() =>
+        performLifecycle(action, target, undefined, replacementId),
+      );
     }
   };
   return {
+    kind: api?.kind ?? "accounts",
     load,
     reset,
     snapshot,

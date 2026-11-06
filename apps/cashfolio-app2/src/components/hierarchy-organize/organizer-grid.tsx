@@ -7,12 +7,13 @@ import type {
   GridReadyEvent,
   ICellRendererParams,
   SelectionChangedEvent,
+  ValueGetterParams,
 } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
-import { OrganizeAccountActionsCell } from "@/components/account-tree/organize-account-actions-cell";
-import type { OrganizeDisplayRow } from "@/shared/account-organize/tree";
-import type { OrganizeNodeRef } from "@/shared/account-organize/types";
+import { OrganizerRowActions } from "@/components/hierarchy-organize/organizer-row-actions";
+import type { OrganizeDisplayRow } from "@/shared/hierarchy-organize/tree";
+import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
 import type { useOrganizeDrag } from "./use-organize-drag";
 import type { LifecycleDialog } from "./lifecycle-dialogs";
@@ -70,22 +71,32 @@ export function OrganizerGrid({
   callbacks.current = { onMoveItems, onLifecycle };
   const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
     () => [
-      {
-        headerName: "Type",
-        width: 135,
-        valueGetter: ({ data }) =>
-          data?.nodeType === "accountGroup" ? "Group" : "Account",
-      },
-      {
-        headerName: "Status",
-        width: 125,
-        cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data && !data.isActive ? (
-            <Badge color="gray" variant="light">
-              Archived
-            </Badge>
-          ) : null,
-      },
+      ...(organizer.kind === "assetClasses"
+        ? []
+        : ([
+            {
+              headerName: "Type",
+              width: 135,
+              valueGetter: ({ data }: ValueGetterParams<OrganizeDisplayRow>) =>
+                data?.nodeType === "accountGroup"
+                  ? "Group"
+                  : organizer.kind === "categories"
+                    ? "Category"
+                    : "Account",
+            },
+            {
+              headerName: "Status",
+              width: 125,
+              cellRenderer: ({
+                data,
+              }: ICellRendererParams<OrganizeDisplayRow>) =>
+                data && data.isActive === false ? (
+                  <Badge color="gray" variant="light">
+                    Archived
+                  </Badge>
+                ) : null,
+            },
+          ] satisfies ColDef<OrganizeDisplayRow>[])),
       {
         ...rowActionsColumnProps,
         colId: "actions",
@@ -95,7 +106,8 @@ export function OrganizerGrid({
         pinned: "right",
         cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
           data ? (
-            <OrganizeAccountActionsCell
+            <OrganizerRowActions
+              isCategory={organizer.kind === "categories"}
               node={{ ...data, parentId: data.parentId ?? null }}
               availability={organizer.snapshot?.actionAvailability[data.id]}
               blocked={blocked || drag.dragging}
@@ -121,7 +133,12 @@ export function OrganizerGrid({
           ) : null,
       },
     ],
-    [drag.dragging, blocked, organizer.snapshot?.actionAvailability],
+    [
+      drag.dragging,
+      blocked,
+      organizer.snapshot?.actionAvailability,
+      organizer.kind,
+    ],
   );
   const rowClassRules = useMemo<
     GridOptions<OrganizeDisplayRow>["rowClassRules"]
@@ -129,7 +146,7 @@ export function OrganizerGrid({
     () => ({
       [styles.recent]: ({ data }) =>
         !!data && organizer.revealIds.includes(data.id),
-      [styles.archived]: ({ data }) => !!data && !data.isActive,
+      [styles.archived]: ({ data }) => !!data && data.isActive === false,
     }),
     [organizer.revealIds],
   );

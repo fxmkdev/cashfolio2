@@ -79,7 +79,7 @@ export function AccountsPageHeader({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
-      {!isCategories && grouping === "accountStructure" && onOrganize && (
+      {grouping === "accountStructure" && onOrganize && (
         <Button
           variant="default"
           leftSection={<IconArrowsMove size={16} />}
@@ -136,15 +136,21 @@ export function AccountsPageHeader({
           <Group justify="space-between" align="center" gap="md" mb="md">
             <Group gap="md">
               {managementTabs}
-              <Checkbox
-                label="Show Archived"
-                checked={showArchived}
-                onChange={(event) =>
-                  onShowArchivedChange?.(event.currentTarget.checked)
-                }
-              />
+              {organizing ? (
+                <Badge variant="light" size="lg">
+                  Organizing
+                </Badge>
+              ) : (
+                <Checkbox
+                  label="Show Archived"
+                  checked={showArchived}
+                  onChange={(event) =>
+                    onShowArchivedChange?.(event.currentTarget.checked)
+                  }
+                />
+              )}
             </Group>
-            {managementActions}
+            {organizing ? organizerActions : managementActions}
           </Group>
         </>
       ) : (

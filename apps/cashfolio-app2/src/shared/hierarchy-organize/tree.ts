@@ -1,4 +1,4 @@
-import type { OrganizeNode, OrganizeNodeRef } from "./types";
+import type { HierarchyNode as OrganizeNode, OrganizeNodeRef } from "./types";
 
 // A shared fallback collation keeps browser previews and server persistence in
 // the same order when manual sort orders are null or tied.
@@ -39,12 +39,12 @@ export function descendants(nodes: OrganizeNode[], id: string) {
   return result;
 }
 
-export function organizeDisplayRows(
-  nodes: OrganizeNode[],
+export function organizeDisplayRows<N extends OrganizeNode>(
+  nodes: N[],
   showArchived = true,
 ) {
   return nodes
-    .filter((node) => showArchived || node.isActive)
+    .filter((node) => showArchived || node.isActive !== false)
     .map((node) => ({
       ...node,
       parentId: node.parentId ?? undefined,
@@ -52,21 +52,21 @@ export function organizeDisplayRows(
     .sort(compareOrganizeNodes);
 }
 
-export type OrganizeDisplayRow = ReturnType<typeof organizeDisplayRows>[number];
+export type OrganizeDisplayRow = ReturnType<
+  typeof organizeDisplayRows<import("./types").OrganizeNode>
+>[number];
 
-export function normalizeOrganizeSelection(
-  nodes: OrganizeNode[],
+export function normalizeOrganizeSelection<N extends OrganizeNode>(
+  nodes: N[],
   items: OrganizeNodeRef[],
-): OrganizeNode[] {
+): N[] {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const selected = new Set<string>();
   for (const item of items) {
     if (selected.has(item.id)) throw new Error("Select each item only once.");
     const node = byId.get(item.id);
     if (!node || node.nodeType !== item.nodeType)
-      throw new Error(
-        "An item is no longer available. Refresh the account list.",
-      );
+      throw new Error("An item is no longer available. Refresh the hierarchy.");
     selected.add(item.id);
   }
   const roots = new Set(
@@ -84,13 +84,13 @@ export function normalizeOrganizeSelection(
     }),
   );
   const rows = organizeDisplayRows(nodes);
-  const children = new Map<string | undefined, OrganizeDisplayRow[]>();
+  const children = new Map<string | undefined, typeof rows>();
   for (const row of rows) {
     const list = children.get(row.parentId) ?? [];
     list.push(row);
     children.set(row.parentId, list);
   }
-  const result: OrganizeNode[] = [];
+  const result: N[] = [];
   const visit = (parentId: string | undefined) => {
     for (const row of children.get(parentId) ?? []) {
       if (roots.has(row.id)) result.push(byId.get(row.id)!);

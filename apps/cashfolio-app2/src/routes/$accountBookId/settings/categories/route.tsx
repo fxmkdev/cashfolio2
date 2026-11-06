@@ -53,7 +53,7 @@ function CategoriesPage() {
   const ledgerNavigationState = useLedgerNavigationState();
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab, showArchived } = Route.useSearch();
+  const { tab, showArchived, organize } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/settings/categories" });
   const router = useRouter();
   const viewProps = useAccountsPageController({
@@ -62,6 +62,7 @@ function CategoriesPage() {
     accountBookId,
     tab,
     showArchived,
+    organize,
     onShowArchivedChange: (nextShowArchived) => {
       void navigate({ search: { tab, showArchived: nextShowArchived } });
     },

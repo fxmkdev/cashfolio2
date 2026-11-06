@@ -1,3 +1,4 @@
+import { organizeRoute, type OrganizePage } from "./navigation";
 import { useBlocker, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOrganizeNavigationQueue } from "./navigation-queue";
@@ -12,6 +13,7 @@ function browserIndex() {
 export function useOrganizeNavigationGuard(
   accountBookId: string,
   pending: boolean,
+  page: OrganizePage = "accounts",
 ) {
   const router = useRouter();
   const pendingRef = useRef(pending);
@@ -28,7 +30,7 @@ export function useOrganizeNavigationGuard(
       ({ current, action }) => {
         if (
           !pendingRef.current ||
-          current.routeId !== "/$accountBookId/accounts" ||
+          current.routeId !== organizeRoute(page) ||
           current.params.accountBookId !== accountBookId
         )
           return false;
@@ -37,7 +39,7 @@ export function useOrganizeNavigationGuard(
           action === "BACK" || action === "FORWARD" || action === "GO",
         );
       },
-      [accountBookId, queue, router],
+      [accountBookId, queue, router, page],
     ),
     enableBeforeUnload: pending,
   });

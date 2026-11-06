@@ -1,5 +1,5 @@
 import { Button, Checkbox, Group, Text } from "@mantine/core";
-import type { OrganizeNodeRef } from "@/shared/account-organize/types";
+import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
 import styles from "./organizer.module.css";
 
@@ -15,6 +15,7 @@ export function OrganizerToolbar({
   hiddenResults,
   showArchived,
   onVisibility,
+  supportsArchived = true,
 }: {
   selectedCount: number;
   roots: OrganizeNodeRef[];
@@ -23,10 +24,11 @@ export function OrganizerToolbar({
   blocked: boolean;
   dragging: boolean;
   hint: string;
-  organizer: Pick<Organizer, "pending" | "message" | "submitState">;
+  organizer: Pick<Organizer, "pending" | "message" | "submitState" | "kind">;
   hiddenResults: number;
   showArchived: boolean;
   onVisibility: (value: boolean) => void;
+  supportsArchived?: boolean;
 }) {
   const groups = roots.filter(
     (node) => node.nodeType === "accountGroup",
@@ -41,14 +43,21 @@ export function OrganizerToolbar({
       : organizer.message);
   const instruction =
     status ||
-    "Drag to move or reorder. Groups move with all descendants. Changes save automatically.";
+    (organizer.kind === "assetClasses"
+      ? "Drag to move or reorder. Classes move with all descendants. Changes save automatically."
+      : "Drag to move or reorder. Groups move with all descendants. Changes save automatically.");
   return (
     <Group justify="space-between" mb="sm" className={styles.selectionBar}>
       {selectedCount ? (
-        <Group role="toolbar" aria-label="Organize Account Actions" gap="xs">
+        <Group
+          role="toolbar"
+          aria-label={`Organize ${organizer.kind === "accounts" ? "Account" : organizer.kind === "categories" ? "Category" : "Asset Class"} Actions`}
+          gap="xs"
+        >
           <Text size="sm" role="status">
-            {groups} {groups === 1 ? "group" : "groups"} and {accounts}{" "}
-            {accounts === 1 ? "account" : "accounts"} selected
+            {organizer.kind === "assetClasses"
+              ? `${roots.length} asset ${roots.length === 1 ? "class" : "classes"} selected`
+              : `${groups} ${groups === 1 ? "group" : "groups"} and ${accounts} ${organizer.kind === "categories" ? (accounts === 1 ? "category" : "categories") : accounts === 1 ? "account" : "accounts"} selected`}
           </Text>
           <Button
             size="sm"
@@ -113,13 +122,15 @@ export function OrganizerToolbar({
             them.
           </Text>
         )}
-        <Checkbox
-          label="Show Archived"
-          style={{ flexShrink: 0 }}
-          checked={showArchived}
-          disabled={blocked || dragging}
-          onChange={(event) => onVisibility(event.currentTarget.checked)}
-        />
+        {supportsArchived && (
+          <Checkbox
+            label="Show Archived"
+            style={{ flexShrink: 0 }}
+            checked={showArchived}
+            disabled={blocked || dragging}
+            onChange={(event) => onVisibility(event.currentTarget.checked)}
+          />
+        )}
       </Group>
     </Group>
   );

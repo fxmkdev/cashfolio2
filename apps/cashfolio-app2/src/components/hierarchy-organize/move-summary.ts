@@ -1,8 +1,8 @@
 import type {
   OrganizeMove,
   OrganizeNode,
-} from "@/shared/account-organize/types";
-import { descendants, organizePath } from "@/shared/account-organize/tree";
+} from "@/shared/hierarchy-organize/types";
+import { descendants, organizePath } from "@/shared/hierarchy-organize/tree";
 
 export function moveSummary(nodes: OrganizeNode[], next: OrganizeNode[]) {
   const changed = next.filter(
@@ -30,9 +30,9 @@ export function dragMoveSummary(
   const archivedDescendants = nodes.filter(
     (node) =>
       included.has(node.id) &&
-      !node.isActive &&
+      node.isActive === false &&
       !move.items.some((item) => item.id === node.id),
   ).length;
   const count = included.size - move.items.length;
-  return `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${count} included descendants (${archivedDescendants} archived). ${moveSummary(nodes, next)}`.trim();
+  return `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${count} included descendants${nodes.some((node) => node.nodeType === "assetClass") ? "" : ` (${archivedDescendants} archived)`}. ${moveSummary(nodes, next)}`.trim();
 }

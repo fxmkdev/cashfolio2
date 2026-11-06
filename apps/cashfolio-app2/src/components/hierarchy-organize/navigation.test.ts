@@ -9,6 +9,69 @@ const organized = `${normal}&organize=true`;
 const target = createOrganizeReturnTarget("book", normal, 2)!;
 
 describe("organizer return navigation", () => {
+  it.each([
+    [
+      "categories",
+      "/book/settings/categories?tab=EQUITY-INCOME&showArchived=false",
+    ],
+    [
+      "categories",
+      "/book/settings/categories?tab=EQUITY-EXPENSE&showArchived=true",
+    ],
+    ["assetClasses", "/book/settings/classifications"],
+  ] as const)(
+    "verifies same-page Settings return targets (%s, %s)",
+    (page, normal) => {
+      const target = createOrganizeReturnTarget("book", normal, 2, page);
+      expect(
+        getOrganizeReturnDelta(
+          target,
+          "book",
+          `${normal}${normal.includes("?") ? "&" : "?"}organize=true`,
+          3,
+          page,
+        ),
+      ).toBe(-1);
+      expect(
+        getOrganizeReturnDelta(
+          target,
+          "other",
+          `${normal}?organize=true`,
+          3,
+          page,
+        ),
+      ).toBeUndefined();
+      expect(
+        createOrganizeReturnTarget("book", normal, 2, "accounts"),
+      ).toBeUndefined();
+    },
+  );
+  it("does not reuse a return target across category tabs or Settings pages", () => {
+    const target = createOrganizeReturnTarget(
+      "book",
+      "/book/settings/categories?tab=EQUITY-INCOME",
+      2,
+      "categories",
+    );
+    expect(
+      getOrganizeReturnDelta(
+        target,
+        "book",
+        "/book/settings/categories?tab=EQUITY-EXPENSE&organize=true",
+        3,
+        "categories",
+      ),
+    ).toBeUndefined();
+    expect(
+      getOrganizeReturnDelta(
+        target,
+        "book",
+        "/book/settings/classifications?organize=true",
+        3,
+        "assetClasses",
+      ),
+    ).toBeUndefined();
+  });
   it("returns to the adjacent scoped normal entry, including after reload/Forward", () => {
     expect(getOrganizeReturnDelta(target, "book", organized, 3)).toBe(-1);
     expect(

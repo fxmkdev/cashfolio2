@@ -1,6 +1,6 @@
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
-import type { OrganizeNode } from "@/shared/account-organize/types";
+import type { OrganizeNode } from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
 
 export type LifecycleDialog = {
@@ -27,7 +27,14 @@ export function OrganizerLifecycleDialogs({
         await organizer.performLifecycle(dialog.action, dialog.node, onClose);
     },
   };
-  const entity = dialog?.node.nodeType === "accountGroup" ? "Group" : "Account";
+  const entity =
+    organizer.kind === "categories"
+      ? dialog?.node.nodeType === "accountGroup"
+        ? "Category Group"
+        : "Category"
+      : dialog?.node.nodeType === "accountGroup"
+        ? "Group"
+        : "Account";
   return (
     <>
       <ConfirmArchiveModal

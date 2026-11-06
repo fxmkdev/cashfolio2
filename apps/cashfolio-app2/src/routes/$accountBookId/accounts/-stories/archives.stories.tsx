@@ -80,20 +80,9 @@ export const ArchivedGroupActions: Story = {
     });
 
     walletRowQueries = await getWalletRowQueries();
-    await userEvent.click(
-      await walletRowQueries.findByRole("menuitem", {
-        name: "Reorder Siblings",
-      }),
-    );
-    const reorderDialog = await findVisibleDialog(body, "Reorder Siblings");
-    await userEvent.click(
-      within(reorderDialog).getByRole("button", { name: "Close" }),
-    );
-    await waitFor(() => {
-      expect(
-        body.queryByRole("dialog", { name: "Reorder Siblings" }),
-      ).not.toBeInTheDocument();
-    });
+    await expect(
+      walletRowQueries.queryByRole("menuitem", { name: "Reorder Siblings" }),
+    ).not.toBeInTheDocument();
   },
 };
 

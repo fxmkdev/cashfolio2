@@ -3,7 +3,6 @@ import type { ManagedClass } from "./-class-dialog";
 
 export type AssetClassGridRow = ManagedClass & {
   path: string;
-  canReorder: boolean;
   hasChildren: boolean;
 };
 
@@ -24,11 +23,9 @@ export function buildAssetClassGridRows(
   }
   return ordered.map((option) => {
     const node = byId.get(option.value)!;
-    const siblings = siblingsByParent.get(node.parentId)!;
     return {
       ...node,
       path: option.label,
-      canReorder: siblings.length > 1,
       hasChildren: siblingsByParent.has(node.id),
     };
   });

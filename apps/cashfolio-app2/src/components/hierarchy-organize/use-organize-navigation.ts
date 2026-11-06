@@ -2,6 +2,8 @@ import { useOrganizeNavigationGuard } from "./use-organize-navigation-guard";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import {
+  organizeRoute,
+  type OrganizePage,
   createOrganizeReturnTarget,
   getOrganizeReturnDelta,
   type OrganizeReturnTarget,
@@ -18,22 +20,23 @@ export function useOrganizeNavigation(
   requested: boolean,
   available: boolean,
   pending: boolean,
+  page: OrganizePage = "accounts",
 ) {
   const router = useRouter();
-  const navigate = useNavigate({ from: "/$accountBookId/accounts" });
-  useOrganizeNavigationGuard(accountBookId, pending);
+  const navigate = useNavigate();
+  useOrganizeNavigationGuard(accountBookId, pending, page);
 
   const replaceNormal = useCallback(
     () =>
       navigate({
-        to: "/$accountBookId/accounts",
+        to: organizeRoute(page),
         params: { accountBookId },
         search: (previous) => ({ ...previous, organize: undefined }),
         state: (previous) => ({ ...previous, organizeReturnTarget: undefined }),
         replace: true,
         resetScroll: false,
       }),
-    [accountBookId, navigate],
+    [accountBookId, navigate, page],
   );
   useEffect(() => {
     if (requested && !available) void replaceNormal();
@@ -43,7 +46,7 @@ export function useOrganizeNavigation(
     if (!available || requested) return;
     const { location } = router.state;
     void navigate({
-      to: "/$accountBookId/accounts",
+      to: organizeRoute(page),
       params: { accountBookId },
       search: (previous) => ({ ...previous, organize: true }),
       state: {
@@ -51,6 +54,7 @@ export function useOrganizeNavigation(
           accountBookId,
           location.href,
           location.state.__TSR_index,
+          page,
         ),
       },
       resetScroll: false,
@@ -64,6 +68,7 @@ export function useOrganizeNavigation(
       accountBookId,
       location.href,
       location.state.__TSR_index,
+      page,
     );
     if (delta) router.history.go(delta);
     else void replaceNormal();

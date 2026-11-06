@@ -5,7 +5,6 @@ import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
 import { isVirtualArchivedGroup } from "../-archived-grid-rows";
 import { useAccountsPresentation } from "../-use-accounts-presentation";
-import { useSelectedSiblingRows } from "../-page-data";
 import { useBulkAccountActions } from "../-use-bulk-account-actions";
 import { useAccountTreeColumnDefs } from "../-page-columns";
 import type { AccountsGridRow } from "../-page-types";
@@ -66,10 +65,6 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
   });
   const { rows, rowsByParentKey, balanceInReferenceCurrencyByGroupId } =
     presentation;
-  const selectedSiblingRows = useSelectedSiblingRows(
-    rowsByParentKey,
-    modalState.reorderingRow,
-  );
   const assignment = useBulkAccountActions({
     scopeKey: `${assignments.scope}:${tab}:${mode}:${grouping}`,
     enabled: !!options.bulkAssignment && !isEquityTab,
@@ -99,7 +94,6 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
     },
     onArchiveRow: modalState.setArchivingRow,
     onDeleteRow: modalState.setDeletingRow,
-    onReorderRow: modalState.setReorderingRow,
   });
   return {
     routing,
@@ -112,7 +106,6 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
     gainLossState,
     setGainLossState,
     presentation,
-    selectedSiblingRows,
     assignment,
     columnDefs,
   };

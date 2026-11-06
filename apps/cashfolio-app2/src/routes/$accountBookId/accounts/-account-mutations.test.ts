@@ -9,7 +9,6 @@ vi.mock("@/server/accounts", () => ({
   deleteAccount: vi.fn(),
   deleteAccountGroup: vi.fn(),
   getAccountTreeData: vi.fn(),
-  reorderAccountTreeItems: vi.fn(),
   unarchiveAccount: vi.fn(),
   unarchiveAccountGroup: vi.fn(),
   updateAccount: vi.fn(),
@@ -49,8 +48,6 @@ function createActions(overrides: Partial<AccountsMutationState> = {}) {
     unarchiveAccount: vi.fn<AccountsMutationApi["unarchiveAccount"]>(),
     unarchiveAccountGroup:
       vi.fn<AccountsMutationApi["unarchiveAccountGroup"]>(),
-    reorderAccountTreeItems:
-      vi.fn<AccountsMutationApi["reorderAccountTreeItems"]>(),
   } satisfies AccountsMutationApi;
   const actions = createAccountsMutationActions({
     accountBookId: "book-1",
@@ -241,26 +238,6 @@ describe("createAccountsMutationActions", () => {
     });
     expect(state.setDeletingRow).toHaveBeenCalledWith(undefined);
     expect(deletingRow).toBeUndefined();
-    expect(invalidate).toHaveBeenCalledOnce();
-  });
-
-  test("reorders siblings by emitted index order and invalidates", async () => {
-    const { actions, api, invalidate } = createActions();
-
-    await actions.handleReorderSiblings([
-      { id: "account-1", nodeType: "account" },
-      { id: "group-2", nodeType: "accountGroup" },
-    ]);
-
-    expect(api.reorderAccountTreeItems).toHaveBeenCalledWith({
-      data: {
-        accountBookId: "book-1",
-        updates: [
-          { id: "account-1", nodeType: "account", sortOrder: 0 },
-          { id: "group-2", nodeType: "accountGroup", sortOrder: 1 },
-        ],
-      },
-    });
     expect(invalidate).toHaveBeenCalledOnce();
   });
 });

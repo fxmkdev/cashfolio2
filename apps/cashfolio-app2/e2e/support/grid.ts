@@ -59,14 +59,7 @@ export async function revealRowActions(row: Locator) {
 
 export async function clickRowAction(
   row: Locator,
-  actionLabel:
-    | "Edit"
-    | "Copy"
-    | "Rebook"
-    | "Delete"
-    | "Archive"
-    | "Unarchive"
-    | "Reorder Siblings",
+  actionLabel: "Edit" | "Copy" | "Rebook" | "Delete" | "Archive" | "Unarchive",
 ) {
   await (await getRowAction(row, actionLabel)).click();
   await row

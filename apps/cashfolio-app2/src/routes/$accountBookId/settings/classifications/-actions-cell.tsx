@@ -2,31 +2,17 @@ import {
   RowActionsMenu,
   type RowAction,
 } from "@/components/grid/row-actions-menu";
-import {
-  IconArrowsSort,
-  IconPencil,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { AssetClassGridRow } from "./-grid-rows";
 
 export function AssetClassActionsCell(props: {
   row: AssetClassGridRow;
   onEdit: () => void;
   onAddChild: () => void;
-  onReorder: () => void;
   onDelete: () => void;
 }) {
   const { row } = props;
   const actions: RowAction[] = [
-    {
-      id: "reorder",
-      label: "Reorder Siblings",
-      icon: <IconArrowsSort size={16} />,
-      onClick: props.onReorder,
-      disabled: !row.canReorder,
-      disabledReason: "Cannot reorder because this row has no siblings",
-    },
     {
       id: "edit",
       label: "Edit",

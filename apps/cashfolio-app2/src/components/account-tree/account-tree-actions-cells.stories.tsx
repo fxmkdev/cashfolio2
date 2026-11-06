@@ -10,7 +10,6 @@ type StoryProps = {
   variant: "active" | "archived";
   archivable?: boolean;
   deletable?: boolean;
-  reorderEnabled?: boolean;
   unarchivable?: boolean;
   unarchivePending?: boolean;
   onAddAccount?: () => void;
@@ -18,7 +17,6 @@ type StoryProps = {
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
-  onReorder: () => void;
   onUnarchive: () => void;
 };
 
@@ -26,12 +24,10 @@ function StoryComponent({
   variant,
   archivable = true,
   deletable = true,
-  reorderEnabled = true,
   unarchivable = true,
   onEdit,
   onArchive,
   onDelete,
-  onReorder,
   onUnarchive,
   unarchivePending,
   onAddAccount,
@@ -46,27 +42,21 @@ function StoryComponent({
           onAddGroup={onAddGroup}
           archiveLabel={archivable ? "Archive" : "Cannot archive this row"}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
-          reorderLabel="Reorder Siblings"
           archivable={archivable}
           deletable={deletable}
-          reorderEnabled={reorderEnabled}
           onEdit={onEdit}
           onArchive={onArchive}
           onDelete={onDelete}
-          onReorder={onReorder}
         />
       ) : (
         <ArchivedAccountTreeActionsCell
           rowLabel="Cash"
           unarchivePending={unarchivePending}
-          reorderLabel="Reorder Siblings"
-          reorderEnabled={reorderEnabled}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
           unarchiveLabel={unarchivable ? "Unarchive" : "Cannot unarchive"}
           deletable={deletable}
           onEdit={onEdit}
           onDelete={onDelete}
-          onReorder={onReorder}
           unarchivable={unarchivable}
           onUnarchive={onUnarchive}
         />
@@ -82,12 +72,10 @@ const meta = {
     variant: "active",
     archivable: true,
     deletable: true,
-    reorderEnabled: true,
     unarchivable: true,
     onEdit: fn(),
     onArchive: fn(),
     onDelete: fn(),
-    onReorder: fn(),
     onUnarchive: fn(),
   },
 } satisfies Meta<typeof StoryComponent>;
@@ -102,7 +90,6 @@ export const ActiveDisabled: Story = {
   args: {
     archivable: false,
     deletable: false,
-    reorderEnabled: false,
   },
 };
 
@@ -151,12 +138,9 @@ export const ArchivedInteractionSmoke: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "More Actions for Cash" }),
     );
-    await userEvent.click(
-      await body.findByRole("menuitem", { name: "Reorder Siblings" }),
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: "More Actions for Cash" }),
-    );
+    await expect(
+      body.queryByRole("menuitem", { name: "Reorder Siblings" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(await body.findByRole("menuitem", { name: "Edit" }));
     await userEvent.click(
       canvas.getByRole("button", { name: "More Actions for Cash" }),
@@ -171,7 +155,6 @@ export const ArchivedInteractionSmoke: Story = {
       await body.findByRole("menuitem", { name: "Unarchive" }),
     );
 
-    await expect(args.onReorder).toHaveBeenCalled();
     await expect(args.onEdit).toHaveBeenCalled();
     await expect(args.onDelete).toHaveBeenCalled();
     await expect(args.onUnarchive).toHaveBeenCalled();
@@ -195,7 +178,7 @@ export const ChildCreation: Story = {
 };
 
 export const DisabledExplanations: Story = {
-  args: { archivable: false, deletable: false, reorderEnabled: false },
+  args: { archivable: false, deletable: false },
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const trigger = within(canvasElement).getByRole("button", {
@@ -233,13 +216,6 @@ export const DisabledExplanations: Story = {
     await expect(trigger).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
-    await userEvent.keyboard("{ArrowDown}");
-    const reorder = body.getByRole("menuitem", { name: "Reorder Siblings" });
-    await expect(reorder).toHaveFocus();
-    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
-    await userEvent.keyboard("{Enter} ");
-    await expect(args.onReorder).not.toHaveBeenCalled();
-    await expect(body.getByRole("menu")).toBeVisible();
     await userEvent.keyboard("{ArrowDown}");
     await expect(body.getByRole("menuitem", { name: "Edit" })).toHaveFocus();
     await waitFor(() =>

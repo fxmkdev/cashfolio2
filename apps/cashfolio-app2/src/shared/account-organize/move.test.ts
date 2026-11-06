@@ -5,7 +5,7 @@ import {
   normalizeOrganizeSelection,
   organizeDisplayRows,
   organizePath,
-} from "./tree";
+} from "../hierarchy-organize/tree";
 import type { OrganizeMove, OrganizeNode } from "./types";
 
 function node(id: string, overrides: Partial<OrganizeNode> = {}): OrganizeNode {

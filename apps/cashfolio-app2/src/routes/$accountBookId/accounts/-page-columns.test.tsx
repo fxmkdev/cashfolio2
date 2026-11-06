@@ -28,7 +28,6 @@ describe("account classification columns", () => {
         onUnarchiveRow: vi.fn(),
         onArchiveRow: vi.fn(),
         onDeleteRow: vi.fn(),
-        onReorderRow: vi.fn(),
       });
       return null;
     }

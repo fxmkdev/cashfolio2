@@ -1,10 +1,13 @@
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
-import { Button, Group, Stack, Text } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { Alert, Badge, Box, Button, Group, Stack, Text } from "@mantine/core";
+import { IconArrowsMove, IconPlus } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { useMemo, useState } from "react";
 import { DataGrid } from "@/components/grid/data-grid";
-import { ReorderGroupChildrenModal } from "@/components/account-tree/reorder-group-children-modal";
+import { HierarchyOrganizer } from "@/components/hierarchy-organize/organizer";
+import { OrganizerActions } from "@/components/hierarchy-organize/organizer-actions";
+import { useOrganizeSession } from "@/components/hierarchy-organize/use-organize-session";
+import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import {
   ClassDialog,
   type ManagedClass,
@@ -31,34 +34,37 @@ const NAME_COLUMN: ColDef<AssetClassGridRow> = {
   cellRendererParams: { suppressCount: true },
 };
 
-export function ClassificationsPageView(props: {
+type ClassificationsPageProps = {
+  accountBookId?: string;
+  organize?: boolean;
+  organizerApi?: OrganizerApi;
   nodes: ManagedClass[];
   onSave: (draft: ClassDraft) => Promise<void>;
-  onReorder: (parentId: string | null, orderedIds: string[]) => Promise<void>;
   onDelete: (id: string, replacementId: string | null) => Promise<void>;
   onRefresh: () => Promise<void>;
-}) {
+};
+export function ClassificationsPageView(props: ClassificationsPageProps) {
+  return <ClassificationsPageContent key={props.accountBookId} {...props} />;
+}
+function ClassificationsPageContent(props: ClassificationsPageProps) {
+  const { organizer, navigation, normalGrid, isOrganizing } =
+    useOrganizeSession<AssetClassGridRow>({
+      accountBookId: props.accountBookId ?? "storybook",
+      requested: !!props.organize,
+      available: !!props.organizerApi,
+      page: "assetClasses",
+      api: props.organizerApi,
+      onSaved: () => {
+        void props.onRefresh();
+      },
+    });
   const [dialog, setDialog] = useState<{
     draft: ClassDraft;
     deleting?: boolean;
   } | null>(null);
-  const [reorderingRow, setReorderingRow] = useState<ManagedClass | null>(null);
   const rows = useMemo(
     () => buildAssetClassGridRows(props.nodes),
     [props.nodes],
-  );
-  const siblingRows = useMemo(
-    () =>
-      reorderingRow
-        ? rows
-            .filter((row) => row.parentId === reorderingRow.parentId)
-            .map((row) => ({
-              id: row.id,
-              name: row.name,
-              nodeType: "assetClass" as const,
-            }))
-        : [],
-    [rows, reorderingRow],
   );
   const columns = useMemo<ColDef<AssetClassGridRow>[]>(
     () => [
@@ -84,7 +90,6 @@ export function ClassificationsPageView(props: {
               onAddChild={() =>
                 setDialog({ draft: { name: "", parentId: data.id } })
               }
-              onReorder={() => setReorderingRow(data)}
               onDelete={() => setDialog({ draft: data, deleting: true })}
             />
           ) : null,
@@ -94,51 +99,113 @@ export function ClassificationsPageView(props: {
   );
   return (
     <Stack flex={1} mih={0}>
-      <Group justify="end">
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setDialog({ draft: { name: "", parentId: null } })}
-        >
-          New Asset Class
-        </Button>
+      <Group justify="space-between">
+        <Box>
+          {isOrganizing && (
+            <Badge variant="light" size="lg">
+              Organizing
+            </Badge>
+          )}
+        </Box>
+        {isOrganizing ? (
+          <OrganizerActions organizer={organizer} onDone={navigation.exit} />
+        ) : (
+          <Group>
+            {props.organizerApi && (
+              <Button
+                variant="default"
+                leftSection={<IconArrowsMove size={16} />}
+                disabled={organizer.loading}
+                onClick={navigation.enter}
+              >
+                Organize
+              </Button>
+            )}
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setDialog({ draft: { name: "", parentId: null } })}
+            >
+              New Asset Class
+            </Button>
+          </Group>
+        )}
       </Group>
-      <Text size="sm" c="dimmed">
-        Organize asset classes for gain/loss reports. Accounts can be assigned
-        to any level. Changes apply to all historical periods.
-      </Text>
-      <DataGrid
-        containerStyle={{ flex: 1, minHeight: 0 }}
-        rowData={rows}
-        columnDefs={columns}
-        defaultColDef={DEFAULT_COL_DEF}
-        autoGroupColumnDef={NAME_COLUMN}
-        treeData
-        treeDataParentIdField="parentId"
-        groupDefaultExpanded={-1}
-        getRowId={({ data }) => data.id}
-        onGridReady={({ api }) =>
-          api.setGridAriaProperty("label", "Asset Classes")
-        }
-        localeText={GRID_LOCALE_TEXT}
-      />
-      <Text size="sm" c="dimmed">
-        Accounts without an assignment appear as Unclassified.
-      </Text>
-      <ReorderGroupChildrenModal
-        opened={!!reorderingRow}
-        onClose={() => setReorderingRow(null)}
-        rowName={reorderingRow?.name ?? ""}
-        initialRows={siblingRows}
-        onRefreshConstraints={props.onRefresh}
-        onReorder={(ordered) =>
-          reorderingRow
-            ? props.onReorder(
-                reorderingRow.parentId,
-                ordered.map((row) => row.id),
-              )
-            : Promise.resolve()
-        }
-      />
+      {isOrganizing && (
+        <HierarchyOrganizer
+          accountBookId={props.accountBookId ?? "storybook"}
+          organizer={organizer}
+          renderLifecycleDialog={(dialog, close) =>
+            dialog?.action === "delete" &&
+            dialog.node.nodeType === "assetClass" ? (
+              <ClassDialog
+                draft={dialog.node}
+                deleting
+                nodes={
+                  organizer.snapshot?.nodes.filter(
+                    (node) => node.nodeType === "assetClass",
+                  ) ?? []
+                }
+                onClose={close}
+                onRefresh={organizer.refresh}
+                onSave={props.onSave}
+                submitState={{
+                  ...organizer.submitState,
+                  isSubmitting: organizer.pending,
+                }}
+                onDelete={(id, replacementId) =>
+                  organizer.performLifecycle(
+                    "delete",
+                    { id, nodeType: "assetClass" },
+                    close,
+                    replacementId,
+                  )
+                }
+              />
+            ) : null
+          }
+        />
+      )}
+      <Box
+        style={{
+          display: isOrganizing ? "none" : "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+          gap: "var(--mantine-spacing-md)",
+        }}
+      >
+        {organizer.loadError && (
+          <Alert color="red" role="alert">
+            {organizer.loadError}
+            <Button variant="subtle" onClick={() => void organizer.load()}>
+              Try Again
+            </Button>
+          </Alert>
+        )}
+        <Text size="sm" c="dimmed">
+          Organize asset classes for gain/loss reports. Accounts can be assigned
+          to any level. Changes apply to all historical periods.
+        </Text>
+        <DataGrid
+          containerStyle={{ flex: 1, minHeight: 0 }}
+          rowData={rows}
+          columnDefs={columns}
+          defaultColDef={DEFAULT_COL_DEF}
+          autoGroupColumnDef={NAME_COLUMN}
+          treeData
+          treeDataParentIdField="parentId"
+          groupDefaultExpanded={-1}
+          getRowId={({ data }) => data.id}
+          onGridReady={({ api }) => {
+            normalGrid.current = api;
+            api.setGridAriaProperty("label", "Asset Classes");
+          }}
+          localeText={GRID_LOCALE_TEXT}
+        />
+        <Text size="sm" c="dimmed">
+          Accounts without an assignment appear as Unclassified.
+        </Text>
+      </Box>
       {dialog && (
         <ClassDialog
           {...dialog}

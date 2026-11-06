@@ -7,11 +7,9 @@ import { useAccountTreeColumnDefs } from "./-page-columns";
 import { createAccountRow, createGroupRow } from "./-column-test-fixtures";
 describe("account tree Delete explanations", () => {
   it.each([true, false])(
-    "protects synthetic headings and disables reorder in Asset Class view (active=%s)",
+    "protects synthetic headings and omits reorder in Asset Class view (active=%s)",
     (isActive) => {
       let render!: (params: { data: TreeRow }) => ReactElement<{
-        reorderEnabled: boolean;
-        reorderLabel: string;
         onEdit: () => void;
       }> | null;
       const onEdit = vi.fn();
@@ -27,7 +25,6 @@ describe("account tree Delete explanations", () => {
           onUnarchiveRow: async () => {},
           onArchiveRow: () => {},
           onDeleteRow: () => {},
-          onReorderRow: () => {},
         });
         const actions = columns.find(
           (column) => "colId" in column && column.colId === "actions",
@@ -50,10 +47,7 @@ describe("account tree Delete explanations", () => {
       }
       const account = createAccountRow({ isActive });
       const action = render({ data: account })!;
-      expect(action.props.reorderEnabled).toBe(false);
-      expect(action.props.reorderLabel).toBe(
-        "Switch to Account Structure to reorder siblings",
-      );
+      expect(action.props).not.toHaveProperty("onReorder");
       action.props.onEdit();
       expect(onEdit).toHaveBeenCalledWith(account);
     },
@@ -88,7 +82,6 @@ describe("account tree Delete explanations", () => {
               onUnarchiveRow: async () => {},
               onArchiveRow: () => {},
               onDeleteRow: () => {},
-              onReorderRow: () => {},
             });
             const column = columns.find(
               (candidate) =>

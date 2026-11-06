@@ -178,15 +178,6 @@ test("archived rows allow edit, reorder siblings, and delete in unified Accounts
 
   const renamedArchivedPrimaryRow = agGridRowByText(page, renamedPrimaryName);
   await expect(renamedArchivedPrimaryRow).toBeVisible();
-  await clickRowAction(renamedArchivedPrimaryRow, "Reorder Siblings");
-  await expect(
-    page.getByRole("dialog", { name: "Reorder Siblings" }),
-  ).toBeVisible();
-  await page
-    .getByRole("dialog", { name: "Reorder Siblings" })
-    .getByRole("button", { name: "Close" })
-    .click();
-
   const archivedSiblingRow = agGridRowByText(page, siblingName);
   await expect(archivedSiblingRow).toBeVisible();
   await clickRowAction(archivedSiblingRow, "Delete");

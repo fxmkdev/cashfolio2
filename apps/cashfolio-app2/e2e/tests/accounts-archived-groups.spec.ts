@@ -177,20 +177,6 @@ for (const tab of ["BALANCE", "EQUITY-INCOME", "EQUITY-EXPENSE"] as const) {
       ).parentGroupId,
     ).toBe(live.id);
     const renamed = agGridRowByText(page, "A Closed Renamed");
-    await clickRowAction(renamed, "Reorder Siblings");
-    const reorder = page.getByRole("dialog", {
-      name: "Reorder Siblings",
-      exact: true,
-    });
-    await expect(
-      reorder.getByText("A Closed Direct", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      reorder.getByText("Z Live Account", { exact: true }),
-    ).toHaveCount(0);
-    await expect(reorder.getByText("Archived", { exact: true })).toHaveCount(0);
-    await reorder.getByRole("button", { name: "Close", exact: true }).click();
-
     await page.reload();
     await expect(groupArchive).toHaveAttribute("aria-expanded", "true");
     await expect(rootArchive).toHaveAttribute("aria-expanded", "false");

@@ -11,7 +11,6 @@ export function getAccountsModalViewProps(
     | "handleUpdateGroup"
     | "handleDelete"
     | "handleArchive"
-    | "handleReorderSiblings"
   >,
 ) {
   return {
@@ -25,7 +24,6 @@ export function getAccountsModalViewProps(
     editingGroup: modalState.editingGroup,
     deletingRow: modalState.deletingRow,
     archivingRow: modalState.archivingRow,
-    reorderingRow: modalState.reorderingRow,
 
     onOpenCreateGroup: () => modalState.openCreateGroup(),
     onOpenCreateAccount: () => modalState.openCreateAccount(),
@@ -44,7 +42,5 @@ export function getAccountsModalViewProps(
     onConfirmDelete: actions.handleDelete,
     onCloseArchive: () => modalState.setArchivingRow(undefined),
     onConfirmArchive: actions.handleArchive,
-    onCloseReorder: () => modalState.setReorderingRow(undefined),
-    onReorderSiblings: actions.handleReorderSiblings,
   };
 }

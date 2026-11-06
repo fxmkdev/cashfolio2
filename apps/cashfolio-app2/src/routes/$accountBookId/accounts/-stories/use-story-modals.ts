@@ -43,8 +43,5 @@ export function getStoryModalProps(state: ReturnType<typeof useStoryModals>) {
     handleDelete: async () => {
       state.setDeletingRow(undefined);
     },
-    handleReorderSiblings: async () => {
-      state.setReorderingRow(undefined);
-    },
   });
 }

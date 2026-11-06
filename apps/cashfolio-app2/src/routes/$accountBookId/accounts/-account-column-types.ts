@@ -18,5 +18,4 @@ export type AccountTreeColumnParams = {
   unarchivePending?: boolean;
   onArchiveRow: (row: RowTarget) => void;
   onDeleteRow: (row: RowTarget) => void;
-  onReorderRow: (value: { name: string; parentKey: string }) => void;
 };

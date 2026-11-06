@@ -149,11 +149,6 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   if (await utilitiesExpander.isVisible()) await utilitiesExpander.click();
   const electricity = agGridRowByText(page, "E2E Electricity");
   await expect(electricity).toBeVisible();
-  await clickRowAction(electricity, "Reorder Siblings");
-  const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
-  await expect(reorder.getByText("E2E Water", { exact: true })).toBeVisible();
-  await reorder.getByRole("button", { name: "Close", exact: true }).click();
-
   await clickRowAction(electricity, "Edit");
   const edit = page.getByRole("dialog", { name: "Edit Category" });
   await edit.getByLabel("Name").fill("E2E Electricity Updated");

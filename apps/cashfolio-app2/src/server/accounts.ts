@@ -29,7 +29,6 @@ export {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
   updateAccount,

@@ -1,3 +1,4 @@
+import type { AccountOrganizeScope } from "../../shared/account-organize/scope";
 import {
   assertRecord,
   requireArrayField,
@@ -22,16 +23,29 @@ function readRef(value: unknown): OrganizeNodeRef {
 
 export function validateOrganizeBook(data: unknown) {
   assertRecord(data);
-  return { accountBookId: requireStringField(data, "accountBookId") };
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    ...(data.scope === undefined
+      ? {}
+      : {
+          scope: requireEnumField(data, "scope", [
+            "balance",
+            "income",
+            "expense",
+          ] as const),
+        }),
+  };
 }
 
 function readParent(data: Record<string, unknown>) {
   return data.parentId === null ? null : requireStringField(data, "parentId");
 }
 
-export function validateOrganizeMove(
-  data: unknown,
-): OrganizeMove & { accountBookId: string; version: string } {
+export function validateOrganizeMove(data: unknown): OrganizeMove & {
+  accountBookId: string;
+  version: string;
+  scope?: AccountOrganizeScope;
+} {
   assertRecord(data);
   return {
     ...validateOrganizeBook(data),

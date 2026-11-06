@@ -17,12 +17,3 @@ export type AccountBookNodeIdInput = {
   id: string;
   accountBookId: string;
 };
-
-export type ReorderAccountTreeItemsInput = {
-  accountBookId: string;
-  updates: {
-    id: string;
-    nodeType: "account" | "accountGroup";
-    sortOrder: number;
-  }[];
-};

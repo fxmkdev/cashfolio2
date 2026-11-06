@@ -10,9 +10,8 @@ import {
   deleteAccount,
   deleteAccountGroup,
 } from "@/server/accounts";
-import type { OrganizerApi } from "./-organize/use-organizer";
+import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import { getManagementTabs } from "./-page-types";
-import { useSelectedSiblingRows } from "./-page-data";
 import { useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import { loadAccountsPageData } from "./-page-loader";
@@ -41,11 +40,37 @@ export function useAccountsPageController(args: {
   const mode = args.mode ?? "active";
   const organizerApi = useMemo<OrganizerApi>(
     () => ({
+      kind: args.managementContext === "categories" ? "categories" : "accounts",
       load: () =>
-        getAccountOrganizeData({ data: { accountBookId: args.accountBookId } }),
+        getAccountOrganizeData({
+          data: {
+            accountBookId: args.accountBookId,
+            scope:
+              args.managementContext === "categories"
+                ? args.tab === "EQUITY-INCOME"
+                  ? "income"
+                  : "expense"
+                : "balance",
+          },
+        }),
       move: (move, version) =>
         moveAccountTreeItems({
-          data: { accountBookId: args.accountBookId, ...move, version },
+          data: {
+            accountBookId: args.accountBookId,
+            ...move,
+            items: move.items.map((item) => {
+              if (item.nodeType === "assetClass")
+                throw new Error("Choose a category or account.");
+              return { ...item, nodeType: item.nodeType };
+            }),
+            version,
+            scope:
+              args.managementContext === "categories"
+                ? args.tab === "EQUITY-INCOME"
+                  ? "income"
+                  : "expense"
+                : "balance",
+          },
         }),
       archive: (target) =>
         (target.nodeType === "account" ? archiveAccount : archiveAccountGroup)({
@@ -62,7 +87,7 @@ export function useAccountsPageController(args: {
           data: { id: target.id, accountBookId: args.accountBookId },
         }),
     }),
-    [args.accountBookId],
+    [args.accountBookId, args.managementContext, args.tab],
   );
   const grouping =
     args.managementContext === "categories"
@@ -101,10 +126,6 @@ export function useAccountsPageController(args: {
     isEquityTab,
     gainLossData: gainLoss.data,
   });
-  const selectedSiblingRows = useSelectedSiblingRows(
-    rowsByParentKey,
-    modalState.reorderingRow,
-  );
   const grid = useAccountsGrid({
     accountBookId: args.accountBookId,
     tab: args.tab,
@@ -142,7 +163,6 @@ export function useAccountsPageController(args: {
     unarchivePending: unarchiveRecovery.isPending,
     onArchiveRow: modalState.setArchivingRow,
     onDeleteRow: modalState.setDeletingRow,
-    onReorderRow: modalState.setReorderingRow,
   });
 
   return {
@@ -173,7 +193,6 @@ export function useAccountsPageController(args: {
     pinnedBottomRowData,
     isGroupOpenByDefault: grid.isGroupOpenByDefault,
     onRowGroupOpened: grid.onRowGroupOpened,
-    selectedSiblingRows,
     ...getAccountsModalViewProps(modalState, actions),
     onOpenLedger: args.onOpenLedger,
   };

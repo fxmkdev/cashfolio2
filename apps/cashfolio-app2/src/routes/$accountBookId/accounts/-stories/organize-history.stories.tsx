@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AccountsPageView } from "../-page-view";
-import { createOrganizerStoryApi } from "../-organize/story-fixtures";
+import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { AccountsPageStoryHarness } from "./harness";
 
 const normalPath = "/storybook-book/accounts?tab=BALANCE&mode=active";
@@ -203,6 +203,7 @@ function pendingNavigation(
     if (kind === "archive")
       api.archive = async (...args) => {
         await deferred();
+        if (!archive) throw new Error("Archive is required by this story.");
         return archive(...args);
       };
     if (kind === "recovery")

@@ -7,7 +7,6 @@ import type { ExistingNode } from "../account-editor/account-cash-form-rules";
 import type { AccountGroupInitialValues } from "../account-editor/edit-account-group-modal";
 import type { AccountInitialValues } from "../account-editor/edit-account-modal";
 import type { AccountOption } from "@/shared/account-options";
-import type { ReorderGroupChildRow } from "../account-tree/reorder-group-children-modal";
 
 export const accountGroupOptions = [
   {
@@ -176,9 +175,3 @@ export const editTransactionInitialValues = {
     },
   ],
 };
-
-export const reorderRows: ReorderGroupChildRow[] = [
-  { id: "group-cash", name: "Cash", nodeType: "accountGroup" },
-  { id: "account-checking", name: "Checking", nodeType: "account" },
-  { id: "account-savings", name: "Savings", nodeType: "account" },
-];

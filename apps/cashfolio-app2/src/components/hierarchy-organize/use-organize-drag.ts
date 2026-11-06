@@ -4,17 +4,18 @@ import type {
   IRowNode,
   IsRowValidDropPositionParams,
 } from "ag-grid-enterprise";
-import { planAccountMove } from "@/shared/account-organize/move";
+import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
 import {
   normalizeOrganizeSelection,
   type OrganizeDisplayRow,
-} from "@/shared/account-organize/tree";
+} from "@/shared/hierarchy-organize/tree";
 import type {
   OrganizeMove,
   OrganizeNode,
   OrganizeNodeRef,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 import { dragMoveSummary } from "./move-summary";
+import { canContainChildren } from "@/shared/hierarchy-organize/types";
 
 export function dragMove(
   items: OrganizeNodeRef[],
@@ -22,7 +23,7 @@ export function dragMove(
   position: "above" | "inside" | "below",
 ): OrganizeMove {
   if (position === "inside") {
-    if (target.nodeType !== "accountGroup")
+    if (!canContainChildren(target))
       throw new Error("Accounts cannot contain other items.");
     return { items, parentId: target.id, placement: "last" };
   }
@@ -88,7 +89,7 @@ export function useOrganizeDrag({
         showHint(previewCache.current.message);
         return;
       }
-      const next = planAccountMove(nodes, move);
+      const next = planOrganizeMove(nodes, move);
       proposed.current = move;
       const message = dragMoveSummary(nodes, next, move);
       previewCache.current = { nodes, key, message };
@@ -141,7 +142,7 @@ export function useOrganizeDrag({
       const ratio =
         (params.y - (target.rowTop ?? 0)) / (target.rowHeight || 38);
       const position: "above" | "inside" | "below" =
-        row.nodeType === "accountGroup" && ratio >= 0.25 && ratio <= 0.75
+        canContainChildren(row) && ratio >= 0.25 && ratio <= 0.75
           ? "inside"
           : ratio < 0.5
             ? "above"

@@ -1,11 +1,7 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
-import type { GridApi, GridState } from "ag-grid-enterprise";
 import { Alert, Box, Button, Text } from "@mantine/core";
-import { AccountOrganizer } from "./-organize/organizer";
-import { OrganizerActions } from "./-organize/organizer-actions";
-import { useOrganizer } from "./-organize/use-organizer";
-import { useOrganizeNavigation } from "./-organize/use-organize-navigation";
-import { useGlobalLoading } from "@/components/navigation/global-loading";
+import { HierarchyOrganizer } from "@/components/hierarchy-organize/organizer";
+import { OrganizerActions } from "@/components/hierarchy-organize/organizer-actions";
+import { useOrganizeSession } from "@/components/hierarchy-organize/use-organize-session";
 import type { AccountsGridRow } from "./-page-types";
 import { PageShell } from "@/components/layout/page-shell";
 import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
@@ -36,50 +32,18 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   } = props;
   const isCategories = managementContext === "categories";
   const grouping = props.grouping ?? "accountStructure";
-  const canOrganize =
-    !isCategories && grouping === "accountStructure" && !!props.organizerApi;
-  const [organizing, setOrganizing] = useState(false);
-  const requested = !!props.organize && canOrganize;
-  const isOrganizing = organizing && requested;
-  const organizer = useOrganizer(
-    props.onOrganizeSaved ?? (() => {}),
-    props.organizerApi,
-    false,
-  );
-  useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
-  const navigation = useOrganizeNavigation(
-    props.accountBookId,
-    !!props.organize,
-    canOrganize,
-    organizer.pending,
-  );
-  const { reset, load, snapshot } = organizer;
-  const normalGrid = useRef<GridApi<AccountsGridRow> | null>(null);
-  const normalGridState = useRef<GridState | undefined>(undefined);
-  const activate = useEffectEvent(() => {
-    normalGridState.current = normalGrid.current?.getState();
-    bulkAccountActions?.clearSelection();
-    setOrganizing(true);
-  });
-  useEffect(() => {
-    if (requested && snapshot && !organizing) activate();
-  }, [organizing, requested, snapshot]);
-  useEffect(() => {
-    if (requested) {
-      void load();
-      return reset;
-    }
-    setOrganizing(false);
-    reset();
-    const previousGridState = normalGridState.current;
-    normalGridState.current = undefined;
-    const frame = requestAnimationFrame(() => {
-      if (previousGridState && !normalGrid.current?.isDestroyed()) {
-        normalGrid.current?.setState(previousGridState, ["rowSelection"]);
-      }
+  const canOrganize = grouping === "accountStructure" && !!props.organizerApi;
+  const { organizer, navigation, normalGrid, isOrganizing } =
+    useOrganizeSession<AccountsGridRow>({
+      accountBookId: props.accountBookId,
+      requested: !!props.organize,
+      available: canOrganize,
+      page: isCategories ? "categories" : "accounts",
+      api: props.organizerApi,
+      onSaved: props.onOrganizeSaved ?? (() => {}),
+      onActivate: () => bulkAccountActions?.clearSelection(),
     });
-    return () => cancelAnimationFrame(frame);
-  }, [load, requested, reset]);
+  const { load } = organizer;
   return (
     <PageShell>
       <AccountsPageHeader
@@ -92,7 +56,7 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         }
       />
       {isOrganizing && (
-        <AccountOrganizer
+        <HierarchyOrganizer
           accountBookId={props.accountBookId}
           organizer={organizer}
         />

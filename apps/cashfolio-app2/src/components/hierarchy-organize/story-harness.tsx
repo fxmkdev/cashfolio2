@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert, Box, Button } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
-import { AccountOrganizer } from "./organizer";
+import { HierarchyOrganizer } from "./organizer";
 import { createOrganizerStoryApi } from "./story-fixtures";
 import { useOrganizer, type OrganizerApi } from "./use-organizer";
 import { OrganizerActions } from "./organizer-actions";
@@ -35,7 +35,7 @@ export function Harness({
         </Alert>
       )}
       {organizer.snapshot && (
-        <AccountOrganizer
+        <HierarchyOrganizer
           accountBookId={props.accountBookId}
           organizer={organizer}
         />

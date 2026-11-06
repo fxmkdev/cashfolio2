@@ -1,10 +1,10 @@
 import type { GroupTreeOption } from "@/components/account-tree/group-tree-select";
-import { planAccountMove } from "@/shared/account-organize/move";
-import { compareOrganizeNodes } from "@/shared/account-organize/tree";
+import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
+import { compareOrganizeNodes } from "@/shared/hierarchy-organize/tree";
 import type {
   OrganizeNode,
   OrganizeNodeRef,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 
 export const TOP_LEVEL_DESTINATION = "__top_level__";
 
@@ -24,7 +24,8 @@ export function moveDestinationGroups(
     ...nodes
       .filter(
         (node) =>
-          node.nodeType === "accountGroup" && (showArchived || node.isActive),
+          node.nodeType !== "account" &&
+          (showArchived || node.isActive !== false),
       )
       .sort(compareOrganizeNodes)
       .map((node) => {
@@ -41,13 +42,13 @@ export function moveDestinationGroups(
           parentGroupId: node.parentId,
           label: [...treePath, node.name].join(" / "),
           treePath,
-          treeLabel: `${node.name}${node.isActive ? "" : " (Archived)"}`,
+          treeLabel: `${node.name}${node.isActive === false ? " (Archived)" : ""}`,
         };
       }),
   ];
   return choices.filter((option) => {
     try {
-      planAccountMove(nodes, {
+      planOrganizeMove(nodes, {
         items,
         parentId: option.value === TOP_LEVEL_DESTINATION ? null : option.value,
         placement: "last",

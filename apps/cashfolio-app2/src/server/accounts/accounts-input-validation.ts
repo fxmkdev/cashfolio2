@@ -122,32 +122,6 @@ export function validateAccountBookNodeIdInput(data: unknown): {
   };
 }
 
-export function validateReorderAccountTreeItemsInput(data: unknown) {
-  assertRecord(data);
-  const accountBookId = requireStringField(
-    data,
-    "accountBookId",
-    "Account book id is required.",
-  );
-  const updates = requireArrayField(data, "updates", "Updates are required.");
-  return {
-    accountBookId,
-    updates: Array.from(updates, (update) => {
-      assertRecord(update, "Reorder update must be an object.");
-      return {
-        id: requireStringField(update, "id", "Node id is required."),
-        nodeType: requireEnumField(
-          update,
-          "nodeType",
-          ["account", "accountGroup"] as const,
-          "Node type is invalid.",
-        ),
-        sortOrder: requireIntegerField(update, "sortOrder"),
-      };
-    }),
-  };
-}
-
 export function validateSetAccountsAssetClassInput(data: unknown): {
   accountBookId: string;
   accountIds: string[];

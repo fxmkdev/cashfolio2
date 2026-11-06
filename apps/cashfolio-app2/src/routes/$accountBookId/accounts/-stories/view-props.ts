@@ -77,7 +77,6 @@ export function getStoryViewProps(
     onRowGroupOpened: options.rememberExpansion
       ? model.expansion.onRowGroupOpened
       : () => undefined,
-    selectedSiblingRows: model.selectedSiblingRows,
     onOpenLedger: (nextAccountId) => {
       if (options.routeSmoke) {
         void navigate({

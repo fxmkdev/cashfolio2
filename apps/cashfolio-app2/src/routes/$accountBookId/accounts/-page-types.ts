@@ -41,6 +41,7 @@ export function parseCategoriesSearch(search: Record<string, unknown>) {
     tab: getManagementTabs("categories").some((tab) => tab.value === search.tab)
       ? (search.tab as TabValue)
       : ("EQUITY-INCOME" as const),
+    ...(search.organize === true ? { organize: true as const } : {}),
     showArchived:
       typeof search.showArchived === "boolean"
         ? search.showArchived

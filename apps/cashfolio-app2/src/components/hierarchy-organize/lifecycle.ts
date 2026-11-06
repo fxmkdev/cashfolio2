@@ -1,10 +1,10 @@
-import { organizeDisplayRows } from "@/shared/account-organize/tree";
+import { organizeDisplayRows } from "@/shared/hierarchy-organize/tree";
 import type {
   OrganizeLifecycleAction,
   OrganizeNodeRef,
   OrganizeNode,
   OrganizeSnapshot,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 
 export function organizeLifecycleAvailability(
   snapshot: OrganizeSnapshot | undefined,
@@ -59,7 +59,7 @@ export function committedLifecycleView(
         action === "delete"
           ? before.nodes.filter((item) => item.id !== node.id)
           : before.nodes.map((item) =>
-              item.id === node.id
+              item.id === node.id && item.nodeType !== "assetClass"
                 ? { ...item, isActive: action === "unarchive" }
                 : item,
             ),

@@ -1,3 +1,4 @@
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
   IconArchive,
@@ -8,10 +9,11 @@ import {
 import type {
   OrganizeActionAvailability,
   OrganizeNode,
-} from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/types";
 
-export function OrganizeAccountActionsCell({
+export function OrganizerRowActions({
   node,
+  isCategory = false,
   availability,
   blocked,
   onMove,
@@ -20,6 +22,7 @@ export function OrganizeAccountActionsCell({
   onDelete,
 }: {
   node: OrganizeNode;
+  isCategory?: boolean;
   availability?: OrganizeActionAvailability;
   blocked: boolean;
   onMove: () => void;
@@ -27,6 +30,11 @@ export function OrganizeAccountActionsCell({
   onUnarchive: () => void;
   onDelete: () => void;
 }) {
+  const reason = (message?: string) =>
+    getAccountConstraintMessage(
+      message,
+      isCategory ? "categories" : "accounts",
+    );
   const statusAction = node.isActive ? "Archive" : "Unarchive";
   const statusEnabled = node.isActive
     ? availability?.archivable
@@ -50,25 +58,27 @@ export function OrganizeAccountActionsCell({
           </ActionIcon>
         </span>
       </Tooltip>
-      <Tooltip label={statusReason ?? statusAction}>
-        <span style={{ display: "inline-flex" }}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            color={node.isActive ? "yellow" : "blue"}
-            aria-label={`${statusAction} ${node.name}`}
-            disabled={blocked || !statusEnabled}
-            onClick={node.isActive ? onArchive : onUnarchive}
-          >
-            {node.isActive ? (
-              <IconArchive size={16} />
-            ) : (
-              <IconArchiveOff size={16} />
-            )}
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <Tooltip label={availability?.deleteDisabledReason ?? "Delete"}>
+      {node.nodeType !== "assetClass" && (
+        <Tooltip label={reason(statusReason) ?? statusAction}>
+          <span style={{ display: "inline-flex" }}>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              color={node.isActive ? "yellow" : "blue"}
+              aria-label={`${statusAction} ${node.name}`}
+              disabled={blocked || !statusEnabled}
+              onClick={node.isActive ? onArchive : onUnarchive}
+            >
+              {node.isActive ? (
+                <IconArchive size={16} />
+              ) : (
+                <IconArchiveOff size={16} />
+              )}
+            </ActionIcon>
+          </span>
+        </Tooltip>
+      )}
+      <Tooltip label={reason(availability?.deleteDisabledReason) ?? "Delete"}>
         <span style={{ display: "inline-flex" }}>
           <ActionIcon
             variant="subtle"

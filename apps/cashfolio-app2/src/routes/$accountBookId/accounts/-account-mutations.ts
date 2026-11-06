@@ -7,7 +7,6 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
   updateAccount,
@@ -25,7 +24,6 @@ export type AccountsMutationApi = {
   archiveAccountGroup: typeof archiveAccountGroup;
   unarchiveAccount: typeof unarchiveAccount;
   unarchiveAccountGroup: typeof unarchiveAccountGroup;
-  reorderAccountTreeItems: typeof reorderAccountTreeItems;
 };
 
 export type AccountsMutationState = {
@@ -56,7 +54,6 @@ const defaultAccountsMutationApi: AccountsMutationApi = {
   archiveAccountGroup,
   unarchiveAccount,
   unarchiveAccountGroup,
-  reorderAccountTreeItems,
 };
 
 type MutationContext = {
@@ -205,22 +202,6 @@ function createTreeMutationActions(args: MutationContext) {
           data: { id: row.id, accountBookId: args.accountBookId },
         });
       }
-      args.invalidate();
-    },
-
-    async handleReorderSiblings(
-      rows: { id: string; nodeType: "account" | "accountGroup" }[],
-    ) {
-      await api.reorderAccountTreeItems({
-        data: {
-          accountBookId: args.accountBookId,
-          updates: rows.map((row, i) => ({
-            id: row.id,
-            nodeType: row.nodeType,
-            sortOrder: i,
-          })),
-        },
-      });
       args.invalidate();
     },
   };

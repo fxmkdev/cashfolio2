@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Box, Button, Text, VisuallyHidden } from "@mantine/core";
 import type {
   GridApi,
@@ -17,20 +24,32 @@ import {
   normalizeOrganizeSelection,
   organizeDisplayRows,
   type OrganizeDisplayRow,
-} from "@/shared/account-organize/tree";
-import type { OrganizeNodeRef } from "@/shared/account-organize/types";
+} from "@/shared/hierarchy-organize/tree";
+import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
 import { MoveDialog } from "./move-dialog";
 import type { Organizer } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
 
-export function AccountOrganizer({
+export function HierarchyOrganizer({
   accountBookId,
   organizer,
+  renderLifecycleDialog,
 }: {
   accountBookId: string;
   organizer: Organizer;
+  renderLifecycleDialog?: (
+    dialog: LifecycleDialog | undefined,
+    onClose: () => void,
+  ) => ReactNode;
 }) {
+  const supportsArchived = organizer.kind !== "assetClasses";
+  const label =
+    organizer.kind === "assetClasses"
+      ? "Asset Classes"
+      : organizer.kind === "categories"
+        ? "Categories"
+        : "Accounts";
   const [showArchived, setShowArchived] = useState(false);
   const [selectionNotice, setSelectionNotice] = useState("");
   const region = useRef<HTMLElement>(null);
@@ -101,14 +120,15 @@ export function AccountOrganizer({
   };
   const hiddenResults = organizer.revealIds.filter(
     (id) =>
-      !showArchived && nodes.some((node) => node.id === id && !node.isActive),
+      !showArchived &&
+      nodes.some((node) => node.id === id && node.isActive === false),
   ).length;
   return (
     <Box
       ref={region}
       tabIndex={-1}
       component="section"
-      aria-label="Organize Accounts"
+      aria-label={`Organize ${label}`}
       className={movementBlocked ? styles.blocked : undefined}
       data-account-book-id={accountBookId}
       style={{
@@ -132,6 +152,7 @@ export function AccountOrganizer({
         organizer={organizer}
         hiddenResults={hiddenResults}
         showArchived={showArchived}
+        supportsArchived={supportsArchived}
         onVisibility={changeArchivedVisibility}
       />
       {!dialogItems && !lifecycleDialog && (
@@ -144,11 +165,11 @@ export function AccountOrganizer({
       </VisuallyHidden>
       {!rows.length && (
         <Text size="sm" c="dimmed">
-          {showArchived ? (
-            "There are no accounts or groups to organize."
+          {showArchived || !supportsArchived ? (
+            `There are no ${label.toLowerCase()} to organize.`
           ) : (
             <>
-              There are no active accounts or groups.{" "}
+              There are no active {label.toLowerCase()} or groups.{" "}
               <Button
                 variant="subtle"
                 size="compact-sm"
@@ -185,11 +206,17 @@ export function AccountOrganizer({
         onClose={() => setDialogItems(undefined)}
         onMove={organizer.saveMove}
       />
-      <OrganizerLifecycleDialogs
-        dialog={lifecycleDialog}
-        organizer={organizer}
-        onClose={() => setLifecycleDialog(undefined)}
-      />
+      {renderLifecycleDialog ? (
+        renderLifecycleDialog(lifecycleDialog, () =>
+          setLifecycleDialog(undefined),
+        )
+      ) : (
+        <OrganizerLifecycleDialogs
+          dialog={lifecycleDialog}
+          organizer={organizer}
+          onClose={() => setLifecycleDialog(undefined)}
+        />
+      )}
     </Box>
   );
 }

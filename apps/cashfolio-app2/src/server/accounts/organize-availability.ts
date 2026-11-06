@@ -1,3 +1,4 @@
+import type { AccountOrganizeScope } from "../../shared/account-organize/scope";
 import type { Prisma } from "../../.prisma-client/client";
 import type {
   OrganizeNode,
@@ -18,6 +19,7 @@ export async function readOrganizeAvailability(
   tx: Prisma.TransactionClient,
   accountBookId: string,
   nodes: OrganizeNode[],
+  scope: AccountOrganizeScope = "balance",
 ): Promise<OrganizeSnapshot["actionAvailability"]> {
   const bookings = await tx.booking.groupBy({
     by: ["accountId"],
@@ -56,9 +58,9 @@ export async function readOrganizeAvailability(
         node.nodeType === "account"
           ? getAccountArchiveAvailability({
               isActive: node.isActive,
-              hasZeroBalance: moneyIsZero(
-                bookingById.get(node.id)?._sum.value ?? 0,
-              ),
+              hasZeroBalance:
+                scope !== "balance" ||
+                moneyIsZero(bookingById.get(node.id)?._sum.value ?? 0),
             })
           : getGroupArchiveAvailability({
               isActive: node.isActive,

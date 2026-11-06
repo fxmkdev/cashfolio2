@@ -1,3 +1,7 @@
+import {
+  accountOrganizeFilter,
+  type AccountOrganizeScope,
+} from "../../shared/account-organize/scope";
 import { createHash } from "node:crypto";
 import { readOrganizeAvailability } from "./organize-availability";
 import type { Prisma } from "../../.prisma-client/client";
@@ -15,10 +19,11 @@ export function organizeVersion(nodes: OrganizeNode[]) {
 export async function readOrganizeSnapshot(
   tx: Prisma.TransactionClient,
   accountBookId: string,
+  scope: AccountOrganizeScope = "balance",
 ): Promise<OrganizeSnapshot> {
   const [accounts, groups] = await Promise.all([
     tx.account.findMany({
-      where: { accountBookId, type: "BALANCE" },
+      where: { accountBookId, ...accountOrganizeFilter(scope) },
       select: {
         id: true,
         name: true,
@@ -30,7 +35,7 @@ export async function readOrganizeSnapshot(
       },
     }),
     tx.accountGroup.findMany({
-      where: { accountBookId, type: "BALANCE" },
+      where: { accountBookId, ...accountOrganizeFilter(scope) },
       select: {
         id: true,
         name: true,
@@ -61,12 +66,13 @@ export async function readOrganizeSnapshot(
       tx,
       accountBookId,
       nodes,
+      scope,
     ),
   };
 }
 
 export const ORGANIZE_STALE_MESSAGE =
-  "The account hierarchy changed. Refresh and try the move again.";
+  "The hierarchy changed. Refresh and try the move again.";
 
 export function assertOrganizeVersion(
   snapshot: OrganizeSnapshot,

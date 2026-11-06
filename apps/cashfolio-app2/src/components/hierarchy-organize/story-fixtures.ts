@@ -92,7 +92,7 @@ export const organizeStoryNodes: OrganizeNode[] = [
 export function createOrganizerStoryApi(
   failure?: "busy" | "network" | "load",
   initialNodes: OrganizeNode[] = organizeStoryNodes,
-): OrganizerApi {
+): OrganizerApi & Required<Pick<OrganizerApi, "archive" | "unarchive">> {
   let nodes = structuredClone(initialNodes);
   let failed = false;
   const snapshot = (): OrganizeSnapshot => ({
@@ -103,7 +103,7 @@ export function createOrganizerStoryApi(
         const children = nodes.filter((item) => item.parentId === node.id);
         const blockedArchive = children.some((item) => item.isActive);
         const archivedParent = nodes.find(
-          (item) => item.id === node.parentId && !item.isActive,
+          (item) => item.id === node.parentId && item.isActive === false,
         );
         return [
           node.id,
@@ -111,10 +111,10 @@ export function createOrganizerStoryApi(
             archivable: node.isActive && !blockedArchive,
             archiveDisabledReason: blockedArchive
               ? "Cannot archive group because it contains active accounts"
-              : !node.isActive
+              : node.isActive === false
                 ? "Already archived"
                 : undefined,
-            unarchivable: !node.isActive && !archivedParent,
+            unarchivable: node.isActive === false && !archivedParent,
             unarchiveDisabledReason: archivedParent
               ? "Cannot unarchive because its parent group is archived"
               : node.isActive
@@ -175,7 +175,14 @@ export function createOrganizerStoryApi(
           : new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
       }
       const before = nodes;
-      nodes = planAccountMove(nodes, move);
+      nodes = planAccountMove(nodes, {
+        ...move,
+        items: move.items.map((item) => {
+          if (item.nodeType === "assetClass")
+            throw new Error("Choose an account or group.");
+          return { ...item, nodeType: item.nodeType };
+        }),
+      });
       return {
         snapshot: snapshot(),
         changed: nodes !== before,

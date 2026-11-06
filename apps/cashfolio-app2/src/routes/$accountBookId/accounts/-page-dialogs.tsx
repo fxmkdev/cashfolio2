@@ -5,7 +5,6 @@ import { EditAccountGroupModal } from "@/components/account-editor/edit-account-
 import { EditAccountModal } from "@/components/account-editor/edit-account-modal";
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
-import { ReorderGroupChildrenModal } from "@/components/account-tree/reorder-group-children-modal";
 import { getEntityLabel } from "./-page-types";
 import type { AccountsPageViewProps } from "./-page-view-types";
 export function AccountsBulkAssignmentDialogs({
@@ -52,8 +51,6 @@ export function AccountsPageDialogs({
   editGroupModalOpen,
   archivingRow,
   deletingRow,
-  reorderingRow,
-  selectedSiblingRows,
   onCloseCreateAccount,
   onSubmitCreateAccount,
   onCloseCreateGroup,
@@ -68,8 +65,6 @@ export function AccountsPageDialogs({
   onConfirmArchive,
   onCloseDelete,
   onConfirmDelete,
-  onCloseReorder,
-  onReorderSiblings,
 }: Pick<
   AccountsPageViewProps,
   | "managementContext"
@@ -91,8 +86,6 @@ export function AccountsPageDialogs({
   | "editGroupModalOpen"
   | "archivingRow"
   | "deletingRow"
-  | "reorderingRow"
-  | "selectedSiblingRows"
   | "onCloseCreateAccount"
   | "onSubmitCreateAccount"
   | "onCloseCreateGroup"
@@ -107,8 +100,6 @@ export function AccountsPageDialogs({
   | "onConfirmArchive"
   | "onCloseDelete"
   | "onConfirmDelete"
-  | "onCloseReorder"
-  | "onReorderSiblings"
 >) {
   const isEditingArchivedAccount = rows.some(
     (row) => row.id === editingAccount?.id && !row.isActive,
@@ -202,15 +193,6 @@ export function AccountsPageDialogs({
         }
         name={deletingRow?.name}
         onConfirm={onConfirmDelete}
-      />
-      <ReorderGroupChildrenModal
-        key={reorderingRow?.parentKey}
-        onRefreshConstraints={onRefreshConstraints}
-        opened={!!reorderingRow}
-        onClose={onCloseReorder}
-        rowName={reorderingRow?.name ?? ""}
-        initialRows={selectedSiblingRows}
-        onReorder={onReorderSiblings}
       />
     </>
   );

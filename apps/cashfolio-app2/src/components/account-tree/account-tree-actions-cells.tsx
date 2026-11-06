@@ -1,6 +1,5 @@
 import { RowActionsMenu } from "@/components/grid/row-actions-menu";
 import {
-  IconArrowsSort,
   IconArchive,
   IconArchiveOff,
   IconPencil,
@@ -10,52 +9,29 @@ import {
 
 export function ArchivedAccountTreeActionsCell({
   rowLabel,
-  reorderLabel,
-  reorderEnabled = true,
   deleteLabel,
   deletable,
   unarchiveLabel,
   onEdit,
   onDelete,
-  onReorder,
   unarchivable,
   onUnarchive,
   unarchivePending = false,
 }: {
   rowLabel: string;
-  reorderLabel?: string;
-  reorderEnabled?: boolean;
   deleteLabel: string;
   deletable: boolean;
   unarchiveLabel: string;
   onEdit: () => void;
   onDelete: () => void;
-  onReorder?: () => void;
   unarchivable: boolean;
   onUnarchive: () => void;
   unarchivePending?: boolean;
 }) {
-  const reorderActionLabel = reorderLabel ?? "Reorder Siblings";
-  const reorderActionUnavailableLabel = "Cannot reorder right now";
-  const canReorder = reorderEnabled && !!onReorder;
-  const resolvedReorderTooltipLabel = canReorder
-    ? reorderActionLabel
-    : reorderEnabled && !onReorder
-      ? reorderActionUnavailableLabel
-      : reorderActionLabel;
-
   return (
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
-        {
-          id: "reorder",
-          label: "Reorder Siblings",
-          icon: <IconArrowsSort size={16} />,
-          onClick: () => onReorder?.(),
-          disabled: !canReorder,
-          disabledReason: resolvedReorderTooltipLabel,
-        },
         {
           id: "edit",
           label: "Edit",
@@ -95,12 +71,9 @@ export function ActiveAccountTreeActionsCell({
   deleteLabel,
   archivable,
   deletable,
-  reorderLabel,
-  reorderEnabled = true,
   onEdit,
   onArchive,
   onDelete,
-  onReorder,
 }: {
   rowLabel: string;
   addAccountLabel?: string;
@@ -110,34 +83,14 @@ export function ActiveAccountTreeActionsCell({
   deleteLabel: string;
   archivable: boolean;
   deletable: boolean;
-  reorderLabel?: string;
-  reorderEnabled?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
-  onReorder?: () => void;
 }) {
-  const reorderActionLabel = reorderLabel ?? "Reorder Siblings";
-  const reorderActionUnavailableLabel = "Cannot reorder right now";
-  const canReorder = reorderEnabled && !!onReorder;
-  const resolvedReorderTooltipLabel = canReorder
-    ? reorderActionLabel
-    : reorderEnabled && !onReorder
-      ? reorderActionUnavailableLabel
-      : reorderActionLabel;
-
   return (
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
-        {
-          id: "reorder",
-          label: "Reorder Siblings",
-          icon: <IconArrowsSort size={16} />,
-          onClick: () => onReorder?.(),
-          disabled: !canReorder,
-          disabledReason: resolvedReorderTooltipLabel,
-        },
         {
           id: "edit",
           label: "Edit",

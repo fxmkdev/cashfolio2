@@ -56,7 +56,6 @@ const meta = {
     ],
     onSave: fn(async () => {}),
     onDelete: fn(async () => {}),
-    onReorder: fn(async () => {}),
     onRefresh: fn(async () => {}),
   },
 } satisfies Meta<typeof ClassificationsPageView>;
@@ -97,15 +96,15 @@ export const Hierarchy: Story = {
     await expect(equities).toHaveAttribute("aria-expanded", "true");
     const actions = await rowActions(canvasElement, "equities");
     await expect(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    ).toBeEnabled();
+      actions.queryByRole("menuitem", { name: "Reorder Siblings" }),
+    ).not.toBeInTheDocument();
     await expect(
       actions.getByRole("menuitem", { name: "Delete" }),
     ).toHaveAttribute("aria-disabled", "true");
     const swiss = await rowActions(canvasElement, "swiss");
     await expect(
-      swiss.getByRole("menuitem", { name: "Reorder Siblings" }),
-    ).toHaveAttribute("aria-disabled", "true");
+      swiss.queryByRole("menuitem", { name: "Reorder Siblings" }),
+    ).not.toBeInTheDocument();
   },
 };
 export const CreateChild: Story = {
@@ -284,7 +283,7 @@ export const SaveFailurePreservesDraft: Story = {
     await expect(args.onRefresh).toHaveBeenCalled();
   },
 };
-export const EditAndReorder: Story = {
+export const Edit: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     let actions = await rowActions(canvasElement, "swiss");
@@ -306,23 +305,6 @@ export const EditAndReorder: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    );
-    const reorder = within(
-      await body.findByRole("dialog", { name: "Reorder Siblings" }),
-    );
-    await waitFor(() =>
-      expect(reorder.getByText("Siblings of Equities")).toBeVisible(),
-    );
-    await expect(
-      await reorder.findByText("Cash", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      reorder.queryByText("Swiss Equities", { exact: true }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(reorder.getByRole("button", { name: "Close" }));
   },
 };
 export const Empty: Story = {
@@ -407,92 +389,5 @@ export const DeepHierarchy: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(await gridRow(canvasElement, "grandchild")).toBeVisible();
-  },
-};
-
-async function dragClassSibling(
-  dialog: HTMLElement,
-  sourceId: string,
-  targetId: string,
-) {
-  const source = dialog.querySelector<HTMLElement>(
-    `.ag-row[row-id="${sourceId}"] .ag-row-drag`,
-  )!;
-  const target = dialog.querySelector<HTMLElement>(
-    `.ag-row[row-id="${targetId}"]`,
-  )!;
-  // Modal and row transitions can move the drop target after it becomes visible.
-  await waitFor(async () => {
-    expect(source).toBeVisible();
-    const bounds = () =>
-      [source.getBoundingClientRect(), target.getBoundingClientRect()].map(
-        (rect) => [rect.x, rect.y, rect.width, rect.height],
-      );
-    const before = bounds();
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    expect(bounds()).toEqual(before);
-  });
-  const from = source.getBoundingClientRect(),
-    to = target.getBoundingClientRect();
-  const clientX = from.left + from.width / 2;
-  await userEvent.pointer([
-    {
-      target: source,
-      coords: { clientX, clientY: from.top + from.height / 2 },
-      keys: "[MouseLeft>]",
-    },
-    {
-      target: source,
-      coords: { clientX, clientY: from.top + from.height / 2 - 8 },
-    },
-    { target, coords: { clientX, clientY: to.top + to.height / 2 } },
-    { target, coords: { clientX, clientY: to.top + 8 } },
-    { target, coords: { clientX, clientY: to.top + 8 }, keys: "[/MouseLeft]" },
-  ]);
-}
-
-export const ReorderFailureRestoresConfirmedOrder: Story = {
-  play: async ({ canvasElement, args }) => {
-    args.onReorder.mockRejectedValueOnce(
-      new Error("The siblings changed. Refresh and reorder the updated list."),
-    );
-    const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    );
-    const dialog = await within(canvasElement.ownerDocument.body).findByRole(
-      "dialog",
-      { name: "Reorder Siblings" },
-    );
-    await waitFor(() =>
-      expect(
-        dialog.querySelector('.ag-row[row-id="cash"] .ag-row-drag'),
-      ).not.toBeNull(),
-    );
-    await dragClassSibling(dialog, "cash", "equities");
-    await waitFor(() =>
-      expect(args.onReorder).toHaveBeenCalledWith(null, ["cash", "equities"]),
-    );
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "The siblings changed",
-    );
-    expect(args.onRefresh).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(
-        dialog.querySelector('.ag-row[row-index="0"] [col-id="name"]'),
-      ).toHaveTextContent("Equities"),
-    );
-    await waitFor(() =>
-      expect(
-        within(dialog).getByRole("button", { name: "Close" }),
-      ).toBeEnabled(),
-    );
-    await dragClassSibling(dialog, "cash", "equities");
-    await waitFor(() => expect(args.onReorder).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument(),
-    );
   },
 };

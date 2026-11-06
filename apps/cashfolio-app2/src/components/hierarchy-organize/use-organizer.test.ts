@@ -54,6 +54,7 @@ vi.mock("@/server/accounts", () => ({
 import { useOrganizer } from "./use-organizer";
 import { createOrganizerStoryApi, organizeStoryNodes } from "./story-fixtures";
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
+import { createAssetClassStoryApi } from "./asset-class-story-fixtures";
 
 function renderHook<T>(hook: () => T) {
   harness.cursor = 0;
@@ -401,5 +402,43 @@ describe("organizer controller", () => {
     expect(render(api).revealIds).toEqual(["investments"]);
     expect(render(api).focusFallbackIds[0]).toBe("destination");
     expect(render(api).focusFallbackIds).not.toContain("archived");
+  });
+});
+
+describe("asset class lifecycle recovery", () => {
+  it("passes replacement choice through one controller and never repeats a confirmed delete after refresh failure", async () => {
+    const api = createAssetClassStoryApi();
+    const organizer = await ready(api);
+    const remove = vi.spyOn(api, "delete");
+    const load = vi
+      .spyOn(api, "load")
+      .mockRejectedValue(new Error("Refresh failed"));
+    const close = vi.fn();
+    await organizer.submitState.runSubmit(() =>
+      organizer.performLifecycle(
+        "delete",
+        { id: "swiss", nodeType: "assetClass" },
+        close,
+        "cash",
+      ),
+    );
+    expect(remove).toHaveBeenCalledExactlyOnceWith(
+      { id: "swiss", nodeType: "assetClass" },
+      "cash",
+    );
+    expect(close).toHaveBeenCalledOnce();
+    expect(
+      render(api).snapshot?.nodes.some((node) => node.id === "swiss"),
+    ).toBe(false);
+    expect(render(api).blocked).toBe(true);
+    render(api).retry();
+    expect(remove).toHaveBeenCalledTimes(1);
+    load.mockRestore();
+    await render(api).submitState.refreshConstraints();
+    expect(render(api).blocked).toBe(false);
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "cash"),
+    ).toMatchObject({ activeCount: 2, archivedCount: 1 });
+    expect(remove).toHaveBeenCalledTimes(1);
   });
 });

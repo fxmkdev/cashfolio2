@@ -165,7 +165,7 @@ export const ArchivedOnlyEmptyState: Story = {
     api: createOrganizerStoryApi(
       undefined,
       organizeStoryNodes
-        .filter((node) => !node.isActive)
+        .filter((node) => node.isActive === false)
         .map((node) => ({ ...node, parentId: null })),
     ),
   },
