@@ -49,7 +49,6 @@ vi.mock("react", () => ({
 vi.mock("@/server/accounts", () => ({
   getAccountOrganizeData: vi.fn(),
   moveAccountTreeItems: vi.fn(),
-  undoAccountTreeMove: vi.fn(),
 }));
 
 import { useOrganizer } from "./use-organizer";
@@ -123,7 +122,7 @@ describe("organizer controller", () => {
     expect(await pending).toBe(false);
     expect(render(api, saved, false).snapshot).toBeUndefined();
   });
-  it("clears Undo, selection-reveal feedback and recovery errors before reentry", async () => {
+  it("clears selection-reveal feedback and recovery errors before reentry", async () => {
     const api = createOrganizerStoryApi();
     await (await ready(api)).saveMove(move);
     vi.spyOn(api, "move").mockRejectedValueOnce(
@@ -133,19 +132,17 @@ describe("organizer controller", () => {
     await render(api).saveMove({ ...move, parentId: null });
     expect(render(api).submitState.refreshError).toBeTruthy();
     render(api).reset();
-    expect(render(api).undo).toBeNull();
     expect(render(api).revealIds).toEqual([]);
     expect(render(api).message).toBe("");
     expect(render(api).submitState.refreshError).toBeNull();
     expect(await render(api).load()).toBe(true);
     expect(render(api).blocked).toBe(false);
   });
-  it("loads once, saves optimistically and exposes a single-use Undo", async () => {
+  it("loads once and reconciles an optimistic move", async () => {
     const api = createOrganizerStoryApi();
     const load = vi.spyOn(api, "load");
     let organizer = await ready(api);
     expect(organizer.blocked).toBe(false);
-    const before = organizer.snapshot;
     const pending = organizer.saveMove(move);
     organizer = render(api);
     expect(organizer.pending).toBe(true);
@@ -155,14 +152,12 @@ describe("organizer controller", () => {
     ).toBe("destination");
     await pending;
     organizer = render(api);
-    expect(organizer.undo).not.toBeNull();
     expect(organizer.message).toBe("Move saved.");
-    await organizer.undoMove();
-    organizer = render(api);
-    expect(organizer.snapshot).toEqual(before);
-    expect(organizer.undo).toBeNull();
-    expect(organizer.message).toBe("Move undone.");
-    expect(saved).toHaveBeenCalledTimes(2);
+    expect(
+      organizer.snapshot?.nodes.find((node) => node.id === "checking")
+        ?.parentId,
+    ).toBe("destination");
+    expect(saved).toHaveBeenCalledTimes(1);
     expect(load).toHaveBeenCalledTimes(1);
   });
   it("ignores duplicate submissions and keeps Done/movement blocked until the request finishes", async () => {
@@ -187,14 +182,12 @@ describe("organizer controller", () => {
     expect(submit).toHaveBeenCalledTimes(1);
     expect(render(api).pending).toBe(false);
   });
-  it("does not call the server for a no-op or consume the existing Undo", async () => {
+  it("does not call the server for a no-op", async () => {
     const api = createOrganizerStoryApi();
     const submit = vi.spyOn(api, "move");
     await (await ready(api)).saveMove(move);
-    const undo = render(api).undo;
     await render(api).saveMove(move);
     expect(submit).toHaveBeenCalledTimes(1);
-    expect(render(api).undo).toEqual(undo);
     expect(render(api).message).toContain("already in that position");
   });
   it("restores confirmed data, refreshes and allows a busy retry", async () => {
@@ -210,7 +203,7 @@ describe("organizer controller", () => {
     expect(failed.retryDisabled).toBe(false);
     failed.retry();
     for (let i = 0; i < 12; i++) await Promise.resolve();
-    expect(render(api).undo).not.toBeNull();
+    expect(render(api).message).toBe("Move saved.");
   });
   it("blocks movement after failed recovery and allows it only after a successful refresh", async () => {
     const api = createOrganizerStoryApi("network");
@@ -226,7 +219,7 @@ describe("organizer controller", () => {
     await render(api).submitState.refreshConstraints();
     expect(render(api).blocked).toBe(false);
   });
-  it("clears Undo on conflicting refresh and disables stale busy retries", async () => {
+  it("disables stale busy retries on conflicting refresh", async () => {
     const api = createOrganizerStoryApi();
     await (await ready(api)).saveMove(move);
     const snapshot = await api.load();
@@ -234,22 +227,8 @@ describe("organizer controller", () => {
       .spyOn(api, "load")
       .mockResolvedValue({ ...snapshot, version: "concurrent" });
     await render(api).refresh();
-    expect(render(api).undo).toBeNull();
     expect(render(api).retryDisabled).toBe(true);
     load.mockRestore();
-  });
-  it("keeps Undo available after a rolled-back Undo failure", async () => {
-    const api = createOrganizerStoryApi();
-    await (await ready(api)).saveMove(move);
-    vi.spyOn(api, "undo").mockRejectedValueOnce(
-      new Error(ACCOUNT_BOOK_BUSY_MESSAGE),
-    );
-    const previous = render(api).undo;
-    await render(api).undoMove();
-    expect(render(api).undo).toEqual(previous);
-    render(api).retry();
-    for (let i = 0; i < 12; i++) await Promise.resolve();
-    expect(render(api).undo).toBeNull();
   });
   it("recovers from an initial load failure", async () => {
     const api = createOrganizerStoryApi("load");
@@ -259,5 +238,144 @@ describe("organizer controller", () => {
     await organizer.refresh();
     expect(render(api).loadError).toBeUndefined();
     expect(render(api).blocked).toBe(false);
+  });
+  it("archives, unarchives and deletes with a canonical refresh after each commit", async () => {
+    const api = createOrganizerStoryApi();
+    const committed = vi.fn();
+    await ready(api);
+    for (const action of ["archive", "unarchive", "delete"] as const) {
+      const organizer = render(api);
+      expect(
+        await organizer.submitState.runSubmit(() =>
+          organizer.performLifecycle(action, move.items[0], committed),
+        ),
+      ).toBe(true);
+      const next = render(api);
+      expect(next.snapshot).toEqual(await api.load());
+      const node = next.snapshot?.nodes.find((node) => node.id === "checking");
+      if (action === "delete") expect(node).toBeUndefined();
+      else expect(node?.isActive).toBe(action === "unarchive");
+    }
+    expect(saved).toHaveBeenCalledTimes(3);
+    expect(committed).toHaveBeenCalledTimes(3);
+  });
+  it("keeps all mutations blocked until the post-commit refresh settles", async () => {
+    const api = createOrganizerStoryApi();
+    const organizer = await ready(api);
+    const original = api.load;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(api, "load").mockImplementation(async () => {
+      await gate;
+      return original();
+    });
+    const archive = vi.spyOn(api, "archive");
+    const pending = organizer.submitState.runSubmit(() =>
+      organizer.performLifecycle("archive", move.items[0]),
+    );
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    expect(render(api).pending).toBe(true);
+    expect(await render(api).saveMove(move)).toBe(false);
+    expect(
+      await render(api).submitState.runSubmit(() =>
+        render(api).performLifecycle("archive", move.items[0]),
+      ),
+    ).toBe(false);
+    release();
+    await pending;
+    expect(archive).toHaveBeenCalledTimes(1);
+    expect(render(api).pending).toBe(false);
+  });
+  it("never repeats a confirmed lifecycle commit when its refresh fails", async () => {
+    const api = createOrganizerStoryApi();
+    const organizer = await ready(api);
+    const archive = vi.spyOn(api, "archive");
+    const load = vi.spyOn(api, "load").mockRejectedValue(new Error("Offline"));
+    const committed = vi.fn();
+    expect(
+      await organizer.submitState.runSubmit(() =>
+        organizer.performLifecycle("archive", move.items[0], committed),
+      ),
+    ).toBe(false);
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(saved).toHaveBeenCalledTimes(1);
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    load.mockRestore();
+    await render(api).submitState.refreshConstraints();
+    expect(archive).toHaveBeenCalledTimes(1);
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "checking")
+        ?.isActive,
+    ).toBe(false);
+  });
+  it("recovers from an uncertain lifecycle outcome before permitting another operation", async () => {
+    const api = createOrganizerStoryApi("network");
+    const organizer = await ready(api);
+    const load = vi
+      .spyOn(api, "load")
+      .mockRejectedValueOnce(new Error("Offline"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performLifecycle("archive", move.items[0]),
+    );
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).submitState.submissionError?.isUncertainOutcome).toBe(
+      true,
+    );
+    await expect(
+      render(api).performLifecycle("delete", move.items[0]),
+    ).rejects.toThrow("no longer available");
+    await render(api).submitState.refreshConstraints();
+    expect(render(api).blocked).toBe(false);
+    load.mockRestore();
+  });
+  it("allows a confirmed busy rollback to retry and rejects ineligible lifecycle targets", async () => {
+    const api = createOrganizerStoryApi("busy");
+    const organizer = await ready(api);
+    const archive = vi.spyOn(api, "archive");
+    await organizer.submitState.runSubmit(() =>
+      organizer.performLifecycle("archive", move.items[0]),
+    );
+    render(api).retry();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(archive).toHaveBeenCalledTimes(2);
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "checking")
+        ?.isActive,
+    ).toBe(false);
+    await expect(
+      render(api).performLifecycle("archive", {
+        id: "investments",
+        nodeType: "accountGroup",
+      }),
+    ).rejects.toThrow("contains active");
+    await expect(
+      render(api).performLifecycle("delete", {
+        id: "missing",
+        nodeType: "account",
+      }),
+    ).rejects.toThrow("no longer available");
+  });
+  it("disables a busy retry when refreshed eligibility changes without a hierarchy edit", async () => {
+    const api = createOrganizerStoryApi("busy");
+    const organizer = await ready(api);
+    const current = organizer.snapshot!;
+    const archive = vi.spyOn(api, "archive");
+    vi.spyOn(api, "load").mockResolvedValue({
+      ...current,
+      actionAvailability: {
+        ...current.actionAvailability,
+        checking: { ...current.actionAvailability.checking, archivable: false },
+      },
+    });
+    await organizer.submitState.runSubmit(() =>
+      organizer.performLifecycle("archive", move.items[0]),
+    );
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    expect(archive).toHaveBeenCalledTimes(1);
   });
 });

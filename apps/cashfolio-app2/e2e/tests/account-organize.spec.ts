@@ -5,7 +5,7 @@ import { seedDatabase } from "../support/db";
 import { clickGridRowSelectionCheckbox } from "../support/grid";
 import { expect, test } from "../support/fixtures";
 
-test("organizes an account and complete group subtree, persists ordering, and undoes the latest move", async ({
+test("organizes an account and complete group subtree, persists ordering, and manages account lifecycle actions", async ({
   page,
   e2eExternalId,
 }) => {
@@ -69,6 +69,13 @@ test("organizes an account and complete group subtree, persists ordering, and un
   await page.getByRole("button", { name: "Organize", exact: true }).click();
   const organizer = page.getByRole("region", { name: "Organize Accounts" });
   await expect(organizer.locator(`.ag-row[row-id="${source}"]`)).toBeVisible();
+  await expect(
+    organizer.getByRole("checkbox", { name: "Show Archived" }),
+  ).not.toBeChecked();
+  await expect(organizer.locator(`.ag-row[row-id="${archived}"]`)).toHaveCount(
+    0,
+  );
+  await organizer.getByRole("checkbox", { name: "Show Archived" }).check();
   await expect(
     organizer.locator(`.ag-row[row-id="${archived}"]`),
   ).toBeVisible();
@@ -163,17 +170,11 @@ test("organizes an account and complete group subtree, persists ordering, and un
   await expect(page).toHaveURL(/organize=true/);
   // Forward opens a fresh session; it neither replays nor reverses the saved move.
   expect(await accountState()).toEqual(persisted);
-  await expect(
-    page.getByRole("button", { name: "Undo", exact: true }),
-  ).toHaveCount(0);
   await page.reload();
   await expect(organizer).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Undo", exact: true }),
-  ).toHaveCount(0);
-  await expect(
     organizer.getByRole("checkbox", { name: "Show Archived" }),
-  ).toBeChecked();
+  ).not.toBeChecked();
   await expect(organizer.locator(`.ag-row[row-id="${source}"]`)).toBeVisible();
   expect(await accountState()).toEqual(persisted);
   await organizer
@@ -196,22 +197,80 @@ test("organizes an account and complete group subtree, persists ordering, and un
         ).parentGroupId,
     )
     .toBeNull();
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  const freeRow = organizer.locator(
+    `.ag-row[row-id="${free}"]:not(.ag-opacity-zero)`,
+  );
+  await freeRow.hover();
+  await organizer
+    .getByRole("button", { name: "Archive Organize Free", exact: true })
+    .click();
+  const archiveDialog = page.getByRole("dialog", {
+    name: "Archive Account",
+    exact: true,
+  });
+  await archiveDialog
+    .getByRole("button", { name: "Archive", exact: true })
+    .click();
+  await expect(archiveDialog).not.toBeVisible();
+  await expect(freeRow).toHaveCount(0);
   await expect
     .poll(
       async () =>
         (
-          await prisma.accountGroup.findUniqueOrThrow({
+          await prisma.account.findUniqueOrThrow({
             where: {
-              id_accountBookId: {
-                id: source,
-                accountBookId: book.accountBookId,
-              },
+              id_accountBookId: { id: free, accountBookId: book.accountBookId },
             },
           })
-        ).parentGroupId,
+        ).isActive,
     )
-    .toBe(destination);
+    .toBe(false);
+  await expect(
+    organizer.getByRole("checkbox", { name: "Show Archived" }),
+  ).not.toBeChecked();
+  await page.reload();
+  await expect(organizer).toBeVisible();
+  await expect(freeRow).toHaveCount(0);
+  await organizer.getByRole("checkbox", { name: "Show Archived" }).check();
+  await expect(freeRow).toContainText("Archived");
+  await freeRow.hover();
+  await organizer
+    .getByRole("button", { name: "Unarchive Organize Free", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.account.findUniqueOrThrow({
+            where: {
+              id_accountBookId: { id: free, accountBookId: book.accountBookId },
+            },
+          })
+        ).isActive,
+    )
+    .toBe(true);
+  await expect(freeRow).not.toContainText("Archived");
+  await freeRow.hover();
+  await organizer
+    .getByRole("button", { name: "Delete Organize Free", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Delete Account", exact: true })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(freeRow).toHaveCount(0);
+  await expect
+    .poll(() =>
+      prisma.account.findUnique({
+        where: {
+          id_accountBookId: { id: free, accountBookId: book.accountBookId },
+        },
+      }),
+    )
+    .toBeNull();
+  await page.reload();
+  await expect(organizer).toBeVisible();
+  await expect(freeRow).toHaveCount(0);
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Add Account", exact: true }),

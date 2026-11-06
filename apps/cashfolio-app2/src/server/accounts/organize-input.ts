@@ -1,16 +1,12 @@
 import {
   assertRecord,
   requireArrayField,
-  requireBooleanField,
   requireEnumField,
-  requireIntegerField,
   requireStringField,
 } from "../input-validation";
 import type {
   OrganizeMove,
   OrganizeNodeRef,
-  OrganizeRestore,
-  OrganizeUndo,
 } from "../../shared/account-organize/types";
 
 function readRef(value: unknown): OrganizeNodeRef {
@@ -52,35 +48,5 @@ export function validateOrganizeMove(
       data.anchorId === undefined
         ? undefined
         : requireStringField(data, "anchorId"),
-  };
-}
-
-export function validateOrganizeUndo(data: unknown): {
-  accountBookId: string;
-  undo: OrganizeUndo;
-} {
-  assertRecord(data);
-  assertRecord(data.undo);
-  const undo = data.undo;
-  return {
-    ...validateOrganizeBook(data),
-    undo: {
-      version: requireStringField(undo, "version"),
-      restore: Array.from(
-        requireArrayField(undo, "restore"),
-        (value): OrganizeRestore => {
-          assertRecord(value);
-          return {
-            ...readRef(value),
-            parentId: readParent(value),
-            sortOrder:
-              value.sortOrder === null
-                ? null
-                : requireIntegerField(value, "sortOrder"),
-            isCashAccount: requireBooleanField(value, "isCashAccount"),
-          };
-        },
-      ),
-    },
   };
 }

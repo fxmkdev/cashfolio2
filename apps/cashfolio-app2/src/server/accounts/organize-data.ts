@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readOrganizeAvailability } from "./organize-availability";
 import type { Prisma } from "../../.prisma-client/client";
 import type {
   OrganizeNode,
@@ -53,7 +54,15 @@ export async function readOrganizeSnapshot(
       unit: null,
     })),
   ];
-  return { nodes, version: organizeVersion(nodes) };
+  return {
+    nodes,
+    version: organizeVersion(nodes),
+    actionAvailability: await readOrganizeAvailability(
+      tx,
+      accountBookId,
+      nodes,
+    ),
+  };
 }
 
 export const ORGANIZE_STALE_MESSAGE =

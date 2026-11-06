@@ -8,7 +8,7 @@ import {
   normalizeOrganizeSelection,
   organizeDisplayRows,
 } from "./tree";
-import type { OrganizeMove, OrganizeNode, OrganizeRestore } from "./types";
+import type { OrganizeMove, OrganizeNode, OrganizeChange } from "./types";
 
 export function validateOrganizeTree(nodes: OrganizeNode[]) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
@@ -137,7 +137,7 @@ export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
 export function organizeChanges(
   before: OrganizeNode[],
   after: OrganizeNode[],
-): OrganizeRestore[] {
+): OrganizeChange[] {
   const byId = new Map(before.map((node) => [node.id, node]));
   return after
     .filter((node) => {
@@ -155,24 +155,4 @@ export function organizeChanges(
       sortOrder,
       isCashAccount,
     }));
-}
-
-export function restoreAccountMove(
-  nodes: OrganizeNode[],
-  restore: OrganizeRestore[],
-) {
-  const updates = new Map(restore.map((node) => [node.id, node]));
-  if (!restore.length || updates.size !== restore.length)
-    throw new Error("Invalid Undo receipt.");
-  for (const update of restore) {
-    if (
-      !nodes.some(
-        (node) => node.id === update.id && node.nodeType === update.nodeType,
-      )
-    )
-      throw new Error("An Undo item is no longer available.");
-  }
-  const result = nodes.map((node) => ({ ...node, ...updates.get(node.id) }));
-  validateOrganizeTree(result);
-  return result;
 }

@@ -152,7 +152,9 @@ export function AccountsPageHeader({
           heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
           headingAccessory={
             organizing ? (
-              <Badge variant="light">Organizing</Badge>
+              <Badge variant="light" size="lg">
+                Organizing
+              </Badge>
             ) : (
               <Group gap="xs" wrap="nowrap">
                 <Text size="sm">Group By</Text>

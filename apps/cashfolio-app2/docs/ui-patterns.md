@@ -1168,8 +1168,8 @@ affected count, relevant selection actions, and **Clear Selection**. Do not show
 zero-selection status text or disabled bulk buttons before selection. Where
 layout stability matters, replace same-height instruction or utility content
 with the selection toolbar. Keep persistent mode controls and history actions,
-such as **Done** and **Undo**, separate from selection actions. Apply this
-pattern to all grids, including account management and transaction lists.
+such as **Done**, separate from selection actions. Apply this pattern to all
+grids, including account management and transaction lists.
 
 ## Bulk Transaction Actions
 
@@ -1522,33 +1522,42 @@ Organize is represented by `organize=true` in the Accounts URL. Entering pushes
 one browser-history entry before loading, so Back exits even during loading and
 Forward reopens a fresh session. Done returns to the verified normal Accounts
 origin or replaces a directly visited Organize URL. Loading retries and saved
-moves add no history entries. During move, Undo, and recovery requests, wait for
-the request to settle before continuing the first queued navigation attempt.
-There is no unsaved-changes confirmation for a settled organizer. Undo remains a
-separate action for the latest saved move; Back never undoes, and Forward never
-replays. Exiting clears selection, visibility, expansion, dialogs, and Undo
-history; reentry uses defaults. See [Routing](routing.md) for return-target
+moves add no history entries. During movement, lifecycle mutations, and recovery
+requests, wait for the request to settle before continuing the first queued
+navigation attempt. There is no unsaved-changes confirmation for a settled
+organizer. Organize has no Undo or Redo; Back never reverses a change, and
+Forward never replays one. Exiting clears selection, visibility, expansion, and
+dialogs; reentry uses defaults. See [Routing](routing.md) for return-target
 rules.
 
 Keep **Accounts** as the heading with an **Organizing** badge and standard
-header spacing, without a mode-specific background. **Done** and, when
-available, **Undo** use the same right-aligned header toolbar as the normal
-management actions. Selection actions appear only after selection, replacing the
-instruction row without shifting the grid. Keep drag and save status in reserved
-space; avoid standalone loading spinners. Use global progress for initial
-hierarchy loading and recovery, and shared local feedback for mutations.
-Announce mode entry and movement results accessibly.
+header spacing, without a mode-specific background. Use a large Organizing badge
+beside the heading. **Done** uses the same right-aligned header toolbar as
+normal management actions. Selection actions appear only after selection,
+replacing the instruction row without shifting the grid. Routine drag/save
+feedback shares that row, with no separate empty status line. Use the normal
+header and grid spacing; avoid standalone loading spinners. Use global progress
+for initial hierarchy loading and recovery, and shared local feedback for
+mutations. Announce mode entry and movement results accessibly.
 
 Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;
 the complete subtree travels intact, including archived descendants. This
 selection is separate from the normal account-property bulk selection and starts
-empty on entry. Creation, editing, archiving, deletion, and property bulk
-actions are hidden while organizing.
+empty on entry. Creation, editing, and property bulk actions are hidden while
+organizing. Row actions use an unlabeled, fixed-width, right-pinned column with
+shared hover/focus styling: Move To (`IconArrowsMove`, blue), Archive
+(`IconArchive`, yellow) or Unarchive (`IconArchiveOff`, blue), then Delete
+(`IconTrash`, red). Use accessible labels identifying the row and
+disabled-reason tooltips. Archive/delete reuse the shared confirmation dialogs;
+unarchive runs directly. Existing eligibility remains authoritative: groups with
+active children cannot be archived, nonempty groups cannot be deleted, booked
+accounts cannot be deleted, and archived ancestors prevent unarchiving. These
+are single-row operations, not recursive subtree archive/delete or bulk actions.
 
 Organize displays real persisted parents and manual order, including archived
 items, without virtual Archived branches. Archived rows have a status badge and
-subdued readable styling. **Show Archived** starts enabled on each entry and
+subdued readable styling. **Show Archived** starts disabled on each entry and
 affects visibility only. Turning it off deselects hidden archived rows while
 retaining active selections; selected groups still move every descendant. Keep
 expansion across toggles. Freeze the toggle during dragging, an open Move To
@@ -1560,7 +1569,7 @@ hierarchy is valid. Before/After means immediately beside the real anchor in the
 complete sibling order; First/Last uses the complete list's boundaries, even
 with archived items hidden. Untouched siblings retain their relative order.
 Dialog destinations and anchors follow archived visibility; previews include
-archived-descendant counts. Preserve the visibility choice after moves and Undo,
+archived-descendant counts. Preserve the visibility choice after all operations,
 focus a visible affected item or ancestor, and announce hidden results. Offer
 Show Archived when the active-only tree is empty.
 
@@ -1586,19 +1595,31 @@ Cash Account changes. Success reveals the moved items and announces the result.
 
 Each move autosaves through an authorized serialized book mutation. A coherent
 balance-hierarchy metadata snapshot supplies a version checked under the book
-lock before moving or undoing, preventing stale writes. Unrelated booking and
-balance changes do not affect that version. The latest successful move has one
-in-memory **Undo**, restoring exact previous parents, nullable sort orders, and
-all affected Cash Account flags. Undo is validated again on the server and is
-cleared by exit, reload, account-book change, or conflicting hierarchy refresh.
-There is no Redo or persistent undo history.
+lock before moving, preventing stale writes. Unrelated booking and balance
+changes do not affect that version. There is no Undo, Redo, or stored undo
+history.
 
-One request runs at a time. Failed moves restore confirmed data and refresh
-choices using shared mutation feedback. Only confirmed busy rollbacks offer an
-explicit retry while the hierarchy version remains unchanged. Uncertain network
-outcomes require a successful refresh before another operation. Movement remains
-disabled when that refresh fails. Both moves and Undo invalidate reporting data
-after a committed change; financial fields are never accepted by these APIs.
+Snapshots include fresh action availability separately from hierarchy
+versioning. Use existing rule helpers and booking metadata without fetching
+financial reporting data. Lifecycle mutations reuse the existing authorized
+server functions and revalidate eligibility at submission. After a committed
+action, invalidate reporting data and refresh the canonical organizer snapshot
+before allowing more operations. Preserve expansion and visibility; prune
+unavailable or hidden selections, focus a visible ancestor/neighbor when a row
+disappears, and announce hidden archive results without enabling Show Archived
+automatically.
+
+One submission controller covers movement, lifecycle confirmations, direct
+unarchive, and recovery. Shared confirmation dialogs optionally accept this
+controller; standalone callers retain their internal controller. While pending,
+disable movement, row mutations, Show Archived, and Done, and queue navigation.
+Failed moves restore confirmed data and refresh choices using shared mutation
+feedback. Only confirmed busy rollbacks offer an explicit retry while the
+hierarchy version and target eligibility remain valid. Uncertain network
+outcomes require a successful refresh before another operation. A confirmed
+lifecycle commit is never resubmitted to recover a failed refresh; retain the
+committed state and recover by reading canonical data. Financial fields are
+never accepted by movement APIs.
 
 ## Node Type Mixing in Tree Data
 

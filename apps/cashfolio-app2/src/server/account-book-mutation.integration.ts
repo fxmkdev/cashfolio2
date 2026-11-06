@@ -248,7 +248,7 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     ).toBe("B");
   });
 
-  it("rejects an Undo after a concurrent group edit without replacing the newer state", async () => {
+  it("rejects a stale move after a concurrent group edit without replacing the newer state", async () => {
     const snapshot = await organize.getAccountOrganizeData({
       data: { accountBookId: bookId },
     });
@@ -267,8 +267,14 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
           data: { ...groupUpdate("B").data, name: "Renamed B" },
         }),
       () =>
-        organize.undoAccountTreeMove({
-          data: { accountBookId: bookId, undo: moved.undo! },
+        organize.moveAccountTreeItems({
+          data: {
+            accountBookId: bookId,
+            version: moved.snapshot.version,
+            items: [{ id: "A", nodeType: "accountGroup" }],
+            parentId: null,
+            placement: "last",
+          },
         }),
     );
     expectRejected(outcomes, "hierarchy changed");

@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { organizeLifecycleAvailability } from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { organizeDisplayRows } from "@/shared/account-organize/tree";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
   OrganizeMove,
   OrganizeMoveResult,
   OrganizeSnapshot,
-  OrganizeUndo,
+  OrganizeNodeRef,
+  OrganizeLifecycleAction,
 } from "@/shared/account-organize/types";
 
 export type OrganizerApi = {
   load: () => Promise<OrganizeSnapshot>;
   move: (move: OrganizeMove, version: string) => Promise<OrganizeMoveResult>;
-  undo: (undo: OrganizeUndo) => Promise<OrganizeSnapshot>;
+  archive: (target: OrganizeNodeRef) => Promise<unknown>;
+  unarchive: (target: OrganizeNodeRef) => Promise<unknown>;
+  delete: (target: OrganizeNodeRef) => Promise<unknown>;
 };
 
 export function useOrganizer(
@@ -22,7 +27,6 @@ export function useOrganizer(
   const api = useRef(apiOverride).current;
   const [snapshot, setSnapshot] = useState<OrganizeSnapshot>();
   const confirmed = useRef<OrganizeSnapshot | undefined>(undefined);
-  const [undo, setUndo] = useState<OrganizeUndo | null>(null);
   const [loadError, setLoadError] = useState<string>();
   const [loading, setLoading] = useState(autoLoad);
   const [message, setMessage] = useState("");
@@ -31,14 +35,21 @@ export function useOrganizer(
   const generation = useRef(0);
   const loadInFlight = useRef<number | undefined>(undefined);
   const attempted = useRef<
-    { move?: OrganizeMove; undo?: OrganizeUndo; version: string } | undefined
+    | {
+        move?: OrganizeMove;
+        lifecycle?: {
+          action: OrganizeLifecycleAction;
+          target: OrganizeNodeRef;
+        };
+        version: string;
+      }
+    | undefined
   >(undefined);
   const refresh = useCallback(async () => {
     if (!api) throw new Error("Organize is unavailable.");
     const current = generation.current;
     const next = await api.load();
     if (!mounted.current || current !== generation.current) return;
-    if (confirmed.current?.version !== next.version) setUndo(null);
     confirmed.current = next;
     setSnapshot(next);
     setLoadError(undefined);
@@ -82,7 +93,6 @@ export function useOrganizer(
     confirmed.current = undefined;
     attempted.current = undefined;
     setSnapshot(undefined);
-    setUndo(null);
     setLoading(false);
     setLoadError(undefined);
     setMessage("");
@@ -116,10 +126,9 @@ export function useOrganizer(
           if (!mounted.current) return;
           confirmed.current = result.snapshot;
           setSnapshot(result.snapshot);
-          if (result.undo) setUndo(result.undo);
           setRevealIds(move.items.map((item) => item.id));
           setMessage(
-            result.undo
+            result.changed
               ? "Move saved."
               : "The items are already in that position.",
           );
@@ -132,29 +141,80 @@ export function useOrganizer(
     },
     [api, needsRefresh, onSaved, pending, runSubmit],
   );
-  const undoMove = async () => {
+  // Shared confirmation dialogs and direct unarchive wrap this in runSubmit,
+  // so movement, lifecycle actions, recovery, and navigation share one lock.
+  const performLifecycle = async (
+    action: OrganizeLifecycleAction,
+    target: OrganizeNodeRef,
+    onCommitted?: () => void,
+  ) => {
     const before = confirmed.current;
-    if (!api || !before || !undo || pending || needsRefresh) return;
-    await submitState.runSubmit(async () => {
-      attempted.current = { undo, version: before.version };
-      const result = await api.undo(undo);
-      if (!mounted.current) return;
-      confirmed.current = result;
-      setSnapshot(result);
-      setUndo(null);
-      setRevealIds(undo.restore.map((item) => item.id));
-      setMessage("Move undone.");
-      onSaved();
+    const node = before?.nodes.find(
+      (item) => item.id === target.id && item.nodeType === target.nodeType,
+    );
+    const availability = organizeLifecycleAvailability(before, target, action);
+    if (!api || !before || !node || needsRefresh || !availability.enabled) {
+      throw new Error(
+        needsRefresh
+          ? "This item is no longer available for that action. Refresh and try again."
+          : availability.reason,
+      );
+    }
+    attempted.current = {
+      lifecycle: { action, target },
+      version: before.version,
+    };
+    await api[action](target);
+    // A confirmed commit is never retried, even if its subsequent refresh fails.
+    attempted.current = undefined;
+    if (!mounted.current) return;
+    // Reflect a known commit while canonical metadata is being recovered.
+    // Its old version cannot be submitted: the shared controller stays blocked.
+    setSnapshot({
+      ...before,
+      nodes:
+        action === "delete"
+          ? before.nodes.filter((item) => item.id !== target.id)
+          : before.nodes.map((item) =>
+              item.id === target.id
+                ? { ...item, isActive: action === "unarchive" }
+                : item,
+            ),
     });
+    onSaved();
+    onCommitted?.();
+    const displayed = organizeDisplayRows(before.nodes, true);
+    const index = displayed.findIndex((item) => item.id === target.id);
+    const neighbor = displayed[index + 1] ?? displayed[index - 1];
+    setRevealIds([
+      target.id,
+      ...(node.parentId ? [node.parentId] : neighbor ? [neighbor.id] : []),
+    ]);
+    setMessage(
+      `${node.name} ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
+    );
+    await refresh();
+  };
+  const isRetryValid = () => {
+    const attempt = attempted.current;
+    return (
+      !!attempt &&
+      attempt.version === confirmed.current?.version &&
+      (!attempt.lifecycle ||
+        organizeLifecycleAvailability(
+          confirmed.current,
+          attempt.lifecycle.target,
+          attempt.lifecycle.action,
+        ).enabled)
+    );
   };
   const retry = () => {
-    if (
-      !submitState.submissionError?.isBusy ||
-      attempted.current?.version !== confirmed.current?.version
-    )
-      return;
+    if (!submitState.submissionError?.isBusy || !isRetryValid()) return;
     if (attempted.current?.move) void saveMove(attempted.current.move);
-    else if (attempted.current?.undo) void undoMove();
+    else if (attempted.current?.lifecycle) {
+      const { action, target } = attempted.current.lifecycle;
+      void runSubmit(() => performLifecycle(action, target));
+    }
   };
   return {
     load,
@@ -163,8 +223,7 @@ export function useOrganizer(
     loading,
     loadError,
     refresh,
-    undo,
-    undoMove,
+    performLifecycle,
     saveMove,
     pending,
     blocked: pending || needsRefresh || loading || !snapshot,
@@ -172,7 +231,7 @@ export function useOrganizer(
     revealIds,
     submitState,
     retry,
-    retryDisabled: attempted.current?.version !== confirmed.current?.version,
+    retryDisabled: !isRetryValid(),
   };
 }
 

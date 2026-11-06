@@ -3,7 +3,12 @@ import { useMemo } from "react";
 import {
   getAccountOrganizeData,
   moveAccountTreeItems,
-  undoAccountTreeMove,
+  archiveAccount,
+  archiveAccountGroup,
+  unarchiveAccount,
+  unarchiveAccountGroup,
+  deleteAccount,
+  deleteAccountGroup,
 } from "@/server/accounts";
 import type { OrganizerApi } from "./-organize/use-organizer";
 import { getManagementTabs } from "./-page-types";
@@ -42,9 +47,19 @@ export function useAccountsPageController(args: {
         moveAccountTreeItems({
           data: { accountBookId: args.accountBookId, ...move, version },
         }),
-      undo: (undo) =>
-        undoAccountTreeMove({
-          data: { accountBookId: args.accountBookId, undo },
+      archive: (target) =>
+        (target.nodeType === "account" ? archiveAccount : archiveAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
+        }),
+      unarchive: (target) =>
+        (target.nodeType === "account"
+          ? unarchiveAccount
+          : unarchiveAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
+        }),
+      delete: (target) =>
+        (target.nodeType === "account" ? deleteAccount : deleteAccountGroup)({
+          data: { id: target.id, accountBookId: args.accountBookId },
         }),
     }),
     [args.accountBookId],

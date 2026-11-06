@@ -9,18 +9,13 @@ import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/per
 import {
   organizeChanges,
   planAccountMove,
-  restoreAccountMove,
 } from "../../shared/account-organize/move";
 import type {
   OrganizeMoveResult,
   OrganizeSnapshot,
 } from "../../shared/account-organize/types";
 import { assertOrganizeVersion, readOrganizeSnapshot } from "./organize-data";
-import {
-  validateOrganizeBook,
-  validateOrganizeMove,
-  validateOrganizeUndo,
-} from "./organize-input";
+import { validateOrganizeBook, validateOrganizeMove } from "./organize-input";
 import {
   validateAccountName,
   validateAccountGroupName,
@@ -125,27 +120,7 @@ export const moveAccountTreeItems = createServerFn({ method: "POST" })
       assertOrganizeVersion(before, data.version);
       const next = planAccountMove(before.nodes, data);
       const saved = await persistOrganize(tx, data.accountBookId, before, next);
-      return {
-        ...saved,
-        undo: saved.changed
-          ? {
-              version: saved.snapshot.version,
-              restore: organizeChanges(next, before.nodes),
-            }
-          : null,
-      };
+      return saved;
     });
-    return { snapshot: result.snapshot, undo: result.undo };
-  });
-
-export const undoAccountTreeMove = createServerFn({ method: "POST" })
-  .validator(validateOrganizeUndo)
-  .handler(async ({ data }): Promise<OrganizeSnapshot> => {
-    const result = await mutateOrganize(data.accountBookId, async (tx) => {
-      const before = await readOrganizeSnapshot(tx, data.accountBookId);
-      assertOrganizeVersion(before, data.undo.version);
-      const next = restoreAccountMove(before.nodes, data.undo.restore);
-      return persistOrganize(tx, data.accountBookId, before, next);
-    });
-    return result.snapshot;
+    return result;
   });

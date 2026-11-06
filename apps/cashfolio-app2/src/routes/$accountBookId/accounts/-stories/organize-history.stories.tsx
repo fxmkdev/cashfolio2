@@ -45,10 +45,8 @@ export const OrganizeBackForwardAndDone: Story = {
     });
     await expect(
       within(reopened).getByRole("checkbox", { name: "Show Archived" }),
-    ).toBeChecked();
-    await expect(
-      canvas.queryByRole("button", { name: "Undo" }),
-    ).not.toBeInTheDocument();
+    ).not.toBeChecked();
+
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await waitFor(() =>
       expect(canvas.getByTestId("history-index")).toHaveTextContent("0"),
@@ -178,7 +176,7 @@ export const OrganizeRetryKeepsHistoryEntry: Story = {
 // Memory history supports blockers for push/replace. The E2E also exercises
 // native browser Back while a server request is held in flight.
 function pendingNavigation(
-  kind: "move" | "undo" | "recovery",
+  kind: "move" | "archive" | "recovery",
 ): NonNullable<Story["play"]> {
   return async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -192,7 +190,7 @@ function pendingNavigation(
     });
     // Preserve each API signature while deferring just the selected request.
     const move = api.move;
-    const undo = api.undo;
+    const archive = api.archive;
     const load = api.load;
     const deferred = fn(async () => {
       await gate;
@@ -202,10 +200,10 @@ function pendingNavigation(
         await deferred();
         return move(...args);
       };
-    if (kind === "undo")
-      api.undo = async (...args) => {
+    if (kind === "archive")
+      api.archive = async (...args) => {
         await deferred();
-        return undo(...args);
+        return archive(...args);
       };
     if (kind === "recovery")
       api.load = async () => {
@@ -213,26 +211,26 @@ function pendingNavigation(
         return load();
       };
     try {
-      await userEvent.click(
-        await canvas.findByRole("button", { name: "Move Checking" }),
-      );
-      const dialog = within(
-        await body.findByRole("dialog", { name: "Move To…" }),
-      );
-      await userEvent.click(dialog.getByLabelText("Destination"));
-      await userEvent.click(
-        await body.findByRole("option", { name: "Long-Term" }),
-      );
-      await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-      if (kind === "undo") {
-        await waitFor(() =>
-          expect(
-            body.queryByRole("dialog", { name: "Move To…" }),
-          ).not.toBeInTheDocument(),
-        );
+      if (kind === "archive") {
         await userEvent.click(
-          await canvas.findByRole("button", { name: "Undo" }),
+          await canvas.findByRole("button", { name: "Archive Checking" }),
         );
+        const dialog = within(
+          await body.findByRole("dialog", { name: "Archive Account" }),
+        );
+        await userEvent.click(dialog.getByRole("button", { name: "Archive" }));
+      } else {
+        await userEvent.click(
+          await canvas.findByRole("button", { name: "Move Checking" }),
+        );
+        const dialog = within(
+          await body.findByRole("dialog", { name: "Move To…" }),
+        );
+        await userEvent.click(dialog.getByLabelText("Destination"));
+        await userEvent.click(
+          await body.findByRole("option", { name: "Long-Term" }),
+        );
+        await userEvent.click(dialog.getByRole("button", { name: "Move" }));
       }
       await waitFor(() => expect(deferred).toHaveBeenCalledTimes(1));
       await expect(canvas.getByRole("button", { name: "Done" })).toBeDisabled();
@@ -254,7 +252,7 @@ function pendingNavigation(
       release();
       // The three saved functions retain their exact signatures.
       api.move = move;
-      api.undo = undo;
+      api.archive = archive;
       api.load = load;
     }
   };
@@ -264,9 +262,9 @@ export const OrganizeNavigationWaitsForMove: Story = {
   args: { organizerApi: createOrganizerStoryApi() },
   play: pendingNavigation("move"),
 };
-export const OrganizeNavigationWaitsForUndo: Story = {
+export const OrganizeNavigationWaitsForArchive: Story = {
   args: { organizerApi: createOrganizerStoryApi() },
-  play: pendingNavigation("undo"),
+  play: pendingNavigation("archive"),
 };
 export const OrganizeNavigationWaitsForRecovery: Story = {
   args: { organizerApi: createOrganizerStoryApi("network") },

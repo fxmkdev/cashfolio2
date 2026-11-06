@@ -165,12 +165,11 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   - Done traverses back only to the adjacent normal Accounts origin recorded in
     history state for the same book and URL. Missing or invalid origin state
     uses replacement navigation to normal Accounts. Moves add no history
-    entries. Selection, archived visibility, expansion, dialogs, and Undo
-    receipts remain session-local and clear on exit. Back/Forward never undo or
-    replay a move.
-  - During move, Undo, and recovery requests, a route-scoped blocker queues one
-    navigation attempt and continues after the request settles. Settled sessions
-    do not prompt about unsaved changes.
+    entries. Selection, archived visibility, expansion, and dialogs remain
+    session-local and clear on exit. Back/Forward never undo or replay a move.
+  - During move, archive, unarchive, delete, and recovery requests, a
+    route-scoped blocker queues one navigation attempt and continues after the
+    request settles. Settled sessions do not prompt about unsaved changes.
   - The loader fetches the unified balance-account hierarchy. The shared
     account-management loader fetches only the selected category subtype for
     settings category tabs.

@@ -1,8 +1,4 @@
-import {
-  organizeChanges,
-  planAccountMove,
-  restoreAccountMove,
-} from "@/shared/account-organize/move";
+import { planAccountMove } from "@/shared/account-organize/move";
 import type {
   OrganizeNode,
   OrganizeSnapshot,
@@ -102,7 +98,65 @@ export function createOrganizerStoryApi(
   const snapshot = (): OrganizeSnapshot => ({
     nodes: structuredClone(nodes),
     version: JSON.stringify(nodes),
+    actionAvailability: Object.fromEntries(
+      nodes.map((node) => {
+        const children = nodes.filter((item) => item.parentId === node.id);
+        const blockedArchive = children.some((item) => item.isActive);
+        const archivedParent = nodes.find(
+          (item) => item.id === node.parentId && !item.isActive,
+        );
+        return [
+          node.id,
+          {
+            archivable: node.isActive && !blockedArchive,
+            archiveDisabledReason: blockedArchive
+              ? "Cannot archive group because it contains active accounts"
+              : !node.isActive
+                ? "Already archived"
+                : undefined,
+            unarchivable: !node.isActive && !archivedParent,
+            unarchiveDisabledReason: archivedParent
+              ? "Cannot unarchive because its parent group is archived"
+              : node.isActive
+                ? "Already active"
+                : undefined,
+            deletable: !children.length && node.id !== "fund",
+            deleteDisabledReason: children.length
+              ? "Cannot delete group because it contains accounts"
+              : node.id === "fund"
+                ? "Cannot delete account because it has bookings"
+                : undefined,
+          },
+        ];
+      }),
+    ),
   });
+  function mutate(action: "archive" | "unarchive" | "delete", id: string) {
+    const availability = snapshot().actionAvailability[id];
+    if (
+      !availability ||
+      !(action === "archive"
+        ? availability.archivable
+        : action === "unarchive"
+          ? availability.unarchivable
+          : availability.deletable)
+    )
+      throw new Error("Action unavailable");
+    if (failure && !failed) {
+      failed = true;
+      throw failure === "network"
+        ? new TypeError("Failed to fetch")
+        : new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
+    }
+    nodes =
+      action === "delete"
+        ? nodes.filter((node) => node.id !== id)
+        : nodes.map((node) =>
+            node.id === id
+              ? { ...node, isActive: action === "unarchive" }
+              : node,
+          );
+  }
   return {
     load: async () => {
       if (failure === "load" && !failed) {
@@ -124,20 +178,17 @@ export function createOrganizerStoryApi(
       nodes = planAccountMove(nodes, move);
       return {
         snapshot: snapshot(),
-        undo:
-          nodes === before
-            ? null
-            : {
-                version: snapshot().version,
-                restore: organizeChanges(nodes, before),
-              },
+        changed: nodes !== before,
       };
     },
-    undo: async (undo) => {
-      if (undo.version !== snapshot().version)
-        throw new Error("The hierarchy changed.");
-      nodes = restoreAccountMove(nodes, undo.restore);
-      return snapshot();
+    archive: async (target) => {
+      mutate("archive", target.id);
+    },
+    unarchive: async (target) => {
+      mutate("unarchive", target.id);
+    },
+    delete: async (target) => {
+      mutate("delete", target.id);
     },
   };
 }

@@ -101,6 +101,9 @@ async function chooseMove(
 function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
   return async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
     const source = await row(canvasElement, "checking");
     const target = await row(canvasElement, "investments");
     const destination = await row(canvasElement, "destination");
@@ -278,7 +281,7 @@ export const StableHandlesDuringRecovery: Story = {
   play: handleStabilityScenario(true),
 };
 
-export const BulkSubtreeMoveAndUndo: Story = {
+export const BulkSubtreeMove: Story = {
   play: async ({ canvasElement, args }) => {
     await select(canvasElement, "investments");
     await select(canvasElement, "checking");
@@ -298,21 +301,15 @@ export const BulkSubtreeMoveAndUndo: Story = {
     await expect(await row(canvasElement, "investments")).toHaveClass(
       "ag-row-level-1",
     );
-    await userEvent.click(canvas.getByRole("button", { name: "Undo" }));
-    await waitFor(async () =>
-      expect(await row(canvasElement, "investments")).toHaveClass(
-        "ag-row-level-0",
-      ),
-    );
-    await expect(
-      canvas.queryByRole("button", { name: "Undo" }),
-    ).not.toBeInTheDocument();
   },
 };
 
 export const ArchivedSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
     await waitFor(async () =>
       expect(await row(canvasElement, "archived")).toBeVisible(),
     );
@@ -333,6 +330,9 @@ export const ArchivedSelection: Story = {
 export const ArchivedVisibilityAndSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
+    );
     const nested = await row(canvasElement, "nested");
     await userEvent.click(
       nested.querySelector<HTMLElement>(".ag-group-contracted")!,
@@ -413,10 +413,6 @@ export const ArchivedOnlyEmptyState: Story = {
   render: (args) => <Harness {...args} useProvidedApi />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await row(canvasElement, "archived")).toBeVisible();
-    await userEvent.click(
-      canvas.getByRole("checkbox", { name: "Show Archived" }),
-    );
     await expect(
       canvas.getByText(/There are no active accounts or groups/),
     ).toBeVisible();
@@ -424,42 +420,6 @@ export const ArchivedOnlyEmptyState: Story = {
       canvas.getByRole("button", { name: "Show Archived" }),
     );
     await expect(await row(canvasElement, "archived")).toBeVisible();
-  },
-};
-
-export const UndoRevealsHiddenArchivedResults: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await select(canvasElement, "archived");
-    const dialog = await chooseMove(canvasElement);
-    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-    await waitFor(() =>
-      expect(
-        within(canvasElement.ownerDocument.body).queryByRole("dialog"),
-      ).not.toBeInTheDocument(),
-    );
-    await userEvent.click(
-      canvas.getByRole("checkbox", { name: "Show Archived" }),
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Undo" }));
-    await waitFor(() =>
-      expect(
-        canvas.queryByRole("button", { name: "Undo" }),
-      ).not.toBeInTheDocument(),
-    );
-    await expect(
-      canvas.getByRole("checkbox", { name: "Show Archived" }),
-    ).not.toBeChecked();
-    await expect(
-      canvas.getByText(/affected archived items are hidden/),
-    ).toBeInTheDocument();
-    await waitFor(async () =>
-      expect(
-        (await row(canvasElement, "investments")).querySelector(
-          '[col-id="ag-Grid-AutoColumn"]',
-        ),
-      ).toHaveFocus(),
-    );
   },
 };
 
@@ -608,10 +568,8 @@ export const DragReorderAndCancel: Story = {
     ).toBeVisible();
     await user.keyboard("{Escape}");
     await user.pointer({ target, keys: "[/MouseLeft]" });
-    await expect(source).toHaveAttribute("row-index", "5");
-    await expect(
-      within(canvasElement).queryByRole("button", { name: "Undo" }),
-    ).not.toBeInTheDocument();
+    await expect(source).toHaveAttribute("row-index", "4");
+
     await user.pointer([
       {
         target: handle,

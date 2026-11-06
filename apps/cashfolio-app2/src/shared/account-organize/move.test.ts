@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  organizeChanges,
-  planAccountMove,
-  restoreAccountMove,
-  validateOrganizeTree,
-} from "./move";
+import { organizeChanges, planAccountMove, validateOrganizeTree } from "./move";
 import {
   descendants,
   normalizeOrganizeSelection,
@@ -174,7 +169,7 @@ describe("account movement", () => {
     const next = planAccountMove(nodes, move([nodes[1]]));
     expect(next[1]).toMatchObject({ parentId: null, isCashAccount: true });
   });
-  it("inherits destination cash flags throughout the subtree and restores exact prior metadata", () => {
+  it("inherits destination cash flags throughout the subtree", () => {
     const nodes = [
       node("source"),
       node("child", { parentId: "source" }),
@@ -183,8 +178,8 @@ describe("account movement", () => {
     ];
     const next = planAccountMove(nodes, move([nodes[0]], { parentId: "cash" }));
     expect(next.every((n) => n.isCashAccount)).toBe(true);
-    expect(restoreAccountMove(next, organizeChanges(next, nodes))).toEqual(
-      nodes,
+    expect(organizeChanges(nodes, next)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: nodes[0].id })]),
     );
   });
   it("inserts mixed active/archived roots as a block beside a real sibling", () => {
@@ -226,9 +221,7 @@ describe("account movement", () => {
       "moved",
       "active",
     ]);
-    expect(restoreAccountMove(next, organizeChanges(next, nodes))).toEqual(
-      nodes,
-    );
+
     expect(
       planAccountMove(
         next,
@@ -331,16 +324,7 @@ describe("account movement", () => {
       planAccountMove(nodes, move([nodes[2]], { parentId: "d" }))[2].parentId,
     ).toBe("d");
   });
-  it("validates untrusted Undo references and resulting cash/archive/cycle rules", () => {
-    const nodes = [node("group"), leaf("a", "group")];
-    const change = { ...nodes[0], parentId: "group" };
-    expect(() => restoreAccountMove(nodes, [change])).toThrow("itself");
-    expect(() => restoreAccountMove(nodes, [change, change])).toThrow(
-      "receipt",
-    );
-    expect(() =>
-      restoreAccountMove(nodes, [{ ...change, id: "missing" }]),
-    ).toThrow("available");
+  it("validates resulting Cash Account rules", () => {
     expect(() =>
       validateOrganizeTree([
         node("cash", { isCashAccount: true }),

@@ -15,7 +15,21 @@ export type OrganizeNode = OrganizeNodeRef & {
   unit: Unit | null;
 };
 
-export type OrganizeSnapshot = { nodes: OrganizeNode[]; version: string };
+export type OrganizeActionAvailability = {
+  archivable: boolean;
+  archiveDisabledReason?: string;
+  unarchivable: boolean;
+  unarchiveDisabledReason?: string;
+  deletable: boolean;
+  deleteDisabledReason?: string;
+};
+
+export type OrganizeSnapshot = {
+  nodes: OrganizeNode[];
+  version: string;
+  actionAvailability: Record<string, OrganizeActionAvailability>;
+};
+export type OrganizeLifecycleAction = "archive" | "unarchive" | "delete";
 export type OrganizePlacement = "first" | "last" | "before" | "after";
 export type OrganizeMove = {
   items: OrganizeNodeRef[];
@@ -24,13 +38,9 @@ export type OrganizeMove = {
   anchorId?: string;
 };
 
-export type OrganizeRestore = OrganizeNodeRef &
+export type OrganizeChange = OrganizeNodeRef &
   Pick<OrganizeNode, "parentId" | "sortOrder" | "isCashAccount">;
-export type OrganizeUndo = {
-  version: string;
-  restore: OrganizeRestore[];
-};
 export type OrganizeMoveResult = {
   snapshot: OrganizeSnapshot;
-  undo: OrganizeUndo | null;
+  changed: boolean;
 };

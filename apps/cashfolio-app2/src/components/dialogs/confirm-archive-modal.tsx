@@ -11,20 +11,23 @@ export function ConfirmArchiveModal({
   onConfirm,
   onRefreshConstraints,
   formatErrorMessage,
+  submitState: providedSubmitState,
 }: {
   opened: boolean;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;
   formatErrorMessage?: (message: string) => string;
+  submitState?: ReturnType<typeof useDialogSubmitState>;
   title: string;
   name?: string;
   onConfirm: () => void | Promise<void>;
 }) {
-  const submitState = useDialogSubmitState({
+  const internalSubmitState = useDialogSubmitState({
     captureErrors: true,
     formatErrorMessage,
     onRefreshConstraints,
   });
+  const submitState = providedSubmitState ?? internalSubmitState;
   const { isSubmitting, runSubmit } = submitState;
   const handleClose = () => {
     if (isSubmitting) return;

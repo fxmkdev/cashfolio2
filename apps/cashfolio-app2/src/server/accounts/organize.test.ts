@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   accountWrite: vi.fn(),
   groupWrite: vi.fn(),
   transaction: vi.fn(),
+  bookings: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
@@ -53,17 +54,9 @@ vi.mock("../account-book-mutation.server", () => ({
     mocks.transaction(operation),
 }));
 
-import {
-  getAccountOrganizeData,
-  moveAccountTreeItems,
-  undoAccountTreeMove,
-} from "./organize";
+import { getAccountOrganizeData, moveAccountTreeItems } from "./organize";
 import { organizeVersion } from "./organize-data";
-import {
-  validateOrganizeBook,
-  validateOrganizeMove,
-  validateOrganizeUndo,
-} from "./organize-input";
+import { validateOrganizeBook, validateOrganizeMove } from "./organize-input";
 
 const accountBookId = "book";
 const initial: OrganizeNode[] = [
@@ -114,6 +107,7 @@ beforeEach(() => {
   mocks.nodes = structuredClone(initial);
   mocks.otherAccountNames = [];
   mocks.failId = "";
+  mocks.bookings.mockResolvedValue([]);
   mocks.accountRead.mockImplementation(async (query) =>
     typeof query.where.type === "object"
       ? mocks.otherAccountNames
@@ -159,6 +153,7 @@ beforeEach(() => {
   mocks.accountWrite.mockImplementation(update);
   mocks.groupWrite.mockImplementation(update);
   const tx = {
+    booking: { groupBy: mocks.bookings },
     account: { findMany: mocks.accountRead, update: mocks.accountWrite },
     accountGroup: { findMany: mocks.groupRead, update: mocks.groupWrite },
   };
@@ -226,8 +221,7 @@ describe("organize server boundary", () => {
     ).rejects.toThrow("Forbidden");
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
-  it("saves complete subtree changes, preserves unrelated fields and returns an exact inverse", async () => {
-    const before = await snapshot();
+  it("saves complete subtree changes, preserves unrelated fields and returns the canonical snapshot", async () => {
     const result = await save();
     expect(mocks.authorizeWrite).toHaveBeenCalledWith(accountBookId);
     expect(
@@ -235,19 +229,13 @@ describe("organize server boundary", () => {
         .filter((n) => ["group", "account", "archived"].includes(n.id))
         .every((n) => n.isCashAccount),
     ).toBe(true);
-    expect(result.undo?.restore.map((n) => n.id)).toEqual(
-      expect.arrayContaining(["group", "account", "archived"]),
-    );
+    expect(result.changed).toBe(true);
     for (const write of [mocks.accountWrite, mocks.groupWrite])
       for (const [args] of write.mock.calls)
         expect(Object.keys(args.data).sort()).toEqual(
           expect.arrayContaining(["sortOrder", "isCashAccount"]),
         );
-    const restored = await undoAccountTreeMove({
-      data: { accountBookId, undo: result.undo! },
-    });
-    expect(restored).toEqual(before);
-    expect(mocks.invalidate).toHaveBeenCalledTimes(2);
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1);
   });
   it("does not write or invalidate caches for a no-op", async () => {
     const result = await save({
@@ -255,7 +243,7 @@ describe("organize server boundary", () => {
       parentId: "group",
       placement: "last",
     });
-    expect(result.undo).toBeNull();
+    expect(result.changed).toBe(false);
     expect(mocks.accountWrite).not.toHaveBeenCalled();
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
@@ -294,30 +282,68 @@ describe("organize server boundary", () => {
     expect(await snapshot()).toEqual(before);
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
-  it("rejects stale Undo after any relevant metadata change", async () => {
+  it("rejects stale moves after a concurrent metadata change", async () => {
     const result = await save();
     mocks.nodes[0].name = "Concurrent rename";
     const before = await snapshot();
-    await expect(
-      undoAccountTreeMove({ data: { accountBookId, undo: result.undo! } }),
-    ).rejects.toThrow("hierarchy changed");
+    await expect(save({ version: result.snapshot.version })).rejects.toThrow(
+      "hierarchy changed",
+    );
     expect(await snapshot()).toEqual(before);
   });
-  it("rejects malformed or invalid Undo without partial updates", async () => {
-    const result = await save();
-    const undo = {
-      ...result.undo!,
-      restore: [{ ...result.undo!.restore[0], id: "foreign" }],
-    };
-    await expect(
-      undoAccountTreeMove({ data: { accountBookId, undo } }),
-    ).rejects.toThrow("available");
-    expect(await snapshot()).toEqual(result.snapshot);
+  it("returns fresh eligibility without invalidating movement versions for booking changes", async () => {
+    const before = await snapshot();
+    mocks.bookings.mockResolvedValue([
+      { accountId: "account", _count: 1, _sum: { value: 10 } },
+    ]);
+    const after = await snapshot();
+    expect(after.version).toBe(before.version);
+    expect(after.actionAvailability.account).toMatchObject({
+      deletable: false,
+      archivable: false,
+    });
+    expect(after.actionAvailability.group).toMatchObject({
+      deletable: false,
+      archivable: false,
+    });
+    expect(after.actionAvailability.archived.unarchivable).toBe(true);
+    mocks.nodes[0].isActive = false;
+    expect((await snapshot()).actionAvailability.archived.unarchivable).toBe(
+      false,
+    );
+  });
+  it("allows archiving a booked zero-balance account but never deleting it", async () => {
+    mocks.bookings.mockResolvedValue([
+      { accountId: "account", _count: 2, _sum: { value: 0 } },
+    ]);
+    const result = await snapshot();
+    expect(result.actionAvailability.account).toMatchObject({
+      archivable: true,
+      deletable: false,
+    });
+    expect(mocks.bookings).toHaveBeenCalledWith({
+      by: ["accountId"],
+      where: { accountBookId, accountId: { in: ["account", "archived"] } },
+      _count: true,
+      _sum: { value: true },
+    });
+  });
+  it("counts hidden archived children for deletion without preventing group archive", async () => {
+    mocks.nodes.find((node) => node.id === "account")!.isActive = false;
+    const result = await snapshot();
+    expect(result.actionAvailability.group).toMatchObject({
+      archivable: true,
+      deletable: false,
+    });
+    expect(result.actionAvailability.cash).toMatchObject({
+      archivable: true,
+      deletable: true,
+    });
   });
 });
 
 describe("organize input contracts", () => {
-  it("strips unrelated account and financial fields from moves and Undo", () => {
+  it("strips unrelated account and financial fields from moves", () => {
     expect(validateOrganizeBook({ accountBookId, ignored: true })).toEqual({
       accountBookId,
     });
@@ -336,21 +362,6 @@ describe("organize input contracts", () => {
       parentId: null,
       placement: "last",
     });
-    expect(
-      validateOrganizeUndo({
-        accountBookId,
-        undo: {
-          version: "v",
-          restore: [{ ...initial[0], name: "Ignored", openingBalance: 1 }],
-        },
-      }).undo.restore[0],
-    ).toEqual({
-      id: "group",
-      nodeType: "accountGroup",
-      parentId: null,
-      sortOrder: null,
-      isCashAccount: false,
-    });
   });
   it.each([
     null,
@@ -366,18 +377,5 @@ describe("organize input contracts", () => {
     },
   ])("rejects malformed move input %j", (input) => {
     expect(() => validateOrganizeMove(input)).toThrow();
-  });
-  it("rejects non-integer sort orders and nonboolean cash flags", () => {
-    for (const patch of [
-      { sortOrder: 0.5 },
-      { isCashAccount: "true" },
-      { parentId: undefined },
-    ])
-      expect(() =>
-        validateOrganizeUndo({
-          accountBookId,
-          undo: { version: "v", restore: [{ ...initial[0], ...patch }] },
-        }),
-      ).toThrow();
   });
 });
