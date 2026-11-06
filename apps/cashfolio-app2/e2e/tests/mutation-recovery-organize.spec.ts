@@ -3,6 +3,7 @@ import { expect, test } from "../support/fixtures";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
 import { withBookLock } from "../support/book-lock";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/mutation-errors";
 
 test("a rejected organizer move restores saved order and can be explicitly retried", async ({
@@ -51,7 +52,10 @@ test("a rejected organizer move restores saved order and can be explicitly retri
   await page
     .getByRole("option", { name: "Move recovery group", exact: true })
     .click();
-  await dialog.getByRole("radio", { name: "First", exact: true }).check();
+  await selectSegmentedControlOption(
+    dialog.getByRole("radiogroup", { name: "Position", exact: true }),
+    "First",
+  );
   await withBookLock(book.accountBookId, async () => {
     await dialog.getByRole("button", { name: "Move", exact: true }).click();
     await expect(dialog.getByRole("alert")).toHaveText(

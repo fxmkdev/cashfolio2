@@ -10,6 +10,7 @@ import {
   scrollGridToRight,
 } from "../support/grid";
 import { selectClassificationOption } from "../support/classifications";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 test("creates, assigns, reports, reparents and deletes an asset class", async ({
   page,
   e2eExternalId,
@@ -44,7 +45,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     .getByRole("button", { name: "Move Other Assets", exact: true })
     .click();
   const move = page.getByRole("dialog", { name: "Move To…" });
-  await move.getByRole("radio", { name: "First", exact: true }).check();
+  await selectSegmentedControlOption(
+    move.getByRole("radiogroup", { name: "Position", exact: true }),
+    "First",
+  );
   await move.getByRole("button", { name: "Move", exact: true }).click();
   await expect(move).not.toBeVisible();
   await expect
