@@ -108,6 +108,14 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
     const target = await row(canvasElement, "investments");
     const destination = await row(canvasElement, "destination");
     const archived = await row(canvasElement, "archived");
+    // Showing archived rows animates existing siblings down. Start the gesture
+    // once the new neighbor positions settle, rather than aiming at old bounds.
+    await waitFor(() =>
+      expect(
+        destination.getBoundingClientRect().top -
+          archived.getBoundingClientRect().top,
+      ).toBeCloseTo(destination.getBoundingClientRect().height, 0),
+    );
     const baseline = [source, target, destination].map((element) => ({
       id: element.getAttribute("row-id")!,
       handle: element.querySelector<HTMLElement>(".ag-row-drag")!,

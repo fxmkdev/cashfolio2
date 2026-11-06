@@ -285,9 +285,9 @@ export const OrganizeLifecycleRefreshRecovery: Story = {
         canvas.getByRole("checkbox", { name: "Show Archived" }),
       ).toBeDisabled();
       await expect(archive).toHaveBeenCalledTimes(1);
-      await expect(
-        canvasElement.querySelector('[row-id="checking"]'),
-      ).toBeNull();
+      await waitFor(() =>
+        expect(canvasElement.querySelector('[row-id="checking"]')).toBeNull(),
+      );
       await userEvent.click(
         canvas.getByRole("button", { name: "Refresh Choices" }),
       );
