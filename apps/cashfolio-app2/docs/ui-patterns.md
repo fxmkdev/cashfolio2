@@ -882,6 +882,10 @@ sign; debt amounts are positive magnitudes in those reports.
   row-specific accessible name. Keep a single action as a direct button. Ledger
   keeps **Edit** directly beside the menu containing **Copy**, **Rebook**, and
   **Delete**; Edit is not duplicated in that menu.
+- Account List Organize mode keeps three direct icons for **Move To…**,
+  **Archive/Unarchive**, and **Delete**, making its structural tools immediately
+  accessible. It uses `rowActionsColumnProps` for keyboard access and grid event
+  isolation, overriding width/minWidth/maxWidth to 120px.
 - Spread `rowActionsColumnProps` into menu column definitions: blank header,
   fixed 56px width, no sorting/filtering/resizing/header menu, grid event
   isolation, keyboard access to renderer buttons, and

@@ -9,6 +9,7 @@ import type {
   SelectionChangedEvent,
 } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
+import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import { OrganizeAccountActionsCell } from "@/components/account-tree/organize-account-actions-cell";
 import type { OrganizeDisplayRow } from "@/shared/account-organize/tree";
 import type { OrganizeNodeRef } from "@/shared/account-organize/types";
@@ -86,13 +87,12 @@ export function OrganizerGrid({
           ) : null,
       },
       {
+        ...rowActionsColumnProps,
         colId: "actions",
-        headerName: "",
         width: 120,
+        minWidth: 120,
+        maxWidth: 120,
         pinned: "right",
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
           data ? (
             <OrganizeAccountActionsCell

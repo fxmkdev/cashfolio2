@@ -15,6 +15,31 @@ const meta = {
 };
 export default meta;
 
+export const RowActionsKeyboardAccess: Story = {
+  play: async ({ canvasElement }) => {
+    await row(canvasElement, "checking");
+    const canvas = within(canvasElement);
+    const move = canvas.getByRole("button", { name: "Move Checking" });
+    move.focus();
+    await userEvent.keyboard(" ");
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Move To…" }),
+    );
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="checking"] .ag-selection-checkbox input',
+      ),
+    ).not.toBeChecked();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(move).toHaveFocus());
+    await userEvent.tab();
+    await expect(
+      canvas.getByRole("button", { name: "Archive Checking" }),
+    ).toHaveFocus();
+  },
+};
+
 export const BulkSubtreeMove: Story = {
   play: async ({ canvasElement, args }) => {
     await select(canvasElement, "investments");

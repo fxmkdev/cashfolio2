@@ -165,7 +165,7 @@ export function AccountOrganizer({
         api={api}
         organizer={organizer}
         drag={drag}
-        blocked={movementBlocked}
+        blocked={organizer.blocked}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
         onMoveItems={setDialogItems}
