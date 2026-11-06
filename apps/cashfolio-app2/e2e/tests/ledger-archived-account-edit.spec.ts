@@ -108,7 +108,9 @@ for (const scenario of [
     await expect(
       page.getByRole("heading", { name: updatedName }),
     ).toBeVisible();
-    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Archived", { exact: true }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await expect(groupInput).toHaveValue(groupName);
     await expect(assetClassInput).toHaveValue("Real Estate");

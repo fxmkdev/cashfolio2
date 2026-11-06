@@ -43,6 +43,9 @@ export function LedgerAccountSwitcher({
       filter={filterLedgerAccountNode}
       allowDeselect={false}
       clearable={false}
+      // Navigation commits the new account. Keep this ledger's display value
+      // until then so restoring it with browser Back cannot retain the target.
+      clearSearchOnChange={false}
       expandOnClick
       expandedValues={
         selectedNameSearch

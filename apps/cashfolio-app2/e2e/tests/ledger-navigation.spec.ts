@@ -1,4 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
+import { defaultStringifySearch } from "@tanstack/react-router";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 import {
   agGridRowByText,
@@ -117,7 +118,7 @@ for (const period of ["2026-01", "2026", undefined]) {
   test(`account switching preserves ${period ?? "All Periods"} across siblings, branches and browser history`, async ({
     page,
   }) => {
-    const search = period ? `?period=${period}` : "";
+    const search = defaultStringifySearch({ period });
     const source = `/${seeded.accountBookId}/${seeded.cashAccount.id}${search}#activity`;
     await page.goto(source);
     const switcher = page.getByRole("textbox", { name: "Switch Account" });
@@ -163,7 +164,9 @@ for (const period of ["2026-01", "2026", undefined]) {
     await expect(page).toHaveURL(
       `/${seeded.accountBookId}/${archivedFinancialAccountId}${search}`,
     );
-    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Archived", { exact: true }),
+    ).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(
       `/${seeded.accountBookId}/${distantAccountId}${search}`,

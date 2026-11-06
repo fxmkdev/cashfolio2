@@ -90,6 +90,7 @@ export const KeyboardAndDismissal: Story = {
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
     await expect(args.onSelectAccount).toHaveBeenCalledWith("savings");
     await expect(args.onSelectAccount).toHaveBeenCalledTimes(1);
+    await expect(input).toHaveValue("Checking");
   },
 };
 
