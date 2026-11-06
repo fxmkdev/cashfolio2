@@ -97,11 +97,16 @@ export const BulkTrackingMethodMixedGroupSelection: Story = {
     await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
       "invalidations: 1",
     );
-    await expect(
-      canvasElement.querySelector(
-        '[row-id="portfolio"] [col-id="trackingMethod"]',
-      ),
-    ).toHaveTextContent("Mixed");
+    const viewport = canvasElement.querySelector(".ag-grid-viewport");
+    if (!viewport) throw new Error("Missing grid viewport");
+    viewport.scrollLeft = viewport.scrollWidth;
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="portfolio"] [col-id="trackingMethod"]',
+        ),
+      ).toHaveTextContent("Mixed"),
+    );
   },
 };
 
