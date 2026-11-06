@@ -33,11 +33,8 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       : "Add Account";
     await clickPinnedRowAction({
       row: parent,
-      actionLabel: `Add Child to ${parentName}`,
+      actionLabel: createLabel,
     });
-    await page
-      .getByRole("menuitem", { name: createLabel, exact: true })
-      .click();
     let dialog = page.getByRole("dialog", {
       name: isCategory ? "New Category" : "New Account",
       exact: true,
@@ -97,11 +94,8 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
     await expect(dialog).not.toBeVisible();
     await clickPinnedRowAction({
       row: parent,
-      actionLabel: `Add Child to ${parentName}`,
+      actionLabel: "Add Group",
     });
-    await page
-      .getByRole("menuitem", { name: "Add Group", exact: true })
-      .click();
     dialog = page.getByRole("dialog", {
       name: isCategory ? "New Category Group" : "New Group",
       exact: true,
@@ -130,12 +124,16 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       .first();
     if (await expander.isVisible()) await expander.click();
     await expect(agGridRowByText(page, `Child ${scope} group`)).toBeVisible();
+    const childRow = page.locator(
+      `.ag-grid-scrolling-container > .ag-row[row-id="${child.id}"]`,
+    );
+    await childRow.hover();
+    await childRow.getByRole("button", { name: /^More Actions for / }).click();
     await expect(
-      page
-        .locator(`.ag-grid-scrolling-container > .ag-row[row-id="${child.id}"]`)
-        .getByRole("button", {
-          name: /^Add Child/,
-        }),
+      page.getByRole("menuitem", { name: createLabel, exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("menuitem", { name: "Add Group", exact: true }),
     ).toHaveCount(0);
   });
 }

@@ -1,12 +1,5 @@
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { useMemo } from "react";
-import { ActionIcon, Group, Tooltip } from "@mantine/core";
-import {
-  IconCopy,
-  IconPencil,
-  IconSquareArrowRight,
-  IconTrash,
-} from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
 import {
@@ -24,7 +17,8 @@ import {
 } from "@/components/grid/multi-value-set-filter";
 import { isReferenceCurrencyUnit } from "@/shared/reference-currency-display";
 import type { LedgerRow } from "./page-types";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { LedgerActionsCell } from "./actions-cell";
+import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import { buildCounterpartyLedgerSearch } from "./counterparty-ledger-search";
 
 export function getLedgerCounterpartyAccountFilterValues(
@@ -296,124 +290,20 @@ export function useLedgerColumnDefs(args: {
           ]),
       {
         colId: "actions",
-        headerName: "",
-        width: 150,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
-          if (!data) return null;
-          if (data.isVirtualCarryOver) return null;
-          const isOpeningBalancesTransaction =
-            data.isOpeningBalancesTransaction;
-          return (
-            <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Edit"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onEditClick(data.transactionId);
-                    }}
-                    aria-label="Edit"
-                  >
-                    <IconPencil size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Copy"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onCopyClick(data.transactionId);
-                    }}
-                    aria-label="Copy"
-                  >
-                    <IconCopy size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Rebook"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    color="blue"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onRebookClick({
-                        bookingId: data.id,
-                        transactionId: data.transactionId,
-                        bookingValue: data.bookingValue,
-                        bookingUnit: {
-                          unit: data.unit,
-                          currency: data.currency,
-                          cryptocurrency: data.cryptocurrency,
-                          symbol: data.symbol,
-                          tradeCurrency: data.tradeCurrency,
-                        },
-                      });
-                    }}
-                    aria-label="Rebook"
-                  >
-                    <IconSquareArrowRight size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Delete"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    color="red"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onDeleteClick(data.transactionId, data.description);
-                    }}
-                    aria-label="Delete"
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-            </Group>
-          );
-        },
+        ...rowActionsColumnProps,
+        width: 88,
+        minWidth: 88,
+        maxWidth: 88,
+        cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) =>
+          data ? (
+            <LedgerActionsCell
+              row={data}
+              onEditClick={onEditClick}
+              onCopyClick={onCopyClick}
+              onRebookClick={onRebookClick}
+              onDeleteClick={onDeleteClick}
+            />
+          ) : null,
       },
     ];
   }, [

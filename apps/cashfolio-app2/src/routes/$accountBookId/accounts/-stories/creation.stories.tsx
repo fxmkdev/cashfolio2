@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { Button, Text } from "@mantine/core";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
@@ -129,7 +130,7 @@ export const ContextualAccountCreation: Story = {
     const cash = await canvas.findByText("Cash", { exact: true });
     await userEvent.hover(cash.closest<HTMLElement>(".ag-row")!);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Add Child to Cash" }),
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
     );
     await userEvent.click(
       await body.findByRole("menuitem", { name: "Add Account" }),
@@ -164,7 +165,7 @@ export const ContextualAccountCreation: Story = {
     );
     await userEvent.hover(cash.closest<HTMLElement>(".ag-row")!);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Add Child to Cash" }),
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
     );
     await userEvent.click(
       await body.findByRole("menuitem", { name: "Add Group" }),
@@ -189,11 +190,15 @@ export const ContextualAccountCreation: Story = {
     const leaf = (
       await canvas.findByText("Checking", { exact: true })
     ).closest<HTMLElement>(".ag-row")!;
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    const actions = await openRowActionsMenu(leaf);
     expect(
-      within(leaf).queryByRole("button", { name: /^Add Child/ }),
+      actions.queryByRole("menuitem", { name: /^Add / }),
     ).not.toBeInTheDocument();
     expect(
-      canvasElement.querySelector('.ag-row-pinned [aria-label^="Add Child"]'),
+      canvasElement.querySelector(".ag-row-pinned [data-row-actions-trigger]"),
     ).toBeNull();
   },
 };
@@ -214,7 +219,7 @@ export const ContextualIncomeCategoryCreation: Story = {
     ).closest<HTMLElement>(".ag-row")!;
     await userEvent.hover(row);
     await userEvent.click(
-      within(row).getByRole("button", { name: "Add Child to Housing" }),
+      within(row).getByRole("button", { name: "More Actions for Housing" }),
     );
     await waitFor(() =>
       expect(

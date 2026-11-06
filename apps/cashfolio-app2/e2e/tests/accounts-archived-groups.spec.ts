@@ -1,3 +1,4 @@
+import { getRowAction } from "../support/grid";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -152,9 +153,7 @@ for (const tab of ["BALANCE", "EQUITY-INCOME", "EQUITY-EXPENSE"] as const) {
       page.locator(`[row-id="__archived__:group:${closed.id}"]`),
     ).toHaveCount(0);
     const leafActionRow = await revealRowActions(leaf);
-    await expect(
-      leafActionRow.getByRole("button", { name: "Unarchive" }),
-    ).toBeDisabled();
+    await expect(await getRowAction(leafActionRow, "Unarchive")).toBeDisabled();
     await clickRowAction(closedRow, "Edit");
     const dialog = page.getByRole("dialog").filter({
       has: page.getByRole("heading", {

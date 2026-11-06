@@ -489,7 +489,7 @@ submit UX and prevent duplicate requests.
 
 ## Action Icons
 
-- Always wrap `ActionIcon` components in a `Tooltip` describing the action (e.g.
+- Wrap `ActionIcon` components in a `Tooltip` describing the action (e.g.
   "Edit", "Delete")
 - Action availability behavior is defined in `Action Availability Pattern`.
 - Standard non-destructive row actions use the normal action color
@@ -510,20 +510,27 @@ Use the following shared icon reference for hierarchy actions:
 | Delete             | `IconTrash`      | Red    |
 
 Keep row actions in **Reorder → Edit → Add Child → Archive/Delete** order,
-showing only applicable actions. Use the shared grid action-cell styles so
-actions appear on row hover and keyboard focus. Disabled actions retain a
-tooltip explaining why they are unavailable; pending mutations prevent duplicate
+showing only applicable actions. Multi-action rows use the shared
+`RowActionsMenu` with labelled menu items and the same icons. Separate
+Archive/Delete from the preceding actions; preserve Unarchive on archived rows.
+Use the shared grid action-cell styles so actions appear on row hover and
+keyboard focus. Disabled menu items show their reason in a multiline tooltip on
+whole-item hover and keyboard focus, using the global tooltip delay. A visually
+hidden description keeps the reason accessible while the tooltip is closed. Use
+`aria-disabled`, preserve arrow-key focus, and guard activation and menu
+closing; style disabled items with the shared CSS module. Disabled direct
+buttons retain an explanatory tooltip. Pending mutations prevent duplicate
 submission.
 
 ## Contextual Child Creation
 
-Active, real account/category groups expose an `IconPlus` menu labelled **Add
-Child to {name}**. Financial groups offer **Add Account** and **Add Group**;
-category groups offer the current tab's **Add Income Category** or **Add Expense
-Category**, plus **Add Group**. Leaf accounts/categories, archived groups,
-virtual Archived rows, and totals have no child-creation action. Asset classes
-can contain children at any level, so their Add Child action opens the class
-editor directly.
+Active, real account/category groups expose child-creation items directly in
+their row-actions menu, without a nested Add Child menu. Financial groups offer
+**Add Account** and **Add Group**; category groups offer the current tab's **Add
+Income Category** or **Add Expense Category**, plus **Add Group**. Leaf
+accounts/categories, archived groups, virtual Archived rows, and totals have no
+child-creation action. Asset classes can contain children at any level, so their
+Add Child action opens the class editor directly.
 
 Reuse the normal creation dialog with an editable parent prefilled through
 creation-only `defaultGroupId` / `defaultParentGroupId` props. Keep edit-mode
@@ -798,7 +805,7 @@ sign; debt amounts are positive magnitudes in those reports.
 ## Accounts List Columns
 
 - The `Name` column is frozen on the left, starts at 320px, and can be resized
-  with a 320px minimum width. Row actions are frozen on the right at 170px. When
+  with a 320px minimum width. Row actions are frozen on the right at 56px. When
   columns no longer fit, scroll horizontally inside the grid to reach the middle
   columns. In both category tabs, `Name` is unpinned and flexes to fill the
   space beside the row actions, retaining its 320px minimum width. These layouts
@@ -861,7 +868,8 @@ sign; debt amounts are positive magnitudes in those reports.
   - a disabled-reason string (e.g. `deleteDisabledReason`,
     `archiveDisabledReason`, `unarchiveDisabledReason`)
 - In the UI, always render the action and wire availability to
-  `ActionIcon.disabled`.
+  `ActionIcon.disabled` for direct buttons or `aria-disabled` with guarded
+  activation for menu items.
 - The tooltip label should use the disabled reason when unavailable, otherwise a
   default action label.
 - Enforce rules server-side as well; UI availability is an affordance, not an
@@ -869,13 +877,32 @@ sign; debt amounts are positive magnitudes in those reports.
 
 ## Data Grid Actions Column
 
-- Use `cellClass: "actions-cell"` so icons only appear on whole-row hover
-  (styled in `src/components/grid/grid-theme.css`). This must work for pinned
-  actions columns too; rely on AG Grid's row-hover state rather than hovering
-  only the actions cell.
+- Use the shared `RowActionsMenu` for multiple row actions. Its compact
+  `size="sm"` (22px) vertical-dots trigger has a **More Actions** tooltip and a
+  row-specific accessible name. Keep a single action as a direct button. Ledger
+  keeps **Edit** directly beside the menu containing **Copy**, **Rebook**, and
+  **Delete**; Edit is not duplicated in that menu.
+- Spread `rowActionsColumnProps` into menu column definitions: blank header,
+  fixed 56px width, no sorting/filtering/resizing/header menu, grid event
+  isolation, keyboard access to renderer buttons, and
+  `cellClass: "actions-cell"`. Ledger overrides width/minWidth/maxWidth to 88px.
+  Preserve existing column pinning. Ledger Edit also uses `size="sm"`. Both
+  controls retain 16px icons.
+- Action controls appear on whole-row hover and keyboard focus, including pinned
+  cells, and stay revealed while their menu is open (styled in
+  `src/components/grid/grid-theme.css`). Neither the dots nor Ledger Edit are
+  permanently visible. Rely on AG Grid's row state rather than hovering only the
+  actions cell.
+- Menus render in a portal, aligned bottom-end with viewport collision handling.
+  Menu interactions must not select rows or start grid editing. Preserve
+  keyboard navigation and return focus on dismissal without stealing focus from
+  a dialog opened by an action. Focus the stable row trigger immediately before
+  invoking an enabled action so a newly opened dialog captures it as its return
+  target. Keep focus inside the dialog until it closes, then return to that
+  trigger if it is still mounted.
 - Reuse this class in modal grids too (for example `EditTransactionModal`'s
   actions column) to keep action affordances consistent across the app
-- Wrap multiple action icons in a
+- Wrap a direct action plus the menu trigger in a
   `<Group gap={4} wrap="nowrap" h="100%" align="center">`
 - If actions-column rendering grows beyond simple inline JSX, extract it into
   dedicated components under `src/components/` and keep the route focused on

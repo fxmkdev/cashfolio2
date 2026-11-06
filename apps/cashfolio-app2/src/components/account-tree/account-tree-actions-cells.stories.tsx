@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box } from "@mantine/core";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
   ActiveAccountTreeActionsCell,
   ArchivedAccountTreeActionsCell,
@@ -12,6 +12,9 @@ type StoryProps = {
   deletable?: boolean;
   reorderEnabled?: boolean;
   unarchivable?: boolean;
+  unarchivePending?: boolean;
+  onAddAccount?: () => void;
+  onAddGroup?: () => void;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -30,11 +33,17 @@ function StoryComponent({
   onDelete,
   onReorder,
   onUnarchive,
+  unarchivePending,
+  onAddAccount,
+  onAddGroup,
 }: StoryProps) {
   return (
     <Box w={240}>
       {variant === "active" ? (
         <ActiveAccountTreeActionsCell
+          rowLabel="Cash"
+          onAddAccount={onAddAccount}
+          onAddGroup={onAddGroup}
           archiveLabel={archivable ? "Archive" : "Cannot archive this row"}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
           reorderLabel="Reorder Siblings"
@@ -48,6 +57,8 @@ function StoryComponent({
         />
       ) : (
         <ArchivedAccountTreeActionsCell
+          rowLabel="Cash"
+          unarchivePending={unarchivePending}
           reorderLabel="Reorder Siblings"
           reorderEnabled={reorderEnabled}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
@@ -104,10 +115,24 @@ export const Archived: Story = {
 export const InteractionSmoke: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Archive" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(await body.findByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Archive" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Delete" }),
+    );
 
     await expect(args.onEdit).toHaveBeenCalled();
     await expect(args.onArchive).toHaveBeenCalled();
@@ -121,17 +146,147 @@ export const ArchivedInteractionSmoke: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Reorder Siblings" }),
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
     );
-    await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Unarchive" }));
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Reorder Siblings" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(await body.findByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Delete" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "More Actions for Cash" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Unarchive" }),
+    );
 
     await expect(args.onReorder).toHaveBeenCalled();
     await expect(args.onEdit).toHaveBeenCalled();
     await expect(args.onDelete).toHaveBeenCalled();
     await expect(args.onUnarchive).toHaveBeenCalled();
+  },
+};
+
+export const ChildCreation: Story = {
+  args: { onAddAccount: fn(), onAddGroup: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    for (const name of ["Add Account", "Add Group"]) {
+      await userEvent.click(
+        canvas.getByRole("button", { name: "More Actions for Cash" }),
+      );
+      await userEvent.click(await body.findByRole("menuitem", { name }));
+    }
+    await expect(args.onAddAccount).toHaveBeenCalledOnce();
+    await expect(args.onAddGroup).toHaveBeenCalledOnce();
+  },
+};
+
+export const DisabledExplanations: Story = {
+  args: { archivable: false, deletable: false, reorderEnabled: false },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const trigger = within(canvasElement).getByRole("button", {
+      name: "More Actions for Cash",
+    });
+    await expect(trigger.getBoundingClientRect().width).toBe(22);
+    await userEvent.click(trigger);
+    const menu = await body.findByRole("menu");
+    const deleteItem = body.getByRole("menuitem", { name: "Delete" });
+    await expect(deleteItem).toHaveAttribute("aria-disabled", "true");
+    await expect(deleteItem).toHaveTextContent(/^Delete$/);
+    await expect(deleteItem).toHaveAccessibleDescription(
+      "Cannot delete this row",
+    );
+    await expect(body.queryByRole("tooltip")).not.toBeInTheDocument();
+    await userEvent.hover(deleteItem);
+    await waitFor(() => {
+      expect(body.getByRole("tooltip")).toBeVisible();
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot delete this row",
+      );
+    });
+    await userEvent.click(deleteItem);
+    await expect(menu).toBeVisible();
+    await expect(args.onDelete).not.toHaveBeenCalled();
+    await userEvent.unhover(deleteItem);
+    await waitFor(() =>
+      expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    await expect(deleteItem).toHaveAccessibleDescription(
+      "Cannot delete this row",
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(menu).not.toBeInTheDocument());
+    await expect(trigger).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+    await userEvent.keyboard("{ArrowDown}");
+    const reorder = body.getByRole("menuitem", { name: "Reorder Siblings" });
+    await expect(reorder).toHaveFocus();
+    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onReorder).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(body.getByRole("menuitem", { name: "Edit" })).toHaveFocus();
+    await waitFor(() =>
+      expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    await userEvent.keyboard("{ArrowDown}");
+    const archive = body.getByRole("menuitem", { name: "Archive" });
+    await expect(archive).toHaveFocus();
+    await waitFor(() => {
+      expect(body.getByRole("tooltip")).toBeVisible();
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot archive this row",
+      );
+    });
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onArchive).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(body.getByRole("menuitem", { name: "Delete" })).toHaveFocus();
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Cannot delete this row",
+      ),
+    );
+    await userEvent.keyboard("{Enter} ");
+    await expect(args.onDelete).not.toHaveBeenCalled();
+    await expect(body.getByRole("menu")).toBeVisible();
+  },
+};
+
+export const UnarchivePending: Story = {
+  args: { variant: "archived", unarchivePending: true },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      within(canvasElement).getByRole("button", {
+        name: "More Actions for Cash",
+      }),
+    );
+    await expect(
+      await body.findByRole("menuitem", { name: "Unarchive" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    const unarchive = body.getByRole("menuitem", { name: "Unarchive" });
+    await expect(unarchive).toHaveAccessibleDescription("Unarchiving…");
+    await userEvent.hover(unarchive);
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent("Unarchiving…"),
+    );
   },
 };

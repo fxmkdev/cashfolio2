@@ -70,6 +70,7 @@ export function AccountsPageGrid({
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}
         onRowDoubleClicked={(e) => {
+          if (e.isEventHandlingSuppressed) return;
           if (e.data?.nodeType === "account") {
             onOpenLedger(e.data.id);
           }

@@ -59,10 +59,20 @@ export const PendingDeletion: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await expect(await canvas.findByText("Deletion pending")).toBeVisible();
     await expect(canvas.getByText("Admin (inactive)")).toBeVisible();
-    const roles = canvas.getAllByRole("button", { name: "Manage Roles" });
-    await expect(roles[1]).toBeDisabled();
     await userEvent.click(
-      canvas.getByRole("button", { name: "Retry Deletion" }),
+      canvas.getByRole("button", { name: "More Actions for Pending user" }),
+    );
+    await expect(
+      await body.findByRole("menuitem", { name: "Manage Roles" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await userEvent.hover(body.getByRole("menuitem", { name: "Manage Roles" }));
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "Deletion pending; role changes unavailable",
+      ),
+    );
+    await userEvent.click(
+      body.getByRole("menuitem", { name: "Retry Deletion" }),
     );
     const dialog = await body.findByRole("dialog", { name: "Retry Deletion" });
     const controls = within(dialog);
@@ -92,7 +102,12 @@ export const DeletionFailure: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Retry Deletion" }),
+      await canvas.findByRole("button", {
+        name: "More Actions for Pending user",
+      }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "Retry Deletion" }),
     );
     const controls = within(
       await body.findByRole("dialog", { name: "Retry Deletion" }),
@@ -110,5 +125,90 @@ export const DeletionFailure: Story = {
     await expect(
       controls.getByRole("button", { name: "Retry Deletion" }),
     ).toBeEnabled();
+  },
+};
+
+export const SelfDeletionDisabled: Story = {
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More Actions for Current Admin",
+      }),
+    );
+    await expect(
+      await body.findByRole("menuitem", { name: "Delete" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await userEvent.hover(body.getByRole("menuitem", { name: "Delete" }));
+    await waitFor(() =>
+      expect(body.getByRole("tooltip")).toHaveTextContent(
+        "You cannot delete yourself",
+      ),
+    );
+    await userEvent.click(body.getByRole("menuitem", { name: "Manage Roles" }));
+    const dialog = await body.findByRole("dialog");
+    await waitFor(() =>
+      expect(body.queryByRole("menu")).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
+  },
+};
+
+async function openRolesFromRowMenu(
+  canvasElement: HTMLElement,
+  activation: "keyboard" | "pointer",
+) {
+  const body = within(canvasElement.ownerDocument.body);
+  const trigger = await within(canvasElement).findByRole("button", {
+    name: "More Actions for Current Admin",
+  });
+  if (activation === "keyboard") {
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+  } else {
+    await userEvent.click(trigger);
+  }
+  await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+  const item = body.getByRole("menuitem", { name: "Manage Roles" });
+  if (activation === "keyboard") {
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(item).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+  } else {
+    await userEvent.click(item);
+  }
+  const dialog = await body.findByRole("dialog", { name: "Manage Roles" });
+  await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(dialog.contains(document.activeElement)).toBe(true),
+  );
+  return { trigger, dialog };
+}
+
+export const DialogFocusReturn: Story = {
+  play: async ({ canvasElement, args }) => {
+    for (const dismissal of ["Escape", "Cancel", "Save"] as const) {
+      const { trigger, dialog } = await openRolesFromRowMenu(
+        canvasElement,
+        dismissal === "Cancel" ? "pointer" : "keyboard",
+      );
+      if (dismissal === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else {
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: dismissal }),
+        );
+      }
+      await waitFor(() => expect(dialog).not.toBeInTheDocument());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      if (dismissal === "Save") {
+        await expect(args.onSubmitRoles).toHaveBeenCalledWith({
+          userId: "actor",
+          roles: [UserRole.ADMIN],
+        });
+      }
+    }
   },
 };

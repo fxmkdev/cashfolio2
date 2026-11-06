@@ -1,5 +1,4 @@
 import {
-  ActionIcon,
   Badge,
   Button,
   Group,
@@ -7,7 +6,6 @@ import {
   Stack,
   Text,
   TextInput,
-  Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconCheck, IconTrash } from "@tabler/icons-react";
@@ -25,8 +23,6 @@ type DeleteUserHandler = (args: {
   confirmation: string;
 }) => Promise<void>;
 
-const TOOLTIP_TRIGGER_STYLE = { display: "inline-flex" } as const;
-
 function showUserDeletedNotification() {
   notifications.show({
     color: "green",
@@ -39,39 +35,6 @@ function showUserDeletedNotification() {
 
 function getDeleteErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Failed to delete user.";
-}
-
-export function DeleteUserAction({
-  user,
-  onDeleteUser,
-}: {
-  user: AdminUserListItem;
-  onDeleteUser: (user: AdminUserListItem) => void;
-}) {
-  return (
-    <Tooltip
-      label={
-        user.isCurrentUser
-          ? "You cannot delete yourself"
-          : user.deletionPending
-            ? "Retry Deletion"
-            : "Delete"
-      }
-    >
-      <span style={TOOLTIP_TRIGGER_STYLE}>
-        <ActionIcon
-          aria-label={user.deletionPending ? "Retry Deletion" : "Delete"}
-          color="red"
-          disabled={user.isCurrentUser}
-          onClick={() => onDeleteUser(user)}
-          size="sm"
-          variant="subtle"
-        >
-          <IconTrash size={16} />
-        </ActionIcon>
-      </span>
-    </Tooltip>
-  );
 }
 
 export function DeleteUserModal({

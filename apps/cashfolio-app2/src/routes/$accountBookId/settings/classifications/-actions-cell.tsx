@@ -1,4 +1,7 @@
-import { ActionIcon, Group, Tooltip } from "@mantine/core";
+import {
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/grid/row-actions-menu";
 import {
   IconArrowsSort,
   IconPencil,
@@ -15,49 +18,37 @@ export function AssetClassActionsCell(props: {
   onDelete: () => void;
 }) {
   const { row } = props;
-  const actions = [
+  const actions: RowAction[] = [
     {
+      id: "reorder",
       label: "Reorder Siblings",
-      icon: IconArrowsSort,
+      icon: <IconArrowsSort size={16} />,
       onClick: props.onReorder,
       disabled: !row.canReorder,
-      reason: "Cannot reorder because this row has no siblings",
+      disabledReason: "Cannot reorder because this row has no siblings",
     },
-    { label: `Edit ${row.name}`, icon: IconPencil, onClick: props.onEdit },
     {
-      label: `Add Child to ${row.name}`,
-      icon: IconPlus,
+      id: "edit",
+      label: "Edit",
+      icon: <IconPencil size={16} />,
+      onClick: props.onEdit,
+    },
+    {
+      id: "add-child",
+      label: "Add Child",
+      icon: <IconPlus size={16} />,
       onClick: props.onAddChild,
     },
     {
-      label: `Delete ${row.name}`,
-      icon: IconTrash,
+      id: "delete",
+      label: "Delete",
+      separatorBefore: true,
+      icon: <IconTrash size={16} />,
       onClick: props.onDelete,
       disabled: row.hasChildren,
-      reason: "Move or delete child classes first",
+      disabledReason: "Move or delete child classes first",
       color: "red",
     },
   ];
-  return (
-    <Group gap={4} wrap="nowrap" h="100%" align="center">
-      {actions.map(
-        ({ label, icon: Icon, onClick, disabled, reason, color }) => (
-          <Tooltip key={label} label={disabled ? reason : label}>
-            <span style={{ display: "inline-flex" }}>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                aria-label={label}
-                disabled={disabled}
-                color={color}
-                onClick={onClick}
-              >
-                <Icon size={16} />
-              </ActionIcon>
-            </span>
-          </Tooltip>
-        ),
-      )}
-    </Group>
-  );
+  return <RowActionsMenu rowLabel={row.name} actions={actions} />;
 }

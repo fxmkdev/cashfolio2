@@ -99,7 +99,7 @@ const users: AdminUserListItem[] = [
 ];
 
 describe("AdminUsersPageView", () => {
-  it("shows pending deletion and disables role editing while offering retry", () => {
+  it("shows pending deletion with a collapsed row-actions menu", () => {
     const pending = {
       ...users[1],
       roles: [UserRole.ADMIN],
@@ -118,12 +118,10 @@ describe("AdminUsersPageView", () => {
     );
     expect(markup).toContain("Deletion pending");
     expect(markup).toContain("Admin (inactive)");
-    expect(markup).toContain('aria-label="Retry Deletion"');
-    expect(markup).toMatch(
-      /<button[^>]*disabled[^>]*aria-label="Manage Roles"/,
-    );
+    expect(markup).toContain('aria-label="More Actions for logto-missing"');
+    expect(markup).not.toContain('role="menuitem"');
   });
-  it("renders users, role pills, and role-management actions", () => {
+  it("renders users, role pills, and row-specific action triggers", () => {
     const markup = renderToStaticMarkup(
       createElement(
         MantineProvider,
@@ -152,9 +150,9 @@ describe("AdminUsersPageView", () => {
     expect(markup).toContain('data-testid="admin-user-roles-cell"');
     expect(markup).toContain('data-empty="true"');
     expect(markup).toContain("01.01.2026, 00:00");
-    expect(markup).toContain("Manage Roles");
-    expect(markup).toContain("Delete");
-    expect(markup).toContain("disabled");
+    expect(markup).toContain('aria-label="More Actions for Ada Lovelace"');
+    expect(markup).toContain('aria-label="More Actions for logto-missing"');
+    expect(markup).not.toContain('role="menuitem"');
   });
 
   it("matches delete confirmation by email when available", () => {

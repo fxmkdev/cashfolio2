@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { Box } from "@mantine/core";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType } from "@/.prisma-client/enums";
@@ -188,9 +189,8 @@ export const ConstrainedWidthWithGainLoss: Story = {
     });
     await userEvent.hover(nameCell);
     await waitFor(() => expect(actionsCell).toHaveStyle({ opacity: "1" }));
-    await userEvent.click(
-      within(accountRow).getByRole("button", { name: "Edit" }),
-    );
+    const actions = await openRowActionsMenu(accountRow);
+    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
     const body = within(canvasElement.ownerDocument.body);
     const editDialog = await findVisibleDialog(body, "Edit Account");
     expect(nameHeader.getBoundingClientRect().width).toBe(420);

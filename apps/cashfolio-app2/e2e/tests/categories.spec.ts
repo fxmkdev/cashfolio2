@@ -183,10 +183,24 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   await expandArchivedGroups(page);
   const archived = agGridRowByText(page, "E2E Electricity Updated");
   await expect(archived).toBeVisible();
+  const archivedId = await archived.getAttribute("row-id");
   await clickRowAction(archived, "Unarchive");
-  await expect(
-    archived.getByRole("button", { name: "Unarchive", exact: true }),
-  ).toHaveCount(0);
+  if (!archivedId) throw new Error("Missing category row ID");
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.account.findUniqueOrThrow({
+            where: {
+              id_accountBookId: {
+                id: archivedId,
+                accountBookId: seeded.accountBookId,
+              },
+            },
+          })
+        ).isActive,
+    )
+    .toBe(true);
   await page.goto(url);
   await updated.dblclick();
   await page.getByRole("button", { name: "Category Actions" }).click();

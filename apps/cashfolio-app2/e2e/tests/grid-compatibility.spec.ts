@@ -75,9 +75,12 @@ test("account names and actions stay frozen while overflow stays inside the grid
     )
     .toBeCloseTo(initialActionsRight, 0);
   await cashRow.hover();
-  const edit = cashRow.getByRole("button", { name: "Edit", exact: true });
-  await expect(edit).toBeInViewport();
-  await edit.click();
+  const moreActions = cashRow.getByRole("button", {
+    name: /^More Actions for /,
+  });
+  await expect(moreActions).toBeInViewport();
+  await moreActions.click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Edit Account" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -112,7 +115,7 @@ test("account names and actions stay frozen while overflow stays inside the grid
   await viewport.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
   });
-  await expect(edit).toBeInViewport();
+  await expect(moreActions).toBeInViewport();
 });
 
 test("restores pre-upgrade expanded group storage and persists collapse", async ({

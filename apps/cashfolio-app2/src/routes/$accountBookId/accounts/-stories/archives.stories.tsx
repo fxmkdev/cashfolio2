@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType } from "@/.prisma-client/enums";
 import { createGroupRow, createAccountRow } from "./fixtures";
@@ -47,12 +48,12 @@ export const ArchivedGroupActions: Story = {
       const walletRow = walletCell.closest(".ag-row");
       if (!walletRow) throw new Error("Could not resolve Wallet row");
       viewport.scrollLeft = viewport.scrollWidth;
-      return within(walletRow as HTMLElement);
+      return openRowActionsMenu(walletRow as HTMLElement);
     };
 
     let walletRowQueries = await getWalletRowQueries();
     await userEvent.click(
-      await walletRowQueries.findByRole("button", { name: "Edit" }),
+      await walletRowQueries.findByRole("menuitem", { name: "Edit" }),
     );
     const editDialog = await findVisibleDialog(body, "Edit Account");
     await userEvent.click(
@@ -66,7 +67,7 @@ export const ArchivedGroupActions: Story = {
 
     walletRowQueries = await getWalletRowQueries();
     await userEvent.click(
-      await walletRowQueries.findByRole("button", { name: "Delete" }),
+      await walletRowQueries.findByRole("menuitem", { name: "Delete" }),
     );
     const deleteDialog = await findVisibleDialog(body, "Delete Account");
     await userEvent.click(
@@ -80,7 +81,7 @@ export const ArchivedGroupActions: Story = {
 
     walletRowQueries = await getWalletRowQueries();
     await userEvent.click(
-      await walletRowQueries.findByRole("button", {
+      await walletRowQueries.findByRole("menuitem", {
         name: "Reorder Siblings",
       }),
     );
@@ -192,8 +193,15 @@ export const ArchivedGroupsHaveNoChildCreation: Story = {
         canvasElement.querySelectorAll(".ag-row:not(.ag-opacity-zero)"),
       ).not.toHaveLength(0),
     );
-    expect(
-      within(canvasElement).queryByRole("button", { name: /^Add Child/ }),
-    ).not.toBeInTheDocument();
+    for (const row of canvasElement.querySelectorAll<HTMLElement>(
+      ".ag-row:not(.ag-opacity-zero)",
+    )) {
+      if (!within(row).queryByRole("button", { name: /^More Actions for / }))
+        continue;
+      const actions = await openRowActionsMenu(row);
+      expect(
+        actions.queryByRole("menuitem", { name: /^Add / }),
+      ).not.toBeInTheDocument();
+    }
   },
 };

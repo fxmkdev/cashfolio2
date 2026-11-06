@@ -1,3 +1,4 @@
+import { getRowAction } from "../support/grid";
 import { expandArchivedGroups } from "../support/grid";
 import {
   agGridRowByText,
@@ -235,6 +236,6 @@ test("archive action is disabled for non-zero asset balances", async ({
   await expect(usdRow).toBeVisible();
   const actionRow = await revealRowActions(usdRow);
 
-  const archiveButton = actionRow.getByRole("button", { name: "Archive" });
+  const archiveButton = await getRowAction(actionRow, "Archive");
   await expect(archiveButton).toBeDisabled();
 });

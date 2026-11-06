@@ -1,5 +1,8 @@
 import {
-  ActionIcon,
+  RowActionsMenu,
+  rowActionsColumnProps,
+} from "@/components/grid/row-actions-menu";
+import {
   Avatar,
   Badge,
   Button,
@@ -9,10 +12,9 @@ import {
   Switch,
   Text,
   Title,
-  Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck, IconUserCog } from "@tabler/icons-react";
+import { IconCheck, IconUserCog, IconTrash } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { useMemo, useState } from "react";
 import { UserRole } from "@/.prisma-client/enums";
@@ -22,7 +24,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import type { AdminUserListItem } from "@/server/admin-users";
-import { DeleteUserAction, DeleteUserModal } from "./-users-delete-controls";
+import { DeleteUserModal } from "./-users-delete-controls";
 import { getIdentityStatusLabel } from "./-users-page-utils";
 
 export type AdminUsersPageViewProps = {
@@ -163,28 +165,29 @@ function UserActionsCell({
   onDeleteUser: (user: AdminUserListItem) => void;
 }) {
   return (
-    <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip
-        label={
-          user.deletionPending
-            ? "Deletion pending; role changes unavailable"
-            : "Manage Roles"
-        }
-      >
-        <span style={{ display: "inline-flex" }}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            disabled={user.deletionPending}
-            onClick={() => onManageRoles(user)}
-            aria-label="Manage Roles"
-          >
-            <IconUserCog size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <DeleteUserAction user={user} onDeleteUser={onDeleteUser} />
-    </Group>
+    <RowActionsMenu
+      rowLabel={user.displayName}
+      actions={[
+        {
+          id: "manage-roles",
+          label: "Manage Roles",
+          icon: <IconUserCog size={16} />,
+          disabled: user.deletionPending,
+          disabledReason: "Deletion pending; role changes unavailable",
+          onClick: () => onManageRoles(user),
+        },
+        {
+          id: "delete",
+          label: user.deletionPending ? "Retry Deletion" : "Delete",
+          icon: <IconTrash size={16} />,
+          color: "red",
+          separatorBefore: true,
+          disabled: user.isCurrentUser,
+          disabledReason: "You cannot delete yourself",
+          onClick: () => onDeleteUser(user),
+        },
+      ]}
+    />
   );
 }
 
@@ -268,13 +271,7 @@ export function AdminUsersPageView({
       },
       {
         colId: "actions",
-        headerName: "",
-        width: 90,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
+        ...rowActionsColumnProps,
         cellRenderer: ({ data }: ICellRendererParams<AdminUserListItem>) =>
           data ? (
             <UserActionsCell

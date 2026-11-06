@@ -82,7 +82,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   ).toHaveAttribute("row-id", "OTHER_ASSETS");
   await clickPinnedRowAction({
     row: page.locator('[row-id="EQUITIES"]').first(),
-    actionLabel: "Add Child to Equities",
+    actionLabel: "Add Child",
   });
   let dialog = page.getByRole("dialog", {
     name: "New Asset Class",
@@ -96,7 +96,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   });
   await page.goto(`/${book.accountBookId}/accounts`);
   const row = agGridRowByText(page, book.cashAccount.name);
-  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await clickPinnedRowAction({ row, actionLabel: "Edit" });
   dialog = page.getByRole("dialog", { name: "Edit Account", exact: true });
   await dialog.getByLabel("Asset Class", { exact: true }).click();
   await page
@@ -127,7 +127,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await page.goto(`/${book.accountBookId}/settings/classifications`);
   await clickPinnedRowAction({
     row: page.locator(`[row-id="${node.id}"]`).first(),
-    actionLabel: "Edit Pension Equities",
+    actionLabel: "Edit",
   });
   dialog = page.getByRole("dialog", { name: "Edit Asset Class", exact: true });
   await dialog.getByLabel("Parent Class", { exact: true }).click();
@@ -143,7 +143,7 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await page.goto(`/${book.accountBookId}/settings/classifications`);
   await clickPinnedRowAction({
     row: page.locator(`[row-id="${node.id}"]`).first(),
-    actionLabel: "Delete Pension Equities",
+    actionLabel: "Delete",
   });
   dialog = page.getByRole("dialog", {
     name: "Delete Asset Class",

@@ -1,3 +1,4 @@
+import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import {
   assetClassRowId,
   unitRowId,
@@ -125,18 +126,30 @@ export const AssetClassSwitchingAndExpansion: Story = {
           .querySelector<HTMLElement>(`[row-id="${id}"]`)!
           .getBoundingClientRect().height,
       ).toBe(standardRowHeight);
-      await waitFor(() => {
-        const actions = canvasElement.querySelector<HTMLElement>(
-          `.ag-row:not(.ag-opacity-zero)[row-id="${id}"] [col-id="actions"]`,
-        );
-        if (!actions) throw new Error(`Missing actions for ${id}`);
+      const selector = `.ag-row:not(.ag-opacity-zero)[row-id="${id}"]`;
+      await waitFor(() =>
+        expect(canvasElement.querySelector(selector)).not.toBeNull(),
+      );
+      const actions = await openRowActionsMenu(
+        canvasElement.querySelector<HTMLElement>(selector)!,
+      );
+      await expect(
+        actions.getByRole("menuitem", { name: "Reorder Siblings" }),
+      ).toHaveAttribute("aria-disabled", "true");
+      await expect(
+        actions.getByRole("menuitem", { name: "Reorder Siblings" }),
+      ).toHaveAccessibleDescription(
+        "Switch to Account Structure to reorder siblings",
+      );
+      await expect(
+        actions.getByRole("menuitem", { name: "Edit" }),
+      ).toBeEnabled();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() =>
         expect(
-          within(actions).getByRole("button", { name: "Reorder Siblings" }),
-        ).toBeDisabled();
-        expect(
-          within(actions).getByRole("button", { name: "Edit" }),
-        ).toBeEnabled();
-      });
+          within(canvasElement.ownerDocument.body).queryByRole("menu"),
+        ).not.toBeInTheDocument(),
+      );
     }
     await collapse(classId);
     await chooseAccountGrouping(canvasElement, "Account Structure");

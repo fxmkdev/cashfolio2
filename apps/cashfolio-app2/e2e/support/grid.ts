@@ -68,10 +68,7 @@ export async function clickRowAction(
     | "Unarchive"
     | "Reorder Siblings",
 ) {
-  const stableRow = await revealRowActions(row);
-  await stableRow
-    .getByRole("button", { name: actionLabel, exact: true })
-    .click();
+  await (await getRowAction(row, actionLabel)).click();
   await row
     .page()
     .locator(".ag-grid-viewport")
@@ -81,17 +78,37 @@ export async function clickRowAction(
     });
 }
 
+/** Supports both a direct primary action and an item in a row's overflow menu. */
+export async function getRowAction(row: Locator, actionLabel: string) {
+  // An inspected disabled item may leave a menu covering a different row.
+  if (
+    !(await row.locator("[data-row-actions-open]").count()) &&
+    (await row.page().getByRole("menu").count())
+  ) {
+    await row.page().keyboard.press("Escape");
+    await expect(row.page().getByRole("menu")).toHaveCount(0);
+  }
+  const stableRow = await revealRowActions(row);
+  const direct = stableRow.getByRole("button", {
+    name: actionLabel,
+    exact: true,
+  });
+  if (await direct.count()) return direct;
+  const trigger = stableRow.getByRole("button", { name: /^More Actions for / });
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") {
+    await trigger.click();
+  }
+  const menu = row.page().getByRole("menu");
+  await expect(menu).toHaveCount(1);
+  await expect(menu).toBeVisible();
+  return menu.getByRole("menuitem", { name: actionLabel, exact: true });
+}
+
 export async function clickPinnedRowAction(args: {
   row: Locator;
   actionLabel: string;
 }) {
-  await args.row.hover();
-  // v36 keeps pinned and scrolling cells inside the same row element.
-  const action = args.row
-    .locator(":scope > .ag-grid-pinned-right-cells")
-    .getByRole("button", { name: args.actionLabel });
-  await expect(action).toBeVisible();
-  await action.click();
+  await (await getRowAction(args.row, args.actionLabel)).click();
 }
 
 export async function clickGridRowSelectionCheckbox(row: Locator) {
