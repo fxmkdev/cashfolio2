@@ -66,6 +66,12 @@ test("organizes an account and complete group subtree, persists ordering, and ma
     ],
   });
   await page.goto(`/${book.accountBookId}/accounts`);
+  // Provide two same-document destinations for repeated Back during saving.
+  for (const grouping of ["Asset Class", "Account Structure"]) {
+    await page.getByLabel("Group By").click();
+    await page.getByRole("option", { name: grouping, exact: true }).click();
+    await expect(page.getByLabel("Group By")).toHaveValue(grouping);
+  }
   await page.getByRole("button", { name: "Organize", exact: true }).click();
   const organizer = page.getByRole("region", { name: "Organize Accounts" });
   await expect(organizer.locator(`.ag-row[row-id="${source}"]`)).toBeVisible();
@@ -122,6 +128,9 @@ test("organizes an account and complete group subtree, persists ordering, and ma
     ).toBeDisabled();
     await page.evaluate(() => window.history.back());
     await expect(page).not.toHaveURL(/organize=true/);
+    await expect(organizer).toBeVisible();
+    await page.evaluate(() => window.history.back());
+    await expect(page).toHaveURL(/organize=true/);
     await expect(organizer).toBeVisible();
   } finally {
     releaseSave();

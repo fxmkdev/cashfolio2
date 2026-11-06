@@ -21,6 +21,15 @@ describe("organizer return navigation", () => {
     ).toBe(-1);
   });
 
+  it("recognizes a normal Accounts origin that omits the optional active mode", () => {
+    const target = createOrganizeReturnTarget(
+      "book",
+      "/book/accounts?tab=BALANCE",
+      2,
+    );
+    expect(getOrganizeReturnDelta(target, "book", organized, 3)).toBe(-1);
+  });
+
   it.each([
     undefined,
     null,

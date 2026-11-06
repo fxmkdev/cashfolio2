@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { organizeLifecycleAvailability } from "./lifecycle";
+import {
+  committedLifecycleView,
+  organizeLifecycleAvailability,
+} from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { organizeDisplayRows } from "@/shared/account-organize/tree";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
   OrganizeMove,
@@ -171,37 +173,14 @@ export function useOrganizer(
     // A confirmed commit is never retried, even if its subsequent refresh fails.
     attempted.current = undefined;
     if (!mounted.current) return;
-    // Reflect a known commit while canonical metadata is being recovered.
-    // Its old version cannot be submitted: the shared controller stays blocked.
-    setSnapshot({
-      ...before,
-      nodes:
-        action === "delete"
-          ? before.nodes.filter((item) => item.id !== target.id)
-          : before.nodes.map((item) =>
-              item.id === target.id
-                ? { ...item, isActive: action === "unarchive" }
-                : item,
-            ),
-    });
+    const committed = committedLifecycleView(before, action, node);
+    // This version stays blocked until canonical metadata is recovered.
+    setSnapshot(committed.snapshot);
+    setRevealIds(committed.revealIds);
+    setFocusFallbackIds(committed.focusFallbackIds);
+    setMessage(committed.message);
     onSaved();
     onCommitted?.();
-    const siblings = organizeDisplayRows(before.nodes, true).filter(
-      (item) => (item.parentId ?? null) === node.parentId,
-    );
-    const index = siblings.findIndex((item) => item.id === target.id);
-    const neighbors: string[] = [];
-    for (let distance = 1; distance < siblings.length; distance++) {
-      const after = siblings[index + distance];
-      const previous = siblings[index - distance];
-      if (after) neighbors.push(after.id);
-      if (previous) neighbors.push(previous.id);
-    }
-    setRevealIds([target.id, ...(node.parentId ? [node.parentId] : [])]);
-    setFocusFallbackIds(neighbors);
-    setMessage(
-      `${node.name} ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
-    );
     await refresh();
   };
   const isRetryValid = () => {

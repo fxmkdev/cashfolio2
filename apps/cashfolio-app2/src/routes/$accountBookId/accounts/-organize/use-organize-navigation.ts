@@ -1,5 +1,6 @@
-import { useBlocker, useNavigate, useRouter } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef } from "react";
+import { useOrganizeNavigationGuard } from "./use-organize-navigation-guard";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useCallback, useEffect } from "react";
 import {
   createOrganizeReturnTarget,
   getOrganizeReturnDelta,
@@ -20,38 +21,7 @@ export function useOrganizeNavigation(
 ) {
   const router = useRouter();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
-  const queued = useRef<((cancel: boolean) => void) | undefined>(undefined);
-  useBlocker({
-    shouldBlockFn: useCallback(
-      ({ current }) => {
-        if (
-          !pending ||
-          current.routeId !== "/$accountBookId/accounts" ||
-          current.params.accountBookId !== accountBookId
-        )
-          return false;
-        // Keep the first attempt; reject further attempts while it waits.
-        if (queued.current) return true;
-        return new Promise<boolean>((resolve) => {
-          queued.current = resolve;
-        });
-      },
-      [accountBookId, pending],
-    ),
-    enableBeforeUnload: pending,
-  });
-  useEffect(() => {
-    if (!pending) {
-      queued.current?.(false);
-      queued.current = undefined;
-    }
-  }, [pending]);
-  useEffect(
-    () => () => {
-      queued.current?.(true);
-    },
-    [],
-  );
+  useOrganizeNavigationGuard(accountBookId, pending);
 
   const replaceNormal = useCallback(
     () =>

@@ -17,10 +17,12 @@ function accountsUrl(href: unknown, accountBookId: string) {
     return undefined;
   if (
     url.searchParams.get("tab") !== "BALANCE" ||
-    url.searchParams.get("mode") !== "active" ||
+    (url.searchParams.has("mode") &&
+      url.searchParams.get("mode") !== "active") ||
     url.searchParams.get("grouping") === "assetClass"
   )
     return undefined;
+  url.searchParams.set("mode", "active");
   return url;
 }
 
@@ -65,7 +67,7 @@ export function getOrganizeReturnDelta(
   if (current?.searchParams.get("organize") !== "true") return undefined;
   current.searchParams.delete("organize");
   current.searchParams.sort();
-  const origin = new URL(candidate.href, current.origin);
+  const origin = accountsUrl(candidate.href, accountBookId)!;
   origin.searchParams.sort();
   return current.href === origin.href ? -1 : undefined;
 }

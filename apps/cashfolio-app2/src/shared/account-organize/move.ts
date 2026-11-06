@@ -61,18 +61,12 @@ export function validateOrganizeTree(nodes: OrganizeNode[]) {
   }
 }
 
-export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
-  const roots = normalizeOrganizeSelection(nodes, move.items);
-  if (!roots.length) throw new Error("Select at least one account or group.");
+function movePositions(
+  nodes: OrganizeNode[],
+  roots: OrganizeNode[],
+  move: OrganizeMove,
+) {
   const rootIds = new Set(roots.map((node) => node.id));
-  const destination = nodes.find((node) => node.id === move.parentId);
-  if (move.parentId !== null && destination?.nodeType !== "accountGroup")
-    throw new Error("Select an available destination group.");
-  const movingIds = new Set(
-    roots.flatMap((node) => [...descendants(nodes, node.id)]),
-  );
-  if (move.parentId !== null && movingIds.has(move.parentId))
-    throw new Error("A group cannot be moved into itself or its descendants.");
   const siblings = nodes
     .filter((node) => node.parentId === move.parentId && !rootIds.has(node.id))
     .sort(compareOrganizeNodes);
@@ -98,6 +92,22 @@ export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
       .sort(compareOrganizeNodes)
       .forEach((node, i) => positions.set(node.id, i));
   }
+  return positions;
+}
+
+export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
+  const roots = normalizeOrganizeSelection(nodes, move.items);
+  if (!roots.length) throw new Error("Select at least one account or group.");
+  const rootIds = new Set(roots.map((node) => node.id));
+  const destination = nodes.find((node) => node.id === move.parentId);
+  if (move.parentId !== null && destination?.nodeType !== "accountGroup")
+    throw new Error("Select an available destination group.");
+  const movingIds = new Set(
+    roots.flatMap((node) => [...descendants(nodes, node.id)]),
+  );
+  if (move.parentId !== null && movingIds.has(move.parentId))
+    throw new Error("A group cannot be moved into itself or its descendants.");
+  const positions = movePositions(nodes, roots, move);
   const cashChanges = new Map<string, boolean>();
   for (const root of roots) {
     if (!destination || root.parentId === move.parentId) continue;
@@ -111,7 +121,11 @@ export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
     isCashAccount: cashChanges.get(node.id) ?? node.isCashAccount,
   }));
   validateOrganizeTree(next);
-  // An unchanged visible order must not silently normalize nullable sort orders.
+  // Preserve nullable orders for effective no-ops.
+  return unchangedHierarchy(nodes, next) ? nodes : next;
+}
+
+function unchangedHierarchy(nodes: OrganizeNode[], next: OrganizeNode[]) {
   const siblingOrder = (items: OrganizeNode[]) => {
     const displayed = organizeDisplayRows(items);
     const parents = [...new Set(displayed.map((node) => node.parentId))].sort();
@@ -126,12 +140,10 @@ export function planAccountMove(nodes: OrganizeNode[], move: OrganizeMove) {
       node.parentId === next[i].parentId &&
       node.isCashAccount === next[i].isCashAccount,
   );
-  if (
+  return (
     sameStructure &&
     JSON.stringify(siblingOrder(nodes)) === JSON.stringify(siblingOrder(next))
-  )
-    return nodes;
-  return next;
+  );
 }
 
 export function organizeChanges(

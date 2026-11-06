@@ -1535,10 +1535,12 @@ header spacing, without a mode-specific background. Use a large Organizing badge
 beside the heading. **Done** uses the same right-aligned header toolbar as
 normal management actions. Selection actions appear only after selection,
 replacing the instruction row without shifting the grid. Routine drag/save
-feedback shares that row, with no separate empty status line. Use the normal
-header and grid spacing; avoid standalone loading spinners. Use global progress
-for initial hierarchy loading and recovery, and shared local feedback for
-mutations. Announce mode entry and movement results accessibly.
+feedback shares that row, with no separate empty status line. Keep routine
+feedback on one line, retaining full text for assistive technology and hover, so
+long drag previews cannot shift the grid. Use the normal header and grid
+spacing; avoid standalone loading spinners. Use global progress for initial
+hierarchy loading and recovery, and shared local feedback for mutations.
+Announce mode entry and movement results accessibly.
 
 Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;
@@ -1587,6 +1589,8 @@ compatible anchors exist. The Sibling field remains a flat searchable choice
 within one parent. Top Level remains available in that dialog and by dropping
 before/after a compatible root row; there is no separate Top Level drop area.
 Organize displays saved manual order, without search or sorting in the grid.
+Null or tied sort orders use a fixed `en-US` fallback collation and ID
+tie-breaker in both browser planning and server persistence.
 
 Moves inherit existing parent Cash Account rules, including subtree propagation
 and non-currency restrictions. Moving to Top Level preserves flags; reordering
@@ -1614,12 +1618,14 @@ unarchive, and recovery. Shared confirmation dialogs optionally accept this
 controller; standalone callers retain their internal controller. While pending,
 disable movement, row mutations, Show Archived, and Done, and queue navigation.
 Failed moves restore confirmed data and refresh choices using shared mutation
-feedback. Only confirmed busy rollbacks offer an explicit retry while the
-hierarchy version and target eligibility remain valid. Uncertain network
-outcomes require a successful refresh before another operation. A confirmed
-lifecycle commit is never resubmitted to recover a failed refresh; retain the
-committed state and recover by reading canonical data. Financial fields are
-never accepted by movement APIs.
+feedback. While Move To is open, show this feedback and its recovery controls
+inside the dialog; disable submission until recovery succeeds. Busy retries
+submit the current dialog choices and close after success. Only confirmed busy
+rollbacks offer an explicit retry while the hierarchy version and target
+eligibility remain valid. Uncertain network outcomes require a successful
+refresh before another operation. A confirmed lifecycle commit is never
+resubmitted to recover a failed refresh; retain the committed state and recover
+by reading canonical data. Financial fields are never accepted by movement APIs.
 
 ## Node Type Mixing in Tree Data
 

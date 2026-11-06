@@ -1,5 +1,9 @@
 import type { OrganizeNode, OrganizeNodeRef } from "./types";
 
+// A shared fallback collation keeps browser previews and server persistence in
+// the same order when manual sort orders are null or tied.
+const nameOrder = new Intl.Collator("en-US");
+
 export function compareOrganizeNodes(
   a: Pick<OrganizeNode, "id" | "name" | "sortOrder">,
   b: Pick<OrganizeNode, "id" | "name" | "sortOrder">,
@@ -9,7 +13,10 @@ export function compareOrganizeNodes(
     if (b.sortOrder === null) return -1;
     return a.sortOrder - b.sortOrder;
   }
-  return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+  return (
+    nameOrder.compare(a.name, b.name) ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  );
 }
 
 export function descendants(nodes: OrganizeNode[], id: string) {

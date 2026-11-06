@@ -169,7 +169,9 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
     session-local and clear on exit. Back/Forward never undo or replay a move.
   - During move, archive, unarchive, delete, and recovery requests, a
     route-scoped blocker queues one navigation attempt and continues after the
-    request settles. Settled sessions do not prompt about unsaved changes.
+    request settles. Rejected repeated Back/Forward attempts first restore the
+    original entry; retain and replay the first traversal after restoration.
+    Settled sessions do not prompt about unsaved changes.
   - The loader fetches the unified balance-account hierarchy. The shared
     account-management loader fetches only the selected category subtype for
     settings category tabs.

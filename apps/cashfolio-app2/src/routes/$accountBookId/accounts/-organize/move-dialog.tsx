@@ -1,3 +1,4 @@
+import { moveSummary } from "./move-summary";
 import {
   Alert,
   Button,
@@ -10,6 +11,8 @@ import {
   Text,
 } from "@mantine/core";
 import { useId, useMemo, useState } from "react";
+import type { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import { GroupTreeSelect } from "@/components/account-tree/group-tree-select";
 import {
   moveDestinationGroups,
@@ -28,20 +31,13 @@ import type {
   OrganizePlacement,
 } from "@/shared/account-organize/types";
 
-export function moveSummary(nodes: OrganizeNode[], next: OrganizeNode[]) {
-  const changed = next.filter(
-    (node, i) => node.isCashAccount !== nodes[i].isCashAccount,
-  );
-  return changed.length
-    ? `This move changes the Cash Account setting for ${changed.length} ${changed.length === 1 ? "item" : "items"}, including descendants, to match the destination group.`
-    : "";
-}
-
 export function MoveDialog({
   nodes,
   showArchived = true,
   items,
   pending,
+  blocked = pending,
+  submission,
   onClose,
   onMove,
 }: {
@@ -49,6 +45,12 @@ export function MoveDialog({
   showArchived?: boolean;
   items: OrganizeNodeRef[];
   pending: boolean;
+  blocked?: boolean;
+  submission?: {
+    state: ReturnType<typeof useDialogSubmitState>;
+    onRefreshConstraints: () => Promise<void>;
+    retryDisabled: boolean;
+  };
   onClose: () => void;
   onMove: (move: OrganizeMove) => Promise<boolean | undefined>;
 }) {
@@ -126,6 +128,10 @@ export function MoveDialog({
       };
     }
   }, [nodes, items, parent, placement, anchorId, missing]);
+  const submitMove = async () => {
+    if (preview.error || blocked) return;
+    if (await onMove(makeMove(parent))) onClose();
+  };
   return (
     <Modal
       opened
@@ -147,7 +153,7 @@ export function MoveDialog({
           allowDeselect={false}
           groups={destinations}
           value={parent ?? TOP_LEVEL_DESTINATION}
-          disabled={pending}
+          disabled={blocked}
           onChange={(value) => {
             setParent(value === TOP_LEVEL_DESTINATION ? null : value);
             setAnchorId(null);
@@ -159,7 +165,7 @@ export function MoveDialog({
             aria-labelledby={positionLabelId}
             fullWidth
             value={placement}
-            disabled={pending}
+            disabled={blocked}
             data={[
               { value: "first", label: "First" },
               { value: "last", label: "Last" },
@@ -179,7 +185,7 @@ export function MoveDialog({
             data={anchors}
             value={anchorId}
             onChange={setAnchorId}
-            disabled={pending}
+            disabled={blocked}
           />
         )}
         {preview.effect && <Alert color="blue">{preview.effect}</Alert>}
@@ -188,16 +194,23 @@ export function MoveDialog({
             {preview.error}
           </Text>
         )}
+        {submission && (
+          <MutationSubmitFeedback
+            {...submission}
+            onRetry={() => void submitMove()}
+            retryDisabled={
+              submission.retryDisabled || !!preview.error || blocked
+            }
+          />
+        )}
         <Group justify="flex-end">
           <Button variant="default" disabled={pending} onClick={onClose}>
             Cancel
           </Button>
           <Button
-            disabled={!!preview.error || pending}
+            disabled={!!preview.error || blocked}
             loading={pending}
-            onClick={async () => {
-              if (await onMove(makeMove(parent))) onClose();
-            }}
+            onClick={() => void submitMove()}
           >
             Move
           </Button>

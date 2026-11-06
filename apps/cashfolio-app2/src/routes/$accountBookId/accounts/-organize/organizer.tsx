@@ -1,28 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Badge,
-  Box,
-  Button,
-  Checkbox,
-  Group,
-  Text,
-  VisuallyHidden,
-} from "@mantine/core";
+import { Box, Button, Text, VisuallyHidden } from "@mantine/core";
 import type {
-  ColDef,
   GridApi,
-  GridOptions,
   GridReadyEvent,
-  ICellRendererParams,
   SelectionChangedEvent,
 } from "ag-grid-enterprise";
-import { DataGrid } from "@/components/grid/data-grid";
-import { OrganizeAccountActionsCell } from "@/components/account-tree/organize-account-actions-cell";
+import { OrganizerGrid } from "./organizer-grid";
+import { useOrganizeReveal } from "./use-organize-reveal";
 import {
   OrganizerLifecycleDialogs,
   type LifecycleDialog,
 } from "./lifecycle-dialogs";
-import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
+import { OrganizerMutationFeedback } from "./organizer-mutation-feedback";
+import { OrganizerToolbar } from "./organizer-toolbar";
 import {
   normalizeOrganizeSelection,
   organizeDisplayRows,
@@ -34,28 +24,6 @@ import type { Organizer } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
 
-// Hint updates must not reconfigure the tree column or recreate its controls.
-const gridOptions: GridOptions<OrganizeDisplayRow> = {
-  suppressNoRowsOverlay: true,
-  defaultColDef: { sortable: false, filter: false, resizable: true },
-  autoGroupColumnDef: {
-    headerName: "Name",
-    field: "name",
-    flex: 1,
-    minWidth: 280,
-    rowDrag: ({ data }) => !!data,
-    cellRendererParams: { suppressCount: true },
-  },
-  getRowId: ({ data }) => data.id,
-  rowSelection: {
-    mode: "multiRow",
-    groupSelects: "self",
-    headerCheckbox: false,
-    enableClickSelection: false,
-  },
-  selectionColumnDef: { pinned: "left", width: 48, resizable: false },
-};
-
 export function AccountOrganizer({
   accountBookId,
   organizer,
@@ -64,10 +32,7 @@ export function AccountOrganizer({
   organizer: Organizer;
 }) {
   const [showArchived, setShowArchived] = useState(false);
-  const organizerRef = useRef(organizer);
-  organizerRef.current = organizer;
   const [selectionNotice, setSelectionNotice] = useState("");
-  const expansion = useRef(new Map<string, boolean>());
   const region = useRef<HTMLElement>(null);
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
   const [selected, setSelected] = useState<OrganizeNodeRef[]>([]);
@@ -89,7 +54,7 @@ export function AccountOrganizer({
     if (retained.length !== selected.length) {
       setSelected(retained);
       setSelectionNotice(
-        `${selected.length - retained.length} unavailable or hidden items were deselected.`,
+        `${selected.length - retained.length} unavailable or hidden ${selected.length - retained.length === 1 ? "item was" : "items were"} deselected.`,
       );
     }
   }, [rows, selected]);
@@ -107,99 +72,7 @@ export function AccountOrganizer({
     blocked: movementBlocked,
     saveMove: organizer.saveMove,
   });
-  const reveal = useCallback(
-    (id: string, focus: boolean) => {
-      let node = api?.getRowNode(id);
-      let current = nodes.find((item) => item.id === id);
-      while (!node && current?.parentId) {
-        current = nodes.find((item) => item.id === current?.parentId);
-        if (current) node = api?.getRowNode(current.id);
-      }
-      if (!api || !node) return false;
-      let parent = node.parent;
-      while (parent && parent.level >= 0) {
-        parent.setExpanded(true, undefined, true);
-        parent = parent.parent;
-      }
-      api.ensureNodeVisible(node, "middle");
-      if (focus && node.rowIndex !== null)
-        api.setFocusedCell(node.rowIndex, "ag-Grid-AutoColumn");
-      return true;
-    },
-    [api, nodes],
-  );
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      for (const id of organizer.revealIds) reveal(id, false);
-      if (
-        organizer.revealIds.length &&
-        !organizer.revealIds.some((id) => reveal(id, true)) &&
-        !organizer.focusFallbackIds.some((id) => reveal(id, true))
-      )
-        region.current?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [organizer.focusFallbackIds, organizer.revealIds, rows, reveal]);
-  const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
-    () => [
-      {
-        headerName: "Type",
-        width: 135,
-        valueGetter: ({ data }) =>
-          data?.nodeType === "accountGroup" ? "Group" : "Account",
-      },
-      {
-        headerName: "Status",
-        width: 125,
-        cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data && !data.isActive ? (
-            <Badge color="gray" variant="light">
-              Archived
-            </Badge>
-          ) : null,
-      },
-      {
-        colId: "actions",
-        headerName: "",
-        width: 120,
-        pinned: "right",
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data ? (
-            <OrganizeAccountActionsCell
-              node={{ ...data, parentId: data.parentId ?? null }}
-              availability={organizer.snapshot?.actionAvailability[data.id]}
-              blocked={movementBlocked || drag.dragging}
-              onMove={() => setDialogItems([data])}
-              onArchive={() =>
-                setLifecycleDialog({
-                  action: "archive",
-                  node: { ...data, parentId: data.parentId ?? null },
-                })
-              }
-              onDelete={() =>
-                setLifecycleDialog({
-                  action: "delete",
-                  node: { ...data, parentId: data.parentId ?? null },
-                })
-              }
-              onUnarchive={() =>
-                void organizerRef.current.submitState.runSubmit(() =>
-                  organizerRef.current.performLifecycle("unarchive", data),
-                )
-              }
-            />
-          ) : null,
-      },
-    ],
-    [drag.dragging, movementBlocked, organizer.snapshot?.actionAvailability],
-  );
-  const groups = roots.filter(
-    (node) => node.nodeType === "accountGroup",
-  ).length;
-  const accounts = roots.length - groups;
+  useOrganizeReveal({ api, nodes, rows, organizer, region });
   const onGridReady = useCallback(
     ({ api }: GridReadyEvent<OrganizeDisplayRow>) => setApi(api),
     [],
@@ -209,34 +82,6 @@ export function AccountOrganizer({
       setSelected(api.getSelectedRows()),
     [],
   );
-  const rowClassRules = useMemo<
-    GridOptions<OrganizeDisplayRow>["rowClassRules"]
-  >(
-    () => ({
-      [styles.recent]: ({ data }) =>
-        !!data && organizer.revealIds.includes(data.id),
-      [styles.archived]: ({ data }) => !!data && !data.isActive,
-    }),
-    [organizer.revealIds],
-  );
-  const isGroupOpenByDefault = useCallback<
-    NonNullable<GridOptions<OrganizeDisplayRow>["isGroupOpenByDefault"]>
-  >(
-    ({ rowNode }) => expansion.current.get(rowNode.id!) ?? rowNode.level === 0,
-    [],
-  );
-  const onRowGroupOpened = useCallback<
-    NonNullable<GridOptions<OrganizeDisplayRow>["onRowGroupOpened"]>
-  >(({ node }) => {
-    if (node.id) expansion.current.set(node.id, !!node.expanded);
-  }, []);
-  useEffect(() => {
-    api?.forEachNode((node) => {
-      const expanded = expansion.current.get(node.id!);
-      if (node.group && expanded !== undefined && node.expanded !== expanded)
-        node.setExpanded(expanded);
-    });
-  }, [api, rows]);
   const changeArchivedVisibility = (value: boolean) => {
     if (!value) {
       const hidden = selected.filter(
@@ -273,71 +118,25 @@ export function AccountOrganizer({
         minHeight: 0,
       }}
     >
-      <Group justify="space-between" mb="sm" className={styles.selectionBar}>
-        {selected.length ? (
-          <Group role="toolbar" aria-label="Organize Account Actions" gap="xs">
-            <Text size="sm" role="status">
-              {groups} {groups === 1 ? "group" : "groups"} and {accounts}{" "}
-              {accounts === 1 ? "account" : "accounts"} selected
-            </Text>
-            <Button
-              size="sm"
-              disabled={!roots.length || movementBlocked || drag.dragging}
-              onClick={() => setDialogItems(roots)}
-            >
-              Move To…
-            </Button>
-            <Button
-              size="sm"
-              variant="subtle"
-              disabled={!selected.length || movementBlocked || drag.dragging}
-              onClick={() => {
-                api?.deselectAll();
-                setSelected([]);
-              }}
-            >
-              Clear Selection
-            </Button>
-          </Group>
-        ) : (
-          <Text size="sm" c="dimmed" flex={1}>
-            {drag.hint ||
-              (organizer.pending
-                ? organizer.submitState.isWaiting
-                  ? "Waiting for another change to finish…"
-                  : "Saving…"
-                : organizer.message) ||
-              "Drag to move or reorder. Groups move with all descendants. Changes save automatically."}
-          </Text>
-        )}
-        <Group gap="sm">
-          {selected.length > 0 && (
-            <Text size="sm" c="dimmed" role="status">
-              {drag.hint || (organizer.pending ? "Saving…" : organizer.message)}
-            </Text>
-          )}
-          {hiddenResults > 0 && (
-            <Text size="sm" c="dimmed">
-              Affected archived items are hidden. Enable Show Archived to view
-              them.
-            </Text>
-          )}
-          <Checkbox
-            label="Show Archived"
-            checked={showArchived}
-            disabled={movementBlocked || drag.dragging}
-            onChange={(event) =>
-              changeArchivedVisibility(event.currentTarget.checked)
-            }
-          />
-        </Group>
-      </Group>
-      <MutationSubmitFeedback
-        state={{ ...organizer.submitState, isWaiting: false }}
-        onRefreshConstraints={organizer.refresh}
-        onRetry={organizer.retry}
-        retryDisabled={organizer.retryDisabled}
+      <OrganizerToolbar
+        selectedCount={selected.length}
+        roots={roots}
+        onMove={() => setDialogItems(roots)}
+        onClear={() => {
+          api?.deselectAll();
+          setSelected([]);
+        }}
+        blocked={movementBlocked}
+        dragging={drag.dragging}
+        hint={drag.hint}
+        organizer={organizer}
+        hiddenResults={hiddenResults}
+        showArchived={showArchived}
+        onVisibility={changeArchivedVisibility}
       />
+      {!dialogItems && !lifecycleDialog && (
+        <OrganizerMutationFeedback organizer={organizer} />
+      )}
       <VisuallyHidden role="status" aria-live="polite">
         Organize mode. {selectionNotice} {organizer.message}{" "}
         {hiddenResults > 0 &&
@@ -361,28 +160,16 @@ export function AccountOrganizer({
           )}
         </Text>
       )}
-      <DataGrid
-        {...gridOptions}
-        containerStyle={{ flex: 1, minHeight: 200 }}
-        rowData={rows}
-        columnDefs={columnDefs}
-        treeData
-        treeDataParentIdField="parentId"
-        groupDefaultExpanded={1}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
+      <OrganizerGrid
+        rows={rows}
+        api={api}
+        organizer={organizer}
+        drag={drag}
+        blocked={movementBlocked}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
-        rowDragMultiRow
-        rowDragManaged={false}
-        suppressMoveWhenRowDragging
-        rowDragText={drag.dragText}
-        isRowValidDropPosition={drag.validateDrop}
-        onRowDragEnter={drag.start}
-        onRowDragEnd={drag.finish}
-        onRowDragLeave={drag.leave}
-        onRowDragCancel={drag.cancel}
-        rowClassRules={rowClassRules}
+        onMoveItems={setDialogItems}
+        onLifecycle={setLifecycleDialog}
       />
       {dialogItems && (
         <MoveDialog
@@ -390,6 +177,12 @@ export function AccountOrganizer({
           showArchived={showArchived}
           items={dialogItems}
           pending={organizer.pending}
+          blocked={organizer.blocked}
+          submission={{
+            state: organizer.submitState,
+            onRefreshConstraints: organizer.refresh,
+            retryDisabled: organizer.retryDisabled,
+          }}
           onClose={() => setDialogItems(undefined)}
           onMove={organizer.saveMove}
         />

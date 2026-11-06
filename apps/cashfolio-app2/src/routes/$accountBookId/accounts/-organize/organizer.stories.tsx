@@ -1,293 +1,19 @@
-import { useState } from "react";
-import { Alert, Box, Button } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
-import { AccountOrganizer } from "./organizer";
 import { createOrganizerStoryApi, organizeStoryNodes } from "./story-fixtures";
-import { useOrganizer, type OrganizerApi } from "./use-organizer";
-import { OrganizerActions } from "./organizer-actions";
-import { useGlobalLoading } from "@/components/navigation/global-loading";
-
-function Harness({
-  failure,
-  useProvidedApi = false,
-  ...props
-}: {
-  accountBookId: string;
-  api: OrganizerApi;
-  onSaved: () => void;
-  onDone: () => void;
-  useProvidedApi?: boolean;
-  failure?: "busy" | "network" | "load";
-}) {
-  const [api] = useState(() =>
-    useProvidedApi ? props.api : createOrganizerStoryApi(failure),
-  );
-  const organizer = useOrganizer(props.onSaved, api);
-  useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
-  return (
-    <Box h={650} style={{ display: "flex", flexDirection: "column" }}>
-      <OrganizerActions organizer={organizer} onDone={props.onDone} />
-      {organizer.loadError && (
-        <Alert role="alert">
-          {organizer.loadError}
-          <Button onClick={() => void organizer.load()}>Refresh Choices</Button>
-        </Alert>
-      )}
-      {organizer.snapshot && (
-        <AccountOrganizer
-          accountBookId={props.accountBookId}
-          organizer={organizer}
-        />
-      )}
-    </Box>
-  );
-}
-
+import {
+  organizerStoryMeta,
+  Harness,
+  row,
+  select,
+  chooseMove,
+  type OrganizerStory as Story,
+} from "./story-harness";
 const meta = {
+  ...organizerStoryMeta,
   title: "Routes/Accounts/Organize",
   component: Harness,
-  args: {
-    accountBookId: "story-book",
-    onDone: fn(),
-    onSaved: fn(),
-    api: createOrganizerStoryApi(),
-  },
-  render: (args) => <Harness {...args} />,
-} satisfies Meta<typeof Harness>;
+};
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-async function row(canvasElement: HTMLElement, id: string) {
-  let found: HTMLElement | null = null;
-  await waitFor(() => {
-    found = canvasElement.querySelector<HTMLElement>(`.ag-row[row-id="${id}"]`);
-    expect(found).not.toBeNull();
-    expect(found).toBeVisible();
-    expect(found!.querySelector(".ag-group-value")).not.toBeNull();
-  });
-  return found!;
-}
-async function select(canvasElement: HTMLElement, id: string) {
-  const element = await row(canvasElement, id);
-  const checkbox = element.querySelector<HTMLElement>(
-    ".ag-selection-checkbox input",
-  )!;
-  await userEvent.click(checkbox);
-}
-async function chooseMove(
-  canvasElement: HTMLElement,
-  destination = "Long-Term",
-) {
-  const canvas = within(canvasElement);
-  const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(
-    within(
-      canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
-    ).getByRole("button", {
-      name: "Move To…",
-    }),
-  );
-  const dialog = within(await body.findByRole("dialog", { name: "Move To…" }));
-  await userEvent.click(dialog.getByLabelText("Destination"));
-  const option = (await body.findAllByRole("option")).find((item) =>
-    within(item).queryByText(destination, { exact: true }),
-  );
-  if (!option) throw new Error(`Missing destination ${destination}`);
-  await userEvent.click(within(option).getByText(destination, { exact: true }));
-  return dialog;
-}
-
-function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
-  return async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole("checkbox", { name: "Show Archived" }),
-    );
-    const source = await row(canvasElement, "checking");
-    const target = await row(canvasElement, "investments");
-    const destination = await row(canvasElement, "destination");
-    const archived = await row(canvasElement, "archived");
-    // Showing archived rows animates existing siblings down. Start the gesture
-    // once the new neighbor positions settle, rather than aiming at old bounds.
-    await waitFor(() =>
-      expect(
-        destination.getBoundingClientRect().top -
-          archived.getBoundingClientRect().top,
-      ).toBeCloseTo(destination.getBoundingClientRect().height, 0),
-    );
-    const baseline = [source, target, destination].map((element) => ({
-      id: element.getAttribute("row-id")!,
-      handle: element.querySelector<HTMLElement>(".ag-row-drag")!,
-      nameX: element.querySelector(".ag-group-value")!.getBoundingClientRect()
-        .x,
-    }));
-    const assertStable = async () => {
-      for (const { id, nameX } of baseline) {
-        const element = await row(canvasElement, id);
-        const handle = element.querySelector<HTMLElement>(".ag-row-drag")!;
-        await expect(handle).toBeVisible();
-        await expect(handle.getBoundingClientRect().width).toBeGreaterThan(0);
-        await expect(
-          element.querySelector(".ag-group-value")!.getBoundingClientRect().x,
-        ).toBeCloseTo(nameX, 1);
-      }
-      const archivedHandle =
-        archived.querySelector<HTMLElement>(".ag-row-drag")!;
-      await expect(archivedHandle).toBeVisible();
-      await expect(
-        archivedHandle.getBoundingClientRect().width,
-      ).toBeGreaterThan(0);
-    };
-    let finishSave!: () => void;
-    let finishRecovery!: () => void;
-    const saveGate = new Promise<void>((resolve) => {
-      finishSave = resolve;
-    });
-    const recoveryGate = new Promise<void>((resolve) => {
-      finishRecovery = resolve;
-    });
-    const originalMove = args.api.move;
-    const originalLoad = args.api.load;
-    const move = fn(async (...parameters: Parameters<typeof originalMove>) => {
-      await saveGate;
-      return originalMove(...parameters);
-    });
-    const load = fn(async () => {
-      await recoveryGate;
-      return originalLoad();
-    });
-    args.api.move = move;
-    args.api.load = load;
-    const user = userEvent.setup();
-    const handle = baseline[0]!.handle;
-    const from = handle.getBoundingClientRect();
-    let pointerStep = 0;
-    const point = (element: HTMLElement, middle = false) => {
-      const bounds = element.getBoundingClientRect();
-      return {
-        target: element,
-        coords: {
-          clientX: bounds.x + 180 + (pointerStep++ % 2) * 2,
-          clientY: bounds.y + (middle ? bounds.height / 2 : 3),
-        },
-      };
-    };
-    try {
-      await user.pointer([
-        {
-          target: handle,
-          coords: { clientX: from.x + 5, clientY: from.y + 5 },
-          keys: "[MouseLeft>]",
-        },
-        point(destination, true),
-        point(destination, true),
-      ]);
-      await expect(
-        canvas.getByText(/Move 1 item into Long-Term/),
-      ).toBeVisible();
-      await assertStable();
-      await user.pointer([point(archived, true), point(archived, true)]);
-      await expect(
-        canvas.getByText(/Move 1 item after Old Fund/),
-      ).toBeVisible();
-      await assertStable();
-      await user.pointer([point(source), point(source)]);
-      await expect(
-        canvas.getByText(/Select an available sibling/),
-      ).toBeVisible();
-      await assertStable();
-      await user.pointer([point(target), point(target)]);
-      await expect(
-        canvas.getByText(/Move 1 item before Investments/),
-      ).toBeVisible();
-      await assertStable();
-      for (const { id, handle } of baseline)
-        await expect(
-          (await row(canvasElement, id)).querySelector(".ag-row-drag"),
-        ).toBe(handle);
-      await user.pointer({ ...point(target), keys: "[/MouseLeft]" });
-      await waitFor(() => expect(move).toHaveBeenCalledTimes(1));
-      await expect(canvas.getByRole("button", { name: "Done" })).toBeDisabled();
-      await assertStable();
-      const blockedHandle = target.querySelector<HTMLElement>(".ag-row-drag")!;
-      await expect(blockedHandle).toHaveStyle({
-        pointerEvents: "none",
-        opacity: "0.4",
-      });
-      const bounds = blockedHandle.getBoundingClientRect();
-      const hit = canvasElement.ownerDocument.elementFromPoint(
-        bounds.x + 5,
-        bounds.y + 5,
-      )!;
-      await expect(blockedHandle.contains(hit)).toBe(false);
-      await user.pointer([
-        {
-          target: hit,
-          coords: { clientX: bounds.x + 5, clientY: bounds.y + 5 },
-          keys: "[MouseLeft>]",
-        },
-        point(destination, true),
-        { ...point(destination, true), keys: "[/MouseLeft]" },
-      ]);
-      await expect(move).toHaveBeenCalledTimes(1);
-      await expect(
-        canvasElement.ownerDocument.querySelector(".ag-dnd-ghost"),
-      ).toBeNull();
-      finishSave();
-      if (failure) {
-        await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
-        await expect(
-          canvas.getByRole("button", { name: "Done" }),
-        ).toBeDisabled();
-        await assertStable();
-        await expect(target.querySelector(".ag-row-drag")).toHaveStyle({
-          pointerEvents: "none",
-        });
-      }
-      finishRecovery();
-      await waitFor(() =>
-        expect(canvas.getByRole("button", { name: "Done" })).toBeEnabled(),
-      );
-      await assertStable();
-      await expect(target.querySelector(".ag-row-drag")).toHaveStyle({
-        pointerEvents: "auto",
-      });
-      await expect(move).toHaveBeenCalledTimes(1);
-      if (failure) {
-        await expect(canvas.getByRole("alert")).toHaveTextContent(
-          "could not confirm",
-        );
-        await expect(await row(canvasElement, "checking")).toHaveAttribute(
-          "row-index",
-          "5",
-        );
-      } else {
-        await expect(await row(canvasElement, "checking")).toHaveAttribute(
-          "row-index",
-          "0",
-        );
-      }
-    } finally {
-      finishSave();
-      finishRecovery();
-      args.api.move = originalMove;
-      args.api.load = originalLoad;
-    }
-  };
-}
-
-export const StableHandlesDuringDragAndSave: Story = {
-  args: { api: createOrganizerStoryApi() },
-  render: (args) => <Harness {...args} useProvidedApi />,
-  play: handleStabilityScenario(),
-};
-
-export const StableHandlesDuringRecovery: Story = {
-  args: { api: createOrganizerStoryApi("network") },
-  render: (args) => <Harness {...args} useProvidedApi />,
-  play: handleStabilityScenario(true),
-};
 
 export const BulkSubtreeMove: Story = {
   play: async ({ canvasElement, args }) => {
@@ -514,178 +240,24 @@ export const DestinationTreeAndSegmentedPosition: Story = {
   },
 };
 
-export const DragIntoGroup: Story = {
-  play: async ({ canvasElement }) => {
-    const source = await row(canvasElement, "checking");
-    const target = await row(canvasElement, "destination");
-    const handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
-    await expect(handle).not.toBeNull();
-    const from = handle.getBoundingClientRect();
-    const to = target.getBoundingClientRect();
-    await userEvent.hover(handle);
-    await userEvent.pointer([
-      {
-        target: handle,
-        coords: {
-          clientX: from.x + from.width / 2,
-          clientY: from.y + from.height / 2,
-        },
-        keys: "[MouseLeft>]",
-      },
-      {
-        target,
-        coords: { clientX: to.x + 180, clientY: to.y + to.height / 2 },
-      },
-      {
-        target,
-        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
-      },
-      {
-        target,
-        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
-        keys: "[/MouseLeft]",
-      },
-    ]);
-    await waitFor(async () =>
-      expect(await row(canvasElement, "checking")).toHaveClass(
-        "ag-row-level-1",
-      ),
-    );
-  },
-};
-
-export const DragReorderAndCancel: Story = {
-  play: async ({ canvasElement }) => {
-    const source = await row(canvasElement, "checking");
-    const target = await row(canvasElement, "investments");
-    const handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
-    const from = handle.getBoundingClientRect();
-    const to = target.getBoundingClientRect();
-    const user = userEvent.setup();
-    await user.pointer([
-      {
-        target: handle,
-        coords: { clientX: from.x + 5, clientY: from.y + 5 },
-        keys: "[MouseLeft>]",
-      },
-      { target, coords: { clientX: to.x + 180, clientY: to.y + 3 } },
-      { target, coords: { clientX: to.x + 182, clientY: to.y + 3 } },
-    ]);
-    await expect(
-      within(canvasElement).getByText(/Move 1 item before Investments/),
-    ).toBeVisible();
-    await user.keyboard("{Escape}");
-    await user.pointer({ target, keys: "[/MouseLeft]" });
-    await expect(source).toHaveAttribute("row-index", "4");
-
-    await user.pointer([
-      {
-        target: handle,
-        coords: { clientX: from.x + 5, clientY: from.y + 5 },
-        keys: "[MouseLeft>]",
-      },
-      { target, coords: { clientX: to.x + 180, clientY: to.y + 3 } },
-      { target, coords: { clientX: to.x + 182, clientY: to.y + 3 } },
-      {
-        target,
-        coords: { clientX: to.x + 182, clientY: to.y + 3 },
-        keys: "[/MouseLeft]",
-      },
-    ]);
-    await waitFor(async () =>
-      expect(await row(canvasElement, "checking")).toHaveAttribute(
-        "row-index",
-        "0",
-      ),
-    );
-  },
-};
-
-export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
-  play: async ({ canvasElement }) => {
-    await select(canvasElement, "investments");
-    await select(canvasElement, "nested");
-    await select(canvasElement, "checking");
-    const source = await row(canvasElement, "investments");
-    const target = await row(canvasElement, "destination");
-    const handle = source.querySelector<HTMLElement>(".ag-row-drag")!;
-    const from = handle.getBoundingClientRect();
-    const to = target.getBoundingClientRect();
-    await userEvent.pointer([
-      {
-        target: handle,
-        coords: { clientX: from.x + 5, clientY: from.y + 5 },
-        keys: "[MouseLeft>]",
-      },
-      {
-        target,
-        coords: { clientX: to.x + 180, clientY: to.y + to.height / 2 },
-      },
-      {
-        target,
-        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
-      },
-      {
-        target,
-        coords: { clientX: to.x + 182, clientY: to.y + to.height / 2 },
-        keys: "[/MouseLeft]",
-      },
-    ]);
-    await waitFor(async () =>
-      expect(await row(canvasElement, "investments")).toHaveClass(
-        "ag-row-level-1",
-      ),
-    );
-    await expect(await row(canvasElement, "checking")).toHaveClass(
-      "ag-row-level-1",
-    );
-    await expect(await row(canvasElement, "nested")).toHaveClass(
-      "ag-row-level-2",
-    );
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      within(
-        canvas.getByRole("toolbar", { name: "Organize Account Actions" }),
-      ).getByRole("button", {
-        name: "Move To…",
-      }),
-    );
-    const dialog = within(
-      await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-        name: "Move To…",
-      }),
-    );
-    await expect(dialog.getByLabelText("Destination")).toHaveValue("Top Level");
-    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-    await waitFor(async () =>
-      expect(await row(canvasElement, "investments")).toHaveClass(
-        "ag-row-level-0",
-      ),
-    );
-    await expect(await row(canvasElement, "checking")).toHaveClass(
-      "ag-row-level-0",
-    );
-    await expect(await row(canvasElement, "nested")).toHaveClass(
-      "ag-row-level-1",
-    );
-  },
-};
-
 export const BusyFailureAndRetry: Story = {
   render: (args) => <Harness {...args} failure="busy" />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
     await select(canvasElement, "checking");
     const dialog = await chooseMove(canvasElement);
     await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+    await expect(await dialog.findByRole("alert")).toHaveTextContent(
       "No changes were saved",
     );
     await expect(await row(canvasElement, "checking")).toHaveClass(
       "ag-row-level-0",
     );
-    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Try Again" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Try Again" }));
+    await waitFor(() =>
+      expect(
+        within(canvasElement.ownerDocument.body).queryByRole("dialog"),
+      ).not.toBeInTheDocument(),
+    );
     await waitFor(async () =>
       expect(await row(canvasElement, "checking")).toHaveClass(
         "ag-row-level-1",
@@ -701,11 +273,11 @@ export const UncertainFailureRequiresRefresh: Story = {
     await select(canvasElement, "checking");
     const dialog = await chooseMove(canvasElement);
     await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+    await expect(await dialog.findByRole("alert")).toHaveTextContent(
       "could not confirm",
     );
     await expect(
-      canvas.queryByRole("button", { name: "Try Again" }),
+      dialog.queryByRole("button", { name: "Try Again" }),
     ).not.toBeInTheDocument();
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
     await userEvent.click(
@@ -730,5 +302,37 @@ export const LoadRecovery: Story = {
     await expect(await row(canvasElement, "checking")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(args.onDone).toHaveBeenCalled();
+  },
+};
+
+export const MoveDialogRecoveryFeedback: Story = {
+  args: { api: createOrganizerStoryApi("network") },
+  render: (args) => <Harness {...args} useProvidedApi />,
+  play: async ({ canvasElement, args }) => {
+    await select(canvasElement, "checking");
+    const original = args.api.load;
+    args.api.load = fn(original).mockRejectedValueOnce(new Error("Offline"));
+    try {
+      const dialog = await chooseMove(canvasElement);
+      await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+      await waitFor(() => expect(dialog.getAllByRole("alert")).toHaveLength(2));
+      await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
+      await expect(dialog.getByLabelText("Destination")).toBeDisabled();
+      await expect(
+        dialog.getByRole("button", { name: "Cancel" }),
+      ).toBeEnabled();
+      await expect(
+        dialog.queryByRole("button", { name: "Try Again" }),
+      ).not.toBeInTheDocument();
+      await userEvent.click(
+        dialog.getByRole("button", { name: "Refresh Choices" }),
+      );
+      await waitFor(() =>
+        expect(dialog.getByRole("button", { name: "Move" })).toBeEnabled(),
+      );
+      await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    } finally {
+      args.api.load = original;
+    }
   },
 };

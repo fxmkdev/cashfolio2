@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { organizeChanges, planAccountMove, validateOrganizeTree } from "./move";
 import {
   descendants,
@@ -45,6 +45,34 @@ const order = (nodes: OrganizeNode[], parentId: string | null) =>
     .map((row) => row.id);
 
 describe("structural account selection", () => {
+  it("uses the same fallback collation for previews and server moves", () => {
+    const international = [
+      node("z", { name: "Z" }),
+      node("accent", { name: "Ä" }),
+      node("a", { name: "A" }),
+    ];
+    const original = String.prototype.localeCompare;
+    const hostLocale = vi
+      .spyOn(String.prototype, "localeCompare")
+      .mockImplementation(function (this: string, other, locale, options) {
+        return original.call(this, other, locale ?? "sv-SE", options);
+      });
+    try {
+      expect(organizeDisplayRows(international).map((row) => row.id)).toEqual([
+        "a",
+        "accent",
+        "z",
+      ]);
+      expect(
+        normalizeOrganizeSelection(
+          international,
+          international.toReversed(),
+        ).map((row) => row.id),
+      ).toEqual(["a", "accent", "z"]);
+    } finally {
+      hostLocale.mockRestore();
+    }
+  });
   const nodes = [
     node("parent"),
     node("child", { parentId: "parent" }),

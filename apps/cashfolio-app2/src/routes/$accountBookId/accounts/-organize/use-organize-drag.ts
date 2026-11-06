@@ -7,8 +7,6 @@ import type {
 import { planAccountMove } from "@/shared/account-organize/move";
 import {
   normalizeOrganizeSelection,
-  descendants,
-  organizePath,
   type OrganizeDisplayRow,
 } from "@/shared/account-organize/tree";
 import type {
@@ -16,7 +14,7 @@ import type {
   OrganizeNode,
   OrganizeNodeRef,
 } from "@/shared/account-organize/types";
-import { moveSummary } from "./move-dialog";
+import { dragMoveSummary } from "./move-summary";
 
 export function dragMove(
   items: OrganizeNodeRef[],
@@ -91,25 +89,8 @@ export function useOrganizeDrag({
         return;
       }
       const next = planAccountMove(nodes, move);
-      const destination = move.parentId
-        ? organizePath(nodes, move.parentId)
-        : "Top Level";
-      const relative = move.anchorId
-        ? `${move.placement} ${nodes.find((node) => node.id === move.anchorId)?.name} in `
-        : "into ";
-      const included = new Set(
-        move.items.flatMap((item) => [...descendants(nodes, item.id)]),
-      );
-      const archivedDescendants = nodes.filter(
-        (node) =>
-          included.has(node.id) &&
-          !node.isActive &&
-          !move.items.some((item) => item.id === node.id),
-      ).length;
-      const count = included.size - move.items.length;
       proposed.current = move;
-      const message =
-        `Move ${move.items.length} ${move.items.length === 1 ? "item" : "items"} ${relative}${destination}. ${count} included descendants (${archivedDescendants} archived). ${moveSummary(nodes, next)}`.trim();
+      const message = dragMoveSummary(nodes, next, move);
       previewCache.current = { nodes, key, message };
       showHint(message);
     },
