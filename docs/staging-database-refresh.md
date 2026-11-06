@@ -280,6 +280,13 @@ creates or reuses the current Git branch's exact database, then stages
 `DATABASE_URL`, `SEED_TARGET` and tester/admin IDs before deployment. Staging
 releases from tags use the repository's default Git branch.
 
+Set the independent `NONPRODUCTION_NEON_PROJECT_ID` variable in both existing
+GitHub environments, with no repository-level default. The helper requires the
+configured destination to match it before any API request. Deployment passes
+this policy separately into Fly configuration; it is never inferred from the
+generated target. See the configuration link above for the initial value and
+operator responsibilities.
+
 No manual target JSON, seed connection, permission-grant phase, database role or
 SQL bootstrap is required. `DATABASE_URL` serves application access, migrations
 and seeding. Staging switches to a new branch-derived database on cutover; old
@@ -300,6 +307,10 @@ verification runs before migrations and again inside the replacement
 transaction. Missing or mismatched configuration fails deployment. Production
 remains migration-only, and the seed CLI rejects production environments before
 any connection or write.
+
+The seed CLI also requires `SEED_TARGET.projectId` to match the independently
+configured `NONPRODUCTION_NEON_PROJECT_ID` before any connection or migration. A
+self-consistent target and URL for another project are therefore rejected.
 
 A direct application URL can use `sslmode=verify-full` or `sslmode=require`; a
 pooled URL must identify the same approved endpoint. The `pg` client verifies

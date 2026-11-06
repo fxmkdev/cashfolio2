@@ -1,7 +1,6 @@
 import {
-  parseApprovedTarget,
-  readExternalIds,
-  requireValue,
+  validateApprovedTarget,
+  readSeedUsers,
 } from "../../src/staging-seed/target.ts";
 import { Neon } from "./neon.ts";
 import { databaseName } from "./names.ts";
@@ -30,26 +29,21 @@ export async function prepareDatabase(
   )
     throw new Error("Invalid nonproduction Fly app.");
   databaseName(input.branch);
-  const testers = readExternalIds(requireValue(env, "SEED_USER_EXTERNAL_IDS"));
-  const admins = readExternalIds(requireValue(env, "SEED_ADMIN_EXTERNAL_IDS"));
-  if (admins.some((id) => !testers.includes(id)))
-    throw new Error("Seed administrators must be configured testers.");
+  const { testerExternalIds, adminExternalIds } = readSeedUsers(env);
   const context = await neon.discover();
   const database = await neon.ensure(context, input.branch);
-  const target = parseApprovedTarget(
-    JSON.stringify({
-      ...database.target,
-      environment: input.environment,
-      flyApp: input.flyApp,
-    }),
-  );
+  const target = validateApprovedTarget({
+    ...database.target,
+    environment: input.environment,
+    flyApp: input.flyApp,
+  });
   return {
     target,
     secrets: {
       DATABASE_URL: database.databaseUrl,
       SEED_TARGET: JSON.stringify(target),
-      SEED_USER_EXTERNAL_IDS: testers.join(","),
-      SEED_ADMIN_EXTERNAL_IDS: admins.join(","),
+      SEED_USER_EXTERNAL_IDS: testerExternalIds.join(","),
+      SEED_ADMIN_EXTERNAL_IDS: adminExternalIds.join(","),
     },
     outputs: {
       database: target.database,

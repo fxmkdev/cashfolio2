@@ -31,6 +31,21 @@ export function maskSecrets(values: string[]) {
   }
 }
 
+export async function stageFlySecrets(
+  flyApp: string,
+  secrets: Record<string, string>,
+  run = command,
+) {
+  const input = serializeFlySecrets(secrets);
+  maskSecrets([
+    ...Object.values(secrets),
+    ...["SEED_USER_EXTERNAL_IDS", "SEED_ADMIN_EXTERNAL_IDS"].flatMap(
+      (key) => secrets[key]?.split(",") ?? [],
+    ),
+  ]);
+  await run(["secrets", "import", "--app", flyApp, "--stage"], input);
+}
+
 /** flyctl 0.4.115 strips quote delimiters but does not JSON-unescape values. */
 export function serializeFlySecrets(secrets: Record<string, string>): string {
   return (

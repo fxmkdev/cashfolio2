@@ -42,6 +42,32 @@ export function requireValue(env: NodeJS.ProcessEnv, key: string): string {
   return value;
 }
 
+/** Independent policy configured by operators, never inferred from a destination. */
+export function verifyNonproductionProject(
+  projectId: string,
+  env: NodeJS.ProcessEnv,
+): void {
+  const expected = requireValue(env, "NONPRODUCTION_NEON_PROJECT_ID");
+  if (!/^[a-z0-9-]{1,60}$/.test(expected) || projectId !== expected)
+    throw new SeedSafetyError(
+      "The destination is not the configured nonproduction project.",
+    );
+}
+
+export function readSeedUsers(env: NodeJS.ProcessEnv) {
+  const testerExternalIds = readExternalIds(
+    requireValue(env, "SEED_USER_EXTERNAL_IDS"),
+  );
+  const adminExternalIds = readExternalIds(
+    requireValue(env, "SEED_ADMIN_EXTERNAL_IDS"),
+  );
+  if (adminExternalIds.some((id) => !testerExternalIds.includes(id)))
+    throw new SeedSafetyError(
+      "Configured administrators must also be configured testers.",
+    );
+  return { testerExternalIds, adminExternalIds };
+}
+
 export function readSeedConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): SeedConfig {
@@ -55,6 +81,7 @@ export function readSeedConfig(
   }
 
   const target = parseApprovedTarget(requireValue(env, "SEED_TARGET"));
+  verifyNonproductionProject(target.projectId, env);
   if (
     target.environment !== env.APP_ENVIRONMENT ||
     target.flyApp !== env.FLY_APP_NAME
@@ -63,20 +90,9 @@ export function readSeedConfig(
       "The approved target does not match this environment and Fly app.",
     );
   }
-  const testerExternalIds = readExternalIds(
-    requireValue(env, "SEED_USER_EXTERNAL_IDS"),
-  );
-  const adminExternalIds = readExternalIds(
-    requireValue(env, "SEED_ADMIN_EXTERNAL_IDS"),
-  );
-  if (adminExternalIds.some((id) => !testerExternalIds.includes(id)))
-    throw new SeedSafetyError(
-      "Configured administrators must also be configured testers.",
-    );
   return {
     target,
-    testerExternalIds,
-    adminExternalIds,
+    ...readSeedUsers(env),
     connection: parseVerifiedConnection(
       requireValue(env, "DATABASE_URL"),
       target,
@@ -94,13 +110,7 @@ export function readExternalIds(raw: string): string[] {
   return ids;
 }
 
-export function parseNeonTarget(raw: string): NeonTarget {
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new SeedSafetyError("The approved target must be valid JSON.");
-  }
+export function validateNeonTarget(value: unknown): NeonTarget {
   const keys = [
     "hostname",
     "projectId",
@@ -140,18 +150,25 @@ export function parseNeonTarget(raw: string): NeonTarget {
 }
 
 export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
-  let value: ApprovedSeedTarget;
+  let value: unknown;
   try {
-    value = JSON.parse(raw) as ApprovedSeedTarget;
+    value = JSON.parse(raw);
   } catch {
     throw new SeedSafetyError("SEED_TARGET must be valid JSON.");
   }
+  return validateApprovedTarget(value);
+}
+
+export function validateApprovedTarget(value: unknown): ApprovedSeedTarget {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new SeedSafetyError("SEED_TARGET must be an approved target object.");
-  const { environment, flyApp, ...destination } = value;
-  parseNeonTarget(JSON.stringify(destination));
+  const { environment, flyApp, ...destination } = value as Record<
+    string,
+    unknown
+  >;
+  const target = validateNeonTarget(destination);
   if (
-    !["staging", "preview"].includes(environment) ||
+    (environment !== "staging" && environment !== "preview") ||
     typeof flyApp !== "string" ||
     !/^[a-z0-9-]{1,63}$/.test(flyApp)
   )
@@ -162,7 +179,7 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     throw new SeedSafetyError("Staging requires its own Fly app.");
   if (
     !/^cashfolio-app2-[a-z0-9]+(?:-[a-z0-9]+)*-[a-f0-9]{8}$/.test(
-      value.database,
+      target.database,
     )
   )
     throw new SeedSafetyError(
@@ -173,7 +190,7 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     !/^cashfolio-app2-pr-[1-9][0-9]*-[a-z0-9-]+$/.test(flyApp)
   )
     throw new SeedSafetyError("Preview requires a preview Fly app.");
-  return value;
+  return { ...target, environment, flyApp };
 }
 
 export function parseVerifiedConnection(

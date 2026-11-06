@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { Prisma } from "../.prisma-client/client";
 import {
   parseApprovedTarget,
+  validateApprovedTarget,
+  validateNeonTarget,
+  readSeedUsers,
   parseVerifiedConnection,
   readSeedConfig,
   verifyServerIdentity,
@@ -20,6 +23,7 @@ const target: ApprovedSeedTarget = {
 };
 const url = `postgresql://${target.role}:secret@${target.hostname}/cashfolio-app2-main-aaaaaaaa?sslmode=verify-full`;
 const env = {
+  NONPRODUCTION_NEON_PROJECT_ID: "test-project",
   APP_ENVIRONMENT: "staging",
   FLY_APP_NAME: "cashfolio-staging",
   SEED_ADMIN_EXTERNAL_IDS: "tester-one",
@@ -27,6 +31,34 @@ const env = {
   SEED_USER_EXTERNAL_IDS: "tester-one, tester-two,tester-one",
   DATABASE_URL: url,
 };
+
+it("shares tester/admin parsing without granting administrator status to unconfigured testers", () => {
+  expect(readSeedUsers(env)).toEqual({
+    testerExternalIds: ["tester-one", "tester-two"],
+    adminExternalIds: ["tester-one"],
+  });
+  expect(() =>
+    readSeedUsers({ ...env, SEED_ADMIN_EXTERNAL_IDS: "outsider" }),
+  ).toThrow("also be configured testers");
+});
+
+it("validates internal objects and JSON boundaries with the same strict rules", () => {
+  const { environment: _environment, flyApp: _flyApp, ...neonTarget } = target;
+  expect(validateNeonTarget(neonTarget)).toEqual(neonTarget);
+  expect(validateApprovedTarget(target)).toEqual(
+    parseApprovedTarget(JSON.stringify(target)),
+  );
+  for (const invalid of [
+    null,
+    [],
+    "text",
+    { ...target, extra: true },
+    { ...target, role: "bad/role" },
+  ]) {
+    expect(() => validateApprovedTarget(invalid)).toThrow();
+    expect(() => parseApprovedTarget(JSON.stringify(invalid))).toThrow();
+  }
+});
 
 describe("staging seed configuration", () => {
   it("permits only staging and preview and deduplicates tester IDs", () => {
@@ -55,6 +87,7 @@ describe("staging seed configuration", () => {
     "SEED_TARGET",
     "SEED_USER_EXTERNAL_IDS",
     "SEED_ADMIN_EXTERNAL_IDS",
+    "NONPRODUCTION_NEON_PROJECT_ID",
   ])("requires %s", (key) => {
     expect(() => readSeedConfig({ ...env, [key]: undefined })).toThrow(
       "required",

@@ -176,6 +176,15 @@ settings into Fly. Staging releases from tags use the default Git branch.
 Staging switches to a new, freshly seeded database at cutover; existing
 synthetic data is not migrated.
 
+Set `NONPRODUCTION_NEON_PROJECT_ID` independently in both existing staging and
+preview GitHub environments, with no repository-level default. Provisioning and
+cleanup require `NEON_PROJECT_ID` to match this policy before any API request.
+Deployment passes the policy separately into nonproduction Fly configuration,
+and the seed CLI checks it before connections or migrations. Never derive this
+value from the generated target. Missing or mismatched policy fails closed;
+production remains migration-only. See the nonproduction configuration
+documentation below for initial setup and project changes.
+
 Configure `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS` as repository
 secrets shared by staging and previews, or override them in the existing GitHub
 environments. Admin IDs must be included among tester IDs. GitHub secret masking

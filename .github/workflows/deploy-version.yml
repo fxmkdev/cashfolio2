@@ -62,6 +62,14 @@ jobs:
         ${{ inputs.app_environment_url || format('https://{0}/',
         inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
     steps:
+      - name: Validate deployment environment
+        run: |
+          case "$APP_ENVIRONMENT" in
+            staging|prod) ;;
+            *) echo "Unsupported deployment environment" >&2; exit 1 ;;
+          esac
+        env:
+          APP_ENVIRONMENT: ${{ inputs.environment }}
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup nonproduction tooling
@@ -83,6 +91,8 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NONPRODUCTION_NEON_PROJECT_ID:
+            ${{ vars.NONPRODUCTION_NEON_PROJECT_ID }}
           SOURCE_BRANCH:
             ${{ github.ref_type == 'branch' && github.ref_name ||
             github.event.repository.default_branch }}
@@ -99,15 +109,18 @@ jobs:
             format('registry.fly.io/{0}:v{1}',
             vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
           database_project_id: ${{ steps.database.outputs.database_project_id }}
+          nonproduction_neon_project_id:
+            ${{ inputs.environment == 'staging' &&
+            vars.NONPRODUCTION_NEON_PROJECT_ID || '' }}
           database_branch_id: ${{ steps.database.outputs.database_branch_id }}
           database_name: ${{ steps.database.outputs.database }}
           deploy_sha: ${{ inputs.sha }}
           high_availability: ${{ inputs.high_availability }}
           app_environment: ${{ inputs.environment }}
           release_command:
-            ${{ inputs.environment == 'prod' && 'sh
-            apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh' ||
-            'node apps/cashfolio-app2/dist/staging-seed/seed.mjs --release' }}
+            ${{ inputs.environment == 'staging' && 'node
+            apps/cashfolio-app2/dist/staging-seed/seed.mjs --release' || 'sh
+            apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh' }}
           fly_app: ${{ inputs.fly_app || vars.FLY_APP }}
           canonical_hostname:
             ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
@@ -159,6 +172,14 @@ jobs:
       name: ${{ inputs.environment }}-cashfolio-redis
       url: https://${{ vars.CANONICAL_HOSTNAME }}/
     steps:
+      - name: Validate deployment environment
+        run: |
+          case "$APP_ENVIRONMENT" in
+            staging|prod) ;;
+            *) echo "Unsupported deployment environment" >&2; exit 1 ;;
+          esac
+        env:
+          APP_ENVIRONMENT: ${{ inputs.environment }}
       - name: Checkout
         uses: actions/checkout@v5
       - name: Set up flyctl

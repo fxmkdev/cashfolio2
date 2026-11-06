@@ -7,9 +7,29 @@ import { prepareDatabase } from "./prepare.ts";
 const env = {
   NEON_API_KEY: "secret-api-token",
   NEON_PROJECT_ID: "project",
+  NONPRODUCTION_NEON_PROJECT_ID: "project",
   SEED_USER_EXTERNAL_IDS: "tester",
   SEED_ADMIN_EXTERNAL_IDS: "tester",
 };
+
+test("missing, malformed or mismatched nonproduction policy makes zero Neon requests", () => {
+  let requests = 0;
+  const fetcher: typeof fetch = async () => {
+    requests++;
+    throw new Error("No network request is permitted");
+  };
+  for (const overrides of [
+    { NONPRODUCTION_NEON_PROJECT_ID: undefined },
+    { NONPRODUCTION_NEON_PROJECT_ID: "" },
+    { NEON_PROJECT_ID: "production-project" },
+    {
+      NEON_PROJECT_ID: "invalid/project",
+      NONPRODUCTION_NEON_PROJECT_ID: "invalid/project",
+    },
+  ])
+    assert.throws(() => new Neon({ ...env, ...overrides }, fetcher));
+  assert.equal(requests, 0);
+});
 const host = "ep-default.eu-central-1.aws.neon.tech";
 const base: Database = {
   name: "neondb",

@@ -7,12 +7,9 @@ import {
   validatePreviewImage,
   type PullRequest,
 } from "./github.ts";
-import { command, maskSecrets, serializeFlySecrets } from "./runtime.ts";
+import { command, stageFlySecrets, serializeFlySecrets } from "./runtime.ts";
 import { prNumber } from "./names.ts";
-import {
-  readExternalIds,
-  requireValue,
-} from "../../src/staging-seed/target.ts";
+import { requireValue } from "../../src/staging-seed/target.ts";
 
 let phase = "input validation";
 try {
@@ -28,14 +25,6 @@ try {
     requireValue(process.env, "PREVIEW_IMAGE"),
     requireValue(process.env, "FLY_CASHFOLIO_APP_STAGING_APP"),
   );
-  const testerIds = readExternalIds(
-    requireValue(process.env, "SEED_USER_EXTERNAL_IDS"),
-  );
-  const adminIds = readExternalIds(
-    requireValue(process.env, "SEED_ADMIN_EXTERNAL_IDS"),
-  );
-  if (adminIds.some((id) => !testerIds.includes(id)))
-    throw new Error("Seed administrators must be configured testers.");
   // Validate every app secret before creating any resources.
   const appSecrets = Object.fromEntries(
     [
@@ -75,7 +64,6 @@ try {
       "--org",
       requireValue(process.env, "FLY_ORG"),
     ]);
-  maskSecrets([...testerIds, ...adminIds, ...Object.values(prepared.secrets)]);
   const { randomBytes } = await import("node:crypto");
   const secrets = {
     ...appSecrets,
@@ -83,14 +71,9 @@ try {
     REDIS_URL: redisUrl,
     SESSION_SECRET: randomBytes(32).toString("hex"),
   };
-  maskSecrets([secrets.SESSION_SECRET]);
   // stdin avoids putting values in command arguments or workflow outputs.
-  const dotenv = serializeFlySecrets(secrets);
   phase = "preview credential staging";
-  await command(
-    ["secrets", "import", "--app", preview.flyApp, "--stage"],
-    dotenv,
-  );
+  await stageFlySecrets(preview.flyApp, secrets);
   phase = "final PR head validation";
   validatePr(
     await api<PullRequest>(`/pulls/${number}`),

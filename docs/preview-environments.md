@@ -112,6 +112,24 @@ required. The default Neon branch must already have an application database with
 its normal owner and a read-write endpoint. Multiple application owners must be
 resolved by an operator before deployment.
 
+Set `NONPRODUCTION_NEON_PROJECT_ID` separately in each existing GitHub
+environment (`staging-cashfolio-app` and `preview-cashfolio-app`), initially to
+`dry-hill-41073827`. Treat this as trusted operator policy: do not configure a
+repository-level default or derive it from `NEON_PROJECT_ID`, Neon discovery or
+`SEED_TARGET`. Provisioning and cleanup reject a missing policy or a different
+`NEON_PROJECT_ID` before any Neon API request. Nonproduction deployments pass
+the policy separately into Fly configuration; the seed CLI rejects a missing
+policy or a target in another project before connecting or launching migrations.
+Keep this policy available to both environments before deploying an updated
+image. Project changes require an operator to update both environment policies
+and redeploy. The policy assumes trusted configuration administrators and
+complements the project-scoped API key and production credential separation.
+
+Deployment entry points reject unknown environments. The reusable workflow
+accepts `staging` and `prod`; the shared action also accepts `preview`.
+Production selects only migrations, while the seed CLI independently permits
+only staging and preview.
+
 Keep these existing application settings:
 
 - Repository secrets `SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS`:

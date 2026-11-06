@@ -40,6 +40,7 @@ const target = {
   role: "owner",
 };
 const env = {
+  NONPRODUCTION_NEON_PROJECT_ID: "test-project",
   APP_ENVIRONMENT: "staging",
   FLY_APP_NAME: "cashfolio-staging",
   SEED_ADMIN_EXTERNAL_IDS: "tester",
@@ -88,12 +89,15 @@ describe("seed command", () => {
 
   it.each([
     { APP_ENVIRONMENT: "prod" },
+    { APP_ENVIRONMENT: "unknown" },
     { APP_ENVIRONMENT: "preview" },
     { PGOPTIONS: "endpoint=ep-production" },
     { DATABASE_URL: undefined },
     { SEED_TARGET: undefined },
     { SEED_USER_EXTERNAL_IDS: undefined },
     { SEED_ADMIN_EXTERNAL_IDS: undefined },
+    { NONPRODUCTION_NEON_PROJECT_ID: undefined },
+    { NONPRODUCTION_NEON_PROJECT_ID: "other-project" },
     {
       DATABASE_URL: env.DATABASE_URL.replace("ep-staging", "ep-production"),
     },
@@ -105,6 +109,7 @@ describe("seed command", () => {
       ).rejects.toThrow();
       expect(mock.create).not.toHaveBeenCalled();
       expect(mock.replace).not.toHaveBeenCalled();
+      expect(mock.exec).not.toHaveBeenCalled();
     },
   );
 
@@ -227,6 +232,30 @@ it("target failure prevents release migrations and replacement", async () => {
   await expect(runStagingSeed(["--release"], env)).rejects.toThrow(
     "wrong server",
   );
+  expect(mock.exec).not.toHaveBeenCalled();
+  expect(mock.replace).not.toHaveBeenCalled();
+});
+
+it("rejects a self-consistent foreign-project destination before any seed or migration connection", async () => {
+  const foreignTarget = {
+    ...target,
+    projectId: "production-project",
+    hostname: target.hostname.replace("ep-staging", "ep-production"),
+    endpointId: "ep-production",
+  };
+  for (const command of [[], ["--check-target"], ["--release"]]) {
+    for (const policy of [env.NONPRODUCTION_NEON_PROJECT_ID, undefined]) {
+      await expect(
+        runStagingSeed(command, {
+          ...env,
+          NONPRODUCTION_NEON_PROJECT_ID: policy,
+          SEED_TARGET: JSON.stringify(foreignTarget),
+          DATABASE_URL: env.DATABASE_URL.replace("ep-staging", "ep-production"),
+        }),
+      ).rejects.toThrow();
+    }
+  }
+  expect(mock.create).not.toHaveBeenCalled();
   expect(mock.exec).not.toHaveBeenCalled();
   expect(mock.replace).not.toHaveBeenCalled();
 });

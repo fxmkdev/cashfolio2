@@ -48,6 +48,8 @@ jobs:
             ${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NONPRODUCTION_NEON_PROJECT_ID:
+            ${{ vars.NONPRODUCTION_NEON_PROJECT_ID }}
       - name: Cleanup outcome
         if: always()
         run: |

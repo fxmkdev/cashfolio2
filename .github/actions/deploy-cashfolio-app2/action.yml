@@ -58,6 +58,9 @@ inputs:
   database_project_id:
     description: Nonproduction Neon project resolved by provisioning
     default: ""
+  nonproduction_neon_project_id:
+    description: Independently configured allowed nonproduction project
+    default: ""
   database_branch_id:
     description: Nonproduction Neon branch resolved by provisioning
     default: ""
@@ -73,6 +76,15 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate deployment environment
+      shell: bash
+      run: |
+        case "$APP_ENVIRONMENT" in
+          staging|preview|prod) ;;
+          *) echo "Unsupported deployment environment" >&2; exit 1 ;;
+        esac
+      env:
+        APP_ENVIRONMENT: ${{ inputs.app_environment }}
     - name: Require nonproduction database metadata
       if: inputs.app_environment != 'prod'
       shell: bash
@@ -81,11 +93,15 @@ runs:
         : "${DB_BRANCH:?Database branch is required}"
         : "${DB_NAME:?Database name is required}"
         : "${DEPLOY_SHA:?Deployment commit is required}"
+        : "${NONPRODUCTION_NEON_PROJECT_ID:?Nonproduction project policy is required}"
+        test "$DB_PROJECT" = "$NONPRODUCTION_NEON_PROJECT_ID"
       env:
         DB_PROJECT: ${{ inputs.database_project_id }}
         DB_BRANCH: ${{ inputs.database_branch_id }}
         DB_NAME: ${{ inputs.database_name }}
         DEPLOY_SHA: ${{ inputs.deploy_sha }}
+        NONPRODUCTION_NEON_PROJECT_ID:
+          ${{ inputs.nonproduction_neon_project_id }}
     - name: Prepare configuration file
       shell: bash
       run: |
@@ -97,6 +113,8 @@ runs:
         cat apps/cashfolio-app2/fly.generated.toml
       env:
         APP_ENVIRONMENT: ${{ inputs.app_environment }}
+        NONPRODUCTION_NEON_PROJECT_ID:
+          ${{ inputs.nonproduction_neon_project_id }}
         CASHFOLIO_DATABASE_PROJECT_ID: ${{ inputs.database_project_id }}
         CASHFOLIO_DATABASE_BRANCH_ID: ${{ inputs.database_branch_id }}
         CASHFOLIO_DATABASE_NAME: ${{ inputs.database_name }}

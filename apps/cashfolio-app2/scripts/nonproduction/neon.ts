@@ -1,8 +1,9 @@
 import { setTimeout as pause } from "node:timers/promises";
 import {
-  parseNeonTarget,
+  validateNeonTarget,
   parseVerifiedConnection,
   requireValue,
+  verifyNonproductionProject,
   type NeonTarget,
 } from "../../src/staging-seed/target.ts";
 import { databaseName, isManagedDatabase } from "./names.ts";
@@ -34,7 +35,7 @@ class ApiError extends Error {
   }
 }
 export class Neon {
-  project: string;
+  readonly project: string;
   private key: string;
   private fetcher: typeof fetch;
   private sleep: (milliseconds: number) => Promise<unknown>;
@@ -44,9 +45,8 @@ export class Neon {
     sleep: (milliseconds: number) => Promise<unknown> = pause,
   ) {
     this.project = requireValue(env, "NEON_PROJECT_ID");
+    verifyNonproductionProject(this.project, env);
     this.key = requireValue(env, "NEON_API_KEY");
-    if (!/^[a-z0-9-]{1,60}$/.test(this.project))
-      throw new Error("Invalid Neon project configuration.");
     this.fetcher = fetcher;
     this.sleep = sleep;
   }
@@ -154,16 +154,14 @@ export class Neon {
     if (owners.length !== 1)
       throw new Error("One existing application database owner is required.");
     const endpoint = writers[0];
-    const target = parseNeonTarget(
-      JSON.stringify({
-        hostname: endpoint.host,
-        endpointId: endpoint.id,
-        projectId: this.project,
-        branchId: branch.id,
-        database: databases.find((d) => d.owner_name === owners[0])!.name,
-        role: owners[0],
-      }),
-    );
+    const target = validateNeonTarget({
+      hostname: endpoint.host,
+      endpointId: endpoint.id,
+      projectId: this.project,
+      branchId: branch.id,
+      database: databases.find((d) => d.owner_name === owners[0])!.name,
+      role: owners[0],
+    });
     return { target, databases };
   }
   async databases(branch: string): Promise<Database[]> {

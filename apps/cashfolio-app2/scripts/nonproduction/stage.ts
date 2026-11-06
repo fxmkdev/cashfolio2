@@ -1,10 +1,6 @@
 import { appendFile } from "node:fs/promises";
 import { requireValue } from "../../src/staging-seed/target.ts";
-import {
-  command,
-  maskSecrets,
-  serializeFlySecrets,
-} from "../preview/runtime.ts";
+import { stageFlySecrets } from "../preview/runtime.ts";
 import { prepareDatabase } from "./prepare.ts";
 
 try {
@@ -19,11 +15,7 @@ try {
     },
     process.env,
   );
-  maskSecrets(Object.values(prepared.secrets));
-  await command(
-    ["secrets", "import", "--app", flyApp, "--stage"],
-    serializeFlySecrets(prepared.secrets),
-  );
+  await stageFlySecrets(flyApp, prepared.secrets);
   await appendFile(
     requireValue(process.env, "GITHUB_OUTPUT"),
     Object.entries(prepared.outputs)
