@@ -155,12 +155,12 @@ function storeState(tables: boolean, singleAccount = false) {
       );
     }
   } else if (singleAccount) {
-    state.selectedAllocationChartType = "bar";
+    state.selectedAllocationChartType = "donut";
     state.drillPathsByGrouping.assetClass.allocation.asset = [
       "asset-class:OTHER_ASSETS",
     ];
   } else {
-    state.selectedAllocationChartType = "bar";
+    state.selectedAllocationChartType = "donut";
     state.drillPathsByGrouping.assetClass.allocation.asset = [
       "asset-class:EQUITIES",
       investmentId,
@@ -265,7 +265,10 @@ export const AllocationAccountPaths: Story = {
         expect(target).toBeTruthy();
         const box = target.getBoundingClientRect();
         coords = {
-          clientX: box.left + box.width * (index === 0 ? 0.25 : 0.75),
+          clientX:
+            box.left +
+            box.width / 2 +
+            Math.min(box.width, box.height) * (index === 0 ? 0.42 : -0.42),
           clientY: box.top + box.height * 0.5,
         };
         await userEvent.pointer({ target, coords });

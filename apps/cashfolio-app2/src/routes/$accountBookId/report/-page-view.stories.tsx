@@ -330,14 +330,17 @@ export const AllocationToggleSmoke: Story = {
     const allocationChartTypeControl = await canvas.findByLabelText(
       "Allocation Chart Type",
     );
-    const allocationBarOption = within(allocationChartTypeControl).getByRole(
+    const allocationDonutOption = within(allocationChartTypeControl).getByRole(
       "radio",
       {
-        name: "Bar",
+        name: "Donut",
       },
     );
-    await userEvent.click(allocationBarOption);
-    await expect(allocationBarOption).toBeChecked();
+    await userEvent.click(allocationDonutOption);
+    await expect(allocationDonutOption).toBeChecked();
+    await expect(
+      within(allocationChartTypeControl).queryByRole("radio", { name: "Bar" }),
+    ).not.toBeInTheDocument();
     await expect(
       within(allocationChartTypeControl).getByRole("radio", {
         name: "Table",

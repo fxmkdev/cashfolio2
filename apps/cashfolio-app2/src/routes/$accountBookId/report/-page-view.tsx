@@ -288,6 +288,12 @@ export function ReportPageView({
                 allocationBreakdown.activeAllocationBreakdown.hierarchy
               }
               chartOptions={allocationBreakdown.allocationChartOptions}
+              otherRows={allocationBreakdown.otherRows}
+              otherSubtotal={allocationBreakdown.otherSubtotal}
+              isOtherDetailsOpen={allocationBreakdown.isOtherDetailsOpen}
+              onOpenOtherDetails={allocationBreakdown.openOtherDetails}
+              onCloseOtherDetails={allocationBreakdown.closeOtherDetails}
+              onOtherRowOpen={allocationBreakdown.onOtherRowOpen}
               onSelectedBreakdownChange={setSelectedAllocationBreakdown}
               onSelectedChartTypeChange={setSelectedAllocationChartType}
               onDrillPathChange={

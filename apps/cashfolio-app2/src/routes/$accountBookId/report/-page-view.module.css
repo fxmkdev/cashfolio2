@@ -22,6 +22,11 @@
   width: 100%;
 }
 
+.chartViewport {
+  max-height: 440px;
+  overflow-y: auto;
+}
+
 .chartContainer :global(.ag-charts-overlay) {
   color: var(--mantine-color-dimmed);
 }

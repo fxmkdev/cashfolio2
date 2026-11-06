@@ -4,8 +4,7 @@ import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
 import { BreakdownTable } from "./-breakdown-table";
 import {
   ChartTypeSegmentedControl,
-  DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS,
-  type ChartTypeOption,
+  BREAKDOWN_CHART_TYPE_OPTIONS,
 } from "../-selector/-chart-type-segmented-control";
 import type {
   BreakdownBreadcrumb,
@@ -40,11 +39,6 @@ function isBreakdownType(value: string): value is BreakdownType {
   return value === "expense" || value === "income" || value === "cashFlow";
 }
 
-const CASH_FLOW_BREAKDOWN_CHART_TYPE_OPTIONS =
-  DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS.filter(
-    (option) => option.value !== "donut",
-  ) as readonly ChartTypeOption<BreakdownChartType>[];
-
 export function PeriodBreakdownCard({
   selectedBreakdown,
   selectedChartType,
@@ -66,23 +60,15 @@ export function PeriodBreakdownCard({
   onChartContainerDoubleClick,
   footer,
 }: PeriodBreakdownCardProps) {
-  const effectiveSelectedChartType =
-    selectedBreakdown === "cashFlow" && selectedChartType === "donut"
-      ? "bar"
-      : selectedChartType;
-  const isTableView = effectiveSelectedChartType === "table";
+  const isTableView = selectedChartType === "table";
   const hasTableBreakdown = breakdownHierarchy.length > 0;
-  const chartTypeOptions =
-    selectedBreakdown === "cashFlow"
-      ? CASH_FLOW_BREAKDOWN_CHART_TYPE_OPTIONS
-      : DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS;
 
   const controls = (
     <Flex gap="md" wrap="wrap" justify="flex-end">
       <ChartTypeSegmentedControl
         ariaLabel="Breakdown Chart Type"
-        value={effectiveSelectedChartType}
-        options={chartTypeOptions}
+        value={selectedChartType}
+        options={BREAKDOWN_CHART_TYPE_OPTIONS}
         onChange={onSelectedChartTypeChange}
       />
       <SegmentedControl

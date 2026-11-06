@@ -17,11 +17,14 @@ import {
 import {
   type PeriodBreakdownChartDatum,
   type PeriodBreakdownNodeDatum,
-  usePeriodBreakdownChartOptions,
 } from "./-breakdown-chart-options";
+import { useAllocationChartOptions } from "./-allocation-chart-options";
+import { simplifyAllocationDonut } from "./-allocation-donut-data";
+import { getAllocationOtherAction } from "./-allocation-other-actions";
+import { useAllocationOtherDetails } from "./-use-allocation-other-details";
 import type {
   AllocationBreakdownType,
-  BreakdownChartType,
+  AllocationChartType,
 } from "./-breakdown-types";
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
@@ -48,7 +51,13 @@ export type PeriodAllocationBreakdownViewModel = {
   hasAllocationBreakdownAmountDiscrepancy: boolean;
   hasAllocationBreakdown: boolean;
   emptyAllocationBreakdownMessage: string;
-  allocationChartOptions: ReturnType<typeof usePeriodBreakdownChartOptions>;
+  allocationChartOptions: ReturnType<typeof useAllocationChartOptions>;
+  otherRows: PeriodBreakdownChartDatum[];
+  otherSubtotal: PeriodBreakdownChartDatum | undefined;
+  isOtherDetailsOpen: boolean;
+  openOtherDetails: () => void;
+  closeOtherDetails: () => void;
+  onOtherRowOpen: (datum: PeriodBreakdownChartDatum) => void;
   updateSelectedAllocationBreakdownPath: (nextPath: string[]) => void;
   handleAllocationChartContainerDoubleClick: MouseEventHandler<HTMLDivElement> | null;
   hasAllocationPartialData: boolean;
@@ -60,7 +69,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
   grouping: ReportingGrouping;
   overview: PeriodOverview;
   selectedAllocationBreakdown: AllocationBreakdownType;
-  selectedAllocationChartType: BreakdownChartType;
+  selectedAllocationChartType: AllocationChartType;
   drillPathByAllocationBreakdown: DrillPathByAllocationBreakdown;
   setDrillPathByAllocationBreakdown: (
     nextValue: DrillPathByAllocationBreakdownUpdater,
@@ -165,6 +174,31 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     [currentAllocationLevelTotalAmount, currencyFormatter],
   );
 
+  const { chartData: donutData, otherRows } = useMemo(
+    () =>
+      simplifyAllocationDonut(
+        allocationChartData,
+        currencyFormatter,
+        percentageFormatter,
+      ),
+    [allocationChartData, currencyFormatter, percentageFormatter],
+  );
+  const otherSubtotal = donutData.find((datum) => datum.kind === "other");
+  const otherContext = JSON.stringify([
+    accountBookId,
+    overview.selectedPeriodValue,
+    grouping,
+    selectedAllocationBreakdown,
+    selectedAllocationChartType,
+    allocationDrillState.clampedPath,
+    allocationChartData,
+  ]);
+  const {
+    opened: isOtherDetailsOpen,
+    open: openOtherDetails,
+    close: closeOtherDetails,
+  } = useAllocationOtherDetails(otherContext);
+
   const hasAllocationBreakdown = allocationChartData.length > 0;
   const currentAllocationBreakdownNodeId =
     allocationDrillState.currentPathNodes[
@@ -202,6 +236,10 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     (datum: PeriodBreakdownNodeDatum, event: Event) => {
       if (handledDoubleClicks.current.has(event)) return;
       handledDoubleClicks.current.add(event);
+      if (datum.kind === "other") {
+        openOtherDetails();
+        return;
+      }
       if (datum.kind === "group") {
         if (
           !datum.isDrillable ||
@@ -227,17 +265,25 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     [
       allocationDrillState.clampedPath,
       onBreakdownAccountDoubleClick,
+      openOtherDetails,
       updateSelectedAllocationBreakdownPath,
     ],
   );
 
-  const allocationChartOptions = usePeriodBreakdownChartOptions({
-    chartData: allocationChartData,
-    selectedChartType: selectedAllocationChartType,
+  const allocationChartOptions = useAllocationChartOptions({
+    chartData: donutData,
     colors,
-    totalBreakdownAmountLabel: totalAllocationAmountLabel,
+    totalAmountLabel: totalAllocationAmountLabel,
     onNodeDoubleClick: handleAllocationNodeDoubleClick,
   });
+  const onOtherRowOpen = useCallback(
+    (datum: PeriodBreakdownChartDatum) => {
+      if (!getAllocationOtherAction(datum)) return;
+      closeOtherDetails();
+      handleAllocationNodeDoubleClick(datum, new Event("dblclick"));
+    },
+    [closeOtherDetails, handleAllocationNodeDoubleClick],
+  );
   const handleAllocationChartContainerDoubleClick = useMemo(() => {
     if (allocationChartData.length !== 1) {
       return null;
@@ -273,6 +319,15 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     hasAllocationBreakdown,
     emptyAllocationBreakdownMessage,
     allocationChartOptions,
+    otherRows,
+    otherSubtotal,
+    isOtherDetailsOpen:
+      isOtherDetailsOpen &&
+      selectedAllocationChartType === "donut" &&
+      otherRows.length > 0,
+    openOtherDetails,
+    closeOtherDetails,
+    onOtherRowOpen,
     updateSelectedAllocationBreakdownPath,
     handleAllocationChartContainerDoubleClick,
     hasAllocationPartialData,

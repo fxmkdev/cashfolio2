@@ -75,9 +75,9 @@ export async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
 
 export type ReportPageSessionState = {
   selectedBreakdown: "expense" | "income";
-  selectedChartType: "donut" | "bar" | "table";
+  selectedChartType: "bar" | "table";
   selectedAllocationBreakdown: "asset" | "liability";
-  selectedAllocationChartType: "donut" | "bar" | "table";
+  selectedAllocationChartType: "donut" | "table";
   selectedGainsLossesChartType: "waterfall" | "table";
   drillPathByBreakdown: {
     expense: string[];
@@ -95,7 +95,7 @@ export function createReportPageSessionState(
 ): ReportPageSessionState {
   return {
     selectedBreakdown: overrides.selectedBreakdown ?? "expense",
-    selectedChartType: overrides.selectedChartType ?? "donut",
+    selectedChartType: overrides.selectedChartType ?? "bar",
     selectedAllocationBreakdown:
       overrides.selectedAllocationBreakdown ?? "asset",
     selectedAllocationChartType:

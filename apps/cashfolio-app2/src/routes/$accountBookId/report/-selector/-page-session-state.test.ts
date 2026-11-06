@@ -8,6 +8,8 @@ describe("getDefaultReportPageSessionState", () => {
   test("defaults gains/losses chart to waterfall with empty drill path", () => {
     expect(getDefaultReportPageSessionState()).toMatchObject({
       selectedGainsLossesChartType: "waterfall",
+      selectedChartType: "bar",
+      selectedAllocationChartType: "donut",
       drillPathByBreakdown: {
         expense: [],
         income: [],
@@ -109,7 +111,34 @@ describe("parseStoredReportPageSessionState", () => {
     });
 
     expect(parsed.selectedGainsLossesChartType).toBe("waterfall");
+    expect(parsed.selectedChartType).toBe("bar");
+    expect(parsed.selectedAllocationChartType).toBe("donut");
     expect(parsed.drillPathByBreakdown.cashFlow).toEqual([]);
     expect(parsed.drillPathsByGrouping.assetClass.gainsLosses).toEqual([]);
   });
+
+  test.each(["donut", "bar", null, "invalid"])(
+    "normalizes removed or invalid modes (%s) and preserves Table",
+    (legacyMode) => {
+      const parsed = parseStoredReportPageSessionState({
+        selectedChartType: legacyMode === "bar" ? "donut" : legacyMode,
+        selectedAllocationChartType:
+          legacyMode === "donut" ? "bar" : legacyMode,
+        drillPathByBreakdown: { expense: ["group:expense"] },
+        drillPathByAllocationBreakdown: { asset: ["group:asset"] },
+      });
+      expect(parsed.selectedChartType).toBe("bar");
+      expect(parsed.selectedAllocationChartType).toBe("donut");
+      expect(parsed.drillPathByBreakdown.expense).toEqual(["group:expense"]);
+      expect(
+        parsed.drillPathsByGrouping.accountStructure.allocation.asset,
+      ).toEqual(["group:asset"]);
+      const table = parseStoredReportPageSessionState({
+        selectedChartType: "table",
+        selectedAllocationChartType: "table",
+      });
+      expect(table.selectedChartType).toBe("table");
+      expect(table.selectedAllocationChartType).toBe("table");
+    },
+  );
 });

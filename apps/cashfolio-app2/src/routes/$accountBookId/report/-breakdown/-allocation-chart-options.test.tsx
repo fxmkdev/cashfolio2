@@ -6,8 +6,6 @@ import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-brea
 import {
   commonArgs,
   renderChartOptions,
-  getBarSeries,
-  expectCategoryColorsAndLegend,
 } from "./-breakdown-chart-test-helpers";
 
 describe("allocation investment charts", () => {
@@ -71,7 +69,7 @@ describe("allocation investment charts", () => {
               },
             },
             selectedAllocationBreakdown: side,
-            selectedAllocationChartType: "bar",
+            selectedAllocationChartType: "donut",
             drillPathByAllocationBreakdown: {
               asset: ["asset-class:EQUITIES", investmentId],
               liability: ["asset-class:EQUITIES", investmentId],
@@ -79,21 +77,19 @@ describe("allocation investment charts", () => {
             setDrillPathByAllocationBreakdown: vi.fn(),
           }).allocationChartOptions,
       );
-      const series = getBarSeries(options);
-      expect(series.map((item) => item.xKey)).toEqual(["id", "id"]);
-      expect(series.map((item) => item.data?.[0].id)).toEqual([
+      expect(options.data?.map((item) => item.id)).toEqual([
         "account:apple-1",
         "account:apple-2",
       ]);
-      expect(series.map((item) => item.yName)).toEqual([
+      expect(options.data?.map((item) => item.label)).toEqual([
         "Bank / Brokerage / Apple",
         "Bank / Brokerage / Apple",
       ]);
-      expectCategoryColorsAndLegend(options);
+      expect(options.series?.[0]?.type).toBe("donut");
     },
   );
 
-  test.each(["bar", "donut"] as const)(
+  test.each(["donut", "table"] as const)(
     "%s investment groups require a separate account double-click",
     (chartType) => {
       const onOpen = vi.fn();
@@ -133,10 +129,9 @@ describe("allocation investment charts", () => {
       if (!model) throw new Error("Missing allocation model");
       const options = model.allocationChartOptions;
       const series = options.series?.[0];
-      if (!series || (series.type !== "donut" && series.type !== "bar"))
+      if (!series || series.type !== "donut")
         throw new Error("Missing chart series");
-      const datum =
-        series.type === "bar" ? series.data?.[0] : options.data?.[0];
+      const datum = options.data?.[0];
       const listener = series.listeners?.seriesNodeDoubleClick;
       if (!listener) throw new Error("Missing double-click listener");
       const event = new Event("dblclick");
@@ -161,3 +156,69 @@ describe("allocation investment charts", () => {
     },
   );
 });
+
+test.each(["asset", "liability"] as const)(
+  "simplifies nested %s allocations without changing hierarchy or totals",
+  (side) => {
+    const children = Array.from({ length: 6 }, (_, i) => ({
+      id: `account:${i}`,
+      label: `Account ${i}`,
+      kind: "account" as const,
+      amount: i + 1,
+      children: [],
+    }));
+    const hierarchy = [
+      {
+        id: "group:many",
+        label: "Many Accounts",
+        kind: "group" as const,
+        amount: 21,
+        children,
+      },
+    ];
+    const breakdown = {
+      ...baseOverview.accountBreakdownsByGrouping.accountStructure
+        .assetBreakdown,
+      hierarchy,
+      totalAmount: 21,
+    };
+    let model:
+      ReturnType<typeof usePeriodAllocationBreakdownViewModel> | undefined;
+    function Harness() {
+      model = usePeriodAllocationBreakdownViewModel({
+        ...commonArgs,
+        grouping: "accountStructure",
+        selectedAllocationBreakdown: side,
+        selectedAllocationChartType: "donut",
+        overview: {
+          ...baseOverview,
+          accountBreakdownsByGrouping: {
+            ...baseOverview.accountBreakdownsByGrouping,
+            accountStructure: {
+              ...baseOverview.accountBreakdownsByGrouping.accountStructure,
+              assetBreakdown: breakdown,
+              liabilityBreakdown: breakdown,
+            },
+          },
+        },
+        drillPathByAllocationBreakdown: {
+          asset: ["group:many"],
+          liability: ["group:many"],
+        },
+        setDrillPathByAllocationBreakdown: vi.fn(),
+      });
+      return null;
+    }
+    renderToStaticMarkup(createElement(Harness));
+    if (!model) throw new Error("Missing allocation model");
+    expect(model.allocationChartOptions.data).toHaveLength(5);
+    expect(model.otherRows.map((row) => row.id)).toEqual([
+      "account:1",
+      "account:0",
+    ]);
+    expect(model.otherSubtotal?.amount).toBe(3);
+    expect(model.otherSubtotal?.percentage).toBeCloseTo((3 / 21) * 100);
+    expect(model.activeAllocationBreakdown.hierarchy).toEqual(hierarchy);
+    expect(model.allocationDrillState.clampedPath).toEqual(["group:many"]);
+  },
+);

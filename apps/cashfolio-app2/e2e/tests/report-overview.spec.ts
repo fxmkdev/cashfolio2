@@ -199,7 +199,7 @@ test("report page persists card state, drill state, and table expansion across r
   const breakdownChartTypeControl = page.getByRole("radiogroup", {
     name: "Breakdown Chart Type",
   });
-  await selectSegmentedControlOption(breakdownChartTypeControl, "Donut");
+  await selectSegmentedControlOption(breakdownChartTypeControl, "Bar");
 
   const breakdownChart = page.getByTestId("period-breakdown-chart");
   await expect(breakdownChart).toBeVisible();
@@ -230,9 +230,9 @@ test("report page persists card state, drill state, and table expansion across r
   const allocationChartTypeControl = page.getByRole("radiogroup", {
     name: "Allocation Chart Type",
   });
-  await selectSegmentedControlOption(allocationChartTypeControl, "Bar");
+  await selectSegmentedControlOption(allocationChartTypeControl, "Table");
   await expect(
-    allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
+    allocationChartTypeControl.getByRole("radio", { name: "Table" }),
   ).toBeChecked();
 
   const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
@@ -260,7 +260,7 @@ test("report page persists card state, drill state, and table expansion across r
     allocationTypeControl.getByRole("radio", { name: "Liabilities" }),
   ).toBeChecked();
   await expect(
-    allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
+    allocationChartTypeControl.getByRole("radio", { name: "Table" }),
   ).toBeChecked();
   await expect(
     gainsLossesChartTypeControl.getByRole("radio", { name: "Waterfall" }),
