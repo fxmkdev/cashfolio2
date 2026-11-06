@@ -376,3 +376,27 @@ test("invalid deployment input cannot create resources and failed deletes remain
       });
   }
 });
+
+test("a missing database is harmless, but a missing deletion operation fails cleanup", async () => {
+  const context = await fixture().neon.discover();
+  let requests = 0;
+  const neon = new Neon(
+    env,
+    async () => {
+      return ++requests === 1
+        ? new Response(
+            JSON.stringify({
+              operations: [
+                { id: "delete-op", project_id: "project", status: "running" },
+              ],
+            }),
+          )
+        : new Response("not found", { status: 404 });
+    },
+    async () => {},
+  );
+  await assert.rejects(
+    neon.deleteDatabase(context.target, { ...base, name: databaseName("old") }),
+    /404/,
+  );
+});

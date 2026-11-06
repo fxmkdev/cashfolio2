@@ -283,14 +283,16 @@ export class Neon {
       !isManagedDatabase(database.name)
     )
       throw new Error("Refusing to delete an unmanaged database.");
+    let result: Json;
     try {
-      const result = await this.request(
+      result = await this.request(
         `/branches/${target.branchId}/databases/${encodeURIComponent(database.name)}`,
         "DELETE",
       );
-      await this.wait(result.operations);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) throw error;
+      if (error instanceof ApiError && error.status === 404) return;
+      throw error;
     }
+    await this.wait(result.operations);
   }
 }
