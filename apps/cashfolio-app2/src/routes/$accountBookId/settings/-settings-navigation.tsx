@@ -1,4 +1,5 @@
 import { Tabs } from "@mantine/core";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { LinkTab } from "@/components/navigation/link-tab";
 
 export function SettingsNavigation({
@@ -55,6 +56,7 @@ export function SettingsNavigation({
           ml="auto"
           c="red"
           color="red"
+          leftSection={<IconAlertTriangle size={16} aria-hidden="true" />}
         >
           Danger Zone
         </LinkTab>

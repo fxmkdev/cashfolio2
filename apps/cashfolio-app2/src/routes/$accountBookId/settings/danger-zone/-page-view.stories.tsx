@@ -59,8 +59,21 @@ export const DangerZone: Story = {
       "false",
     );
     await expect(
-      canvas.getByRole("heading", { name: "Danger Zone" }),
+      canvas.queryByRole("heading", { name: "Danger Zone" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByText(
+        "Permanently delete this account book and all data inside it.",
+      ),
     ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Delete Account Book" }),
+    ).toBeVisible();
+    const warningIcon = dangerTab.querySelector("svg");
+    await expect(warningIcon).toBeVisible();
+    await expect(warningIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(warningIcon).toHaveAttribute("width", "16");
+    await expect(warningIcon).toHaveAttribute("height", "16");
     await expect(
       canvas.queryByRole("button", { name: "Save" }),
     ).not.toBeInTheDocument();

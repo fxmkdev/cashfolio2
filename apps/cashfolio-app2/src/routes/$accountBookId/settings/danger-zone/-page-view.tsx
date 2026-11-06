@@ -1,14 +1,6 @@
-import {
-  Button,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import { Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
+import { IconCheck, IconTrash } from "@tabler/icons-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
@@ -142,15 +134,9 @@ export function DangerZonePageView(args: {
   return (
     <NarrowPageShell>
       <Group justify="space-between" align="flex-start" gap="lg">
-        <Stack gap={4}>
-          <Group gap="xs">
-            <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
-            <Title order={2}>Danger Zone</Title>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Permanently delete this account book and all data inside it.
-          </Text>
-        </Stack>
+        <Text size="sm" c="dimmed">
+          Permanently delete this account book and all data inside it.
+        </Text>
         <Button
           color="red"
           variant="outline"
