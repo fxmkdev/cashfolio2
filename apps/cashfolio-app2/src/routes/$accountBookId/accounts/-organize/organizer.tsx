@@ -171,22 +171,20 @@ export function AccountOrganizer({
         onMoveItems={setDialogItems}
         onLifecycle={setLifecycleDialog}
       />
-      {dialogItems && (
-        <MoveDialog
-          nodes={nodes}
-          showArchived={showArchived}
-          items={dialogItems}
-          pending={organizer.pending}
-          blocked={organizer.blocked}
-          submission={{
-            state: organizer.submitState,
-            onRefreshConstraints: organizer.refresh,
-            retryDisabled: organizer.retryDisabled,
-          }}
-          onClose={() => setDialogItems(undefined)}
-          onMove={organizer.saveMove}
-        />
-      )}
+      <MoveDialog
+        nodes={nodes}
+        showArchived={showArchived}
+        items={dialogItems}
+        pending={organizer.pending}
+        blocked={organizer.blocked}
+        submission={{
+          state: organizer.submitState,
+          onRefreshConstraints: organizer.refresh,
+          retryDisabled: organizer.retryDisabled,
+        }}
+        onClose={() => setDialogItems(undefined)}
+        onMove={organizer.saveMove}
+      />
       <OrganizerLifecycleDialogs
         dialog={lifecycleDialog}
         organizer={organizer}

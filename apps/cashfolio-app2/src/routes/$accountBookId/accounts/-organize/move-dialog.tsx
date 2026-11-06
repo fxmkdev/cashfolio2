@@ -31,19 +31,10 @@ import type {
   OrganizePlacement,
 } from "@/shared/account-organize/types";
 
-export function MoveDialog({
-  nodes,
-  showArchived = true,
-  items,
-  pending,
-  blocked = pending,
-  submission,
-  onClose,
-  onMove,
-}: {
+type MoveDialogProps = {
   nodes: OrganizeNode[];
   showArchived?: boolean;
-  items: OrganizeNodeRef[];
+  items?: OrganizeNodeRef[];
   pending: boolean;
   blocked?: boolean;
   submission?: {
@@ -53,7 +44,35 @@ export function MoveDialog({
   };
   onClose: () => void;
   onMove: (move: OrganizeMove) => Promise<boolean | undefined>;
-}) {
+};
+
+export function MoveDialog(props: MoveDialogProps) {
+  // Keep the shell mounted so Mantine captures the trigger on opening and
+  // returns focus on closing; reset destination choices with the content.
+  return (
+    <Modal
+      opened={!!props.items}
+      onClose={props.onClose}
+      title="Move To…"
+      closeOnEscape={!props.pending}
+      closeOnClickOutside={!props.pending}
+      withCloseButton={!props.pending}
+    >
+      {props.items && <MoveDialogContent {...props} items={props.items} />}
+    </Modal>
+  );
+}
+
+function MoveDialogContent({
+  nodes,
+  showArchived = true,
+  items,
+  pending,
+  blocked = pending,
+  submission,
+  onClose,
+  onMove,
+}: MoveDialogProps & { items: OrganizeNodeRef[] }) {
   const positionLabelId = useId();
   const [parent, setParent] = useState<string | null>(null);
   const [placement, setPlacement] = useState<OrganizePlacement>("last");
@@ -133,89 +152,78 @@ export function MoveDialog({
     if (await onMove(makeMove(parent))) onClose();
   };
   return (
-    <Modal
-      opened
-      onClose={onClose}
-      title="Move To…"
-      closeOnEscape={!pending}
-      closeOnClickOutside={!pending}
-      withCloseButton={!pending}
-    >
-      <Stack>
-        <Text>
-          {roots.length} selected {roots.length === 1 ? "item" : "items"};{" "}
-          {included.size - roots.length} included descendants
-          {archivedDescendants ? ` (${archivedDescendants} archived)` : ""}.
-        </Text>
-        <GroupTreeSelect
-          label="Destination"
-          searchable
-          allowDeselect={false}
-          groups={destinations}
-          value={parent ?? TOP_LEVEL_DESTINATION}
+    <Stack>
+      <Text>
+        {roots.length} selected {roots.length === 1 ? "item" : "items"};{" "}
+        {included.size - roots.length} included descendants
+        {archivedDescendants ? ` (${archivedDescendants} archived)` : ""}.
+      </Text>
+      <GroupTreeSelect
+        label="Destination"
+        searchable
+        allowDeselect={false}
+        groups={destinations}
+        value={parent ?? TOP_LEVEL_DESTINATION}
+        disabled={blocked}
+        onChange={(value) => {
+          setParent(value === TOP_LEVEL_DESTINATION ? null : value);
+          setAnchorId(null);
+        }}
+      />
+      <Stack gap={4}>
+        <Input.Label id={positionLabelId}>Position</Input.Label>
+        <SegmentedControl<OrganizePlacement>
+          aria-labelledby={positionLabelId}
+          fullWidth
+          value={placement}
           disabled={blocked}
+          data={[
+            { value: "first", label: "First" },
+            { value: "last", label: "Last" },
+            { value: "before", label: "Before", disabled: !anchors.length },
+            { value: "after", label: "After", disabled: !anchors.length },
+          ]}
           onChange={(value) => {
-            setParent(value === TOP_LEVEL_DESTINATION ? null : value);
+            setPlacement(value);
             setAnchorId(null);
           }}
         />
-        <Stack gap={4}>
-          <Input.Label id={positionLabelId}>Position</Input.Label>
-          <SegmentedControl<OrganizePlacement>
-            aria-labelledby={positionLabelId}
-            fullWidth
-            value={placement}
-            disabled={blocked}
-            data={[
-              { value: "first", label: "First" },
-              { value: "last", label: "Last" },
-              { value: "before", label: "Before", disabled: !anchors.length },
-              { value: "after", label: "After", disabled: !anchors.length },
-            ]}
-            onChange={(value) => {
-              setPlacement(value);
-              setAnchorId(null);
-            }}
-          />
-        </Stack>
-        {(placement === "before" || placement === "after") && (
-          <Select
-            label="Sibling"
-            searchable
-            data={anchors}
-            value={anchorId}
-            onChange={setAnchorId}
-            disabled={blocked}
-          />
-        )}
-        {preview.effect && <Alert color="blue">{preview.effect}</Alert>}
-        {preview.error && (
-          <Text c="dimmed" size="sm">
-            {preview.error}
-          </Text>
-        )}
-        {submission && (
-          <MutationSubmitFeedback
-            {...submission}
-            onRetry={() => void submitMove()}
-            retryDisabled={
-              submission.retryDisabled || !!preview.error || blocked
-            }
-          />
-        )}
-        <Group justify="flex-end">
-          <Button variant="default" disabled={pending} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!!preview.error || blocked}
-            loading={pending}
-            onClick={() => void submitMove()}
-          >
-            Move
-          </Button>
-        </Group>
       </Stack>
-    </Modal>
+      {(placement === "before" || placement === "after") && (
+        <Select
+          label="Sibling"
+          searchable
+          data={anchors}
+          value={anchorId}
+          onChange={setAnchorId}
+          disabled={blocked}
+        />
+      )}
+      {preview.effect && <Alert color="blue">{preview.effect}</Alert>}
+      {preview.error && (
+        <Text c="dimmed" size="sm">
+          {preview.error}
+        </Text>
+      )}
+      {submission && (
+        <MutationSubmitFeedback
+          {...submission}
+          onRetry={() => void submitMove()}
+          retryDisabled={submission.retryDisabled || !!preview.error || blocked}
+        />
+      )}
+      <Group justify="flex-end">
+        <Button variant="default" disabled={pending} onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          disabled={!!preview.error || blocked}
+          loading={pending}
+          onClick={() => void submitMove()}
+        >
+          Move
+        </Button>
+      </Group>
+    </Stack>
   );
 }

@@ -74,7 +74,9 @@ export async function chooseMove(
       name: "Move To…",
     }),
   );
-  const dialog = within(await body.findByRole("dialog", { name: "Move To…" }));
+  const dialogElement = await body.findByRole("dialog", { name: "Move To…" });
+  await waitFor(() => expect(dialogElement).toBeVisible());
+  const dialog = within(dialogElement);
   await userEvent.click(dialog.getByLabelText("Destination"));
   const option = (await body.findAllByRole("option")).find((item) =>
     within(item).queryByText(destination, { exact: true }),
