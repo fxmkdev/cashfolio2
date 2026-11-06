@@ -5,6 +5,8 @@ import {
   IconArchiveOff,
   IconArrowsMove,
   IconTrash,
+  IconPencil,
+  IconPlus,
 } from "@tabler/icons-react";
 import type {
   OrganizeActionAvailability,
@@ -20,6 +22,10 @@ export function OrganizerRowActions({
   onArchive,
   onUnarchive,
   onDelete,
+  onEdit,
+  onAddChild,
+  onAddGroup,
+  addChildLabel,
 }: {
   node: OrganizeNode;
   isCategory?: boolean;
@@ -29,6 +35,10 @@ export function OrganizerRowActions({
   onArchive: () => void;
   onUnarchive: () => void;
   onDelete: () => void;
+  onEdit?: () => void;
+  onAddChild?: () => void;
+  onAddGroup?: () => void;
+  addChildLabel?: string;
 }) {
   const reason = (message?: string) =>
     getAccountConstraintMessage(
@@ -58,6 +68,38 @@ export function OrganizerRowActions({
           </ActionIcon>
         </span>
       </Tooltip>
+      {[
+        { label: "Edit", icon: <IconPencil size={16} />, onClick: onEdit },
+        {
+          label:
+            addChildLabel ??
+            (node.nodeType === "assetClass" ? "Add Child" : "Add Category"),
+          icon: <IconPlus size={16} />,
+          onClick: onAddChild,
+        },
+        {
+          label: "Add Group",
+          icon: <IconPlus size={16} />,
+          onClick: onAddGroup,
+        },
+      ]
+        .filter((action) => action.onClick)
+        .map((action) => (
+          <Tooltip key={action.label} label={action.label}>
+            <span style={{ display: "inline-flex" }}>
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                color="blue"
+                aria-label={`${action.label} ${node.name}`}
+                disabled={blocked}
+                onClick={action.onClick}
+              >
+                {action.icon}
+              </ActionIcon>
+            </span>
+          </Tooltip>
+        ))}
       {node.nodeType !== "assetClass" && (
         <Tooltip label={reason(statusReason) ?? statusAction}>
           <span style={{ display: "inline-flex" }}>
@@ -66,6 +108,7 @@ export function OrganizerRowActions({
               size="sm"
               color={node.isActive ? "yellow" : "blue"}
               aria-label={`${statusAction} ${node.name}`}
+              aria-description={reason(statusReason)}
               disabled={blocked || !statusEnabled}
               onClick={node.isActive ? onArchive : onUnarchive}
             >
@@ -85,6 +128,7 @@ export function OrganizerRowActions({
             size="sm"
             color="red"
             aria-label={`Delete ${node.name}`}
+            aria-description={reason(availability?.deleteDisabledReason)}
             disabled={blocked || !availability?.deletable}
             onClick={onDelete}
           >

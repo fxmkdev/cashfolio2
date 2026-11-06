@@ -23,7 +23,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     accountBookId: book.accountBookId,
     counterAccountId: book.cashAccount.id,
   });
-  await page.goto(`/${book.accountBookId}/settings/classifications`);
+  await page.goto(
+    `/${book.accountBookId}/settings/classifications?organize=true`,
+  );
+  await expect(page).not.toHaveURL(/organize=/);
   await expect(
     page.getByRole("tab", { name: "Asset Classes", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
@@ -37,9 +40,8 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await expect(
     page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Organize", exact: true }).click();
   const organizer = page.getByRole("region", {
-    name: "Organize Asset Classes",
+    name: "Asset Classes Hierarchy",
   });
   await organizer
     .getByRole("button", { name: "Move Other Assets", exact: true })
@@ -66,7 +68,6 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
         )[0]?.id,
     )
     .toBe("OTHER_ASSETS");
-  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.reload();
   await expect(
     page.locator('.ag-grid-scrolling-container > .ag-row[row-index="0"]'),
@@ -116,7 +117,6 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await page.getByRole("button", { name: "Organize", exact: true }).click();
   await organizer
     .getByRole("button", { name: "Move Pension Equities", exact: true })
     .click();
@@ -125,7 +125,6 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await selectClassificationOption(page, "Fixed Income");
   await dialog.getByRole("button", { name: "Move", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.goto(
     `/${book.accountBookId}/history?metric=gainsLosses&gainLossScope=asset-class:${node.id}`,
   );
@@ -133,7 +132,6 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await page.getByRole("button", { name: "Organize", exact: true }).click();
   await organizer
     .getByRole("button", { name: "Delete Pension Equities", exact: true })
     .click();

@@ -4,7 +4,7 @@ import {
   getAssetClassOrganizeData,
   moveAssetClassTreeItems,
 } from "@/server/asset-class-organize";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import {
   getAssetClasses,
   saveAssetClass,
@@ -15,8 +15,16 @@ import { createDocumentTitleHead } from "@/shared/document-title";
 export const Route = createFileRoute(
   "/$accountBookId/settings/classifications",
 )({
-  validateSearch: (search: Record<string, unknown>) =>
-    search.organize === true ? { organize: true as const } : {},
+  validateSearch: () => ({}),
+  beforeLoad: ({ location, params }) => {
+    if (new URLSearchParams(location.searchStr).has("organize"))
+      throw redirect({
+        to: "/$accountBookId/settings/classifications",
+        params,
+        search: {},
+        replace: true,
+      });
+  },
   loader: ({ params: { accountBookId } }) =>
     getAssetClasses({ data: { accountBookId } }),
   head: () => createDocumentTitleHead("Asset Classes"),
@@ -26,7 +34,6 @@ function ClassificationsPage() {
   const nodes = Route.useLoaderData(),
     { accountBookId } = Route.useParams(),
     router = useRouter();
-  const { organize } = Route.useSearch();
   const organizerApi = useMemo<OrganizerApi>(
     () => ({
       kind: "assetClasses",
@@ -60,17 +67,14 @@ function ClassificationsPage() {
   return (
     <ClassificationsPageView
       accountBookId={accountBookId}
-      organize={organize}
       organizerApi={organizerApi}
       nodes={nodes}
       onRefresh={refresh}
       onSave={async (value) => {
         await saveAssetClass({ data: { ...value, accountBookId } });
-        await refresh();
       }}
       onDelete={async (id, replacementId) => {
         await deleteAssetClass({ data: { accountBookId, id, replacementId } });
-        await refresh();
       }}
     />
   );

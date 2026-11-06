@@ -33,6 +33,7 @@ export function AccountsPageHeader({
   onOrganize,
   organizePending,
   organizerActions,
+  managementPending = false,
 }: Pick<
   AccountsPageViewProps,
   | "managementContext"
@@ -50,6 +51,7 @@ export function AccountsPageHeader({
   onOrganize?: () => void;
   organizePending?: boolean;
   organizerActions?: ReactNode;
+  managementPending?: boolean;
 }) {
   const isCategories = managementContext === "categories";
   const managementPath = getAccountManagementPath(managementContext);
@@ -79,7 +81,7 @@ export function AccountsPageHeader({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
-      {grouping === "accountStructure" && onOrganize && (
+      {!isCategories && grouping === "accountStructure" && onOrganize && (
         <Button
           variant="default"
           leftSection={<IconArrowsMove size={16} />}
@@ -107,6 +109,7 @@ export function AccountsPageHeader({
           variant="default"
           leftSection={<IconPlus size={16} />}
           onClick={onOpenCreateGroup}
+          disabled={managementPending}
         >
           Add Group
         </Button>
@@ -114,6 +117,7 @@ export function AccountsPageHeader({
       <Button
         leftSection={<IconPlus size={16} />}
         onClick={onOpenCreateAccount}
+        disabled={managementPending}
       >
         {isCategories
           ? tab === "EQUITY-INCOME"
@@ -136,21 +140,16 @@ export function AccountsPageHeader({
           <Group justify="space-between" align="center" gap="md" mb="md">
             <Group gap="md">
               {managementTabs}
-              {organizing ? (
-                <Badge variant="light" size="lg">
-                  Organizing
-                </Badge>
-              ) : (
-                <Checkbox
-                  label="Show Archived"
-                  checked={showArchived}
-                  onChange={(event) =>
-                    onShowArchivedChange?.(event.currentTarget.checked)
-                  }
-                />
-              )}
+              <Checkbox
+                label="Show Archived"
+                disabled={managementPending}
+                checked={showArchived}
+                onChange={(event) =>
+                  onShowArchivedChange?.(event.currentTarget.checked)
+                }
+              />
             </Group>
-            {organizing ? organizerActions : managementActions}
+            {managementActions}
           </Group>
         </>
       ) : (

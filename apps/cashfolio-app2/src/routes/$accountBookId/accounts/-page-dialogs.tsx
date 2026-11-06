@@ -33,6 +33,7 @@ export function AccountsBulkAssignmentDialogs({
 }
 export function AccountsPageDialogs({
   managementContext = "accounts",
+  editorSubmitState,
   rows,
   editingAccount,
   editingGroup,
@@ -68,6 +69,7 @@ export function AccountsPageDialogs({
 }: Pick<
   AccountsPageViewProps,
   | "managementContext"
+  | "editorSubmitState"
   | "rows"
   | "editingAccount"
   | "editingGroup"
@@ -114,6 +116,7 @@ export function AccountsPageDialogs({
     <>
       <>
         <EditAccountModal
+          submitState={editorSubmitState}
           onRefreshConstraints={onRefreshConstraints}
           defaultGroupId={createAccountGroupId}
           opened={createModalOpened}
@@ -139,6 +142,7 @@ export function AccountsPageDialogs({
         />
       </>
       <EditAccountGroupModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         defaultParentGroupId={createGroupParentId}
         opened={createGroupModalOpened}

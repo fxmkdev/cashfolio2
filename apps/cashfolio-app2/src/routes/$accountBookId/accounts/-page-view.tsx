@@ -13,9 +13,17 @@ import {
   AccountsBulkAssignmentDialogs,
 } from "./-page-dialogs";
 import type { AccountsPageViewProps } from "./-page-view-types";
+import { CategoriesPageView } from "./-categories-page";
 export type { AccountsPageViewProps } from "./-page-view-types";
 
 export function AccountsPageView(props: AccountsPageViewProps) {
+  if (props.managementContext === "categories")
+    return (
+      <CategoriesPageView
+        key={`${props.accountBookId}:${props.tab}`}
+        {...props}
+      />
+    );
   return (
     <AccountsPageContent
       key={`${props.accountBookId}:${props.managementContext ?? "accounts"}:${props.tab}`}

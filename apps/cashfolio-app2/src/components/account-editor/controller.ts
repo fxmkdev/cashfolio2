@@ -32,6 +32,7 @@ import { getAccountConstraintMessage } from "@/shared/account-presentation";
 
 export function useEditAccountModalController({
   opened,
+  submitState: providedSubmitState,
   onClose,
   accountGroups,
   onSubmit,
@@ -47,7 +48,7 @@ export function useEditAccountModalController({
   const [statementImportSettingsOpened, setStatementImportSettingsOpened] =
     useState(false);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const submitState = useDialogSubmitState({
+  const internalSubmitState = useDialogSubmitState({
     captureErrors: true,
     formatErrorMessage: (message) =>
       getAccountConstraintMessage(
@@ -56,6 +57,7 @@ export function useEditAccountModalController({
       ) ?? message,
     onRefreshConstraints,
   });
+  const submitState = providedSubmitState ?? internalSubmitState;
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const form = useForm<FormValues, TransformedFormValues>({
     mode: "uncontrolled",
@@ -221,6 +223,7 @@ export function useEditAccountModalController({
 
   const handleSubmit = form.onSubmit(
     (values) => {
+      if (providedSubmitState?.refreshError) return;
       clearSubmissionError();
       return runSubmit(async () => {
         await onSubmit(applyAccountGroupCashInheritance(values, accountGroups));

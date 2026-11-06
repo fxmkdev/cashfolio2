@@ -62,8 +62,13 @@ function renderHook<T>(hook: () => T) {
   harness.effects.splice(0).forEach((effect) => effect());
   return result;
 }
-function render(api: OrganizerApi, onSaved = saved, autoLoad = true) {
-  const useController = () => useOrganizer(onSaved, api, autoLoad);
+function render(
+  api: OrganizerApi,
+  onSaved = saved,
+  autoLoad = true,
+  metadata?: () => Promise<void>,
+) {
+  const useController = () => useOrganizer(onSaved, api, autoLoad, metadata);
   return renderHook(useController);
 }
 const saved = vi.fn();
@@ -440,5 +445,76 @@ describe("asset class lifecycle recovery", () => {
       render(api).snapshot?.nodes.find((node) => node.id === "cash"),
     ).toMatchObject({ activeCount: 2, archivedCount: 1 });
     expect(remove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("management editor submissions", () => {
+  it("refreshes and reveals an edited item without resetting the hierarchy", async () => {
+    const api = createAssetClassStoryApi();
+    const organizer = await ready(api);
+    const close = vi.fn();
+    await organizer.submitState.runSubmit(() =>
+      organizer.performEdit(
+        () =>
+          api.save({ id: "swiss", name: "Updated Class", parentId: "cash" }),
+        { id: "swiss", nodeType: "assetClass" },
+        close,
+      ),
+    );
+    expect(close).toHaveBeenCalledOnce();
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "swiss"),
+    ).toMatchObject({ name: "Updated Class", parentId: "cash" });
+    expect(render(api).revealIds).toEqual(["swiss"]);
+  });
+  it("recovers a committed creation by reading metadata without repeating the save", async () => {
+    const api = createAssetClassStoryApi();
+    const organizer = await ready(api);
+    const write = vi.fn(() =>
+      api.save({ name: "New Class", parentId: "equities" }),
+    );
+    const close = vi.fn();
+    const load = vi
+      .spyOn(api, "load")
+      .mockRejectedValue(new Error("Read unavailable"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performEdit(write, undefined, close),
+    );
+    expect(close).toHaveBeenCalledOnce();
+    expect(write).toHaveBeenCalledOnce();
+    expect(render(api).blocked).toBe(true);
+    render(api).retry();
+    expect(write).toHaveBeenCalledOnce();
+    load.mockRestore();
+    await render(api).submitState.refreshConstraints();
+    const created = render(api).snapshot?.nodes.find(
+      (node) => node.name === "New Class",
+    );
+    expect(created).toBeDefined();
+    expect(render(api).revealIds).toContain(created?.id);
+    expect(render(api).blocked).toBe(false);
+    expect(write).toHaveBeenCalledOnce();
+  });
+  it("blocks editing until editor constraints recover after a committed move", async () => {
+    const api = createAssetClassStoryApi();
+    const metadata = vi.fn(async () => {});
+    render(api, saved, true, metadata);
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    const organizer = render(api, saved, true, metadata);
+    metadata.mockRejectedValue(new Error("Editor metadata unavailable"));
+    await organizer.saveMove({
+      items: [{ id: "swiss", nodeType: "assetClass" }],
+      parentId: "cash",
+      placement: "last",
+    });
+    expect(
+      render(api, saved, true, metadata).snapshot?.nodes.find(
+        (node) => node.id === "swiss",
+      )?.parentId,
+    ).toBe("cash");
+    expect(render(api, saved, true, metadata).blocked).toBe(true);
+    metadata.mockResolvedValue();
+    await render(api, saved, true, metadata).submitState.refreshConstraints();
+    expect(render(api, saved, true, metadata).blocked).toBe(false);
   });
 });

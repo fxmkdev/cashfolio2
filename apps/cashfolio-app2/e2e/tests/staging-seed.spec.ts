@@ -540,10 +540,12 @@ test("archived seed hierarchies are available in Accounts and Categories", async
       await agGridRowByText(page, groups[0])
         .locator(".ag-group-contracted")
         .click();
-    await expect(
-      page.locator('[row-id^="__archived__:"]').first(),
-    ).toBeVisible();
-    await expandArchivedGroups(page);
+    if (!isCategory) {
+      await expect(
+        page.locator('[row-id^="__archived__:"]').first(),
+      ).toBeVisible();
+      await expandArchivedGroups(page);
+    }
     if (tab !== "BALANCE")
       for (const name of groups) {
         const group = agGridRowByText(page, name);

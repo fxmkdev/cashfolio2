@@ -89,6 +89,7 @@ function transformAccountGroupValues(
 
 export function EditAccountGroupModal({
   opened,
+  submitState: providedSubmitState,
   onClose,
   onExitTransitionEnd,
   accountGroups,
@@ -101,6 +102,7 @@ export function EditAccountGroupModal({
   typeDescriptor,
 }: {
   opened: boolean;
+  submitState?: ReturnType<typeof useDialogSubmitState>;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;
   onExitTransitionEnd?: () => void;
@@ -114,7 +116,7 @@ export function EditAccountGroupModal({
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const submitState = useDialogSubmitState({
+  const internalSubmitState = useDialogSubmitState({
     captureErrors: true,
     formatErrorMessage: (message) =>
       getAccountConstraintMessage(
@@ -123,6 +125,7 @@ export function EditAccountGroupModal({
       ) ?? message,
     onRefreshConstraints,
   });
+  const submitState = providedSubmitState ?? internalSubmitState;
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const descendantGroupIds = useMemo(() => {
     if (!editingId || !existingNodes) return new Set<string>();
@@ -280,6 +283,7 @@ export function EditAccountGroupModal({
     >
       <form
         onSubmit={form.onSubmit((values) => {
+          if (providedSubmitState?.refreshError) return;
           clearSubmissionError();
           return runSubmit(async () => {
             await onSubmit(

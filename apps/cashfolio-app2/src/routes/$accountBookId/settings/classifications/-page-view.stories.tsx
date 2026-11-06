@@ -1,5 +1,5 @@
-import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
-import { Button, Stack } from "@mantine/core";
+import { createAssetClassStoryApi } from "@/components/hierarchy-organize/asset-class-story-fixtures";
+import { Stack } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState, type ComponentProps } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -14,7 +14,39 @@ async function gridRow(canvasElement: HTMLElement, id: string) {
 }
 async function rowActions(canvasElement: HTMLElement, id: string) {
   const row = await gridRow(canvasElement, id);
-  return openRowActionsMenu(row);
+  await userEvent.hover(row);
+  return (label: string) =>
+    within(row).getByRole("button", { name: new RegExp(`^${label} `) });
+}
+
+function ManagementHarness(
+  props: ComponentProps<typeof ClassificationsPageView>,
+) {
+  const [api] = useState(() =>
+    createAssetClassStoryApi(
+      props.nodes.map((node) => ({ ...node, nodeType: "assetClass" as const })),
+    ),
+  );
+  const [organizerApi] = useState(() => ({
+    ...api,
+    delete: async (
+      target: Parameters<typeof api.delete>[0],
+      replacementId?: string | null,
+    ) => {
+      await props.onDelete(target.id, replacementId ?? null);
+      await api.delete(target, replacementId);
+    },
+  }));
+  return (
+    <ClassificationsPageView
+      {...props}
+      organizerApi={organizerApi}
+      onSave={async (draft) => {
+        await props.onSave(draft);
+        await api.save(draft);
+      }}
+    />
+  );
 }
 
 const meta = {
@@ -27,6 +59,7 @@ const meta = {
       </Stack>
     ),
   ],
+  render: (args) => <ManagementHarness {...args} />,
   args: {
     nodes: [
       {
@@ -95,23 +128,14 @@ export const Hierarchy: Story = {
     ).toHaveTextContent("1 active, 0 archived");
     await expect(equities).toHaveAttribute("aria-expanded", "true");
     const actions = await rowActions(canvasElement, "equities");
-    await expect(
-      actions.queryByRole("menuitem", { name: "Reorder Siblings" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      actions.getByRole("menuitem", { name: "Delete" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    const swiss = await rowActions(canvasElement, "swiss");
-    await expect(
-      swiss.queryByRole("menuitem", { name: "Reorder Siblings" }),
-    ).not.toBeInTheDocument();
+    await expect(actions("Delete")).toBeDisabled();
   },
 };
 export const CreateChild: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Add Child" }));
+    await userEvent.click(actions("Add Child"));
     const dialog = within(
       await body.findByRole("dialog", { name: "New Asset Class" }),
     );
@@ -134,11 +158,9 @@ export const DeleteAssignedLeaf: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const parent = await rowActions(canvasElement, "equities");
-    await expect(
-      parent.getByRole("menuitem", { name: "Delete" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    await expect(parent("Delete")).toBeDisabled();
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(actions("Delete"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -160,7 +182,7 @@ export const ParentSelectionExcludesSubtree: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -186,7 +208,7 @@ export const ClearParentToTopLevel: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -241,7 +263,7 @@ export const NestedReplacementSelection: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "cash");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(actions("Delete"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -280,14 +302,14 @@ export const SaveFailurePreservesDraft: Story = {
     await expect(dialog.getByRole("textbox", { name: /^Name/ })).toHaveValue(
       "My Class",
     );
-    await expect(args.onRefresh).toHaveBeenCalled();
+    await expect(dialog.getByRole("button", { name: "Save" })).toBeEnabled();
   },
 };
 export const Edit: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     let actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -312,33 +334,12 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByText(
-        "No asset classes. Create one to start classifying accounts.",
+        "There are no asset classes to organize.",
       ),
     ).toBeVisible();
   },
 };
-function RefreshHarness(props: ComponentProps<typeof ClassificationsPageView>) {
-  const [nodes, setNodes] = useState(props.nodes);
-  return (
-    <>
-      <ClassificationsPageView {...props} nodes={nodes} />
-      <Button
-        onClick={() =>
-          setNodes((current) =>
-            current.map((node) => ({
-              ...node,
-              name: node.id === "equities" ? "Equities Updated" : node.name,
-            })),
-          )
-        }
-      >
-        Refresh Fixture
-      </Button>
-    </>
-  );
-}
 export const ExpansionSurvivesRefresh: Story = {
-  render: (args) => <RefreshHarness {...args} />,
   play: async ({ canvasElement }) => {
     const parent = await gridRow(canvasElement, "equities");
     await userEvent.click(parent.querySelector(".ag-group-expanded")!);
@@ -349,8 +350,20 @@ export const ExpansionSurvivesRefresh: Story = {
         ),
       ).toBeNull(),
     );
-    await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Refresh Fixture" }),
+    const actions = await rowActions(canvasElement, "equities");
+    await userEvent.click(actions("Edit"));
+    const body = within(canvasElement.ownerDocument.body);
+    const editor = within(
+      await body.findByRole("dialog", { name: "Edit Asset Class" }),
+    );
+    await userEvent.clear(editor.getByRole("textbox", { name: /^Name/ }));
+    await userEvent.type(
+      editor.getByRole("textbox", { name: /^Name/ }),
+      "Equities Updated",
+    );
+    await userEvent.click(editor.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     await waitFor(() =>
       expect(

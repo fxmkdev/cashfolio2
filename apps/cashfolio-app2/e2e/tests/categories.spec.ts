@@ -1,10 +1,6 @@
 import { prisma } from "../support/db-client";
 import { seedDatabase, type SeededData } from "../support/db";
-import {
-  agGridRowByText,
-  clickRowAction,
-  expandArchivedGroups,
-} from "../support/grid";
+import { agGridRowByText, clickRowAction } from "../support/grid";
 import { expect, test, type Page } from "../support/fixtures";
 import { openDialogFromButton } from "../support/ui";
 
@@ -174,8 +170,7 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   if (await housingExpander.isVisible()) await housingExpander.click();
   await expect(utilities).toBeVisible();
   if (await utilitiesExpander.isVisible()) await utilitiesExpander.click();
-  await expect(page.locator('[row-id^="__archived__:"]').first()).toBeVisible();
-  await expandArchivedGroups(page);
+  await expect(page.locator('[row-id^="__archived__:"]')).toHaveCount(0);
   const archived = agGridRowByText(page, "E2E Electricity Updated");
   await expect(archived).toBeVisible();
   const archivedId = await archived.getAttribute("row-id");
@@ -378,9 +373,6 @@ test("archived visibility follows URLs and history but defaults off on fresh vis
   await expect(visibility).not.toBeChecked();
   await expect(retired).toHaveCount(0);
   await setArchivedVisibility(page, true);
-  const archive = page.locator('[row-id="__archived__:root"]');
-  await expect(archive).toHaveAttribute("aria-expanded", "false");
-  await archive.locator(".ag-group-contracted").click();
   await expect(retired).toBeVisible();
   await page.reload();
   await expect(visibility).toBeChecked();
@@ -419,11 +411,10 @@ test("archived visibility follows URLs and history but defaults off on fresh vis
   await expect(retired).toHaveCount(0);
   await expect(agGridRowByText(page, "E2E Combined Creation")).toBeVisible();
   await expect(agGridRowByText(page, "E2E Combined Group")).toBeVisible();
-  await expect(archive).toHaveCount(0);
+  await expect(page.locator('[row-id^="__archived__:"]')).toHaveCount(0);
   await combinedGroup.locator(".ag-group-expanded").click();
   await page.goBack();
   await expect(visibility).toBeChecked();
-  await expect(archive).toHaveAttribute("aria-expanded", "true");
   await expect(retired).toBeVisible();
   await expect(combinedGroup).toHaveAttribute("aria-expanded", "false");
   await page.goForward();

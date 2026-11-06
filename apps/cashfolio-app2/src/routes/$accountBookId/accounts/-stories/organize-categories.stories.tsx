@@ -34,7 +34,7 @@ const meta: Meta<typeof AccountsPageView> = {
   parameters: {
     router: {
       initialPath:
-        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=true",
+        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
     },
   },
   render: () => (
@@ -49,20 +49,19 @@ const meta: Meta<typeof AccountsPageView> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const CategoryActionsAndTabExit: Story = {
+export const CategoryActionsAndTabChange: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
     const region = within(
-      await canvas.findByRole("region", { name: "Organize Categories" }),
+      await canvas.findByRole("region", { name: "Categories Hierarchy" }),
     );
     await expect(
-      region.getByRole("checkbox", { name: "Show Archived" }),
+      canvas.getByRole("checkbox", { name: "Show Archived" }),
     ).not.toBeChecked();
     await expect(
       canvas.queryByRole("button", { name: "Add Expense Category" }),
-    ).not.toBeInTheDocument();
+    ).toBeVisible();
     await userEvent.click(
       region.getByRole("button", { name: "Archive Electricity" }),
     );
@@ -84,8 +83,8 @@ export const CategoryActionsAndTabExit: Story = {
       }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("region", { name: "Organize Categories" }),
-    ).not.toBeInTheDocument();
+      canvas.getByRole("region", { name: "Categories Hierarchy" }),
+    ).toBeVisible();
   },
 };
 
@@ -98,8 +97,7 @@ export const DirectCategoryEntry: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("region", { name: "Organize Categories" });
-    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await canvas.findByRole("region", { name: "Categories Hierarchy" });
     await expect(
       await canvas.findByRole("button", { name: "Add Expense Category" }),
     ).toBeVisible();

@@ -215,3 +215,16 @@ describe("category visibility and legacy redirects", () => {
     },
   );
 });
+
+it("normalizes obsolete Categories mode requests without losing page settings", () => {
+  expect(
+    getCategoriesRedirect({
+      tab: "EQUITY-EXPENSE",
+      showArchived: true,
+      organize: true,
+    }).search,
+  ).toEqual({ tab: "EQUITY-EXPENSE", showArchived: true });
+  expect(parseCategoriesSearch({ organize: true })).not.toHaveProperty(
+    "organize",
+  );
+});

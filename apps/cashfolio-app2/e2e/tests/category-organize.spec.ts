@@ -3,7 +3,7 @@ import { expect, test } from "../support/fixtures";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
 
-test("organizes the selected category type with archived descendants and exits on tab change", async ({
+test("organizes the selected category type with archived descendants and switches hierarchy on tab change", async ({
   page,
   e2eExternalId,
 }) => {
@@ -59,12 +59,18 @@ test("organizes the selected category type with archived descendants and exits o
       },
     ],
   });
-  const normal = `/${book.accountBookId}/settings/categories?tab=EQUITY-EXPENSE&showArchived=true`;
-  await page.goto(normal);
-  await page.getByRole("button", { name: "Organize", exact: true }).click();
-  const organizer = page.getByRole("region", { name: "Organize Categories" });
+  const normal = `/${book.accountBookId}/settings/categories?tab=EQUITY-EXPENSE&showArchived=false`;
+  await page.goto(`${normal}&organize=true`);
+  await expect(page).not.toHaveURL(/organize=/);
   await expect(
-    organizer.getByRole("checkbox", { name: "Show Archived" }),
+    page.getByRole("button", { name: "Organize", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Done", exact: true }),
+  ).toHaveCount(0);
+  const organizer = page.getByRole("region", { name: "Categories Hierarchy" });
+  await expect(
+    page.getByRole("checkbox", { name: "Show Archived" }),
   ).not.toBeChecked();
   await organizer
     .getByRole("button", { name: "Move Organize Expenses", exact: true })
@@ -108,7 +114,7 @@ test("organizes the selected category type with archived descendants and exits o
     organizer.getByRole("checkbox", { name: "Show Archived" }),
   ).not.toBeChecked();
   await page.getByRole("tab", { name: "Income", exact: true }).click();
-  await expect(organizer).not.toBeVisible();
+  await expect(organizer).toBeVisible();
   await expect(page).not.toHaveURL(/organize=true/);
   await expect(
     page.getByRole("button", { name: "Add Income Category", exact: true }),

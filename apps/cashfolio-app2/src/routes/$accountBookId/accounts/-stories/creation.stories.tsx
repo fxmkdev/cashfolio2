@@ -218,19 +218,11 @@ export const ContextualIncomeCategoryCreation: Story = {
       await canvas.findByText("Housing", { exact: true })
     ).closest<HTMLElement>(".ag-row")!;
     await userEvent.hover(row);
-    await userEvent.click(
-      within(row).getByRole("button", { name: "More Actions for Housing" }),
-    );
-    await waitFor(() =>
-      expect(
-        body.getByRole("menuitem", { name: "Add Income Category" }),
-      ).toBeVisible(),
-    );
     expect(
-      body.queryByRole("menuitem", { name: "Add Expense Category" }),
+      within(row).queryByRole("button", { name: /^Add Expense Category/ }),
     ).not.toBeInTheDocument();
     await userEvent.click(
-      body.getByRole("menuitem", { name: "Add Income Category" }),
+      within(row).getByRole("button", { name: "Add Income Category Housing" }),
     );
     const dialog = within(
       await body.findByRole("dialog", { name: "New Category" }),

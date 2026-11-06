@@ -29,8 +29,11 @@ export function useOrganizer(
   onSaved: () => void,
   apiOverride?: OrganizerApi,
   autoLoad = true,
+  refreshMetadata?: () => Promise<void>,
 ) {
   const api = useRef(apiOverride).current;
+  const metadata = useRef(refreshMetadata);
+  metadata.current = refreshMetadata;
   const [snapshot, setSnapshot] = useState<OrganizeSnapshot>();
   const confirmed = useRef<OrganizeSnapshot | undefined>(undefined);
   const [loadError, setLoadError] = useState<string>();
@@ -38,6 +41,9 @@ export function useOrganizer(
   const [message, setMessage] = useState("");
   const [revealIds, setRevealIds] = useState<string[]>([]);
   const [focusFallbackIds, setFocusFallbackIds] = useState<string[]>([]);
+  const committedEdit = useRef<
+    { ids: Set<string>; target?: OrganizeNodeRef } | undefined
+  >(undefined);
   const mounted = useRef(true);
   const generation = useRef(0);
   const loadInFlight = useRef<number | undefined>(undefined);
@@ -57,10 +63,23 @@ export function useOrganizer(
     if (!api) throw new Error("Organize is unavailable.");
     const current = generation.current;
     const next = await api.load();
+    await metadata.current?.();
     if (!mounted.current || current !== generation.current) return;
     confirmed.current = next;
     setSnapshot(next);
     setLoadError(undefined);
+    const edit = committedEdit.current;
+    if (edit) {
+      setRevealIds(
+        edit.target
+          ? [edit.target.id]
+          : next.nodes
+              .filter((node) => !edit.ids.has(node.id))
+              .map((node) => node.id),
+      );
+      setFocusFallbackIds([]);
+      committedEdit.current = undefined;
+    }
   }, [api]);
   const submitState = useDialogSubmitState({
     captureErrors: true,
@@ -100,6 +119,7 @@ export function useOrganizer(
     invalidateLoad();
     confirmed.current = undefined;
     attempted.current = undefined;
+    committedEdit.current = undefined;
     setSnapshot(undefined);
     setLoading(false);
     setLoadError(undefined);
@@ -130,8 +150,11 @@ export function useOrganizer(
           return;
         }
         setSnapshot({ ...before, nodes: next });
+        let committed = false;
         try {
           const result = await api.move(move, before.version);
+          committed = true;
+          attempted.current = undefined;
           if (!mounted.current) return;
           confirmed.current = result.snapshot;
           setSnapshot(result.snapshot);
@@ -143,8 +166,9 @@ export function useOrganizer(
               : "The items are already in that position.",
           );
           onSaved();
+          await metadata.current?.();
         } catch (error) {
-          if (mounted.current) setSnapshot(before);
+          if (mounted.current && !committed) setSnapshot(before);
           throw error;
         }
       });
@@ -192,6 +216,27 @@ export function useOrganizer(
     onCommitted?.();
     await refresh();
   };
+  // Editor dialogs own runSubmit. Clear retry intent immediately after commit;
+  // a failed metadata read must never replay a successful create or edit.
+  const performEdit = async (
+    operation: () => Promise<unknown>,
+    target?: OrganizeNodeRef,
+    onCommitted?: () => void,
+  ) => {
+    const before = confirmed.current;
+    if (!before || needsRefresh)
+      throw new Error("Refresh the hierarchy before saving.");
+    attempted.current = undefined;
+    await operation();
+    committedEdit.current = {
+      ids: new Set(before.nodes.map((node) => node.id)),
+      target,
+    };
+    onCommitted?.();
+    setMessage("Changes saved.");
+    onSaved();
+    await refresh();
+  };
   const isRetryValid = () => {
     const attempt = attempted.current;
     return (
@@ -224,6 +269,7 @@ export function useOrganizer(
     loadError,
     refresh,
     performLifecycle,
+    performEdit,
     saveMove,
     pending,
     blocked: pending || needsRefresh || loading || !snapshot,

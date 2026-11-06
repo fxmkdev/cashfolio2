@@ -25,7 +25,8 @@ export function useAccountsPageData(args: AccountsPageDataOptions) {
       loadAccountsPageData({
         accountBookId: args.accountBookId,
         tab: args.tab,
-        showArchived,
+        showArchived:
+          args.managementContext === "categories" ? true : showArchived,
       }),
     );
   const onRefreshConstraints = useCallback(async () => {

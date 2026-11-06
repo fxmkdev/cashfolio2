@@ -1,3 +1,5 @@
+import { createId } from "@paralleldrive/cuid2";
+import { validateClassificationChange } from "@/shared/classification-rules";
 import { planAssetClassMove } from "@/shared/hierarchy-organize/move";
 import type {
   AssetClassOrganizeNode,
@@ -35,8 +37,16 @@ export const assetClassStoryNodes: AssetClassOrganizeNode[] = [
   },
 ];
 
-export function createAssetClassStoryApi(): OrganizerApi {
-  let nodes = structuredClone(assetClassStoryNodes);
+export function createAssetClassStoryApi(
+  initialNodes = assetClassStoryNodes,
+): OrganizerApi & {
+  save: (draft: {
+    id?: string;
+    name: string;
+    parentId: string | null;
+  }) => Promise<void>;
+} {
+  let nodes = structuredClone(initialNodes);
   let version = 0;
   const snapshot = (): OrganizeSnapshot =>
     structuredClone({
@@ -61,6 +71,30 @@ export function createAssetClassStoryApi(): OrganizerApi {
     });
   return {
     kind: "assetClasses",
+    save: async (draft) => {
+      validateClassificationChange(nodes, draft);
+      const current = nodes.find((node) => node.id === draft.id);
+      const sortOrder =
+        current?.parentId === draft.parentId
+          ? current.sortOrder
+          : Math.max(
+              -1,
+              ...nodes
+                .filter((node) => node.parentId === draft.parentId)
+                .map((node) => node.sortOrder),
+            ) + 1;
+      if (current) Object.assign(current, draft, { sortOrder });
+      else
+        nodes.push({
+          ...draft,
+          id: createId(),
+          sortOrder,
+          nodeType: "assetClass",
+          activeCount: 0,
+          archivedCount: 0,
+        });
+      version++;
+    },
     load: async () => snapshot(),
     move: async (move, expected) => {
       if (expected !== String(version))

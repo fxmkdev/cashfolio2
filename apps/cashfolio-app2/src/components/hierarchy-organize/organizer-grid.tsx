@@ -18,6 +18,7 @@ import type { Organizer } from "./use-organizer";
 import type { useOrganizeDrag } from "./use-organize-drag";
 import type { LifecycleDialog } from "./lifecycle-dialogs";
 import styles from "./organizer.module.css";
+import type { HierarchyManagement } from "./management";
 
 // Hint updates must not reconfigure the tree column or recreate its controls.
 const gridOptions: GridOptions<OrganizeDisplayRow> = {
@@ -51,6 +52,7 @@ export function OrganizerGrid({
   onSelectionChanged,
   onMoveItems,
   onLifecycle,
+  management,
 }: {
   rows: OrganizeDisplayRow[];
   api?: GridApi<OrganizeDisplayRow>;
@@ -63,14 +65,18 @@ export function OrganizerGrid({
   ) => void;
   onMoveItems: (items: OrganizeNodeRef[]) => void;
   onLifecycle: (dialog: LifecycleDialog) => void;
+  management?: HierarchyManagement;
 }) {
   const expansion = useRef(new Map<string, boolean>());
   const organizerRef = useRef(organizer);
   organizerRef.current = organizer;
   const callbacks = useRef({ onMoveItems, onLifecycle });
+  const managementRef = useRef(management);
+  managementRef.current = management;
   callbacks.current = { onMoveItems, onLifecycle };
   const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
     () => [
+      ...(management?.columns ?? []),
       ...(organizer.kind === "assetClasses"
         ? []
         : ([
@@ -100,9 +106,17 @@ export function OrganizerGrid({
       {
         ...rowActionsColumnProps,
         colId: "actions",
-        width: 120,
-        minWidth: 120,
-        maxWidth: 120,
+        width: management ? (organizer.kind === "categories" ? 200 : 144) : 120,
+        minWidth: management
+          ? organizer.kind === "categories"
+            ? 200
+            : 144
+          : 120,
+        maxWidth: management
+          ? organizer.kind === "categories"
+            ? 200
+            : 144
+          : 120,
         pinned: "right",
         cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
           data ? (
@@ -112,6 +126,38 @@ export function OrganizerGrid({
               availability={organizer.snapshot?.actionAvailability[data.id]}
               blocked={blocked || drag.dragging}
               onMove={() => callbacks.current.onMoveItems([data])}
+              addChildLabel={management?.addChildLabel}
+              onEdit={
+                management
+                  ? () =>
+                      managementRef.current?.onEdit({
+                        ...data,
+                        parentId: data.parentId ?? null,
+                      })
+                  : undefined
+              }
+              onAddChild={
+                management &&
+                (data.nodeType === "assetClass" ||
+                  (data.nodeType === "accountGroup" && data.isActive))
+                  ? () =>
+                      managementRef.current?.onAddChild({
+                        ...data,
+                        parentId: data.parentId ?? null,
+                      })
+                  : undefined
+              }
+              onAddGroup={
+                management?.onAddGroup &&
+                data.nodeType === "accountGroup" &&
+                data.isActive
+                  ? () =>
+                      managementRef.current?.onAddGroup?.({
+                        ...data,
+                        parentId: data.parentId ?? null,
+                      })
+                  : undefined
+              }
               onArchive={() =>
                 callbacks.current.onLifecycle({
                   action: "archive",
@@ -138,6 +184,7 @@ export function OrganizerGrid({
       blocked,
       organizer.snapshot?.actionAvailability,
       organizer.kind,
+      management,
     ],
   );
   const rowClassRules = useMemo<
@@ -153,13 +200,20 @@ export function OrganizerGrid({
   const isGroupOpenByDefault = useCallback<
     NonNullable<GridOptions<OrganizeDisplayRow>["isGroupOpenByDefault"]>
   >(
-    ({ rowNode }) => expansion.current.get(rowNode.id!) ?? rowNode.level === 0,
+    (params) =>
+      expansion.current.get(params.rowNode.id!) ??
+      managementRef.current?.expansion?.isGroupOpenByDefault(params) ??
+      (managementRef.current && organizerRef.current.kind === "assetClasses"
+        ? true
+        : params.rowNode.level === 0),
     [],
   );
   const onRowGroupOpened = useCallback<
     NonNullable<GridOptions<OrganizeDisplayRow>["onRowGroupOpened"]>
-  >(({ node }) => {
+  >((event) => {
+    const { node } = event;
     if (node.id) expansion.current.set(node.id, !!node.expanded);
+    managementRef.current?.expansion?.onRowGroupOpened(event);
   }, []);
   useEffect(() => {
     api?.forEachNode((node) => {
@@ -179,7 +233,25 @@ export function OrganizerGrid({
       groupDefaultExpanded={1}
       isGroupOpenByDefault={isGroupOpenByDefault}
       onRowGroupOpened={onRowGroupOpened}
-      onGridReady={onGridReady}
+      onGridReady={(event) => {
+        if (management)
+          event.api.setGridAriaProperty(
+            "label",
+            organizer.kind === "categories" ? "Categories" : "Asset Classes",
+          );
+        onGridReady(event);
+      }}
+      onRowDoubleClicked={({ data, event }) => {
+        if (
+          blocked ||
+          !data ||
+          data.nodeType !== "account" ||
+          (event?.target instanceof Element &&
+            event.target.closest(".actions-cell"))
+        )
+          return;
+        managementRef.current?.onOpenLeaf?.(data.id);
+      }}
       onSelectionChanged={onSelectionChanged}
       rowDragMultiRow
       rowDragManaged={false}

@@ -113,6 +113,7 @@ export function useAccountsPageController(args: {
   } = loaderData;
   const modalState = useAccountsPageModalState(
     `${args.accountBookId}:${args.tab}`,
+    args.managementContext === "categories",
   );
   const {
     rows,
@@ -166,6 +167,26 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    onEditHierarchyNode: (node) => {
+      const row = rows.find((row) => row.id === node.id);
+      if (row)
+        modalState.handleEditRow({
+          ...row,
+          name: node.name,
+          parentId: node.parentId ?? undefined,
+          persistedParentId: node.parentId,
+          groupId:
+            node.nodeType === "account"
+              ? (node.parentId ?? undefined)
+              : row.groupId,
+          sortOrder: node.sortOrder,
+          isActive: node.isActive !== false,
+        });
+    },
+    onAddHierarchyChild: (node, kind) => {
+      const row = rows.find((row) => row.id === node.id);
+      if (row) onAddChild(row, kind);
+    },
     onOrganizeSaved: args.invalidate,
     organize: args.organize,
     organizerApi,

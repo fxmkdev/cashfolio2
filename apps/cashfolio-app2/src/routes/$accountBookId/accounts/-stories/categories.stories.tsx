@@ -1,4 +1,3 @@
-import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { findVisibleDialog } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
@@ -32,9 +31,14 @@ export const ExpenseCategories: Story = {
         { name: "Expenses" },
       ),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(
-      canvas.getByText("Electricity", { exact: true }),
-    ).toBeVisible();
+    const utilities = await canvas.findByText("Utilities", { exact: true });
+    const expander = utilities
+      .closest(".ag-row")
+      ?.querySelector<HTMLElement>(".ag-group-contracted");
+    if (expander) await userEvent.click(expander);
+    await waitFor(() =>
+      expect(canvas.getByText("Electricity", { exact: true })).toBeVisible(),
+    );
     // Name scrolls while row actions remain pinned, including on mobile.
     await expect(
       canvasElement.querySelector(
@@ -58,9 +62,11 @@ export const ExpenseCategories: Story = {
         .getByText(name, { exact: true })
         .closest<HTMLElement>(".ag-row");
       if (!row) throw new Error(`Missing ${name} row`);
-      const actions = await openRowActionsMenu(row);
-      const deleteItem = actions.getByRole("menuitem", { name: "Delete" });
-      await expect(deleteItem).toHaveAttribute("aria-disabled", "true");
+      await userEvent.hover(row);
+      const deleteItem = within(row).getByRole("button", {
+        name: new RegExp(`^Delete ${name}$`),
+      });
+      await expect(deleteItem).toBeDisabled();
       await expect(deleteItem).toHaveAccessibleDescription(reason);
       await userEvent.hover(deleteItem);
       await waitFor(() =>
@@ -100,31 +106,21 @@ export const CategoriesWithArchived: Story = {
     const canvas = within(canvasElement);
     const visibility = canvas.getByRole("checkbox", { name: "Show Archived" });
     await expect(visibility).toBeChecked();
-    for (const label of await canvas.findAllByText("Archived", {
-      exact: true,
-    })) {
-      expect(label.closest('[role="row"]')).toHaveAttribute(
-        "aria-expanded",
-        "false",
-      );
-    }
+    await waitFor(() =>
+      expect(canvas.getByText("Old Category", { exact: true })).toBeVisible(),
+    );
+    expect(canvasElement.querySelector('[row-id^="__archived__:"]')).toBeNull();
     await expect(
       canvas.getByRole("button", { name: "Add Expense Category" }),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("navigation", { name: "Category Archive" }),
     ).not.toBeInTheDocument();
-    await userEvent.hover(canvas.getAllByText("Archived", { exact: true })[0]);
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByRole("tooltip"),
-    ).toHaveTextContent(
-      "Archived categories grouped automatically. Their transaction history is preserved.",
-    );
     await userEvent.click(visibility);
     await waitFor(() =>
-      expect(canvas.queryAllByText("Archived", { exact: true })).toHaveLength(
-        0,
-      ),
+      expect(
+        canvas.queryByText("Old Category", { exact: true }),
+      ).not.toBeInTheDocument(),
     );
     await expect(visibility).not.toBeChecked();
   },

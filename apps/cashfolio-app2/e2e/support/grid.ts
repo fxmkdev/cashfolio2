@@ -87,6 +87,11 @@ export async function getRowAction(row: Locator, actionLabel: string) {
     exact: true,
   });
   if (await direct.count()) return direct;
+  const escapedLabel = actionLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const namedDirect = stableRow.getByRole("button", {
+    name: new RegExp(`^${escapedLabel} `),
+  });
+  if (await namedDirect.count()) return namedDirect;
   const trigger = stableRow.getByRole("button", { name: /^More Actions for / });
   if ((await trigger.getAttribute("aria-expanded")) !== "true") {
     await trigger.click();

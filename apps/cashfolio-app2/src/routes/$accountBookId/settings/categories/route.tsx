@@ -23,21 +23,20 @@ const AccountsPageView = lazy(async () => {
 export const Route = createFileRoute("/$accountBookId/settings/categories")({
   validateSearch: parseCategoriesSearch,
   loaderDeps: ({ search }) => ({
-    showArchived: search.showArchived,
     tab: search.tab,
   }),
   beforeLoad: ({ location, params, search }) => {
-    if (new URLSearchParams(location.searchStr).has("mode")) {
+    if (
+      new URLSearchParams(location.searchStr).has("mode") ||
+      new URLSearchParams(location.searchStr).has("organize")
+    ) {
       throw redirect({ ...getCategoriesRedirect(search), params });
     }
   },
-  loader: async ({
-    params: { accountBookId },
-    deps: { showArchived, tab },
-  }) => {
+  loader: async ({ params: { accountBookId }, deps: { tab } }) => {
     const pageData = await loadAccountsPageData({
       accountBookId,
-      showArchived,
+      showArchived: true,
       tab,
     });
     return {
@@ -53,7 +52,7 @@ function CategoriesPage() {
   const ledgerNavigationState = useLedgerNavigationState();
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab, showArchived, organize } = Route.useSearch();
+  const { tab, showArchived } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/settings/categories" });
   const router = useRouter();
   const viewProps = useAccountsPageController({
@@ -62,7 +61,6 @@ function CategoriesPage() {
     accountBookId,
     tab,
     showArchived,
-    organize,
     onShowArchivedChange: (nextShowArchived) => {
       void navigate({ search: { tab, showArchived: nextShowArchived } });
     },

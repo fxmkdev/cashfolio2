@@ -30,14 +30,18 @@ import { MoveDialog } from "./move-dialog";
 import type { Organizer } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
+import type { HierarchyManagement } from "./management";
+import { useManagementFocus } from "./use-management-focus";
 
 export function HierarchyOrganizer({
   accountBookId,
   organizer,
   renderLifecycleDialog,
+  management,
 }: {
   accountBookId: string;
   organizer: Organizer;
+  management?: HierarchyManagement;
   renderLifecycleDialog?: (
     dialog: LifecycleDialog | undefined,
     onClose: () => void,
@@ -50,7 +54,8 @@ export function HierarchyOrganizer({
       : organizer.kind === "categories"
         ? "Categories"
         : "Accounts";
-  const [showArchived, setShowArchived] = useState(false);
+  const [localShowArchived, setShowArchived] = useState(false);
+  const showArchived = management?.showArchived ?? localShowArchived;
   const [selectionNotice, setSelectionNotice] = useState("");
   const region = useRef<HTMLElement>(null);
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
@@ -58,7 +63,11 @@ export function HierarchyOrganizer({
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
   const [lifecycleDialog, setLifecycleDialog] = useState<LifecycleDialog>();
   const movementBlocked =
-    organizer.blocked || !!dialogItems || !!lifecycleDialog;
+    organizer.blocked ||
+    !!dialogItems ||
+    !!lifecycleDialog ||
+    !!management?.editorOpened;
+  useManagementFocus(region, !!management, movementBlocked);
   const nodes = useMemo(
     () => organizer.snapshot?.nodes ?? [],
     [organizer.snapshot],
@@ -91,6 +100,10 @@ export function HierarchyOrganizer({
     blocked: movementBlocked,
     saveMove: organizer.saveMove,
   });
+  const onInteractionBlockedChange = management?.onInteractionBlockedChange;
+  useEffect(() => {
+    onInteractionBlockedChange?.(movementBlocked || drag.dragging);
+  }, [onInteractionBlockedChange, movementBlocked, drag.dragging]);
   useOrganizeReveal({ api, nodes, rows, organizer, region });
   const onGridReady = useCallback(
     ({ api }: GridReadyEvent<OrganizeDisplayRow>) => setApi(api),
@@ -128,7 +141,7 @@ export function HierarchyOrganizer({
       ref={region}
       tabIndex={-1}
       component="section"
-      aria-label={`Organize ${label}`}
+      aria-label={management ? `${label} Hierarchy` : `Organize ${label}`}
       className={movementBlocked ? styles.blocked : undefined}
       data-account-book-id={accountBookId}
       style={{
@@ -152,20 +165,21 @@ export function HierarchyOrganizer({
         organizer={organizer}
         hiddenResults={hiddenResults}
         showArchived={showArchived}
-        supportsArchived={supportsArchived}
+        supportsArchived={supportsArchived && !management}
         onVisibility={changeArchivedVisibility}
       />
       {!dialogItems && !lifecycleDialog && (
         <OrganizerMutationFeedback organizer={organizer} />
       )}
       <VisuallyHidden role="status" aria-live="polite">
-        Organize mode. {selectionNotice} {organizer.message}{" "}
+        {!management && "Organize mode. "}
+        {selectionNotice} {organizer.message}{" "}
         {hiddenResults > 0 &&
           `${hiddenResults} affected archived items are hidden. Enable Show Archived to view them.`}
       </VisuallyHidden>
       {!rows.length && (
         <Text size="sm" c="dimmed">
-          {showArchived || !supportsArchived ? (
+          {showArchived || !supportsArchived || management ? (
             `There are no ${label.toLowerCase()} to organize.`
           ) : (
             <>
@@ -185,8 +199,9 @@ export function HierarchyOrganizer({
         rows={rows}
         api={api}
         organizer={organizer}
+        management={management}
         drag={drag}
-        blocked={organizer.blocked}
+        blocked={management ? movementBlocked : organizer.blocked}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
         onMoveItems={setDialogItems}

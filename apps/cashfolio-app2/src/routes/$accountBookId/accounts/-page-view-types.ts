@@ -1,3 +1,5 @@
+import type { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import type { OrganizeNode } from "@/shared/hierarchy-organize/types";
 import { type ReportingGrouping } from "@/shared/reporting-grouping";
 import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
@@ -25,6 +27,12 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  editorSubmitState?: ReturnType<typeof useDialogSubmitState>;
+  onEditHierarchyNode?: (node: OrganizeNode) => void;
+  onAddHierarchyChild?: (
+    node: OrganizeNode,
+    kind: "account" | "accountGroup",
+  ) => void;
   organizerApi?: OrganizerApi;
   organize?: boolean;
   onOrganizeSaved?: () => void;
