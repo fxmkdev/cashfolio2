@@ -8,6 +8,17 @@ test("organizes the selected category type with archived descendants and exits o
   e2eExternalId,
 }) => {
   const book = await seedDatabase({ userExternalId: e2eExternalId });
+  // The shared reporting seed recreates a legacy mixed-subtype Equity parent.
+  // Use a valid subtype-specific category hierarchy, as current migrations do.
+  await prisma.accountGroup.update({
+    where: {
+      id_accountBookId: {
+        id: book.expenseGroupId,
+        accountBookId: book.accountBookId,
+      },
+    },
+    data: { parentGroupId: null },
+  });
   const [source, destination, leaf, archived, income] = Array.from(
     { length: 5 },
     () => createId(),
