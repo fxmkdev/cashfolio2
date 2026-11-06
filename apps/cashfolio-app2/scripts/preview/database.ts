@@ -24,8 +24,8 @@ async function previewDatabase(
   prNumber(number);
   const { rows } = await client.query<{ name: string; owner: string }>(
     `SELECT datname AS name, pg_get_userbyid(datdba) AS owner FROM pg_database
-     WHERE starts_with(datname, $1) AND ends_with(datname, '-cashfolio-app2')`,
-    [`pr-${number}-`],
+     WHERE datname LIKE $1`,
+    [`pr-${number}-%-cashfolio-app2`],
   );
   if (
     rows.length > 1 ||

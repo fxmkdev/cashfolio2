@@ -18,7 +18,7 @@ function fake(
     query: async (sql: string, values?: unknown[]) => {
       calls.push(sql);
       if (sql.includes("datname AS name")) {
-        assert.deepEqual(values, ["pr-42-"]);
+        assert.deepEqual(values, ["pr-42-%-cashfolio-app2"]);
         return { rows: options.databases ?? [] };
       }
       if (sql.startsWith("CREATE DATABASE") && options.failCreate)
