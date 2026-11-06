@@ -5,6 +5,7 @@ import {
 } from "@/.prisma-client/enums";
 import {
   getAccountGroups,
+  getAccountNavigationGroups,
   getAccounts,
   getExistingNodes,
   getLedgerAccountActionData,
@@ -50,6 +51,7 @@ export async function loadLedgerPageData(args: {
     accountTreeRow,
     accountGroups,
     existingNodes,
+    navigationGroups,
   ] = await Promise.all([
     getLedgerData({
       data: {
@@ -86,6 +88,11 @@ export async function loadLedgerPageData(args: {
     getExistingNodes({
       data: { accountBookId: args.accountBookId, accountState },
     }),
+    account.type === AccountType.BALANCE
+      ? getAccountNavigationGroups({
+          data: { accountBookId: args.accountBookId },
+        })
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -93,6 +100,7 @@ export async function loadLedgerPageData(args: {
     accountTreeRow,
     accountGroups,
     existingNodes,
+    navigationGroups,
     rows: ledgerData.rows,
     referenceCurrency: ledgerData.referenceCurrency,
     showGainLoss:

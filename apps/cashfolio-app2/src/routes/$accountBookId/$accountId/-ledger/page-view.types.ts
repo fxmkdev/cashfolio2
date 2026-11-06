@@ -21,6 +21,7 @@ import type { TabValue } from "@/shared/account-tabs";
 import type { SimpleTransactionEditInitialValues } from "./page-data";
 import type { loadLedgerPageData } from "./page-loader";
 import type { LedgerRow } from "./page-types";
+import type { LedgerAccountSwitcherProps } from "./account-switcher";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
@@ -70,6 +71,7 @@ export type RebookingState = {
 };
 
 export type LedgerPageViewProps = {
+  accountSwitcher?: Omit<LedgerAccountSwitcherProps, "account">;
   returnNavigation?: { target: LedgerReturnTarget; onReturn: () => void };
   onManageCategory?: () => void;
   onRefreshConstraints?: () => Promise<void>;

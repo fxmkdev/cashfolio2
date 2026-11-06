@@ -70,11 +70,55 @@ vi.mock("../valuation.server", () => ({
 
 import {
   getActiveAccountBookUnitUsage,
+  getAccountNavigationGroups,
   getAccountsPageData,
   getAccountTreeData,
   getLedgerAccountActionData,
   getGainLossEquityAccountId,
 } from "./accounts-queries";
+
+describe("getAccountNavigationGroups", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("authorizes and loads all financial group metadata without balances", async () => {
+    const groups = [
+      {
+        id: "group",
+        name: "Bank",
+        parentGroupId: null,
+        isActive: false,
+        sortOrder: 2,
+      },
+    ];
+    prisma.accountGroup.findMany.mockResolvedValue(groups);
+    await expect(
+      getAccountNavigationGroups({ data: { accountBookId: "book-1" } }),
+    ).resolves.toEqual(groups);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledExactlyOnceWith({
+      where: { accountBookId: "book-1", type: AccountType.BALANCE },
+      select: {
+        id: true,
+        name: true,
+        parentGroupId: true,
+        isActive: true,
+        sortOrder: true,
+      },
+    });
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(prisma.booking.groupBy).not.toHaveBeenCalled();
+  });
+
+  it("does not query metadata when authorization fails", async () => {
+    ensureAuthorizedForAccountBookId.mockRejectedValueOnce(
+      new Error("Forbidden"),
+    );
+    await expect(
+      getAccountNavigationGroups({ data: { accountBookId: "other-book" } }),
+    ).rejects.toThrow("Forbidden");
+    expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+  });
+});
 
 describe("getAccountTreeData", () => {
   const statementImportCsvFormat = {

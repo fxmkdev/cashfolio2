@@ -12,6 +12,7 @@ export {
   getAccountsPageData,
   getAccountReferenceBalances,
   getAccountGroups,
+  getAccountNavigationGroups,
   getActiveAccountBookUnitUsage,
   getAccounts,
   getExistingNodes,

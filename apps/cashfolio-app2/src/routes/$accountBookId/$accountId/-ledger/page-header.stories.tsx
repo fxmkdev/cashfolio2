@@ -87,6 +87,7 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
   const heading = canvas.getByRole("heading", { level: 2 });
   const metadata = canvas.getByTestId("ledger-header-metadata");
   const toolbar = canvas.getByRole("group", { name: "Ledger Controls" });
+  const switcher = canvas.getByRole("textbox", { name: "Switch Account" });
   const period = canvas.getByRole("button", {
     name: "Previous Period",
   }).parentElement!;
@@ -99,7 +100,15 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
     const header = heading
       .closest(".cf-page-shell")!
       .firstElementChild!.getBoundingClientRect();
-    for (const element of [heading, metadata, toolbar, period, split, add]) {
+    for (const element of [
+      heading,
+      switcher,
+      metadata,
+      toolbar,
+      period,
+      split,
+      add,
+    ]) {
       const rect = element.getBoundingClientRect();
       expect(rect.left).toBeGreaterThanOrEqual(bounds.left - 1);
       expect(rect.right).toBeLessThanOrEqual(bounds.right + 1);

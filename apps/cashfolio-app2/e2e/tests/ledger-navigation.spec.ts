@@ -1,6 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
 import { selectSegmentedControlOption } from "../support/segmented-control";
-import { agGridRowByText } from "../support/grid";
+import {
+  agGridRowByText,
+  clickGridRowSelectionCheckbox,
+} from "../support/grid";
 import { prisma } from "../support/db-client";
 import { seedDatabase, type SeededData } from "../support/db";
 import { expect, test, type Page } from "../support/fixtures";
@@ -10,9 +13,37 @@ let incomeId: string;
 let archivedId: string;
 let openingId: string;
 let gainLossId: string;
+let distantAccountId: string;
+let archivedFinancialAccountId: string;
 
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
+  const branch = await prisma.accountGroup.create({
+    data: {
+      id: createId(),
+      accountBookId: seeded.accountBookId,
+      name: "E2E Other Bank",
+      type: "BALANCE",
+    },
+  });
+  for (const isActive of [true, false]) {
+    const account = await prisma.account.create({
+      data: {
+        id: createId(),
+        accountBookId: seeded.accountBookId,
+        name: isActive
+          ? "E2E Travel Account"
+          : "E2E Archived Financial Account",
+        type: "BALANCE",
+        groupId: branch.id,
+        unit: "CURRENCY",
+        currency: "CHF",
+        isActive,
+      },
+    });
+    if (isActive) distantAccountId = account.id;
+    else archivedFinancialAccountId = account.id;
+  }
   async function category(
     name: string,
     subtype: "INCOME" | "EXPENSE" | "OPENING_BALANCES" | "GAIN_LOSS",
@@ -82,6 +113,77 @@ async function expectNoSelectedSection(page: Page) {
   }
 }
 
+for (const period of ["2026-01", "2026", undefined]) {
+  test(`account switching preserves ${period ?? "All Periods"} across siblings, branches and browser history`, async ({
+    page,
+  }) => {
+    const search = period ? `?period=${period}` : "";
+    const source = `/${seeded.accountBookId}/${seeded.cashAccount.id}${search}#activity`;
+    await page.goto(source);
+    const switcher = page.getByRole("textbox", { name: "Switch Account" });
+    await expect(switcher).toHaveValue(seeded.cashAccount.name);
+    await userSwitchToSibling();
+    await expect(page).toHaveURL(
+      `/${seeded.accountBookId}/${seeded.savingsAccount.id}${search}`,
+    );
+    await expect(switcher).toHaveValue(seeded.savingsAccount.name);
+    await page.goBack();
+    await expect(page).toHaveURL(source);
+    await expect(switcher).toHaveValue(seeded.cashAccount.name);
+    const row = agGridRowByText(page, "E2E Navigation Expense");
+    await clickGridRowSelectionCheckbox(row);
+    await expect(
+      page.getByRole("toolbar", { name: "Selected Row Actions" }),
+    ).toBeVisible();
+    await switcher.click();
+    await expect(
+      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
+    ).toHaveCount(0);
+    await switcher.fill(" other bank / e2e travel ");
+    await page
+      .getByRole("option", { name: "E2E Travel Account", exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      `/${seeded.accountBookId}/${distantAccountId}${search}`,
+    );
+    await expect(
+      page.getByRole("toolbar", { name: "Selected Row Actions" }),
+    ).toHaveCount(0);
+    await switcher.click();
+    await expect(
+      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    await switcher.fill("E2E Archived Financial Account");
+    await page
+      .getByRole("option", {
+        name: "E2E Archived Financial Account",
+        exact: true,
+      })
+      .click();
+    await expect(page).toHaveURL(
+      `/${seeded.accountBookId}/${archivedFinancialAccountId}${search}`,
+    );
+    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(
+      `/${seeded.accountBookId}/${distantAccountId}${search}`,
+    );
+
+    async function userSwitchToSibling() {
+      await switcher.click();
+      await expect(
+        page.getByRole("option", {
+          name: seeded.cashAccount.name,
+          exact: true,
+        }),
+      ).toHaveAttribute("aria-selected", "true");
+      await page
+        .getByRole("option", { name: seeded.savingsAccount.name, exact: true })
+        .click();
+    }
+  });
+}
+
 test("counterparty navigation preserves the immediate source across filters, reload and history", async ({
   page,
 }) => {
@@ -139,6 +241,9 @@ test("direct category and system visits have neutral navigation and only editabl
     [archivedId, "Expense Category", "Category Actions"],
   ]) {
     await page.goto(`/${seeded.accountBookId}/${id}`);
+    await expect(
+      page.getByRole("textbox", { name: "Switch Account" }),
+    ).toHaveCount(0);
     await expect(page.getByText(badge, { exact: true })).toBeVisible();
     await expectNoSelectedSection(page);
     await expect(page.getByRole("link", { name: /^Back to/ })).toHaveCount(0);
