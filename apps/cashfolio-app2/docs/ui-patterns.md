@@ -420,11 +420,14 @@ validation rechecks every submitted account inside one authorized book mutation
 and rejects the whole request if any target is missing or no longer eligible.
 Groups do not store or inherit a tracking method.
 
-Assets and liabilities show `Asset Class: …` as small, muted text beneath the
-ledger name and compact type/unit/status badges, including on archived accounts.
-Show the complete classification hierarchy in its original capitalization and
-allow long paths to wrap. Unclassified accounts show
-`Asset Class: Unclassified`. Equity accounts have no asset-class metadata.
+Assets and liabilities show `Account Group: … · Asset Class: …` as small, muted
+text beneath the ledger name and compact type/unit/status badges, including on
+archived accounts. Show the complete group and classification hierarchies in
+their original capitalization, with `/` between path segments. Accounts with no
+group show `Account Group: Top Level`; unclassified accounts show
+`Asset Class: Unclassified`. Separate the fields with a spaced middle dot (`·`,
+U+00B7), keeping it attached to the preceding field when text wraps. Allow long
+paths to wrap. Category/equity ledger headers omit this metadata line.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure

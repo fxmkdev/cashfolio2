@@ -157,6 +157,7 @@ function LedgerPageStoryHarness({
   accountEditDisabledReason,
   onOpenImportPage,
   accountName,
+  groupPathSegments = assetAccount.groupPathSegments,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -173,6 +174,7 @@ function LedgerPageStoryHarness({
   accountEditDisabledReason?: string;
   onOpenImportPage?: () => void;
   accountName?: string;
+  groupPathSegments?: string[];
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -273,6 +275,7 @@ function LedgerPageStoryHarness({
       : {
           ...assetAccount,
           name: accountName ?? assetAccount.name,
+          groupPathSegments,
           type: accountType,
           isActive: accountActive,
           assetClassId,
@@ -641,6 +644,11 @@ export const HappyPath: Story = {
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
     ).toHaveTextContent("Asset Class: Unclassified");
+    const metadata = canvas.getByTestId("ledger-header-metadata");
+    await expect(metadata).toHaveTextContent(
+      "Account Group: Assets / Cash · Asset Class: Unclassified",
+    );
+    await expect(metadata.textContent?.match(/·/g)).toEqual(["·"]);
     await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
@@ -662,6 +670,15 @@ export const ClassifiedAsset: Story = {
         "Asset Class: Commodities & Precious Metals",
       ),
     ).toHaveTextContent("Asset Class: Commodities & Precious Metals");
+  },
+};
+
+export const TopLevelAccount: Story = {
+  render: () => <LedgerPageStoryHarness groupPathSegments={[]} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByTestId("ledger-header-metadata"),
+    ).toHaveTextContent("Account Group: Top Level · Asset Class: Unclassified");
   },
 };
 
@@ -690,6 +707,11 @@ export const ArchivedClassifiedLiability: Story = {
     await expect(
       canvas.getByTitle("Asset Class: Fixed Income"),
     ).toHaveTextContent("Asset Class: Fixed Income");
+    await expect(
+      canvas.getByTestId("ledger-header-metadata"),
+    ).toHaveTextContent(
+      "Account Group: Assets / Cash · Asset Class: Fixed Income",
+    );
   },
 };
 
@@ -699,11 +721,18 @@ export const EquityWithoutAssetClass: Story = {
     await expect(
       within(canvasElement).queryByTitle(/^Asset Class:/),
     ).not.toBeInTheDocument();
+    await expect(
+      within(canvasElement).queryByTestId("ledger-header-metadata"),
+    ).not.toBeInTheDocument();
   },
 };
 
 const longAccountName =
   "EverydayaccountCHFWithAnUnusuallyLongUnbrokenName".repeat(3);
+const longGroupPathSegments = [
+  "Household Accounts and Long-Term Cash Reserves",
+  "VeryLongUnbrokenAccountGroupName".repeat(3),
+];
 const longAssetClassNodes = [
   {
     id: "long-parent",
@@ -734,6 +763,7 @@ function ResponsiveLedgerHeaderHarness({
   const ledger = (
     <LedgerPageStoryHarness
       accountName={longContent ? longAccountName : "Everyday account CHF"}
+      groupPathSegments={longContent ? longGroupPathSegments : undefined}
       assetClassId={
         longContent ? "long-child" : defaultAssetClassIds.BANK_DEPOSITS
       }
@@ -768,7 +798,7 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   const container = canvas.getByTestId("ledger-header-container");
   const heading = canvas.getByRole("heading", { level: 2 });
-  const metadata = canvas.getByTitle(/^Asset Class:/);
+  const metadata = canvas.getByTestId("ledger-header-metadata");
   const toolbar = canvas.getByRole("group", { name: "Ledger Controls" });
   const period = canvas.getByRole("button", {
     name: "Previous Period",
@@ -912,6 +942,11 @@ export const ResponsiveHeaderLongContent: Story = {
     ).toBeVisible();
     await expect(canvas.getByTitle(/^Asset Class:/)).toHaveTextContent(
       `Asset Class: ${longAssetClassNodes[0].name} / ${longAssetClassNodes[1].name}`,
+    );
+    await expect(
+      canvas.getByTestId("ledger-header-metadata"),
+    ).toHaveTextContent(
+      `Account Group: ${longGroupPathSegments.join(" / ")} · Asset Class: ${longAssetClassNodes[0].name} / ${longAssetClassNodes[1].name}`,
     );
     await checkResponsiveLedgerHeader(canvasElement);
     for (const name of [

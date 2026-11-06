@@ -313,6 +313,8 @@ export function LedgerPageView({
 }: LedgerPageViewProps) {
   const entityLabel = getAccountEntityLabel(account);
   const context = getAccountManagementContext(account);
+  const accountGroupLabel =
+    account.groupPathSegments.join(" / ") || "Top Level";
   const formatErrorMessage = (message: string) =>
     getAccountConstraintMessage(message, context) ?? message;
   const accountKindBadge = getLedgerAccountKindBadgeProps(account);
@@ -358,12 +360,12 @@ export function LedgerPageView({
         heading={<Title order={2}>{account.name}</Title>}
         description={
           account.type === AccountType.BALANCE ? (
-            <Text
-              size="sm"
-              c="dimmed"
-              title={`Asset Class: ${assetClassLabel}`}
-            >
-              Asset Class: {assetClassLabel}
+            <Text size="sm" c="dimmed" data-testid="ledger-header-metadata">
+              <span>Account Group: {accountGroupLabel}</span>
+              <span aria-hidden="true">{"\u00a0·"}</span>{" "}
+              <span title={`Asset Class: ${assetClassLabel}`}>
+                Asset Class: {assetClassLabel}
+              </span>
             </Text>
           ) : undefined
         }
