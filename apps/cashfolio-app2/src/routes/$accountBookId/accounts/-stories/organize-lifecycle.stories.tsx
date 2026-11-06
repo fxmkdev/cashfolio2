@@ -247,6 +247,13 @@ export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
         canvasElement.querySelector('[row-id="archived-group"]'),
       ).toBeNull(),
     );
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="cash"] [col-id="ag-Grid-AutoColumn"]',
+        ),
+      ).toHaveFocus(),
+    );
   },
 };
 

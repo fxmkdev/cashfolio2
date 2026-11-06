@@ -31,6 +31,7 @@ export function useOrganizer(
   const [loading, setLoading] = useState(autoLoad);
   const [message, setMessage] = useState("");
   const [revealIds, setRevealIds] = useState<string[]>([]);
+  const [focusFallbackIds, setFocusFallbackIds] = useState<string[]>([]);
   const mounted = useRef(true);
   const generation = useRef(0);
   const loadInFlight = useRef<number | undefined>(undefined);
@@ -97,6 +98,7 @@ export function useOrganizer(
     setLoadError(undefined);
     setMessage("");
     setRevealIds([]);
+    setFocusFallbackIds([]);
     clearSubmissionError();
     clearRefreshError();
   }, [clearRefreshError, clearSubmissionError, invalidateLoad]);
@@ -127,6 +129,7 @@ export function useOrganizer(
           confirmed.current = result.snapshot;
           setSnapshot(result.snapshot);
           setRevealIds(move.items.map((item) => item.id));
+          setFocusFallbackIds([]);
           setMessage(
             result.changed
               ? "Move saved."
@@ -183,13 +186,19 @@ export function useOrganizer(
     });
     onSaved();
     onCommitted?.();
-    const displayed = organizeDisplayRows(before.nodes, true);
-    const index = displayed.findIndex((item) => item.id === target.id);
-    const neighbor = displayed[index + 1] ?? displayed[index - 1];
-    setRevealIds([
-      target.id,
-      ...(node.parentId ? [node.parentId] : neighbor ? [neighbor.id] : []),
-    ]);
+    const siblings = organizeDisplayRows(before.nodes, true).filter(
+      (item) => (item.parentId ?? null) === node.parentId,
+    );
+    const index = siblings.findIndex((item) => item.id === target.id);
+    const neighbors: string[] = [];
+    for (let distance = 1; distance < siblings.length; distance++) {
+      const after = siblings[index + distance];
+      const previous = siblings[index - distance];
+      if (after) neighbors.push(after.id);
+      if (previous) neighbors.push(previous.id);
+    }
+    setRevealIds([target.id, ...(node.parentId ? [node.parentId] : [])]);
+    setFocusFallbackIds(neighbors);
     setMessage(
       `${node.name} ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
     );
@@ -229,6 +238,7 @@ export function useOrganizer(
     blocked: pending || needsRefresh || loading || !snapshot,
     message,
     revealIds,
+    focusFallbackIds,
     submitState,
     retry,
     retryDisabled: !isRetryValid(),

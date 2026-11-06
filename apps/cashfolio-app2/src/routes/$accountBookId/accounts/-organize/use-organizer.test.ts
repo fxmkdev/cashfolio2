@@ -133,6 +133,7 @@ describe("organizer controller", () => {
     expect(render(api).submitState.refreshError).toBeTruthy();
     render(api).reset();
     expect(render(api).revealIds).toEqual([]);
+    expect(render(api).focusFallbackIds).toEqual([]);
     expect(render(api).message).toBe("");
     expect(render(api).submitState.refreshError).toBeNull();
     expect(await render(api).load()).toBe(true);
@@ -377,5 +378,28 @@ describe("organizer controller", () => {
     expect(render(api).retryDisabled).toBe(true);
     render(api).retry();
     expect(archive).toHaveBeenCalledTimes(1);
+  });
+  it("offers sibling focus fallbacks instead of hidden descendants after archiving a root group", async () => {
+    const api = createOrganizerStoryApi(
+      undefined,
+      organizeStoryNodes.map((node) => ({
+        ...node,
+        isActive: ["nested", "holding", "fund"].includes(node.id)
+          ? false
+          : node.isActive,
+      })),
+    );
+    const organizer = await ready(api);
+    expect(
+      await organizer.submitState.runSubmit(() =>
+        organizer.performLifecycle("archive", {
+          id: "investments",
+          nodeType: "accountGroup",
+        }),
+      ),
+    ).toBe(true);
+    expect(render(api).revealIds).toEqual(["investments"]);
+    expect(render(api).focusFallbackIds[0]).toBe("destination");
+    expect(render(api).focusFallbackIds).not.toContain("archived");
   });
 });

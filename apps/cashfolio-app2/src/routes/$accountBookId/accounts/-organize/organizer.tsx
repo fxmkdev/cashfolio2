@@ -133,12 +133,13 @@ export function AccountOrganizer({
       for (const id of organizer.revealIds) reveal(id, false);
       if (
         organizer.revealIds.length &&
-        !organizer.revealIds.some((id) => reveal(id, true))
+        !organizer.revealIds.some((id) => reveal(id, true)) &&
+        !organizer.focusFallbackIds.some((id) => reveal(id, true))
       )
         region.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [organizer.revealIds, rows, reveal]);
+  }, [organizer.focusFallbackIds, organizer.revealIds, rows, reveal]);
   const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
     () => [
       {
