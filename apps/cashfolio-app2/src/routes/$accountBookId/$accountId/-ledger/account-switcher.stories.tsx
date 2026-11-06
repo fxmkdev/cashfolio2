@@ -19,78 +19,157 @@ const meta: Meta<typeof LedgerAccountSwitcher> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+async function expectClosed() {
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: /^Switch Account:/ }),
+    ).not.toBeInTheDocument(),
+  );
+}
+
+async function expectOpen() {
+  await waitFor(() =>
+    expect(
+      screen.getByRole("dialog", { name: /^Switch Account:/ }),
+    ).toBeVisible(),
+  );
+}
+
 export const BrowseAndSearch: Story = {
   play: async ({ canvasElement, args }) => {
-    const input = within(canvasElement).getByRole("textbox", {
-      name: "Switch Account",
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", {
+      name: "Switch Account: Checking",
     });
-    await expect(input).toHaveValue("Checking");
-    await userEvent.click(input);
-    await expect(input).toHaveValue("");
     await expect(
-      screen.getByRole("option", { name: "Checking" }),
+      canvas.getByRole("heading", { level: 2, name: "Checking" }),
+    ).toBeVisible();
+    await expect(canvas.getAllByText("Checking", { exact: true })).toHaveLength(
+      1,
+    );
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+    await userEvent.click(trigger);
+    const search = await screen.findByRole("textbox", {
+      name: "Search Accounts",
+    });
+    await waitFor(() => expect(search).toHaveFocus());
+    await expectOpen();
+    await expect(search).toHaveValue("");
+    await expect(screen.getByRole("tree", { name: "Accounts" })).toBeVisible();
+    await expect(
+      screen.getByRole("treeitem", { name: "Checking" }),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(screen.getByRole("option", { name: "Savings" })).toBeVisible();
     await expect(
-      screen.queryByRole("option", { name: "Travel EUR" }),
+      screen.getByRole("treeitem", { name: "Savings" }),
+    ).toBeVisible();
+    await expect(
+      screen.queryByRole("treeitem", { name: "Travel EUR" }),
     ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Empty Group", { exact: true }));
+    await userEvent.keyboard("{Enter}");
+    await expect(args.onSelectAccount).not.toHaveBeenCalled();
     await expect(
-      screen.getByRole("option", { name: "Empty Group" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    await userEvent.click(screen.getByRole("option", { name: /Other Bank/ }));
+      screen.getByRole("dialog", { name: /^Switch Account:/ }),
+    ).toBeVisible();
+    await userEvent.click(screen.getByText("Other Bank", { exact: true }));
     await expect(
-      screen.getByRole("option", { name: "Travel EUR" }),
+      screen.getByRole("treeitem", { name: "Travel EUR" }),
     ).toBeVisible();
     await expect(args.onSelectAccount).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("option", { name: /Other Bank/ }));
+    await userEvent.type(search, "Checking");
     await expect(
-      screen.queryByRole("option", { name: "Travel EUR" }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("option", { name: "Checking" }));
-    await expect(args.onSelectAccount).not.toHaveBeenCalled();
-    await userEvent.click(input);
-    await userEvent.type(input, "Checking");
-    await expect(
-      screen.getAllByRole("option", { name: "Checking" }),
+      screen.getAllByRole("treeitem", { name: "Checking" }),
     ).toHaveLength(2);
     await expect(
-      screen.queryByRole("option", { name: "Savings" }),
+      screen.queryByRole("treeitem", { name: "Savings" }),
     ).not.toBeInTheDocument();
-    await userEvent.clear(input);
-    await userEvent.type(input, " OTHER BANK / CHECKING ");
-    const result = screen.getByRole("option", { name: "Checking" });
-    await expect(result).toHaveAttribute("aria-selected", "false");
+    await userEvent.clear(search);
     await expect(
-      screen.getByRole("option", { name: /Other Bank/ }),
-    ).toBeVisible();
-    await userEvent.click(result);
+      screen.queryByRole("treeitem", { name: "Travel EUR" }),
+    ).not.toBeInTheDocument();
+    await userEvent.type(search, " OTHER BANK / CHECKING ");
+    const result = screen.getByRole("treeitem", { name: "Checking" });
+    await expect(result).toHaveAttribute("aria-selected", "false");
+    await userEvent.click(
+      within(result).getByText("Checking", { exact: true }),
+    );
     await expect(args.onSelectAccount).toHaveBeenCalledWith("other-checking");
     await expect(args.onSelectAccount).toHaveBeenCalledTimes(1);
+    await expectClosed();
+    await expect(trigger).toHaveFocus();
   },
 };
 
 export const KeyboardAndDismissal: Story = {
   play: async ({ canvasElement, args }) => {
-    const input = within(canvasElement).getByRole("textbox", {
-      name: "Switch Account",
+    const trigger = within(canvasElement).getByRole("button", {
+      name: "Switch Account: Checking",
     });
-    await userEvent.click(input);
-    await userEvent.type(input, "Savings");
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    const search = () =>
+      screen.getByRole("textbox", { name: "Search Accounts" });
+    await waitFor(() => expect(search()).toHaveFocus());
+    await expectOpen();
     await userEvent.keyboard("{ArrowDown}");
+    await expect(
+      screen.getByRole("treeitem", { name: "Checking" }),
+    ).toHaveFocus();
+    await userEvent.keyboard("{ArrowLeft}{Enter}");
+    await expect(
+      screen.queryByRole("treeitem", { name: "Savings" }),
+    ).not.toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+    await expect(
+      screen.getByRole("treeitem", { name: "Savings" }),
+    ).toBeVisible();
     await expect(args.onSelectAccount).not.toHaveBeenCalled();
-    await userEvent.keyboard("{Escape}");
-    await expect(input).toHaveValue("Checking");
-    await userEvent.click(input);
-    await expect(input).toHaveValue("");
-    await expect(screen.getByRole("option", { name: "Savings" })).toBeVisible();
-    await userEvent.type(input, "no matching account");
+    await userEvent.type(search(), "no matching account");
     await expect(screen.getByText("No accounts found")).toBeVisible();
-    await userEvent.clear(input);
-    await userEvent.type(input, "Savings");
-    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+    await userEvent.keyboard("{Escape}");
+    await expectClosed();
+    await expect(trigger).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await waitFor(() => expect(search()).toHaveFocus());
+    await expectOpen();
+    await expect(search()).toHaveValue("");
+    await userEvent.type(search(), "Savings");
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(
+      screen.getByRole("treeitem", { name: "Savings" }),
+    ).toHaveFocus();
+    await expect(args.onSelectAccount).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Enter}");
     await expect(args.onSelectAccount).toHaveBeenCalledWith("savings");
     await expect(args.onSelectAccount).toHaveBeenCalledTimes(1);
-    await expect(input).toHaveValue("Checking");
+    await expectClosed();
+    await expect(trigger).toHaveTextContent("Checking");
+  },
+};
+
+export const CurrentAccountAndOutsideDismissal: Story = {
+  play: async ({ canvasElement, args }) => {
+    const trigger = within(canvasElement).getByRole("button", {
+      name: "Switch Account: Checking",
+    });
+    await userEvent.click(trigger);
+    await screen.findByRole("treeitem", { name: "Checking" });
+    await expectOpen();
+    await userEvent.click(screen.getByRole("treeitem", { name: "Checking" }));
+    await expect(args.onSelectAccount).not.toHaveBeenCalled();
+    await expectClosed();
+    await expect(trigger).toHaveFocus();
+    await userEvent.click(trigger);
+    await screen.findByRole("dialog", { name: /^Switch Account:/ });
+    await expectOpen();
+    await userEvent.click(trigger);
+    await expectClosed();
+    await userEvent.click(trigger);
+    await screen.findByRole("dialog", { name: /^Switch Account:/ });
+    await expectOpen();
+    await userEvent.click(canvasElement);
+    await expectClosed();
+    await expect(trigger).toHaveFocus();
   },
 };
 
@@ -119,15 +198,24 @@ export const ScrollToCurrentAccount: Story = {
   },
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      within(canvasElement).getByRole("textbox", { name: "Switch Account" }),
+      within(canvasElement).getByRole("button", {
+        name: "Switch Account: Last Account",
+      }),
     );
-    const selected = screen.getByRole("option", { name: "Last Account" });
-    await waitFor(() => {
-      const dropdown = screen.getByRole("listbox").getBoundingClientRect();
-      const option = selected.getBoundingClientRect();
-      expect(option.top).toBeGreaterThanOrEqual(dropdown.top - 1);
-      expect(option.bottom).toBeLessThanOrEqual(dropdown.bottom + 1);
+    const selected = await screen.findByRole("treeitem", {
+      name: "Last Account",
     });
+    await waitFor(() => {
+      const viewport = selected
+        .closest("[data-scrollarea-viewport]")!
+        .getBoundingClientRect();
+      const option = selected.getBoundingClientRect();
+      expect(option.top).toBeGreaterThanOrEqual(viewport.top - 1);
+      expect(option.bottom).toBeLessThanOrEqual(viewport.bottom + 1);
+    });
+    await expect(
+      screen.getByRole("textbox", { name: "Search Accounts" }),
+    ).toHaveFocus();
     await userEvent.keyboard("{Escape}");
   },
 };
@@ -155,30 +243,41 @@ export const SelectAndReopen: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const input = () => canvas.getByRole("textbox", { name: "Switch Account" });
-    await userEvent.click(input());
-    await userEvent.type(input(), "Retired Account");
+    const open = async () => {
+      await userEvent.click(
+        canvas.getByRole("button", { name: /^Switch Account:/ }),
+      );
+      const search = await screen.findByRole("textbox", {
+        name: "Search Accounts",
+      });
+      await expectOpen();
+      return search;
+    };
+    await userEvent.type(await open(), "Retired Account");
     await userEvent.click(
-      screen.getByRole("option", { name: "Retired Account" }),
+      screen.getByRole("treeitem", { name: "Retired Account" }),
     );
     await expect(canvas.getByTestId("selected-account")).toHaveTextContent(
       "retired",
     );
-    await userEvent.click(input());
+    await open();
     await expect(
-      screen.getByRole("option", { name: "Retired Account" }),
+      screen.getByRole("treeitem", { name: "Retired Account" }),
     ).toHaveAttribute("aria-selected", "true");
     await expect(
-      screen.queryByRole("option", { name: "Travel EUR" }),
+      screen.queryByRole("treeitem", { name: "Travel EUR" }),
     ).not.toBeInTheDocument();
-    await userEvent.type(input(), "Travel EUR");
-    await userEvent.click(screen.getByRole("option", { name: "Travel EUR" }));
-    await userEvent.click(input());
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Search Accounts" }),
+      "Travel EUR",
+    );
+    await userEvent.click(screen.getByRole("treeitem", { name: "Travel EUR" }));
+    await open();
     await expect(
-      screen.getByRole("option", { name: "Travel EUR" }),
+      screen.getByRole("treeitem", { name: "Travel EUR" }),
     ).toHaveAttribute("aria-selected", "true");
     await expect(
-      screen.queryByRole("option", { name: "Savings" }),
+      screen.queryByRole("treeitem", { name: "Savings" }),
     ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
   },

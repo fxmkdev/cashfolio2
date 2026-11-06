@@ -121,16 +121,23 @@ for (const period of ["2026-01", "2026", undefined]) {
     const search = defaultStringifySearch({ period });
     const source = `/${seeded.accountBookId}/${seeded.cashAccount.id}${search}#activity`;
     await page.goto(source);
-    const switcher = page.getByRole("textbox", { name: "Switch Account" });
-    await expect(switcher).toHaveValue(seeded.cashAccount.name);
+    const switcher = page.getByRole("button", { name: /^Switch Account:/ });
+    const searchInput = page.getByRole("textbox", { name: "Search Accounts" });
+    await expect(switcher).toHaveAccessibleName(
+      `Switch Account: ${seeded.cashAccount.name}`,
+    );
     await userSwitchToSibling();
     await expect(page).toHaveURL(
       `/${seeded.accountBookId}/${seeded.savingsAccount.id}${search}`,
     );
-    await expect(switcher).toHaveValue(seeded.savingsAccount.name);
+    await expect(switcher).toHaveAccessibleName(
+      `Switch Account: ${seeded.savingsAccount.name}`,
+    );
     await page.goBack();
     await expect(page).toHaveURL(source);
-    await expect(switcher).toHaveValue(seeded.cashAccount.name);
+    await expect(switcher).toHaveAccessibleName(
+      `Switch Account: ${seeded.cashAccount.name}`,
+    );
     const row = agGridRowByText(page, "E2E Navigation Expense");
     await clickGridRowSelectionCheckbox(row);
     await expect(
@@ -138,11 +145,12 @@ for (const period of ["2026-01", "2026", undefined]) {
     ).toBeVisible();
     await switcher.click();
     await expect(
-      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
+      page.getByRole("treeitem", { name: "E2E Travel Account", exact: true }),
     ).toHaveCount(0);
-    await switcher.fill(" other bank / e2e travel ");
+    await expect(searchInput).toBeFocused();
+    await searchInput.fill(" other bank / e2e travel ");
     await page
-      .getByRole("option", { name: "E2E Travel Account", exact: true })
+      .getByRole("treeitem", { name: "E2E Travel Account", exact: true })
       .click();
     await expect(page).toHaveURL(
       `/${seeded.accountBookId}/${distantAccountId}${search}`,
@@ -152,11 +160,11 @@ for (const period of ["2026-01", "2026", undefined]) {
     ).toHaveCount(0);
     await switcher.click();
     await expect(
-      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
+      page.getByRole("treeitem", { name: "E2E Travel Account", exact: true }),
     ).toHaveAttribute("aria-selected", "true");
-    await switcher.fill("E2E Archived Financial Account");
+    await searchInput.fill("E2E Archived Financial Account");
     await page
-      .getByRole("option", {
+      .getByRole("treeitem", {
         name: "E2E Archived Financial Account",
         exact: true,
       })
@@ -175,13 +183,16 @@ for (const period of ["2026-01", "2026", undefined]) {
     async function userSwitchToSibling() {
       await switcher.click();
       await expect(
-        page.getByRole("option", {
+        page.getByRole("treeitem", {
           name: seeded.cashAccount.name,
           exact: true,
         }),
       ).toHaveAttribute("aria-selected", "true");
       await page
-        .getByRole("option", { name: seeded.savingsAccount.name, exact: true })
+        .getByRole("treeitem", {
+          name: seeded.savingsAccount.name,
+          exact: true,
+        })
         .click();
     }
   });
@@ -245,7 +256,7 @@ test("direct category and system visits have neutral navigation and only editabl
   ]) {
     await page.goto(`/${seeded.accountBookId}/${id}`);
     await expect(
-      page.getByRole("textbox", { name: "Switch Account" }),
+      page.getByRole("button", { name: /^Switch Account:/ }),
     ).toHaveCount(0);
     await expect(page.getByText(badge, { exact: true })).toBeVisible();
     await expectNoSelectedSection(page);

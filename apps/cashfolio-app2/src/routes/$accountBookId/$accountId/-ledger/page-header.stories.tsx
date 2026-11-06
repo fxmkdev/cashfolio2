@@ -87,7 +87,13 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
   const heading = canvas.getByRole("heading", { level: 2 });
   const metadata = canvas.getByTestId("ledger-header-metadata");
   const toolbar = canvas.getByRole("group", { name: "Ledger Controls" });
-  const switcher = canvas.getByRole("textbox", { name: "Switch Account" });
+  const switcher = canvas.getByRole("button", { name: /^Switch Account:/ });
+  await expect(
+    canvas.getAllByText(switcher.textContent!, { exact: true }),
+  ).toHaveLength(1);
+  await expect(
+    canvas.queryByRole("textbox", { name: "Search Accounts" }),
+  ).not.toBeInTheDocument();
   const period = canvas.getByRole("button", {
     name: "Previous Period",
   }).parentElement!;
@@ -166,6 +172,26 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
       );
     }
   });
+
+  if (container.getBoundingClientRect().width < 768) {
+    await userEvent.click(switcher);
+    const dialog = await screen.findByRole("dialog", {
+      name: /^Switch Account:/,
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "Search Accounts" }),
+      ).toHaveFocus(),
+    );
+    await waitFor(() => {
+      const bounds = dialog.getBoundingClientRect();
+      expect(bounds.left).toBeGreaterThanOrEqual(15);
+      expect(bounds.right).toBeLessThanOrEqual(window.innerWidth - 15);
+      expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
+    });
+    await userEvent.keyboard("{Escape}");
+    await expect(switcher).toHaveFocus();
+  }
 }
 
 export const ResponsiveHeaderWide: Story = {

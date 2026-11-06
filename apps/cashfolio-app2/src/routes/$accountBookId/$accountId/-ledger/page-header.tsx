@@ -106,24 +106,24 @@ export function LedgerPageHeader(props: LedgerPageHeaderProps) {
   return (
     <TopPageHeader
       layout="responsive"
-      heading={<Title order={2}>{props.account.name}</Title>}
+      heading={
+        props.account.type === AccountType.BALANCE && props.accountSwitcher ? (
+          <LedgerAccountSwitcher
+            key={props.account.id}
+            account={props.account}
+            {...props.accountSwitcher}
+          />
+        ) : (
+          <Title order={2}>{props.account.name}</Title>
+        )
+      }
       description={
         props.account.type === AccountType.BALANCE ? (
           <LedgerMetadata account={props.account} />
         ) : undefined
       }
       headingAccessory={
-        <>
-          {props.account.type === AccountType.BALANCE &&
-            props.accountSwitcher && (
-              <LedgerAccountSwitcher
-                key={props.account.id}
-                account={props.account}
-                {...props.accountSwitcher}
-              />
-            )}
-          <LedgerBadges account={props.account} unitLabel={props.unitLabel} />
-        </>
+        <LedgerBadges account={props.account} unitLabel={props.unitLabel} />
       }
       actions={<LedgerToolbar {...props} />}
     />

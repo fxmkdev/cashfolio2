@@ -580,18 +580,28 @@ callers to override it when needed.
 
 ### Ledger Account Switcher
 
-Financial account ledgers show a searchable **Switch Account** tree selector
-beside the title. It follows the Accounts page's configured hierarchy, sibling
-ordering, and Archived branches within the current account book. Categories and
-system ledgers are excluded. Groups are structural and cannot be selected.
+Financial account ledgers use the account title and a compact chevron as one
+**Switch Account** button inside the page heading. Display the account name
+once, preserve heading typography, and let long names wrap. Category and system
+ledgers retain plain headings.
+
+The button opens a Mantine Popover containing an autofocused **Search Accounts**
+field and an immediately visible Mantine `Tree`, rather than a nested dropdown.
+This navigation control is an exception to the form-field TreeSelect pattern. It
+follows the Accounts page's configured hierarchy, sibling ordering, and Archived
+branches within the current account book. Groups expand and collapse but cannot
+be selected, including empty groups.
 
 Each opening clears the search and reveals the current account's branch and
 siblings. Search matches full hierarchy paths, preserving ancestor context;
 slashes inside names remain literal. Selecting an account opens its ledger and
 preserves the selected month, year, or All Periods state, subject to existing
 account-book date bounds. Transaction targeting and bulk selection are cleared.
-Normal browser history returns to the previous ledger. The title remains a
-heading; the switcher wraps within the responsive header on narrow layouts.
+Normal browser history returns to the previous ledger. Arrow Down from search
+enters the current account or first search result; tree arrow keys navigate and
+Enter activates an account. Selection, Escape, outside click, and the title
+button close the popover. Dismissal restores focus to the title button. Keep the
+popover within the viewport and its tree scrollable on narrow layouts.
 
 ## Document Title Pattern
 
