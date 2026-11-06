@@ -31,7 +31,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: 0.4.115
-      - name: Remove preview app, database and roles
+      - name: Remove preview app and database
         run: node apps/cashfolio-app2/scripts/preview/cleanup.ts
         env:
           GITHUB_TOKEN: ${{ github.token }}

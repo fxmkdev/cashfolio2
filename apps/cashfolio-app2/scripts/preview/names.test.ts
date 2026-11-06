@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { previewNames } from "./names.ts";
-import { previewPassword, identifier } from "./database.ts";
+import { identifier } from "./database.ts";
 
 test("uses the PR title for the database and preserves branch-derived Fly naming", () => {
   const names = previewNames(
@@ -38,13 +38,4 @@ test("contains shell metacharacters as data and rejects invalid PR numbers", () 
     assert.throws(() => previewNames(number, "branch", "Title"));
   assert.throws(() => previewNames(42, "branch", "Title\nINJECT=true"));
   assert.throws(() => identifier('db"; DROP DATABASE production'));
-});
-test("stable derived passwords are distinct per role and PR and require a strong private key", () => {
-  const key = "ab".repeat(32);
-  const first = previewPassword(key, 42, "app");
-  assert.equal(first, previewPassword(key, 42, "app"));
-  assert.notEqual(first, previewPassword(key, 42, "seed"));
-  assert.notEqual(first, previewPassword(key, 43, "app"));
-  assert.notEqual(first, previewPassword("cd".repeat(32), 42, "app"));
-  assert.throws(() => previewPassword("short", 42, "app"));
 });

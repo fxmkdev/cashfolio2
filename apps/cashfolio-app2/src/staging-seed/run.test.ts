@@ -32,13 +32,12 @@ import { runStagingSeed } from "./run";
 const target = {
   environment: "staging",
   flyApp: "cashfolio-staging",
-  migrationRole: "owner",
   hostname: "ep-staging.eu-central-1.aws.neon.tech",
   projectId: "test-project",
   branchId: "br-staging",
   endpointId: "ep-staging",
   database: "neondb",
-  role: "cashfolio_staging_seed",
+  role: "owner",
 };
 const env = {
   APP_ENVIRONMENT: "staging",
@@ -46,7 +45,6 @@ const env = {
   SEED_ADMIN_EXTERNAL_IDS: "tester",
   SEED_TARGET: JSON.stringify(target),
   SEED_USER_EXTERNAL_IDS: "tester",
-  SEED_DATABASE_URL: `postgresql://${target.role}:secret@${target.hostname}/neondb?sslmode=verify-full`,
   DATABASE_URL: `postgresql://owner:secret@${target.hostname}/neondb?sslmode=require`,
 };
 
@@ -71,17 +69,14 @@ beforeEach(() => {
 });
 
 describe("seed command", () => {
-  it("checks both dedicated seed and migration connections without replacing anything", async () => {
+  it("checks the application connection without replacing anything", async () => {
     await expect(
       runStagingSeed(["--check-target"], {
         ...env,
       }),
     ).resolves.toContain("target_verified");
     expect(mock.verify).toHaveBeenNthCalledWith(1, expect.anything(), target);
-    expect(mock.verify).toHaveBeenNthCalledWith(2, expect.anything(), {
-      ...target,
-      role: "owner",
-    });
+    expect(mock.create).toHaveBeenCalledOnce();
     expect(mock.replace).not.toHaveBeenCalled();
     expect(mock.generate).not.toHaveBeenCalled();
     expect(
@@ -95,15 +90,12 @@ describe("seed command", () => {
     { APP_ENVIRONMENT: "prod" },
     { APP_ENVIRONMENT: "preview" },
     { PGOPTIONS: "endpoint=ep-production" },
-    { SEED_DATABASE_URL: undefined },
+    { DATABASE_URL: undefined },
     { SEED_TARGET: undefined },
     { SEED_USER_EXTERNAL_IDS: undefined },
     { SEED_ADMIN_EXTERNAL_IDS: undefined },
     {
-      SEED_DATABASE_URL: env.SEED_DATABASE_URL.replace(
-        "ep-staging",
-        "ep-production",
-      ),
+      DATABASE_URL: env.DATABASE_URL.replace("ep-staging", "ep-production"),
     },
   ])(
     "performs zero connections or writes for an unsafe configuration",
@@ -135,7 +127,7 @@ describe("seed command", () => {
     },
   );
 
-  it("disconnects both clients after a server identity failure without writing", async () => {
+  it("disconnects the client after a server identity failure without writing", async () => {
     mock.verify.mockRejectedValueOnce(new Error("mismatched server identity"));
     await expect(runStagingSeed(["--check-target"], env)).rejects.toThrow(
       "identity",
@@ -148,7 +140,7 @@ describe("seed command", () => {
     ).toBe(true);
   });
 
-  it("runs replacement only with explicit staging enablement and disconnects", async () => {
+  it("runs replacement only with approved staging configuration and disconnects", async () => {
     await expect(runStagingSeed([], env)).resolves.toContain("seed_complete");
     expect(mock.replace).toHaveBeenCalledOnce();
     expect(
@@ -177,43 +169,7 @@ describe("seed command", () => {
   });
 });
 
-it("verifies both destinations before granting narrowly scoped seed permissions", async () => {
-  await runStagingSeed(["--grant-permissions"], env);
-  expect(mock.verify).toHaveBeenCalledTimes(2);
-  const migration = mock.create.mock.results[1].value;
-  expect(migration.$executeRawUnsafe.mock.calls).toHaveLength(3);
-  const tableGrant = migration.$executeRawUnsafe.mock.calls[1][0];
-  for (const table of [
-    "Booking",
-    "ClassificationScheme",
-    "ClassificationNode",
-    "AccountClassification",
-  ])
-    expect(tableGrant).toContain(`"${table}"`);
-  const functionGrant = migration.$executeRawUnsafe.mock.calls[2][0];
-  for (const signature of [
-    "ensure_gain_loss_account_for_new_book()",
-    "initialize_book_classifications()",
-    "seed_asset_class_scheme(text)",
-  ])
-    expect(functionGrant).toContain(`public.${signature}`);
-  expect(migration.$executeRawUnsafe.mock.calls.join(" ")).not.toMatch(
-    /ALL TABLES|neon_superuser|CREATEROLE|TRUNCATE|AuthSession|AuthSubjectRevocation/,
-  );
-  expect(mock.replace).not.toHaveBeenCalled();
-});
-
-it("never grants permissions when target verification fails", async () => {
-  mock.verify.mockRejectedValueOnce(new Error("wrong target"));
-  await expect(runStagingSeed(["--grant-permissions"], env)).rejects.toThrow(
-    "wrong target",
-  );
-  expect(
-    mock.create.mock.results[1].value.$executeRawUnsafe,
-  ).not.toHaveBeenCalled();
-});
-
-it("release verifies before migrations, grants afterwards, and replaces only after grants", async () => {
+it("release verifies before migrations and replaces only after migration success", async () => {
   await expect(runStagingSeed(["--release"], env)).resolves.toContain(
     "seed_complete",
   );
@@ -225,17 +181,13 @@ it("release verifies before migrations, grants afterwards, and replaces only aft
     }),
     expect.any(Function),
   );
-  expect(mock.verify.mock.invocationCallOrder[1]).toBeLessThan(
+  expect(mock.verify.mock.invocationCallOrder[0]).toBeLessThan(
     mock.exec.mock.invocationCallOrder[0],
   );
-  const grants = mock.create.mock.results[3].value.$executeRawUnsafe;
-  expect(grants).toHaveBeenCalledTimes(3);
   expect(mock.exec.mock.invocationCallOrder[0]).toBeLessThan(
-    grants.mock.invocationCallOrder[0],
-  );
-  expect(grants.mock.invocationCallOrder[2]).toBeLessThan(
     mock.replace.mock.invocationCallOrder[0],
   );
+  expect(mock.create).toHaveBeenCalledTimes(2);
   expect(
     mock.create.mock.results.every(
       ({ value }) => value.$disconnect.mock.calls.length === 1,
@@ -267,11 +219,10 @@ it.each([
       approvedUrl.searchParams.get("channel_binding"),
     );
     expect(sourceEnv.DATABASE_URL).toBe(databaseUrl);
-    expect(options.env.SEED_DATABASE_URL).toBe(sourceEnv.SEED_DATABASE_URL);
   },
 );
 
-it("target failure prevents release migrations and all grants", async () => {
+it("target failure prevents release migrations and replacement", async () => {
   mock.verify.mockRejectedValueOnce(new Error("wrong server"));
   await expect(runStagingSeed(["--release"], env)).rejects.toThrow(
     "wrong server",
@@ -293,5 +244,5 @@ it("migration failure stops the release and suppresses raw credentials in diagno
     "Migration failed; seeding was not attempted.",
   );
   expect(mock.replace).not.toHaveBeenCalled();
-  expect(mock.create).toHaveBeenCalledTimes(2);
+  expect(mock.create).toHaveBeenCalledOnce();
 });

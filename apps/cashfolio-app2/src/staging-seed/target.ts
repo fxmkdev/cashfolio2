@@ -1,7 +1,5 @@
 import type { Prisma } from "../.prisma-client/client";
 
-export const STAGING_SEED_ROLE = "cashfolio_staging_seed";
-
 export class SeedSafetyError extends Error {}
 
 export type NeonTarget = {
@@ -16,14 +14,13 @@ export type NeonTarget = {
 export type ApprovedSeedTarget = NeonTarget & {
   environment: "staging" | "preview";
   flyApp: string;
-  migrationRole: string;
 };
 
 export type SeedConfig = {
   target: ApprovedSeedTarget;
   testerExternalIds: string[];
   adminExternalIds: string[];
-  seedConnection: VerifiedConnection;
+  connection: VerifiedConnection;
 };
 
 export type VerifiedConnection = {
@@ -80,9 +77,10 @@ export function readSeedConfig(
     target,
     testerExternalIds,
     adminExternalIds,
-    seedConnection: parseVerifiedConnection(
-      requireValue(env, "SEED_DATABASE_URL"),
+    connection: parseVerifiedConnection(
+      requireValue(env, "DATABASE_URL"),
       target,
+      true,
     ),
   };
 }
@@ -150,39 +148,25 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
   }
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new SeedSafetyError("SEED_TARGET must be an approved target object.");
-  const { environment, flyApp, migrationRole, ...destination } = value;
+  const { environment, flyApp, ...destination } = value;
   parseNeonTarget(JSON.stringify(destination));
   if (
     !["staging", "preview"].includes(environment) ||
     typeof flyApp !== "string" ||
-    !/^[a-z0-9-]{1,63}$/.test(flyApp) ||
-    typeof migrationRole !== "string" ||
-    !/^[a-zA-Z0-9_]{1,63}$/.test(migrationRole) ||
-    migrationRole === value.role
+    !/^[a-z0-9-]{1,63}$/.test(flyApp)
   )
     throw new SeedSafetyError(
-      "The target must identify staging or preview, a Fly app and a separate migration role.",
+      "The target must identify staging or preview, a Fly app and a database role.",
     );
-  if (
-    environment === "staging" &&
-    (value.role !== STAGING_SEED_ROLE ||
-      flyApp.startsWith("cashfolio-app2-pr-"))
-  )
-    throw new SeedSafetyError(
-      "Staging requires its dedicated seed role and app.",
-    );
+  if (environment === "staging" && flyApp.startsWith("cashfolio-app2-pr-"))
+    throw new SeedSafetyError("Staging requires its own Fly app.");
   if (environment === "preview") {
     const pr = /^pr-([1-9][0-9]*)-[a-z0-9-]+-cashfolio-app2$/.exec(
       value.database,
     )?.[1];
-    if (
-      !pr ||
-      value.role !== `cashfolio_pr_${pr}_seed` ||
-      migrationRole !== `cashfolio_pr_${pr}_app` ||
-      !flyApp.startsWith(`cashfolio-app2-pr-${pr}-`)
-    )
+    if (!pr || !flyApp.startsWith(`cashfolio-app2-pr-${pr}-`))
       throw new SeedSafetyError(
-        "The preview database, roles and app must identify the same PR.",
+        "The preview database and app must identify the same PR.",
       );
   }
   return value;
@@ -191,7 +175,7 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
 export function parseVerifiedConnection(
   raw: string,
   target: NeonTarget,
-  migration = false,
+  applicationUrl = false,
 ): VerifiedConnection {
   let url: URL;
   try {
@@ -217,7 +201,7 @@ export function parseVerifiedConnection(
     !["postgres:", "postgresql:"].includes(url.protocol) ||
     url.hash ||
     (url.hostname !== target.hostname &&
-      !(migration && url.hostname === pooledHostname)) ||
+      !(applicationUrl && url.hostname === pooledHostname)) ||
     (url.port && url.port !== "5432") ||
     database !== target.database ||
     !user ||
@@ -240,7 +224,7 @@ export function parseVerifiedConnection(
   }
   const sslmode = url.searchParams.get("sslmode");
   if (
-    (sslmode !== "verify-full" && !(migration && sslmode === "require")) ||
+    (sslmode !== "verify-full" && !(applicationUrl && sslmode === "require")) ||
     (url.searchParams.has("channel_binding") &&
       url.searchParams.get("channel_binding") !== "require")
   ) {

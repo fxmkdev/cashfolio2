@@ -34,17 +34,11 @@ export async function command(args: string[], input?: string): Promise<string> {
 export async function verifiedProvisioner(): Promise<{
   client: Client;
   target: NeonTarget;
+  password: string;
 }> {
   const target = parseNeonTarget(
     requireValue(process.env, "PREVIEW_DATABASE_TARGET"),
   );
-  if (
-    target.role !== "cashfolio_preview_provisioner" ||
-    target.database !== "cashfolio_preview_control"
-  )
-    throw new Error(
-      "Only the dedicated preview provisioner and maintenance database are permitted.",
-    );
   if (process.env.PGOPTIONS?.trim()) throw new Error("PGOPTIONS is forbidden.");
   const connection = parseVerifiedConnection(
     requireValue(process.env, "PREVIEW_DATABASE_ADMIN_URL"),
@@ -54,7 +48,7 @@ export async function verifiedProvisioner(): Promise<{
   try {
     await client.connect();
     await verifyProvisionerServer(client, target);
-    return { client, target };
+    return { client, target, password: connection.password };
   } catch {
     await client.end();
     throw new Error("Preview provisioning target verification failed.");
@@ -76,25 +70,20 @@ export async function verifyProvisionerServer(
     )
   )
     throw new Error("Provisioning reached an unapproved server.");
-  const permissions =
-    await client.query(`SELECT NOT (rolsuper OR rolbypassrls OR rolreplication)
-      AND rolcreatedb AND rolcreaterole AND NOT pg_has_role(current_user, 'neon_superuser', 'MEMBER') AS safe
-      FROM pg_roles WHERE rolname = current_user`);
-  if (permissions.rows.length !== 1 || permissions.rows[0].safe !== true)
+  const permissions = await client.query(
+    "SELECT rolcreatedb FROM pg_roles WHERE rolname = current_user",
+  );
+  if (permissions.rows.length !== 1 || permissions.rows[0].rolcreatedb !== true)
     throw new Error(
-      "The preview provisioner must have only the documented database and role management privileges.",
+      "The nonproduction login must be able to create databases.",
     );
 }
 
-export function databaseUrl(
-  target: NeonTarget,
-  role: string,
-  password: string,
-): string {
+export function databaseUrl(target: NeonTarget, password: string): string {
   const url = new URL(
     `postgresql://${target.hostname}/${target.database}?sslmode=verify-full&channel_binding=require`,
   );
-  url.username = role;
+  url.username = target.role;
   url.password = password;
   return url.href;
 }

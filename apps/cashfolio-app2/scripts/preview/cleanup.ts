@@ -18,7 +18,7 @@ try {
   const pr = await api<PullRequest>(`/pulls/${number}`);
   validatePr(pr, process.env.GITHUB_REPOSITORY!, undefined, true);
   const names = previewNames(number, pr.head.ref, pr.title);
-  const { client } = await verifiedProvisioner();
+  const { client, target } = await verifiedProvisioner();
   try {
     const apps = JSON.parse(await command(["apps", "list", "--json"])) as {
       Name: string;
@@ -27,14 +27,14 @@ try {
     for (const name of [names.flyApp, names.flyAppLegacy])
       if (apps.some((app) => (app.Name ?? app.name) === name))
         await command(["apps", "destroy", name, "--yes"]);
-    await cleanupDatabase(client, number);
+    await cleanupDatabase(client, number, target);
   } finally {
     await client.end();
   }
   console.log(`Preview resources removed for PR #${number}.`);
 } catch {
   console.error(
-    "Preview cleanup failed; inspect the preview app, database and roles with operator access.",
+    "Preview cleanup failed; inspect the preview app, database with operator access.",
   );
   process.exitCode = 1;
 }

@@ -77,7 +77,7 @@ test("preview deployment requires a successful build and excludes forks and non-
     /continue-on-error|!cancelled\(\)|always\(\).*needs:/,
   );
   const steps = [
-    "Provision database",
+    "Provision preview database",
     "Deploy and seed preview",
     "Wake preview",
     "Update preview link",
@@ -140,6 +140,24 @@ test("preview deployment and cleanup reuse setup, and preparation emits outputs 
   assert.match(
     read("workflows/refresh-staging-db.yml"),
     /cashfolio_app2_image: \$\{\{ needs.cashfolio-app2-build-push.outputs.image \}\}/,
+  );
+});
+
+test("nonproduction provisioning uses shared credentials without role or password bootstrap", () => {
+  const sources = [
+    build,
+    read("workflows/cleanup-preview.yml"),
+    ...["prepare.ts", "database.ts", "runtime.ts"].map((path) =>
+      readFileSync(new URL(`./${path}`, import.meta.url), "utf8"),
+    ),
+  ].join("\n");
+  assert.doesNotMatch(
+    sources,
+    /PREVIEW_DATABASE_PASSWORD_KEY|SEED_DATABASE_URL|CREATE ROLE|REVOKE |GRANT |cashfolio_preview_control/,
+  );
+  assert.match(
+    build,
+    /PREVIEW_DATABASE_ADMIN_URL: \$\{\{ secrets.PREVIEW_DATABASE_ADMIN_URL \}\}/,
   );
 });
 

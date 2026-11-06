@@ -151,11 +151,11 @@ requirements. No additional deployment gate is required for this migration.
 
 Staging and preview deployments run
 `node apps/cashfolio-app2/dist/staging-seed/seed.mjs --release` from the exact
-image being deployed. The shared runner verifies both approved connections
-read-only, applies migrations with the existing reachability retry helper,
-grants application-table seed permissions, then transactionally replaces data.
-Missing configuration fails deployment. Production retains its migration-only
-release command and cannot invoke the seed CLI with its environment.
+image being deployed. The shared runner verifies the approved application
+connection read-only, applies migrations with the existing reachability retry
+helper, then transactionally replaces data. Missing configuration fails
+deployment. Production retains its migration-only release command and cannot
+invoke the seed CLI with its environment.
 
 The shared `seed:nonproduction` command executes the built payload. Its
 `--release` option resolves the migration helper relative to the payload, so it
@@ -167,20 +167,20 @@ shared runner with the generated Prisma client and accounting conventions;
 Docker copies the complete output directory and query compiler chunks into the
 slim release payload. The command needs no workspace install in that image.
 
-Staging's `SEED_DATABASE_URL`, `SEED_TARGET`, `SEED_USER_EXTERNAL_IDS`, and
-`SEED_ADMIN_EXTERNAL_IDS` remain operator-provisioned Fly secrets. Previews
-receive only their own generated database/seed credentials from the PR Build
-workflow. Same-repository contributors are trusted with preview provisioning
-credentials; these credentials never enter the preview Fly app. No Neon
-branching operations are used. Exact Neon identity checks continue to protect
-the configured fixed hosts and databases.
+Staging keeps its existing `DATABASE_URL` and adds `SEED_TARGET`,
+`SEED_USER_EXTERNAL_IDS` and `SEED_ADMIN_EXTERNAL_IDS` as operator-configured
+Fly secrets. Previews use that same nonproduction login with their own database
+name. Provisioning creates databases only; no roles, passwords or access grants
+are managed. Same-repository contributors are trusted with this shared login.
+Production uses a separate project and credentials. Exact Neon identity checks
+continue to protect the approved database before migrations and replacement.
 
 See [Synthetic staging data](../../../docs/staging-database-refresh.md) for
 staging setup and [Preview environments](../../../docs/preview-environments.md)
-for the shared staging Neon host, existing preview GitHub environment,
-per-preview credentials and existing-preview cutover. Staging and previews share
-compute capacity but keep separate databases; exact database and role checks
-continue to prevent cross-environment seeding.
+for the shared staging Neon host, existing preview GitHub environment, shared
+nonproduction credentials and existing-preview cutover. Staging and previews
+share compute capacity but keep separate databases; exact database and role
+checks continue to prevent cross-environment seeding.
 
 ## Provider usage cleanup
 

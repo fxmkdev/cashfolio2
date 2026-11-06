@@ -43,8 +43,6 @@ export function previewNames(number: number, headRef: string, title: string) {
     previewUrl: `https://${flyApp}.fly.dev/`,
     hostname: `${flyApp}.fly.dev`,
     database,
-    appRole: `cashfolio_pr_${number}_app`,
-    seedRole: `cashfolio_pr_${number}_seed`,
   };
 }
 

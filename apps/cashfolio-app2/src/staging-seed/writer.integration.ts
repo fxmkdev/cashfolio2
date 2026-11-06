@@ -195,14 +195,16 @@ describe("staging seed against disposable PostgreSQL", () => {
     }
 
     // Identifiers/passwords below contain only fixed prefixes and generated hex.
-    await admin.$executeRawUnsafe(`CREATE DATABASE "${databaseName}"`);
-    databaseCreated = true;
     await admin.$executeRawUnsafe(
-      `CREATE ROLE "${roleName}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`,
+      `CREATE ROLE "${roleName}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`,
     );
     roleCreated = true;
+    await admin.$executeRawUnsafe(
+      `CREATE DATABASE "${databaseName}" OWNER "${roleName}"`,
+    );
+    databaseCreated = true;
     await run("pnpm", ["exec", "prisma", "migrate", "deploy"], {
-      env: { ...process.env, DATABASE_URL: databaseUrl.href },
+      env: { ...process.env, DATABASE_URL: seedUrl.href },
       maxBuffer: 4 * 1024 * 1024,
     });
     for (const [key, value] of [
@@ -214,24 +216,6 @@ describe("staging seed against disposable PostgreSQL", () => {
         `ALTER DATABASE "${databaseName}" SET "${key}" TO '${value}'`,
       );
     }
-    await fixture.$executeRawUnsafe(
-      `GRANT CONNECT ON DATABASE "${databaseName}" TO "${roleName}"`,
-    );
-    await fixture.$executeRawUnsafe(
-      `GRANT USAGE ON SCHEMA public TO "${roleName}"`,
-    );
-    await fixture.$executeRawUnsafe(
-      `GRANT SELECT, INSERT, UPDATE, DELETE ON ${applicationTables.map((table) => `"${table}"`).join(", ")} TO "${roleName}"`,
-    );
-    // Match release permissions without relying on PUBLIC function access.
-    const functions =
-      "public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text)";
-    await fixture.$executeRawUnsafe(
-      `REVOKE EXECUTE ON FUNCTION ${functions} FROM PUBLIC`,
-    );
-    await fixture.$executeRawUnsafe(
-      `GRANT EXECUTE ON FUNCTION ${functions} TO "${roleName}"`,
-    );
   });
 
   beforeEach(async () => {
@@ -330,7 +314,7 @@ describe("staging seed against disposable PostgreSQL", () => {
     expect(await snapshot()).toEqual(initial);
   });
 
-  it("replaces legacy data, preserves tester roles/locales, and creates valid shared books using CRUD-only credentials", async () => {
+  it("replaces legacy data, preserves tester roles/locales, and creates valid shared books using the database-owner login", async () => {
     const existingAdmin = await fixture.user.findUniqueOrThrow({
       where: { externalId: testerExternalIds[0] },
     });

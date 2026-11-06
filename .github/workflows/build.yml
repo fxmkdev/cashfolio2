@@ -453,7 +453,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
-      - name: Provision database and stage preview-only credentials
+      - name: Provision preview database and stage app settings
         id: prepare
         run: node apps/cashfolio-app2/scripts/preview/prepare.ts
         env:
@@ -468,8 +468,6 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
           PREVIEW_DATABASE_TARGET: ${{ vars.PREVIEW_DATABASE_TARGET }}
-          PREVIEW_DATABASE_PASSWORD_KEY:
-            ${{ secrets.PREVIEW_DATABASE_PASSWORD_KEY }}
           SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
           SEED_ADMIN_EXTERNAL_IDS: ${{ secrets.SEED_ADMIN_EXTERNAL_IDS }}
           LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}

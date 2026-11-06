@@ -11,13 +11,12 @@ import {
 const target: ApprovedSeedTarget = {
   environment: "staging",
   flyApp: "cashfolio-staging",
-  migrationRole: "owner",
   hostname: "ep-seed-example.eu-central-1.aws.neon.tech",
   projectId: "test-project",
   branchId: "br-staging",
   endpointId: "ep-seed-example",
   database: "neondb",
-  role: "cashfolio_staging_seed",
+  role: "owner",
 };
 const url = `postgresql://${target.role}:secret@${target.hostname}/neondb?sslmode=verify-full`;
 const env = {
@@ -26,7 +25,7 @@ const env = {
   SEED_ADMIN_EXTERNAL_IDS: "tester-one",
   SEED_TARGET: JSON.stringify(target),
   SEED_USER_EXTERNAL_IDS: "tester-one, tester-two,tester-one",
-  SEED_DATABASE_URL: url,
+  DATABASE_URL: url,
 };
 
 describe("staging seed configuration", () => {
@@ -52,14 +51,14 @@ describe("staging seed configuration", () => {
   });
 
   it.each([
-    "SEED_DATABASE_URL",
+    "DATABASE_URL",
     "SEED_TARGET",
     "SEED_USER_EXTERNAL_IDS",
     "SEED_ADMIN_EXTERNAL_IDS",
-  ])("requires %s without falling back to generic DATABASE_URL", (key) => {
-    expect(() =>
-      readSeedConfig({ ...env, [key]: undefined, DATABASE_URL: url }),
-    ).toThrow("required");
+  ])("requires %s", (key) => {
+    expect(() => readSeedConfig({ ...env, [key]: undefined })).toThrow(
+      "required",
+    );
   });
 
   it.each([",", "tester,", "tester\nother"])(
@@ -78,7 +77,8 @@ describe("staging seed configuration", () => {
     '"value"',
     JSON.stringify({ ...target, role: undefined }),
     JSON.stringify({ ...target, extra: true }),
-    JSON.stringify({ ...target, role: "neondb_owner" }),
+    JSON.stringify({ ...target, role: "bad/role" }),
+    JSON.stringify({ ...target, migrationRole: "obsolete" }),
     JSON.stringify({
       ...target,
       hostname: "ep-production.eu-central-1.aws.neon.tech",
@@ -135,7 +135,7 @@ describe("staging connection restrictions", () => {
     url.replace("/neondb", ":5433/neondb"),
     url.replace("/neondb", "/otherdb"),
     url.replace("/neondb", "/neondb/other"),
-    url.replace("cashfolio_staging_seed", "owner"),
+    url.replace("owner", "other"),
     url.replace(":secret", ""),
     url.replace("secret", "%ZZ"),
     url.replace("verify-full", "require"),
@@ -154,9 +154,8 @@ describe("staging connection restrictions", () => {
     expect(() => parseVerifiedConnection(connection, target)).toThrow();
   });
 
-  it("allows only the same endpoint's migration role and pooled address, still verifies TLS", () => {
+  it("accepts the same endpoint’s application URL with verified TLS", () => {
     const migration = url
-      .replace("cashfolio_staging_seed", "owner")
       .replace("ep-seed-example", "ep-seed-example-pooler")
       .replace("verify-full", "require");
     expect(
@@ -224,17 +223,15 @@ describe("preview target isolation", () => {
     environment: "preview",
     flyApp: "cashfolio-app2-pr-42-topic",
     database: "pr-42-improve-seed-cashfolio-app2",
-    role: "cashfolio_pr_42_seed",
-    migrationRole: "cashfolio_pr_42_app",
   };
-  it("accepts separate preview database and role configuration on staging’s exact host", () => {
+  it("accepts a separate preview database with the shared owner on staging’s exact host", () => {
     expect(
       readSeedConfig({
         ...env,
         APP_ENVIRONMENT: "preview",
         FLY_APP_NAME: previewTarget.flyApp,
         SEED_TARGET: JSON.stringify(previewTarget),
-        SEED_DATABASE_URL: `postgresql://${previewTarget.role}:secret@${previewTarget.hostname}/${previewTarget.database}?sslmode=verify-full`,
+        DATABASE_URL: `postgresql://${previewTarget.role}:secret@${previewTarget.hostname}/${previewTarget.database}?sslmode=verify-full`,
       }).target,
     ).toEqual(previewTarget);
   });
@@ -268,7 +265,10 @@ describe("preview target isolation", () => {
       for (const key of ["database", "role"] as const)
         await expect(
           verifyServerIdentity(
-            connection({ ...identity, [key]: other[key] }),
+            connection({
+              ...identity,
+              [key]: key === "role" ? "wrong_role" : other[key],
+            }),
             expected,
           ),
         ).rejects.toThrow("no replacement");
@@ -278,7 +278,7 @@ describe("preview target isolation", () => {
     { environment: "prod" },
     { flyApp: "cashfolio-app2-pr-43-topic" },
     { database: "production" },
-    { role: "cashfolio_staging_seed" },
+    { role: "bad/role" },
     { migrationRole: "neondb_owner" },
     { database: "pr-43-topic-cashfolio-app2" },
   ])("rejects cross-environment and cross-PR targets %j", (overrides) => {
@@ -286,7 +286,7 @@ describe("preview target isolation", () => {
       parseApprovedTarget(JSON.stringify({ ...previewTarget, ...overrides })),
     ).toThrow();
   });
-  it("rejects a different migration role even on the correct database", () => {
+  it("rejects a different login even on the correct database", () => {
     expect(() =>
       parseVerifiedConnection(
         url.replace(target.role, "other"),

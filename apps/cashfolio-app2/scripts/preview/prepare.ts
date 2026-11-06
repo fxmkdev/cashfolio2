@@ -41,10 +41,6 @@ try {
   );
   if (adminIds.some((id) => !testerIds.includes(id)))
     throw new Error("Seed administrators must be configured testers.");
-  const passwordKey = requireValue(
-    process.env,
-    "PREVIEW_DATABASE_PASSWORD_KEY",
-  );
   // Validate every app secret before creating any resources.
   const appSecrets = Object.fromEntries(
     [
@@ -60,15 +56,14 @@ try {
   requireValue(process.env, "FLY_ORG");
   serializeFlySecrets({ ...appSecrets, REDIS_URL: redisUrl });
   phase = "host verification";
-  const { client, target: host } = await verifiedProvisioner();
+  const { client, target: host, password } = await verifiedProvisioner();
   try {
     phase = "database provisioning";
     const preview = await provisionDatabase(client, {
       number,
       headRef: pr.head.ref,
       title: pr.title,
-      passwordKey,
-      adminRole: host.role,
+      host,
     });
     const target = parseApprovedTarget(
       JSON.stringify({
@@ -76,8 +71,6 @@ try {
         environment: "preview",
         flyApp: preview.flyApp,
         database: preview.database,
-        role: preview.seedRole,
-        migrationRole: preview.appRole,
       }),
     );
     // List first so a failed status request cannot accidentally create an app.
@@ -98,18 +91,12 @@ try {
       console.log(
         `::add-mask::${value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A")}`,
       );
-    mask(preview.appPassword);
-    mask(preview.seedPassword);
+    mask(password);
     for (const id of [...testerIds, ...adminIds]) mask(id);
     const { randomBytes } = await import("node:crypto");
     const secrets = {
       ...appSecrets,
-      DATABASE_URL: databaseUrl(target, preview.appRole, preview.appPassword),
-      SEED_DATABASE_URL: databaseUrl(
-        target,
-        preview.seedRole,
-        preview.seedPassword,
-      ),
+      DATABASE_URL: databaseUrl(target, password),
       SEED_TARGET: JSON.stringify(target),
       SEED_USER_EXTERNAL_IDS: testerIds.join(","),
       SEED_ADMIN_EXTERNAL_IDS: adminIds.join(","),
@@ -118,7 +105,6 @@ try {
     };
     mask(secrets.SESSION_SECRET);
     mask(secrets.DATABASE_URL);
-    mask(secrets.SEED_DATABASE_URL);
     // stdin avoids putting values in command arguments or workflow outputs.
     const dotenv = serializeFlySecrets(secrets);
     phase = "preview credential staging";

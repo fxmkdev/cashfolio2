@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { runSeedRelease } from "./release";
 
 describe("nonproduction release orchestration", () => {
-  it.each([undefined, "verify", "migrate", "grant", "replace"])(
+  it.each([undefined, "verify", "migrate", "replace"])(
     "stops immediately when %s fails",
     async (failure) => {
       const calls: string[] = [];
@@ -15,14 +15,13 @@ describe("nonproduction release orchestration", () => {
       const result = runSeedRelease({
         verify: step("verify"),
         migrate: step("migrate"),
-        grant: step("grant"),
         replace: step("replace"),
       });
       if (failure) await expect(result).rejects.toThrow(failure);
       else await expect(result).resolves.toBe("complete");
-      const sequence = ["verify", "migrate", "grant", "replace"];
+      const sequence = ["verify", "migrate", "replace"];
       expect(calls).toEqual(
-        sequence.slice(0, failure ? sequence.indexOf(failure) + 1 : 4),
+        sequence.slice(0, failure ? sequence.indexOf(failure) + 1 : 3),
       );
     },
   );

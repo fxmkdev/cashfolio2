@@ -1,17 +1,18 @@
 # Synthetic staging data
 
-Every staging and preview application deployment applies migrations and replaces
-application data with the shared synthetic dataset. Production remains
-migration-only. Missing approved seed settings fail the nonproduction release;
-there is no seed enablement flag or silent migration-only fallback.
+Every staging and preview application deployment verifies the destination,
+applies migrations and replaces application data with the shared synthetic
+dataset. Production remains migration-only. Missing approved seed settings fail
+the nonproduction release; there is no seed enablement flag or silent
+migration-only fallback.
 
-The release command verifies both the seed connection and migration connection
-read-only before migrations, grants narrowly scoped seed permissions after
-migrations, then replaces application data in one transaction. The replacement
-locks all ten application tables against concurrent writes and verifies server
-identity again inside the transaction. Any failure fails the release before web
-Machines update. Transaction conflicts/deadlocks get at most three attempts,
-with 100 ms and 200 ms retry delays; other failures fail immediately.
+The release command verifies the application connection read-only before
+migrations, then replaces application data in one transaction using the same
+database-owner login. The replacement locks all ten application tables against
+concurrent writes and verifies server identity again inside the transaction. Any
+failure fails the release before web Machines update. Transaction
+conflicts/deadlocks get at most three attempts, with 100 ms and 200 ms retry
+delays; other failures fail immediately.
 
 Seed accounts are checked with shared application account validation before the
 replacement transaction begins and before direct seed insertion writes. Invalid
@@ -268,19 +269,18 @@ deployment; adding it to the seed source does not reset staging immediately.
 
 ## Configure the approved target
 
-Before deploying the shared release runner, install these secrets on the staging
-Fly app. Use a protected file (mode `0600`) and `flyctl secrets import --stage`
-with stdin so values do not appear in shell history or command arguments.
+Before deploying the shared release runner, keep the staging app's existing
+`DATABASE_URL` and install these Fly secrets using a protected file (mode
+`0600`) and `flyctl secrets import --stage` with stdin:
 
-- `SEED_DATABASE_URL`: direct verified-TLS connection for the existing dedicated
-  `cashfolio_staging_seed` role. It has no fallback to the app's `DATABASE_URL`.
-- `SEED_TARGET`: the exact reviewed JSON destination below, including the actual
-  staging Fly app name and actual migration role from `DATABASE_URL`.
+- `SEED_TARGET`: independently reviewed nonproduction destination metadata
+  below, including staging's actual Fly app, database and existing
+  database-owner role.
 - `SEED_USER_EXTERNAL_IDS`: nonempty comma-separated tester Logto external IDs.
-- `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated administrator external
-  IDs, all also present in the tester list. These only bootstrap a fully empty
-  application database. Existing databases must retain a configured, active
-  administrator; seeding never promotes another tester in a nonempty database.
+- `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated administrator IDs, all in
+  the tester list. These bootstrap only entirely empty application databases.
+  Existing data requires a retained active administrator; another tester is
+  never promoted during replacement.
 
 ```json
 {
@@ -291,124 +291,54 @@ with stdin so values do not appear in shell history or command arguments.
   "branchId": "br-approved-staging",
   "endpointId": "ep-approved-staging",
   "database": "neondb",
-  "role": "cashfolio_staging_seed",
-  "migrationRole": "neondb_owner"
+  "role": "neondb_owner"
 }
 ```
 
-The environment and Fly app must match the running Machine's `APP_ENVIRONMENT`
-and `FLY_APP_NAME`. Both connections must identify the exact project, fixed
-branch, endpoint, database and their respective approved roles. Missing or
-mismatched metadata fails closed. The seed URL must be direct, port 5432, with
-`sslmode=verify-full`; a same-endpoint pooled migration URL may use
-`sslmode=require`, but preflight still verifies its TLS certificate. Routing
-options, duplicate query parameters and `PGOPTIONS` are forbidden.
+The existing `DATABASE_URL` is used for application access, migrations and
+seeding. There is no separate seed connection or permission-grant phase. No
+dedicated seed role, new database privileges or SQL bootstrap is required.
+Staging and previews intentionally share the existing owner login on the
+nonproduction Neon project.
 
-The release runner gives Prisma's migration subprocess a copy of the approved
-URL with `sslmode=require&sslaccept=strict`. Prisma's migration engine uses
-different TLS settings from the `pg` preflight client, so both connections must
-explicitly verify certificates. The parent environment and application URL are
-unchanged.
+## Destination protection
 
-Keep the old `STAGING_SEED_*` secrets until the first new staging release
-succeeds, then remove them and the obsolete `STAGING_SEED_ENABLED` GitHub
-variable. New code reads only `SEED_*`. Do not place staging seed credentials on
-preview apps or production. Preview settings are generated by preview
-provisioning with a separate database and role for each PR.
+The approved environment and Fly app must match `APP_ENVIRONMENT` and
+`FLY_APP_NAME`. The URL and server-reported project, branch, endpoint, database
+and role must exactly match the reviewed target. This read-only verification
+runs before migrations and again inside the replacement transaction. Missing or
+mismatched configuration fails deployment. Production remains migration-only,
+and the seed CLI rejects production environments before any connection or write.
+
+A direct application URL can use `sslmode=verify-full` or `sslmode=require`; a
+pooled URL must identify the same approved endpoint. The `pg` client verifies
+TLS certificates explicitly in either case. Prisma receives a subprocess-only
+copy with `sslmode=require&sslaccept=strict` so its migration connection also
+verifies certificates. Duplicate parameters, routing overrides and `PGOPTIONS`
+are forbidden; the parent application URL is unchanged.
+
+Production is in a separate project. Ensure the shared nonproduction password is
+not valid there, even if the role name is the same. Verify an authentication
+rejection against the reachable production endpoint before rollout; a timeout or
+DNS error does not demonstrate credential separation. Do not record passwords or
+connection strings. Keep production credentials out of preview workflows/apps.
+
+Server identity settings are defined by the
+[Neon extension](https://github.com/neondatabase/neon/blob/main/pgxn/neon/libpagestore.c)
+and its
+[compute configuration](https://github.com/neondatabase/neon/blob/main/compute_tools/src/config.rs).
+
+Update `SEED_TARGET` to the format above before deploying the new runner; the
+old `migrationRole` field is no longer accepted. After staging and preview
+releases succeed, retire obsolete `SEED_DATABASE_URL`, `STAGING_SEED_*` and
+`STAGING_SEED_ENABLED` settings. Remove legacy seed/provisioner roles only after
+confirming no deployed images or other consumers use them. No legacy role or
+privilege changes happen automatically.
 
 Configured testers preserve their IDs, locales and roles. Newly added testers
-receive no administrator role unless explicitly configured for bootstrap in an
-otherwise completely empty application database. Logto identities are untouched.
-
-## Provision isolated seed credentials
-
-Neon roles are branch-scoped and parent roles are copied into newly created
-child branches. The inherited `neondb_owner` role does not establish production
-credential isolation. Create the following role through an interactive SQL
-session connected to **the approved staging branch only**, after its existing
-migrations have been applied:
-
-```sql
-CREATE ROLE cashfolio_staging_seed
-  LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-
--- In psql, set a newly generated, independently stored password without placing
--- its plaintext value in SQL, shell history, or deployment logs:
-\password cashfolio_staging_seed
-
-GRANT CONNECT ON DATABASE neondb TO cashfolio_staging_seed;
-GRANT USAGE ON SCHEMA public TO cashfolio_staging_seed;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
-  "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account",
-  "Transaction", "Booking", "ClassificationScheme", "ClassificationNode",
-  "AccountClassification"
-TO cashfolio_staging_seed;
-GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(),
-  public.initialize_book_classifications(), public.seed_asset_class_scheme(text)
-TO cashfolio_staging_seed;
-```
-
-Adjust the database name to the reviewed target. Do not create this role through
-shared migrations, the Neon Console/API's privileged role-creation flow, or a
-production SQL session. It needs no schema ownership, migration permissions,
-role membership, `TRUNCATE`, or `neon_superuser` membership. Add explicit grants
-when future seed changes require additional application tables. The
-classification migration extends these grants when the existing
-`cashfolio_staging_seed` role is present; it never creates that role. For a
-preview seed role, the shared release runner applies these same narrow table and
-function grants after migrations and before replacement. Authentication tables
-are not granted to seed roles.
-
-Before enabling seeding, use an independently authorized read-only production
-connection to confirm that the role is absent:
-
-```sql
-SELECT rolname FROM pg_roles WHERE rolname = 'cashfolio_staging_seed';
-```
-
-Require zero rows. Also attempt authentication against the production endpoint
-using the new seed role and password and require an explicit authentication
-rejection from the reachable production service. A network failure, timeout, or
-DNS error does not establish credential isolation. Do not record the password or
-connection string in the evidence. Keep only the reviewed endpoint identifiers
-and the successful staging/failed production authentication outcome. A uniquely
-named staging-only role provides isolation from production without changing
-projects. Previews use separate databases and credentials on this same staging
-branch and endpoint; they receive no staging seed secrets. Before enabling
-preview provisioning, grant CONNECT explicitly to every existing staging
-consumer, then revoke PUBLIC connection access as described in
-[Preview environments](preview-environments.md). This preserves staging access
-while denying preview-role connections to its database.
-
-## Validate before deployment
-
-Read the following through each staging connection before any replacement:
-
-```sql
-SELECT
-  current_setting('neon.project_id', true) AS project_id,
-  current_setting('neon.branch_id', true) AS branch_id,
-  current_setting('neon.endpoint_id', true) AS endpoint_id,
-  current_database() AS database_name,
-  current_user AS role_name;
-```
-
-The seed requires exact approved project, branch, endpoint, and database
-matches; its connection must also report the dedicated seed role. These Neon
-settings are supplied by the compute and cannot be changed by the session.
-Missing, empty, or mismatched settings fail closed. The migration connection
-must identify the same approved staging database. Verify that staging has the
-settings and that production authentication with the seed credentials fails
-before deploying the shared seed release. The first shared staging release
-repeats this read-only preflight before migrations, then validates again before
-replacement.
-
-The source of truth for branch-scoped roles is
-[Neon's role documentation](https://neon.com/docs/manage/roles). Server identity
-settings are defined by the
-[Neon extension](https://github.com/neondatabase/neon/blob/main/pgxn/neon/libpagestore.c)
-and populated by its
-[compute configuration](https://github.com/neondatabase/neon/blob/main/compute_tools/src/config.rs).
+receive no administrator role unless explicitly configured for bootstrap in a
+fully empty database. Authentication/session tables and Logto identities are not
+modified by replacement. Shared market-rate caches remain intact.
 
 ## Preview lifecycle and verification
 

@@ -21,9 +21,8 @@ test("connection URLs use only the approved destination and verified TLS", () =>
         projectId: "project",
         branchId: "br-preview",
         endpointId: "ep-preview",
-        role: "unused",
+        role: "neondb_owner",
       },
-      "cashfolio_pr_42_app",
       "a@b:c",
     ),
   );
@@ -33,15 +32,15 @@ test("connection URLs use only the approved destination and verified TLS", () =>
   assert.equal(url.searchParams.get("sslmode"), "verify-full");
 });
 
-test("provisioning refuses mismatched server identity and privileged roles before writes", async () => {
+test("provisioning refuses mismatched server identity and a login without CREATEDB before writes", async () => {
   const { verifyProvisionerServer } = await import("./runtime.ts");
   const target = {
     hostname: "ep-preview.example.neon.tech",
-    database: "cashfolio_preview_control",
+    database: "neondb",
     projectId: "preview-project",
     branchId: "br-preview",
     endpointId: "ep-preview",
-    role: "cashfolio_preview_provisioner",
+    role: "neondb_owner",
   };
   const identity = {
     projectId: target.projectId,
@@ -71,7 +70,9 @@ test("provisioning refuses mismatched server identity and privileged roles befor
   for (const safe of [false, true]) {
     const client = {
       query: async (sql: string) => ({
-        rows: sql.includes("FROM pg_roles") ? [{ safe }] : [identity],
+        rows: sql.includes("FROM pg_roles")
+          ? [{ rolcreatedb: safe }]
+          : [identity],
       }),
     } as unknown as Parameters<typeof verifyProvisionerServer>[0];
     if (safe)

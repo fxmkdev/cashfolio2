@@ -18,7 +18,7 @@ const target = {
   branchId: "br-staging",
   endpointId: "ep-staging",
   database: "neondb",
-  role: "cashfolio_staging_seed",
+  role: "owner",
 };
 const config = { target, testerExternalIds: ["tester"] };
 const dataset = generateStagingDataset(new Date("2026-10-10T00:00:00Z"));

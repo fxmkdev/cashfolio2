@@ -8,7 +8,6 @@ import {
 } from "./dataset";
 import { runSeedRelease } from "./release";
 import {
-  parseVerifiedConnection,
   readSeedConfig,
   requireValue,
   SeedSafetyError,
@@ -28,25 +27,12 @@ export async function runStagingSeed(
   if (args.length === 1 && args[0] === "--sample-csv")
     return generateStatementImportSample();
   const command = args.length === 0 ? "seed" : args.length === 1 ? args[0] : "";
-  if (
-    !["seed", "--check-target", "--grant-permissions", "--release"].includes(
-      command,
-    )
-  )
+  if (!["seed", "--check-target", "--release"].includes(command))
     throw new SeedSafetyError(
-      "Usage: seed [--release | --check-target | --grant-permissions | --sample-csv]",
+      "Usage: seed [--release | --check-target | --sample-csv]",
     );
   // Reject production and incomplete configuration before any subprocess or connection.
   const config = readSeedConfig(env);
-  const migrationTarget = {
-    ...config.target,
-    role: config.target.migrationRole,
-  };
-  const migrationConnection = parseVerifiedConnection(
-    requireValue(env, "DATABASE_URL"),
-    migrationTarget,
-    true,
-  );
   if (command === "--release") {
     return runSeedRelease({
       verify: () => runStagingSeed(["--check-target"], env),
@@ -68,32 +54,13 @@ export async function runStagingSeed(
           );
         }
       },
-      grant: () => runStagingSeed(["--grant-permissions"], env),
       replace: () => runStagingSeed([], env),
     });
   }
-  const seed = createSeedClient(config.seedConnection);
+  const seed = createSeedClient(config.connection);
   try {
-    if (command !== "seed") {
-      const migration = createSeedClient(migrationConnection);
-      try {
-        await verifyServerIdentity(seed, config.target);
-        await verifyServerIdentity(migration, migrationTarget);
-        if (command === "--grant-permissions") {
-          const role = `"${config.target.role}"`; // Validated SQL identifier, never a free-form input.
-          await migration.$executeRawUnsafe(
-            `GRANT USAGE ON SCHEMA public TO ${role}`,
-          );
-          await migration.$executeRawUnsafe(
-            `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account", "Transaction", "Booking", "ClassificationScheme", "ClassificationNode", "AccountClassification" TO ${role}`,
-          );
-          await migration.$executeRawUnsafe(
-            `GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(), public.initialize_book_classifications(), public.seed_asset_class_scheme(text) TO ${role}`,
-          );
-        }
-      } finally {
-        await migration.$disconnect();
-      }
+    if (command === "--check-target") {
+      await verifyServerIdentity(seed, config.target);
       return JSON.stringify({ event: "seed_target_verified" });
     }
     const summary = await replaceStagingData(

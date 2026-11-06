@@ -5,18 +5,11 @@ import {
   provisionDatabase,
   type SqlClient,
 } from "./database.ts";
-const input = {
-  number: 42,
-  headRef: "topic",
-  title: "Test title",
-  passwordKey: "ab".repeat(32),
-  adminRole: "provisioner",
-};
+const host = { database: "neondb", role: "owner" };
+const input = { number: 42, headRef: "topic", title: "Test title", host };
 function fake(
   options: {
-    database?: string;
-    unsafeRole?: boolean;
-    collision?: boolean;
+    databases?: { name: string; owner: string }[];
     failCreate?: boolean;
   } = {},
 ) {
@@ -24,22 +17,10 @@ function fake(
   const client = {
     query: async (sql: string, values?: unknown[]) => {
       calls.push(sql);
-      if (sql.includes("NOT (rolsuper"))
-        return {
-          rows: options.unsafeRole ? [{ safe: false, marker: null }] : [],
-        };
-      if (sql.includes("shobj_description"))
-        return {
-          rows: [
-            {
-              marker: `cashfolio-preview:42:${String(values?.[0]).endsWith("_seed") ? "seed" : "app"}`,
-            },
-          ],
-        };
-      if (sql.includes("datname AS name"))
-        return { rows: options.database ? [{ name: options.database }] : [] };
-      if (sql.includes("SELECT 1 FROM pg_database"))
-        return { rows: options.collision ? [{}] : [] };
+      if (sql.includes("datname AS name")) {
+        assert.deepEqual(values, ["pr-42-"]);
+        return { rows: options.databases ?? [] };
+      }
       if (sql.startsWith("CREATE DATABASE") && options.failCreate)
         throw new Error("create failed");
       return { rows: [] };
@@ -47,75 +28,68 @@ function fake(
   } as SqlClient;
   return { client, calls };
 }
-test("creates only the PR database and restricted SQL roles, with public access revoked", async () => {
+test("creates an empty PR database with the shared login, without changing roles or privileges", async () => {
   const { client, calls } = fake();
   const preview = await provisionDatabase(client, input);
   assert.equal(preview.database, "pr-42-test-title-cashfolio-app2");
-  assert.ok(
-    calls.some(
-      (sql) =>
-        sql.startsWith("CREATE DATABASE") &&
-        sql.endsWith("ALLOW_CONNECTIONS false"),
-    ),
+  assert.deepEqual(
+    calls.filter((sql) => sql.startsWith("CREATE")),
+    ['CREATE DATABASE "pr-42-test-title-cashfolio-app2" TEMPLATE template0'],
   );
-  const open = calls.findIndex(
-    (sql) =>
-      sql.startsWith("ALTER DATABASE") &&
-      sql.endsWith("ALLOW_CONNECTIONS true"),
+  assert.doesNotMatch(
+    calls.join("\n"),
+    /ROLE|GRANT|REVOKE|PASSWORD|ALTER DATABASE/,
   );
-  assert.ok(
-    open > calls.findIndex((sql) => sql.startsWith("REVOKE ALL ON DATABASE")),
-  );
-  assert.ok(
-    open >
-      calls.findIndex((sql) => sql.startsWith("GRANT CONNECT ON DATABASE")),
-  );
-  assert.equal(calls.filter((sql) => sql.startsWith("CREATE ROLE")).length, 2);
-  assert.ok(
-    calls.some((sql) => sql.includes("NOCREATEROLE NOREPLICATION NOBYPASSRLS")),
-  );
-  assert.ok(calls.some((sql) => sql.startsWith("REVOKE ALL ON DATABASE")));
-  assert.ok(!calls.some((sql) => /ALTER ROLE|neon_superuser/.test(sql)));
   assert.match(calls.at(-1)!, /pg_advisory_unlock/);
 });
-test("reuses the original database after a PR title edit without recreation", async () => {
+test("reuses the original database after a PR title edit", async () => {
+  const name = "pr-42-original-title-cashfolio-app2";
+  const { client, calls } = fake({ databases: [{ name, owner: host.role }] });
+  assert.equal((await provisionDatabase(client, input)).database, name);
+  assert.ok(!calls.some((sql) => sql.startsWith("CREATE")));
+});
+test("rejects ambiguous names, other owners, staging targets and invalid PRs without destructive SQL", async () => {
+  const valid = { name: "pr-42-title-cashfolio-app2", owner: host.role };
+  for (const databases of [
+    [valid, { ...valid, name: "pr-42-other-cashfolio-app2" }],
+    [{ ...valid, owner: "other" }],
+    [{ name: host.database, owner: host.role }],
+    [{ ...valid, name: "pr-43-title-cashfolio-app2" }],
+    [{ ...valid, name: "production" }],
+  ]) {
+    for (const operation of ["provision", "cleanup"]) {
+      const { client, calls } = fake({ databases });
+      await assert.rejects(
+        operation === "provision"
+          ? provisionDatabase(client, input)
+          : cleanupDatabase(client, 42, host),
+      );
+      assert.ok(!calls.some((sql) => /^(CREATE|DROP)/.test(sql)));
+      assert.match(calls.at(-1)!, /pg_advisory_unlock/);
+    }
+  }
+  const staging = { ...host, database: valid.name };
+  const { client, calls } = fake({ databases: [valid] });
+  await assert.rejects(cleanupDatabase(client, 42, staging));
+  await assert.rejects(provisionDatabase(client, { ...input, host: staging }));
+  assert.ok(!calls.some((sql) => /^(CREATE|DROP)/.test(sql)));
+  await assert.rejects(cleanupDatabase(client, 0, host));
+});
+test("always releases the provisioning lock after database creation fails", async () => {
+  const { client, calls } = fake({ failCreate: true });
+  await assert.rejects(provisionDatabase(client, input), /create failed/);
+  assert.match(calls.at(-1)!, /pg_advisory_unlock/);
+});
+test("cleanup drops only the requested PR database and is harmless when absent", async () => {
   const { client, calls } = fake({
-    database: "pr-42-original-title-cashfolio-app2",
+    databases: [{ name: "pr-42-title-cashfolio-app2", owner: host.role }],
   });
-  assert.equal(
-    (await provisionDatabase(client, input)).database,
-    "pr-42-original-title-cashfolio-app2",
+  await cleanupDatabase(client, 42, host);
+  assert.deepEqual(
+    calls.filter((sql) => sql.startsWith("DROP")),
+    ['DROP DATABASE "pr-42-title-cashfolio-app2" WITH (FORCE)'],
   );
-  assert.ok(!calls.some((sql) => sql.startsWith("CREATE DATABASE")));
-});
-test("refuses unsafe roles, unexpected ownership and name collisions and always unlocks", async () => {
-  for (const options of [
-    { unsafeRole: true },
-    { database: "production" },
-    { collision: true },
-    { failCreate: true },
-  ]) {
-    const { client, calls } = fake(options);
-    await assert.rejects(provisionDatabase(client, input));
-    assert.match(calls.at(-1)!, /pg_advisory_unlock/);
-    assert.ok(!calls.some((sql) => sql.startsWith("DROP")));
-  }
-});
-test("cleanup removes the owned database before its roles, and refuses other names", async () => {
-  const { client, calls } = fake({ database: "pr-42-title-cashfolio-app2" });
-  await cleanupDatabase(client, 42);
-  const drop = calls.filter((sql) => sql.startsWith("DROP"));
-  assert.match(drop[0], /^DROP DATABASE/);
-  assert.equal(drop.length, 3);
-  for (const database of [
-    "production",
-    "staging",
-    "neondb",
-    "cashfolio_preview_control",
-    "pr-43-title-cashfolio-app2",
-  ]) {
-    const unsafe = fake({ database });
-    await assert.rejects(cleanupDatabase(unsafe.client, 42));
-    assert.ok(!unsafe.calls.some((sql) => sql.startsWith("DROP")));
-  }
+  const missing = fake();
+  await cleanupDatabase(missing.client, 42, host);
+  assert.ok(!missing.calls.some((sql) => sql.startsWith("DROP")));
 });
