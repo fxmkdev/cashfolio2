@@ -27,6 +27,7 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   organizerApi?: OrganizerApi;
+  organize?: boolean;
   onOrganizeSaved?: () => void;
   bulkAccountActions?: BulkAccountActions;
   managementContext?: AccountManagementContext;

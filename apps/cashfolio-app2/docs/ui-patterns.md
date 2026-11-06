@@ -1518,6 +1518,18 @@ grouping. Changing grouping while entry is loading cancels that entry attempt
 and releases its loading state. The Group By control is hidden while organizing;
 Done restores the financial grid.
 
+Organize is represented by `organize=true` in the Accounts URL. Entering pushes
+one browser-history entry before loading, so Back exits even during loading and
+Forward reopens a fresh session. Done returns to the verified normal Accounts
+origin or replaces a directly visited Organize URL. Loading retries and saved
+moves add no history entries. During move, Undo, and recovery requests, wait for
+the request to settle before continuing the first queued navigation attempt.
+There is no unsaved-changes confirmation for a settled organizer. Undo remains a
+separate action for the latest saved move; Back never undoes, and Forward never
+replays. Exiting clears selection, visibility, expansion, dialogs, and Undo
+history; reentry uses defaults. See [Routing](routing.md) for return-target
+rules.
+
 Keep **Accounts** as the heading with an **Organizing** badge and standard
 header spacing, without a mode-specific background. **Done** and, when
 available, **Undo** use the same right-aligned header toolbar as the normal

@@ -90,8 +90,40 @@ test("organizes an account and complete group subtree, persists ordering, and un
   await page
     .getByRole("option", { name: "Organize Destination", exact: true })
     .click();
-  await dialog.getByRole("button", { name: "Move", exact: true }).click();
+  let releaseSave!: () => void;
+  let saving!: () => void;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  const saveStarted = new Promise<void>((resolve) => {
+    saving = resolve;
+  });
+  let held = false;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!held && route.request().method() === "POST") {
+      held = true;
+      saving();
+      await saveGate;
+    }
+    await route.continue();
+  });
+  try {
+    await dialog.getByRole("button", { name: "Move", exact: true }).click();
+    await saveStarted;
+    await expect(
+      page.getByRole("button", { name: "Done", exact: true }),
+    ).toBeDisabled();
+    await page.evaluate(() => window.history.back());
+    await expect(page).not.toHaveURL(/organize=true/);
+    await expect(organizer).toBeVisible();
+  } finally {
+    releaseSave();
+  }
   await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Organize", exact: true }),
+  ).toBeVisible();
+  await page.unroute("**/_serverFn/**");
   await expect
     .poll(
       async () =>
@@ -126,8 +158,16 @@ test("organizes an account and complete group subtree, persists ordering, and un
     groupId: destination,
     sortOrder: 1,
   });
+  await page.goForward();
+  await expect(organizer).toBeVisible();
+  await expect(page).toHaveURL(/organize=true/);
+  // Forward opens a fresh session; it neither replays nor reverses the saved move.
+  expect(await accountState()).toEqual(persisted);
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(0);
   await page.reload();
-  await page.getByRole("button", { name: "Organize", exact: true }).click();
+  await expect(organizer).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Undo", exact: true }),
   ).toHaveCount(0);

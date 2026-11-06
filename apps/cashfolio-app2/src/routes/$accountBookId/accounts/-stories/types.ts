@@ -3,6 +3,7 @@ import type { OrganizerApi } from "../-organize/use-organizer";
 import type { AccountsMode, TabValue, TreeRow } from "../-page-types";
 export type AccountsStoryOptions = {
   organize?: boolean;
+  organizeHistory?: boolean;
   organizerApi?: OrganizerApi;
   bulkAssignment?: boolean;
   assignmentFailsOnce?: boolean;

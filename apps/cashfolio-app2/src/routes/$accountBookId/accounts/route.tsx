@@ -11,6 +11,7 @@ import {
   getAccountsPageTitle,
   parseAccountsSearch,
   getCategoriesRedirect,
+  getCanonicalAccountsSearch,
 } from "./-page-types";
 import { loadAccountsPageData } from "./-page-loader";
 import { useAccountsPageController } from "./-page-controller";
@@ -30,21 +31,15 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
         params,
       });
     }
-    const rawSearch = new URLSearchParams(location.searchStr);
-    if (
-      rawSearch.get("mode") === "archived" ||
-      rawSearch.get("tab") !== "BALANCE"
-    ) {
+    const canonicalSearch = getCanonicalAccountsSearch(
+      location.searchStr,
+      search,
+    );
+    if (canonicalSearch) {
       throw redirect({
         to: "/$accountBookId/accounts",
         params,
-        search: {
-          tab: "BALANCE",
-          mode: "active",
-          ...(search.grouping === "assetClass"
-            ? { grouping: search.grouping }
-            : {}),
-        },
+        search: canonicalSearch,
         replace: true,
       });
     }
@@ -62,7 +57,7 @@ function AccountsPage() {
   const ledgerNavigationState = useLedgerNavigationState();
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab, mode, grouping } = Route.useSearch();
+  const { tab, mode, grouping, organize } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
   const router = useRouter();
 
@@ -72,6 +67,7 @@ function AccountsPage() {
     tab,
     mode,
     grouping,
+    organize,
     onGroupingChange: (grouping) =>
       void navigate({ search: (previous) => ({ ...previous, grouping }) }),
     invalidate: () => {

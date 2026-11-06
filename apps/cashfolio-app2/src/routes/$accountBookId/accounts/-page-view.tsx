@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { GridApi, GridState } from "ag-grid-enterprise";
 import { Alert, Box, Button, Text } from "@mantine/core";
 import { AccountOrganizer } from "./-organize/organizer";
 import { OrganizerActions } from "./-organize/organizer-actions";
 import { useOrganizer } from "./-organize/use-organizer";
+import { useOrganizeNavigation } from "./-organize/use-organize-navigation";
 import { useGlobalLoading } from "@/components/navigation/global-loading";
 import type { AccountsGridRow } from "./-page-types";
 import { PageShell } from "@/components/layout/page-shell";
@@ -38,50 +39,54 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   const canOrganize =
     !isCategories && grouping === "accountStructure" && !!props.organizerApi;
   const [organizing, setOrganizing] = useState(false);
-  const isOrganizing = organizing && canOrganize;
+  const requested = !!props.organize && canOrganize;
+  const isOrganizing = organizing && requested;
   const organizer = useOrganizer(
     props.onOrganizeSaved ?? (() => {}),
     props.organizerApi,
     false,
   );
   useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
-  const { reset } = organizer;
-  useEffect(() => {
-    if (!canOrganize) {
-      reset();
-      setOrganizing(false);
-    }
-  }, [canOrganize, reset]);
+  const navigation = useOrganizeNavigation(
+    props.accountBookId,
+    !!props.organize,
+    canOrganize,
+    organizer.pending,
+  );
+  const { reset, load, snapshot } = organizer;
   const normalGrid = useRef<GridApi<AccountsGridRow> | null>(null);
   const normalGridState = useRef<GridState | undefined>(undefined);
-  const openOrganizer = async () => {
-    if (!canOrganize || organizing || !(await organizer.load())) return;
+  const activate = useEffectEvent(() => {
     normalGridState.current = normalGrid.current?.getState();
     bulkAccountActions?.clearSelection();
     setOrganizing(true);
-  };
-  const closeOrganizer = () => {
+  });
+  useEffect(() => {
+    if (requested && snapshot && !organizing) activate();
+  }, [organizing, requested, snapshot]);
+  useEffect(() => {
+    if (requested) {
+      void load();
+      return reset;
+    }
     setOrganizing(false);
-    organizer.reset();
-    requestAnimationFrame(() => {
+    reset();
+    const frame = requestAnimationFrame(() => {
       if (normalGridState.current && !normalGrid.current?.isDestroyed()) {
         normalGrid.current?.setState(normalGridState.current, ["rowSelection"]);
       }
     });
-  };
+    return () => cancelAnimationFrame(frame);
+  }, [load, requested, reset]);
   return (
     <PageShell>
       <AccountsPageHeader
         {...props}
         organizing={isOrganizing}
-        onOrganize={canOrganize ? openOrganizer : undefined}
-        onGroupingChange={(next) => {
-          if (next !== grouping) organizer.reset();
-          props.onGroupingChange?.(next);
-        }}
+        onOrganize={canOrganize ? navigation.enter : undefined}
         organizePending={organizer.loading}
         organizerActions={
-          <OrganizerActions organizer={organizer} onDone={closeOrganizer} />
+          <OrganizerActions organizer={organizer} onDone={navigation.exit} />
         }
       />
       {isOrganizing && (
@@ -101,7 +106,7 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         {canOrganize && organizer.loadError && (
           <Alert color="red" role="alert">
             {organizer.loadError}
-            <Button variant="subtle" onClick={() => void openOrganizer()}>
+            <Button variant="subtle" onClick={() => void load()}>
               Try Again
             </Button>
           </Alert>

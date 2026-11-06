@@ -1,4 +1,5 @@
-import { Button, Text } from "@mantine/core";
+import { Button, Group, Text } from "@mantine/core";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import type { useAccountsStoryModel } from "./use-story-model";
 import type { AccountsStoryOptions } from "./types";
 
@@ -10,8 +11,31 @@ export function StoryControls({
   options: AccountsStoryOptions;
 }) {
   const { bulkApiRef, assignments, setGainLossState } = model;
+  const router = useRouter();
+  const location = useRouterState({ select: (state) => state.location });
   return (
     <>
+      {options.organizeHistory && (
+        <Group>
+          <Button onClick={() => router.history.back()}>Browser Back</Button>
+          <Button onClick={() => router.history.forward()}>
+            Browser Forward
+          </Button>
+          <Button
+            onClick={() =>
+              void router.navigate({
+                to: "/$accountBookId/accounts",
+                params: { accountBookId: "storybook-book" },
+                search: { tab: "BALANCE", mode: "active" },
+              })
+            }
+          >
+            Navigate to Accounts
+          </Button>
+          <Text data-testid="history-index">{location.state.__TSR_index}</Text>
+          <Text data-testid="history-href">{location.href}</Text>
+        </Group>
+      )}
       {options.bulkAssignment && (
         <>
           <Button

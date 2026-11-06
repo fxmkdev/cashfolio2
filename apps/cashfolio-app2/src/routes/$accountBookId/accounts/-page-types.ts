@@ -139,10 +139,16 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
   mode: AccountsMode;
   showArchived?: boolean;
   grouping?: ReportingGrouping;
+  organize?: true;
 } {
   const tab = isTabValue(search.tab) ? search.tab : "BALANCE";
   return {
     tab,
+    ...(tab === "BALANCE" &&
+    search.grouping !== "assetClass" &&
+    search.organize === true
+      ? { organize: true as const }
+      : {}),
     ...(isReportingGrouping(search.grouping)
       ? { grouping: search.grouping }
       : {}),
@@ -153,5 +159,25 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
       tab.startsWith("EQUITY-") && search.mode === "archived"
         ? "archived"
         : "active",
+  };
+}
+
+/** Normalize legacy Accounts URLs without losing a valid organizer request. */
+export function getCanonicalAccountsSearch(
+  searchStr: string,
+  search: ReturnType<typeof parseAccountsSearch>,
+) {
+  const raw = new URLSearchParams(searchStr);
+  if (
+    raw.get("mode") !== "archived" &&
+    raw.get("tab") === "BALANCE" &&
+    !(raw.has("organize") && !search.organize)
+  )
+    return undefined;
+  return {
+    tab: "BALANCE" as const,
+    mode: "active" as const,
+    ...(search.grouping ? { grouping: search.grouping } : {}),
+    ...(search.organize ? { organize: true as const } : {}),
   };
 }

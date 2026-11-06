@@ -8,6 +8,9 @@ import { chooseAccountGrouping } from "./interaction-helpers";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,
+  parameters: {
+    router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
+  },
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

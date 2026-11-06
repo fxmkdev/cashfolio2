@@ -16,6 +16,7 @@ export function getStoryViewProps(
   return {
     ...getStoryModalProps(modalState),
     grouping: model.grouping,
+    organize: routing.routeSearch.organize === true,
     onGroupingChange: model.setGrouping,
     bulkAccountActions:
       options.bulkAssignment && !isEquityTab ? model.assignment : undefined,

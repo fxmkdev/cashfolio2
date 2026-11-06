@@ -26,6 +26,7 @@ export function useAccountsPageController(args: {
   tab: AccountsPageViewProps["tab"];
   mode?: AccountsPageViewProps["mode"];
   showArchived?: boolean;
+  organize?: boolean;
   grouping?: AccountsPageViewProps["grouping"];
   onGroupingChange?: AccountsPageViewProps["onGroupingChange"];
   onShowArchivedChange?: AccountsPageViewProps["onShowArchivedChange"];
@@ -131,6 +132,7 @@ export function useAccountsPageController(args: {
 
   return {
     onOrganizeSaved: args.invalidate,
+    organize: args.organize,
     organizerApi,
     bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
