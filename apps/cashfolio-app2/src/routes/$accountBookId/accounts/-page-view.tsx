@@ -71,9 +71,11 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     }
     setOrganizing(false);
     reset();
+    const previousGridState = normalGridState.current;
+    normalGridState.current = undefined;
     const frame = requestAnimationFrame(() => {
-      if (normalGridState.current && !normalGrid.current?.isDestroyed()) {
-        normalGrid.current?.setState(normalGridState.current, ["rowSelection"]);
+      if (previousGridState && !normalGrid.current?.isDestroyed()) {
+        normalGrid.current?.setState(previousGridState, ["rowSelection"]);
       }
     });
     return () => cancelAnimationFrame(frame);

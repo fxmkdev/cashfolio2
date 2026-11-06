@@ -76,8 +76,40 @@ export const DirectOrganizeEntry: Story = {
 };
 
 export const BackCancelsOrganizeLoading: Story = {
+  render: (args) => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      organizerApi={args.organizerApi}
+      organizeHistory
+      bulkAssignment
+      expandGroups
+    />
+  ),
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    // A cancelled later entry must not restore an earlier session's grid state.
+    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+    await canvas.findByRole("region", { name: "Organize Accounts" });
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("region", { name: "Organize Accounts" }),
+      ).not.toBeInTheDocument(),
+    );
+    const financialGrid = await canvas.findByRole("treegrid");
+    await waitFor(() =>
+      expect(
+        within(financialGrid).getByText("Wallet", { exact: true }),
+      ).toBeVisible(),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Filter to Checking" }),
+    );
+    await waitFor(() =>
+      expect(
+        within(financialGrid).queryByText("Wallet", { exact: true }),
+      ).not.toBeInTheDocument(),
+    );
     const api = args.organizerApi!;
     const original = api.load;
     let release!: () => void;
@@ -101,6 +133,10 @@ export const BackCancelsOrganizeLoading: Story = {
       await waitFor(() =>
         expect(canvas.getByRole("button", { name: "Organize" })).toBeEnabled(),
       );
+      await new Promise(requestAnimationFrame);
+      await expect(
+        within(financialGrid).queryByText("Wallet", { exact: true }),
+      ).not.toBeInTheDocument();
       release();
       await load.mock.results[0]!.value;
       await userEvent.hover(canvas.getByRole("heading", { name: "Accounts" }));
