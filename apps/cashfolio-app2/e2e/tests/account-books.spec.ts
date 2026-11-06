@@ -137,6 +137,23 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   const accountBookId = getAccountBookIdFromAccountsUrl(page.url());
   await page.goto(`/${accountBookId}/settings`);
 
+  await expect(
+    page.getByRole("button", { name: "Delete Account Book" }),
+  ).toHaveCount(0);
+  const dangerZoneTab = page.getByRole("tab", { name: "Danger Zone" });
+  await dangerZoneTab.click();
+  await expect(page).toHaveURL(`/${accountBookId}/settings/danger-zone`);
+  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
+  await page.reload();
+  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
+  await page.goBack();
+  await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.goForward();
+  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
+
   await page
     .getByRole("button", { name: "Delete Account Book" })
     .first()

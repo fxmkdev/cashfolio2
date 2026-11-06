@@ -161,10 +161,15 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   booking rows. The explicit month/year period filter includes a full
   transaction when any of its bookings intersects the selected period.
 - `$accountBookId/settings/route.tsx` - account-book settings layout with local
-  General/Categories navigation and an outlet. The primary sidebar is unchanged.
+  General, Categories, Asset Classes, and Danger Zone navigation and an outlet.
+  The red Danger Zone tab is separated at the right and wraps on narrow screens.
+  The primary sidebar is unchanged.
 - `$accountBookId/settings/index.tsx` - General settings at the existing
-  `/settings` URL: account book name, reference currency, start date, and the
-  typed-name danger-zone delete flow.
+  `/settings` URL: account book name, reference currency, and start date.
+- `$accountBookId/settings/danger-zone/route.tsx` - dedicated Danger Zone page
+  with the typed-name account-book deletion flow. Loads the current book name
+  independently of the General form; successful deletion clears the book-options
+  cache and navigates to `/`.
 - `$accountBookId/settings/categories/route.tsx` - Income/Expenses category and
   category-group management, including nested groups, ordering, and optional
   archived items within the grid. Its typed `showArchived` search boolean

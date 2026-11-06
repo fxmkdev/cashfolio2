@@ -20,7 +20,6 @@ const meta = {
       unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
     },
     onSubmit: fn(async () => undefined),
-    onDelete: fn(async () => undefined),
   },
   render: (args) => (
     <Box p="md">
@@ -50,8 +49,14 @@ export const General: Story = {
       "Household",
     );
     await expect(
-      canvas.getByRole("heading", { name: "Danger Zone" }),
-    ).toBeVisible();
+      canvas.queryByRole("heading", { name: "Danger Zone" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("button", { name: "Delete Account Book" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      tabs.getByRole("tab", { name: "Danger Zone" }),
+    ).toHaveAttribute("href", "/storybook-book/settings/danger-zone");
   },
 };
 
@@ -67,30 +72,6 @@ export const Save: Story = {
       referenceCurrency: "CHF",
       startDate: "2026-01-01T00:00:00.000Z",
     });
-  },
-};
-
-export const DeleteConfirmation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Delete Account Book" }),
-    );
-    const dialog = within(
-      await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-        name: "Delete Account Book",
-      }),
-    );
-    const deletion = dialog.getByRole("button", {
-      name: "Delete Account Book",
-    });
-    await expect(deletion).toBeDisabled();
-    await userEvent.type(
-      dialog.getByLabelText("Account Book Name"),
-      "Household",
-    );
-    await expect(deletion).not.toBeDisabled();
-    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
 };
 

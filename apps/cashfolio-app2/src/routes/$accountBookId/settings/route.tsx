@@ -24,12 +24,19 @@ function SettingsLayout() {
         `/${accountBookId}/settings/classifications`,
       ),
   });
+  const dangerZone = useRouterState({
+    select: (state) =>
+      state.location.pathname.startsWith(
+        `/${accountBookId}/settings/danger-zone`,
+      ),
+  });
   return (
     <PageShell>
       <SettingsNavigation
         accountBookId={accountBookId}
         categories={categories}
         classifications={classifications}
+        dangerZone={dangerZone}
       />
       <Outlet />
     </PageShell>

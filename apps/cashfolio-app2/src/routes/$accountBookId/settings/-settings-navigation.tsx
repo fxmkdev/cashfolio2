@@ -5,19 +5,23 @@ export function SettingsNavigation({
   accountBookId,
   categories,
   classifications = false,
+  dangerZone = false,
 }: {
   accountBookId: string;
   categories: boolean;
   classifications?: boolean;
+  dangerZone?: boolean;
 }) {
   return (
     <Tabs
       value={
-        classifications
-          ? "classifications"
-          : categories
-            ? "categories"
-            : "general"
+        dangerZone
+          ? "danger-zone"
+          : classifications
+            ? "classifications"
+            : categories
+              ? "categories"
+              : "general"
       }
       mb="md"
     >
@@ -43,6 +47,16 @@ export function SettingsNavigation({
           params={{ accountBookId }}
         >
           Asset Classes
+        </LinkTab>
+        <LinkTab
+          value="danger-zone"
+          to="/$accountBookId/settings/danger-zone"
+          params={{ accountBookId }}
+          ml="auto"
+          c="red"
+          color="red"
+        >
+          Danger Zone
         </LinkTab>
       </Tabs.List>
     </Tabs>
