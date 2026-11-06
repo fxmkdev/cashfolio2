@@ -79,14 +79,6 @@ export function buildGainsLossesWaterfallModel(args: {
     0,
   );
   const totalGainLoss = args.totalGainLoss ?? displayedTotal;
-  const rounding = Number((totalGainLoss - displayedTotal).toFixed(2));
-  if (rounding !== 0)
-    data.push({
-      id: "rounding",
-      label: "Rounding",
-      totalGainLoss: rounding,
-      isDrillable: false,
-    });
 
   return {
     data,

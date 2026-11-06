@@ -707,8 +707,10 @@ callers to override it when needed.
   selectable. Search paths and scoped chart descriptions include the grouping.
 - Grouping does not change total amounts. Allocation footers and chart totals
   use the rounded sum of exact balances. G/L footers use exact contribution
-  aggregates; a non-drillable Rounding waterfall bar reconciles rounded bars
-  with the selected scope's total when necessary.
+  aggregates. G/L waterfalls use the displayed group amounts without a separate
+  Rounding bar. Their Total tooltip retains the selected scope's authoritative
+  total and explains rounding when it differs from the sum of displayed groups
+  at cent precision. Waterfall geometry follows the displayed group amounts.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` /
   `All Gains/Losses` -> group path) directly above chart views.
 - Persist Period card state in `sessionStorage`, scoped by `accountBookId`,
