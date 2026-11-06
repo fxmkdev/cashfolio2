@@ -6,7 +6,7 @@ import {
   isBookingValueCompatibleWithAccountType,
 } from "@/shared/account-utils";
 import type { LedgerAccountOptionSource } from "./page-types";
-import type { RebookingState } from "./page-view";
+import type { RebookingState } from "./page-view.types";
 
 export function useLedgerRebookFlow(args: {
   rebooking: RebookingState | undefined;

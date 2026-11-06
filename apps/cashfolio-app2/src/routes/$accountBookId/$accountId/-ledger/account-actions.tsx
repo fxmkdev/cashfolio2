@@ -16,7 +16,7 @@ import {
   getAccountEntityLabel,
   getAccountManagementContext,
 } from "@/shared/account-presentation";
-import type { LedgerPageViewProps } from "./page-view";
+import type { LedgerPageViewProps } from "./page-view.types";
 import classes from "./page-header.module.css";
 
 export type LedgerAccountActionsProps = Pick<

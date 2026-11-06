@@ -1,338 +1,60 @@
-import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
-import { useEffect, useMemo, useState } from "react";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "@/.prisma-client/enums";
-import {
-  accountOptions as baseAccountOptions,
-  editTransactionInitialValues,
-} from "@/components/testing/storybook-fixtures";
-import { formatMonthPeriodValue } from "@/shared/period";
-import {
-  buildPeriodSelectorModel,
-  getMonthPickerValue,
-  getPeriodModeChangeValue,
-  getPeriodStepValue,
-  getYearPickerValue,
-  type PeriodMode,
-} from "@/shared/period-selector-model";
-import type { StatementImportCsvFormat } from "@/shared/statement-import-csv-format";
-import { getStatementImportDisabledReason } from "../-statement-import/draft/account-options";
-import { useLedgerColumnDefs } from "./page-columns";
-import type { SimpleTransactionEditInitialValues } from "./page-data";
+import { useNavigate } from "@tanstack/react-router";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { PeriodFilterAction } from "../../-period-filter-action";
-import { parseLedgerExplicitPeriod, type LedgerRow } from "./page-types";
+import { useLedgerColumnDefs } from "./page-columns";
+import { LedgerPageView } from "./page-view";
 import {
-  LedgerPageView,
-  type EditMode,
-  type LedgerPageViewProps,
-  type RebookingState,
-  type SimpleTransactionValues,
-  type SplitModalInitialValues,
-  type TransactionMutationValues,
-} from "./page-view";
+  createLedgerStoryAccount,
+  getLedgerStoryViewData,
+  type LedgerPageStoryOptions,
+} from "./page-view.story-fixtures";
+import {
+  useLedgerStoryAccountDialogs,
+  useLedgerStoryCreateDialogs,
+  useLedgerStoryEditDialog,
+  useLedgerStoryTransactionActions,
+} from "./page-view.story-dialogs";
+import { useLedgerStoryPeriod } from "./page-view.story-period";
 
-const statementImportCsvFormat: StatementImportCsvFormat = {
-  hasHeader: true,
-  delimitersToGuess: [",", ";"],
-  columns: [
-    "date",
-    "amount",
-    "original amount",
-    "original currency",
-    "exchange rate",
-    "description",
-  ],
-  dateFormat: "yyyy-MM-dd",
-  numberFormat: {
-    decimalSeparator: ".",
-  },
-};
-
-const assetAccount = {
-  assetClassId: null,
-  trackingMethod: "INDIVIDUAL_UNITS" as const,
-
-  id: "account-checking",
-  name: "Checking",
-  isActive: true,
-  type: AccountType.BALANCE,
-  equityAccountSubtype: null,
-  unit: Unit.CURRENCY,
-  currency: "CHF",
-  cryptocurrency: null,
-  symbol: null,
-  tradeCurrency: null,
-  statementImportCsvFormat,
-  isCashAccount: true,
-  groupPathSegments: ["Assets", "Cash"],
-};
-
-const rows: LedgerRow[] = [
-  {
-    id: "booking-2",
-    transactionId: "transaction-2",
-    bookingValue: -84.5,
-    date: "15.01.2026",
-    counterpartyAccounts: [{ id: "account-groceries", name: "Groceries" }],
-    description: "Grocery shopping",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    isOpeningBalancesTransaction: false,
-    debit: null,
-    credit: 84.5,
-    referenceDebit: null,
-    referenceCredit: null,
-    balance: 915.5,
-    isVirtualCarryOver: false,
-  },
-  {
-    id: "booking-1",
-    transactionId: "transaction-1",
-    bookingValue: 1000,
-    date: "10.01.2026",
-    counterpartyAccounts: [{ id: "account-salary", name: "Salary" }],
-    description: "Salary",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    isOpeningBalancesTransaction: false,
-    debit: 1000,
-    credit: null,
-    referenceDebit: null,
-    referenceCredit: null,
-    balance: 1000,
-    isVirtualCarryOver: false,
-  },
-];
-
-const createSplitInitialValues: SplitModalInitialValues = {
-  description: "Groceries",
-  bookings: [
-    {
-      date: "2026-01-15",
-      account: "account-groceries",
-      description: "",
-      unit: Unit.CURRENCY,
-      currency: "CHF",
-      debit: 84.5,
-    },
-    {
-      date: "2026-01-15",
-      account: "account-checking",
-      description: "",
-      unit: Unit.CURRENCY,
-      currency: "CHF",
-      credit: 84.5,
-    },
-  ],
-};
-
-export function LedgerPageStoryHarness({
-  routeSmoke = false,
-  includePeriodFilterControls = false,
-  accountType = AccountType.BALANCE,
-  startWithSimpleModal = false,
-  startWithSplitModal = false,
-  startWithEditModal = false,
-  accountActive = true,
-  accountActionsDisabled = false,
-  equitySubtype,
-  returnLabel,
-  assetClassId = null,
-  hasStatementImportCsvFormat = true,
-  accountEditDisabledReason,
-  onOpenImportPage,
-  accountName,
-  groupPathSegments = assetAccount.groupPathSegments,
-}: {
-  routeSmoke?: boolean;
-  includePeriodFilterControls?: boolean;
-  accountType?: AccountType;
-  startWithSimpleModal?: boolean;
-  startWithSplitModal?: boolean;
-  startWithEditModal?: boolean;
-  accountActive?: boolean;
-  accountActionsDisabled?: boolean;
-  equitySubtype?: EquityAccountSubtype;
-  returnLabel?: string;
-  assetClassId?: string | null;
-  hasStatementImportCsvFormat?: boolean;
-  accountEditDisabledReason?: string;
-  onOpenImportPage?: () => void;
-  accountName?: string;
-  groupPathSegments?: string[];
-}) {
-  const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
-  const [archivingAccount, setArchivingAccount] = useState<
-    { id: string; name: string } | undefined
-  >();
-  const [deletingAccount, setDeletingAccount] = useState<
-    { id: string; name: string } | undefined
-  >();
-  const [simpleModalOpened, setSimpleModalOpened] =
-    useState(startWithSimpleModal);
-  const [splitModalOpened, setSplitModalOpened] = useState(startWithSplitModal);
-  const [editModalOpened, setEditModalOpened] = useState(startWithEditModal);
-  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
-  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
-  const [editMode, setEditMode] = useState<EditMode>("SPLIT");
-  const [rebookModalOpened, setRebookModalOpened] = useState(false);
-  const [editingTransactionData, setEditingTransactionData] = useState<
-    LedgerPageViewProps["editingTransactionData"]
-  >(
-    startWithEditModal
-      ? {
-          id: "transaction-2",
-          description: editTransactionInitialValues.description,
-          bookings: editTransactionInitialValues.bookings,
-        }
-      : undefined,
-  );
-  const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
-    SimpleTransactionEditInitialValues | undefined
-  >();
-  const [deletingTransaction, setDeletingTransaction] = useState<
-    { id: string; description: string } | undefined
-  >();
-  const [rebooking, setRebooking] = useState<RebookingState | undefined>();
-  const [pickerOpened, setPickerOpened] = useState(false);
-  const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
-    useState<PeriodMode>("month");
-
+export function LedgerPageStoryHarness(options: LedgerPageStoryOptions) {
   const navigate = useNavigate({ from: "/$accountBookId/$accountId" });
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
-  const routeSearch = useRouterState({
-    select: (state) => state.location.search,
-  });
-  const routeSearchPeriod =
-    typeof routeSearch.period === "string" ? routeSearch.period : undefined;
-  const selectedPeriod = useMemo(
-    () => parseLedgerExplicitPeriod(routeSearchPeriod),
-    [routeSearchPeriod],
-  );
-  useEffect(() => {
-    if (!selectedPeriod) {
-      return;
-    }
-    setUnfilteredPeriodMode(selectedPeriod.granularity);
-  }, [selectedPeriod]);
-  const maxDate = useMemo(() => new Date("2026-03-28T00:00:00.000Z"), []);
-  const minBookingDate = useMemo(
-    () => new Date("2021-03-01T00:00:00.000Z"),
-    [],
-  );
-  const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
-  const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
-  const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
-  const periodSelectorModel = useMemo(
-    () =>
-      buildPeriodSelectorModel({
-        selectedGranularity: periodMode,
-        selectedYear,
-        selectedMonth: periodMode === "month" ? selectedMonth : null,
-        minBookingDate,
-        maxDate,
-      }),
-    [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
-  );
-  const hasPeriodFilter = selectedPeriod != null;
-  const account =
-    accountType === AccountType.EQUITY
-      ? {
-          ...assetAccount,
-          id: "account-equity",
-          name:
-            accountName ??
-            (equitySubtype === EquityAccountSubtype.EXPENSE
-              ? "Groceries"
-              : equitySubtype === EquityAccountSubtype.INCOME
-                ? "Salary"
-                : "System Activity"),
-          equityAccountSubtype: equitySubtype ?? null,
-          isActive: accountActive,
-          type: AccountType.EQUITY,
-          isCashAccount: false,
-          groupPathSegments: ["Equity"],
-        }
-      : {
-          ...assetAccount,
-          name: accountName ?? assetAccount.name,
-          groupPathSegments,
-          type: accountType,
-          isActive: accountActive,
-          assetClassId,
-          statementImportCsvFormat: hasStatementImportCsvFormat
-            ? statementImportCsvFormat
-            : null,
-          trackingMethod: "INDIVIDUAL_UNITS" as const,
-        };
-
-  const setPeriodFilter = (nextPeriodValue: string | undefined) => {
-    navigate({
-      search: (previousSearch) => ({
-        ...previousSearch,
-        period: nextPeriodValue,
-      }),
-    });
-  };
-
+  const account = createLedgerStoryAccount(options);
+  const accountDialogs = useLedgerStoryAccountDialogs(account);
+  const createDialogs = useLedgerStoryCreateDialogs(options);
+  const editDialog = useLedgerStoryEditDialog(options);
+  const actions = useLedgerStoryTransactionActions();
+  const period = useLedgerStoryPeriod();
   const columnDefs = useLedgerColumnDefs({
     accountBookId: "storybook-book",
-    hasPeriodFilter,
+    hasPeriodFilter: period.hasPeriodFilter,
     referenceCurrency: null,
-    isEquity: accountType === AccountType.EQUITY,
+    isEquity: account.type === AccountType.EQUITY,
     isOpeningBalances: false,
     isIncome: false,
     isExpense: false,
-    onEditClick: (transactionId) => {
-      setEditingTransactionData({
-        id: transactionId,
-        description: editTransactionInitialValues.description,
-        bookings: editTransactionInitialValues.bookings,
-      });
-      setEditModalOpened(true);
-      setEditMode("SPLIT");
-    },
-    onRebookClick: (args) => {
-      setRebooking(args);
-      setRebookModalOpened(true);
-    },
-    onCopyClick: () => {
-      setSplitModalOpened(true);
-    },
-    onDeleteClick: (transactionId, description) => {
-      setDeletingTransaction({ id: transactionId, description });
-    },
+    onEditClick: editDialog.onEdit,
+    onRebookClick: actions.onRebook,
+    onCopyClick: createDialogs.onCopy,
+    onDeleteClick: actions.onDelete,
   });
-
   return (
     <Box
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100dvh",
-      }}
+      style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}
     >
       <LedgerPageView
+        {...getLedgerStoryViewData(account, options)}
+        {...accountDialogs.props}
+        {...createDialogs.props}
+        {...editDialog.props}
+        {...actions.props}
+        columnDefs={columnDefs}
         returnNavigation={
-          returnLabel
+          options.returnLabel
             ? {
                 target: {
                   href: "/storybook-book/report?period=2026-01",
-                  label: returnLabel,
+                  label: options.returnLabel,
                 },
                 onReturn: () =>
                   void navigate({
@@ -344,273 +66,34 @@ export function LedgerPageStoryHarness({
             : undefined
         }
         onManageCategory={
-          equitySubtype === EquityAccountSubtype.EXPENSE ||
-          equitySubtype === EquityAccountSubtype.INCOME
+          options.equitySubtype === EquityAccountSubtype.EXPENSE ||
+          options.equitySubtype === EquityAccountSubtype.INCOME
             ? () =>
                 void navigate({
                   to: "/$accountBookId/settings/categories",
                   params: { accountBookId: "storybook-book" },
                   search: {
                     tab:
-                      equitySubtype === EquityAccountSubtype.INCOME
+                      options.equitySubtype === EquityAccountSubtype.INCOME
                         ? "EQUITY-INCOME"
                         : "EQUITY-EXPENSE",
-                    showArchived: !accountActive,
+                    showArchived: !account.isActive,
                   },
                 })
             : undefined
         }
-        backTab="BALANCE"
-        account={account}
-        accountGroups={[]}
-        existingNodes={[]}
-        rows={rows}
-        columnDefs={columnDefs}
-        currentAccountLabel="Checking"
-        unitLabel="CHF"
-        accountBookStartDate={new Date("2026-01-04T00:00:00.000Z")}
-        simpleTransactionDisabledReason={null}
-        simpleModalOpened={simpleModalOpened}
-        splitModalOpened={splitModalOpened}
-        accountEditModalOpened={accountEditModalOpened}
-        accountEditDisabledReason={accountEditDisabledReason}
-        accountEditInitialValues={{
-          assetClassId: account.assetClassId,
-          name: account.name,
-          type: account.type,
-          equityAccountSubtype: account.equityAccountSubtype,
-          groupId: undefined,
-          sortOrder: undefined,
-          unit: account.unit,
-          currency: account.currency,
-          cryptocurrency: account.cryptocurrency,
-          symbol: account.symbol,
-          tradeCurrency: account.tradeCurrency,
-          openingBalance: 1000,
-        }}
-        editModalOpened={editModalOpened}
-        isSimpleSubmitting={isSimpleSubmitting}
-        isCreateSplitSubmitting={isCreateSplitSubmitting}
-        isEditSubmitting={isEditSubmitting}
-        isRebookSubmitting={isRebookSubmitting}
-        editMode={editMode}
-        createSplitInitialValues={createSplitInitialValues}
-        editingTransactionData={editingTransactionData}
-        editingSimpleInitialValues={editingSimpleInitialValues}
-        deletingAccount={deletingAccount}
-        archivingAccount={archivingAccount}
-        deletingTransaction={deletingTransaction}
-        rebooking={rebooking}
-        rebookModalOpened={rebookModalOpened}
-        hasCompleteBookingUnit={true}
-        unitUsage={{
-          currencies: ["CHF", "EUR", "USD"],
-          cryptocurrencies: ["BTC"],
-        }}
-        accountOptions={baseAccountOptions}
-        editAccountOptions={baseAccountOptions}
-        simpleCounterAccountOptions={baseAccountOptions}
-        editSimpleCounterAccountOptions={baseAccountOptions}
-        rebookTargetAccountOptions={[
-          { value: "account-groceries", label: "Groceries (Expense)" },
-        ]}
-        accountArchivable={accountActive && !accountActionsDisabled}
-        accountArchiveLabel={
-          accountActionsDisabled
-            ? "Cannot archive account because its current or scheduled balance is not 0"
-            : "Archive"
-        }
-        accountUnarchivable={!accountActive && !accountActionsDisabled}
-        accountUnarchiveLabel={
-          accountActionsDisabled
-            ? "Cannot unarchive account because its parent group is archived"
-            : "Unarchive"
-        }
-        accountDeletable={!accountActionsDisabled}
-        accountDeleteLabel={
-          accountActionsDisabled
-            ? "Cannot delete account because it has bookings"
-            : "Delete"
-        }
-        statementImportDisabledReason={getStatementImportDisabledReason(
-          account,
-        )}
         periodFilterControls={
-          includePeriodFilterControls ? (
-            <PeriodFilterAction
-              periodMode={periodMode}
-              selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
-              pickerOpened={pickerOpened}
-              onPickerOpenedChange={setPickerOpened}
-              canGoToPreviousPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToPreviousPeriod
-              }
-              canGoToNextPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
-              }
-              onPeriodModeChange={(nextMode) => {
-                const nextPeriodMode = nextMode as PeriodMode;
-                if (!hasPeriodFilter) {
-                  setUnfilteredPeriodMode(nextPeriodMode);
-                  return;
-                }
-
-                const nextPeriodValue = getPeriodModeChangeValue({
-                  nextMode: nextPeriodMode,
-                  periodMode,
-                  selectedYear,
-                  selectedYearMaxMonth:
-                    periodSelectorModel.selectedYearMonthBounds.maxMonth,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              onPeriodStep={(step) => {
-                if (!hasPeriodFilter) {
-                  return;
-                }
-
-                setPickerOpened(false);
-                const nextPeriodValue = getPeriodStepValue({
-                  periodMode,
-                  step,
-                  selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
-                  minMonthIndex: periodSelectorModel.minMonthIndex,
-                  maxMonthIndex: periodSelectorModel.maxMonthIndex,
-                  selectedYear,
-                  minYear: periodSelectorModel.minYear,
-                  maxYear: periodSelectorModel.maxYear,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              selectedMonthValue={
-                hasPeriodFilter
-                  ? formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-                  : null
-              }
-              selectedYearValue={
-                hasPeriodFilter
-                  ? `${String(selectedYear).padStart(4, "0")}-01-01`
-                  : null
-              }
-              monthPickerDefaultValue={
-                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-              }
-              yearPickerDefaultValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
-              minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-              maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-              minYearPickerDate={periodSelectorModel.minYearPickerDate}
-              maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-              onMonthPickerChange={(nextValue) => {
-                const nextPeriodValue = getMonthPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              onYearPickerChange={(nextValue) => {
-                const nextPeriodValue = getYearPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              clearFilterDisabled={!hasPeriodFilter}
-              onClearFilter={() => {
-                setPickerOpened(false);
-                setPeriodFilter(undefined);
-              }}
-            />
+          options.includePeriodFilterControls ? (
+            <PeriodFilterAction {...period.controls} />
           ) : undefined
         }
-        onRowDataUpdated={() => undefined}
-        onOpenAccountEdit={() => setAccountEditModalOpened(true)}
-        onCloseAccountEdit={() => setAccountEditModalOpened(false)}
-        onSubmitUpdateAccount={async () => {
-          setAccountEditModalOpened(false);
-        }}
-        onOpenArchiveAccount={() =>
-          setArchivingAccount({ id: account.id, name: account.name })
-        }
-        onCloseArchiveAccount={() => setArchivingAccount(undefined)}
-        onConfirmArchiveAccount={async () => {
-          setArchivingAccount(undefined);
-        }}
-        onUnarchiveAccount={async () => undefined}
-        onOpenDeleteAccount={() =>
-          setDeletingAccount({ id: account.id, name: account.name })
-        }
-        onCloseDeleteAccount={() => setDeletingAccount(undefined)}
-        onConfirmDeleteAccount={async () => {
-          setDeletingAccount(undefined);
-        }}
-        onAddTransactionClick={() => {
-          setSplitModalOpened(false);
-          setSimpleModalOpened(true);
-        }}
-        onCloseSimpleModal={() => setSimpleModalOpened(false)}
-        onSimpleModalExitTransitionEnd={() => undefined}
-        onSimpleSubmittingChange={setIsSimpleSubmitting}
-        onSwitchCreateToSplit={() => {
-          setSimpleModalOpened(false);
-          setSplitModalOpened(true);
-        }}
-        onSubmitCreateSimpleTransaction={async (
-          _values: SimpleTransactionValues,
-        ) => {
-          setSimpleModalOpened(false);
-        }}
-        onOpenImportPage={onOpenImportPage ?? (() => undefined)}
-        onCloseSplitModal={() => setSplitModalOpened(false)}
-        onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
-        onSubmitCreateTransaction={async (
-          _values: TransactionMutationValues,
-        ) => {
-          setSplitModalOpened(false);
-        }}
-        onCloseEditModal={() => setEditModalOpened(false)}
-        onEditSubmittingChange={setIsEditSubmitting}
-        onEditModalExitTransitionEnd={() => {
-          setEditingTransactionData(undefined);
-          setEditingSimpleInitialValues(undefined);
-          setEditMode("SPLIT");
-        }}
-        onSwitchToSplit={() => {
-          setEditMode("SPLIT");
-          setEditingSimpleInitialValues(undefined);
-        }}
-        onSubmitUpdateSimpleTransaction={async (
-          _values: SimpleTransactionValues,
-        ) => {
-          setEditModalOpened(false);
-        }}
-        onSubmitUpdateTransaction={async (
-          _values: TransactionMutationValues,
-        ) => {
-          setEditModalOpened(false);
-        }}
-        onCloseRebookModal={() => setRebookModalOpened(false)}
-        onRebookSubmittingChange={setIsRebookSubmitting}
-        onRebookModalExitTransitionEnd={() => setRebooking(undefined)}
-        onSubmitRebookBooking={async () => {
-          setRebookModalOpened(false);
-        }}
-        onCloseDeleteModal={() => setDeletingTransaction(undefined)}
-        onConfirmDeleteTransaction={async () => {
-          setDeletingTransaction(undefined);
-        }}
       />
-      {routeSmoke ? <Text data-testid="router-path">{pathname}</Text> : null}
-      {routeSmoke ? (
+      {options.routeSmoke ? (
+        <Text data-testid="router-path">{period.pathname}</Text>
+      ) : null}
+      {options.routeSmoke ? (
         <Text data-testid="router-search-period">
-          {routeSearchPeriod ?? "(none)"}
+          {period.routeSearchPeriod ?? "(none)"}
         </Text>
       ) : null}
     </Box>

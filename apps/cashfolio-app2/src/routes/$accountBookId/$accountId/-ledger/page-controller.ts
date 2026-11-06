@@ -51,7 +51,7 @@ import {
   type SimpleTransactionValues,
   type SplitModalInitialValues,
   type TransactionMutationValues,
-} from "./page-view";
+} from "./page-view.types";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 

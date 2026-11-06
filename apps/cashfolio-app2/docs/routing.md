@@ -262,6 +262,14 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
     - `$accountBookId/$accountId/-ledger/page-rebook-flow.ts`
     - `$accountBookId/$accountId/-ledger/page-transaction-utils.ts`
     - `$accountBookId/$accountId/-ledger/page-columns.tsx`
+    - `page-view.tsx` composes the ledger layout; `page-view.types.ts` owns its
+      shared contracts, with compatibility type re-exports from the view.
+    - Account, transaction creation, transaction editing, and rebook/delete
+      dialogs have separate renderers that preserve submission-dismissal guards.
+      Controllers retain ownership of dialog state, draft transitions, and exit
+      cleanup.
+    - Ledger stories share a small harness backed by fixture data, dialog-state
+      helpers, and the existing explicit-period filter with fixed story bounds.
   - statement-import modules:
     - `$accountBookId/$accountId/-statement-import/index.ts` preserves the
       feature's parsing and draft facade exports.

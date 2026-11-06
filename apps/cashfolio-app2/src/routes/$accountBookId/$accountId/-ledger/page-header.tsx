@@ -9,7 +9,7 @@ import {
   type LedgerAccountActionsProps,
 } from "./account-actions";
 import { getLedgerAccountKindBadgeProps } from "./page-data";
-import type { LedgerPageViewProps } from "./page-view";
+import type { LedgerPageViewProps } from "./page-view.types";
 import classes from "./page-header.module.css";
 
 export type LedgerPageHeaderProps = LedgerAccountActionsProps &

@@ -17,7 +17,7 @@ import type {
   SplitModalInitialValues,
   TransactionBookingInput,
   TransactionMutationValues,
-} from "./page-view";
+} from "./page-view.types";
 
 export type SimpleTransactionEditInitialValues = {
   date: Date;
