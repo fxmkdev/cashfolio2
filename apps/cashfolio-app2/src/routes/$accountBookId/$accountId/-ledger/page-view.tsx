@@ -1,4 +1,3 @@
-import { useAssetClasses } from "@/classification-context";
 import type { LedgerReturnTarget } from "@/shared/ledger-navigation";
 import { Anchor } from "@mantine/core";
 import {
@@ -13,26 +12,8 @@ import {
   BulkTransactionDialogs,
 } from "@/components/transactions/bulk-transaction-actions";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
-import {
-  IconArrowLeft,
-  IconSettings,
-  IconArchive,
-  IconArchiveOff,
-  IconBolt,
-  IconFileImport,
-  IconPencil,
-  IconTrash,
-} from "@tabler/icons-react";
-import {
-  Badge,
-  Box,
-  Button,
-  Group,
-  Modal,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
+import { Group, Modal } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
@@ -57,23 +38,17 @@ import {
   type SimpleTransactionDraftValues,
   type SimpleTransactionInitialValues,
 } from "@/components/transactions/simple-transaction-modal";
-import { SplitButton } from "@/components/controls/split-button";
 import { getTransactionCreateDialogText } from "@/components/transactions/transaction-create-dialog-text";
-import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import type { ReactNode } from "react";
-import { AccountType, type Unit } from "@/.prisma-client/enums";
-import { getAssetClassLabel } from "@/shared/asset-class";
+import type { Unit } from "@/.prisma-client/enums";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import type { TabValue } from "@/shared/account-tabs";
-import {
-  getLedgerAccountKindBadgeProps,
-  type SimpleTransactionEditInitialValues,
-} from "./page-data";
+import type { SimpleTransactionEditInitialValues } from "./page-data";
 import { createLedgerAccountEditModalProps } from "./account-edit-modal-props";
 import type { loadLedgerPageData } from "./page-loader";
 import type { LedgerRow } from "./page-types";
-import headerClasses from "./page-header.module.css";
+import { LedgerPageHeader } from "./page-header";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
@@ -313,21 +288,13 @@ export function LedgerPageView({
 }: LedgerPageViewProps) {
   const entityLabel = getAccountEntityLabel(account);
   const context = getAccountManagementContext(account);
-  const accountGroupLabel =
-    account.groupPathSegments.join(" / ") || "Top Level";
   const formatErrorMessage = (message: string) =>
     getAccountConstraintMessage(message, context) ?? message;
-  const accountKindBadge = getLedgerAccountKindBadgeProps(account);
-  const assetClassLabel = getAssetClassLabel(
-    account.assetClassId,
-    useAssetClasses(),
-  );
   const simpleCreateDialogText = getTransactionCreateDialogText(
     !!createSimpleInitialValues,
   );
   const splitCreateDialogText =
     getTransactionCreateDialogText(!!createSplitIsCopy);
-  const isImportPrimary = !statementImportDisabledReason;
 
   return (
     <PageShell>
@@ -355,191 +322,27 @@ export function LedgerPageView({
           </Group>
         </Anchor>
       )}
-      <TopPageHeader
-        layout="responsive"
-        heading={<Title order={2}>{account.name}</Title>}
-        description={
-          account.type === AccountType.BALANCE ? (
-            <Text size="sm" c="dimmed" data-testid="ledger-header-metadata">
-              <span>Account Group: {accountGroupLabel}</span>
-              <span aria-hidden="true">{"\u00a0·"}</span>{" "}
-              <span title={`Asset Class: ${assetClassLabel}`}>
-                Asset Class: {assetClassLabel}
-              </span>
-            </Text>
-          ) : undefined
-        }
-        headingAccessory={
-          <>
-            <Badge
-              size="lg"
-              color={accountKindBadge.color}
-              variant={accountKindBadge.variant}
-            >
-              {accountKindBadge.label}
-            </Badge>
-            {unitLabel ? (
-              <Badge size="lg" color="gray">
-                {unitLabel}
-              </Badge>
-            ) : null}
-            {!account.isActive ? (
-              <Badge size="lg" color="gray">
-                Archived
-              </Badge>
-            ) : null}
-          </>
-        }
-        actions={
-          <Group
-            gap="sm"
-            justify="space-between"
-            wrap="nowrap"
-            className={headerClasses.toolbar}
-            role="group"
-            aria-label="Ledger Controls"
-          >
-            {periodFilterControls && (
-              <Box className={headerClasses.period}>{periodFilterControls}</Box>
-            )}
-            <Group
-              gap="sm"
-              wrap="nowrap"
-              ml="auto"
-              className={headerClasses.commands}
-            >
-              <Tooltip
-                label={
-                  getAccountConstraintMessage(
-                    accountEditDisabledReason,
-                    context,
-                  ) ?? `Edit ${entityLabel}`
-                }
-                disabled={isImportPrimary || !accountEditDisabledReason}
-              >
-                <span className={headerClasses.action}>
-                  <SplitButton
-                    leftSection={
-                      isImportPrimary ? (
-                        <IconFileImport size={16} />
-                      ) : (
-                        <IconPencil size={16} />
-                      )
-                    }
-                    menuLabel={`${entityLabel} Actions`}
-                    onClick={
-                      isImportPrimary ? onOpenImportPage : onOpenAccountEdit
-                    }
-                    primaryDisabled={
-                      !isImportPrimary && !!accountEditDisabledReason
-                    }
-                    menuItems={[
-                      ...(isImportPrimary
-                        ? [
-                            {
-                              key: "edit",
-                              label: "Edit",
-                              disabledReason: getAccountConstraintMessage(
-                                accountEditDisabledReason,
-                                context,
-                              ),
-                              disabled: !!accountEditDisabledReason,
-                              leftSection: <IconPencil size={16} />,
-                              onClick: onOpenAccountEdit,
-                            },
-                          ]
-                        : []),
-                      ...(onManageCategory
-                        ? [
-                            {
-                              key: "manage-category",
-                              label: "Manage Category",
-                              leftSection: <IconSettings size={16} />,
-                              onClick: onManageCategory,
-                            },
-                          ]
-                        : []),
-                      ...(!isImportPrimary
-                        ? [
-                            {
-                              key: "import-statement",
-                              label: "Import Statement",
-                              disabledReason:
-                                statementImportDisabledReason ?? undefined,
-                              disabled: true,
-                              leftSection: <IconFileImport size={16} />,
-                              onClick: onOpenImportPage,
-                            },
-                          ]
-                        : []),
-                      {
-                        type: "divider",
-                        key: "danger-actions-divider",
-                      },
-                      account.isActive
-                        ? {
-                            key: "archive",
-                            label: "Archive",
-                            disabledReason: getAccountConstraintMessage(
-                              accountArchiveLabel,
-                              context,
-                            ),
-                            disabled: !accountArchivable,
-                            color: "yellow",
-                            leftSection: <IconArchive size={16} />,
-                            onClick: onOpenArchiveAccount,
-                          }
-                        : {
-                            key: "unarchive",
-                            label: "Unarchive",
-                            disabledReason: getAccountConstraintMessage(
-                              accountUnarchiveLabel,
-                              context,
-                            ),
-                            disabled:
-                              !accountUnarchivable ||
-                              unarchiveRecovery?.isPending,
-                            color: "blue",
-                            leftSection: <IconArchiveOff size={16} />,
-                            onClick: () => void onUnarchiveAccount(),
-                          },
-                      {
-                        key: "delete",
-                        label: "Delete",
-                        disabledReason: getAccountConstraintMessage(
-                          accountDeleteLabel,
-                          context,
-                        ),
-                        disabled: !accountDeletable,
-                        color: "red",
-                        leftSection: <IconTrash size={16} />,
-                        onClick: onOpenDeleteAccount,
-                      },
-                    ]}
-                  >
-                    {isImportPrimary ? "Import Statement" : "Edit"}
-                  </SplitButton>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  simpleTransactionDisabledReason
-                    ? `${simpleTransactionDisabledReason} Split editor will open instead.`
-                    : "Quick two-booking entry"
-                }
-              >
-                <span className={headerClasses.action}>
-                  <Button
-                    leftSection={<IconBolt size={16} />}
-                    onClick={onAddTransactionClick}
-                  >
-                    Add Transaction
-                  </Button>
-                </span>
-              </Tooltip>
-            </Group>
-          </Group>
-        }
+      <LedgerPageHeader
+        account={account}
+        unitLabel={unitLabel}
+        periodFilterControls={periodFilterControls}
+        simpleTransactionDisabledReason={simpleTransactionDisabledReason}
+        onAddTransactionClick={onAddTransactionClick}
+        accountEditDisabledReason={accountEditDisabledReason}
+        statementImportDisabledReason={statementImportDisabledReason}
+        accountArchivable={accountArchivable}
+        accountArchiveLabel={accountArchiveLabel}
+        accountUnarchivable={accountUnarchivable}
+        accountUnarchiveLabel={accountUnarchiveLabel}
+        accountDeletable={accountDeletable}
+        accountDeleteLabel={accountDeleteLabel}
+        onManageCategory={onManageCategory}
+        onOpenAccountEdit={onOpenAccountEdit}
+        onOpenImportPage={onOpenImportPage}
+        onOpenArchiveAccount={onOpenArchiveAccount}
+        onUnarchiveAccount={onUnarchiveAccount}
+        onOpenDeleteAccount={onOpenDeleteAccount}
+        unarchiveRecovery={unarchiveRecovery}
       />
 
       <UnarchiveMutationFeedback
