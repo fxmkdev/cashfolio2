@@ -28,8 +28,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
 });
 
 async function openStatementImportPage(page: Page) {
-  await page.getByRole("button", { name: "Account Actions" }).click();
-  await page.getByRole("menuitem", { name: "Import Statement" }).click();
+  await page.getByRole("button", { name: "Import Statement" }).click();
 }
 
 function ledgerUrlPattern(args: { accountBookId: string; accountId: string }) {

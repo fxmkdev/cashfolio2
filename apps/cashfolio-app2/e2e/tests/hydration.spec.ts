@@ -34,20 +34,32 @@ for (const entity of ["Account", "Category"] as const) {
     const account =
       entity === "Account" ? seeded.cashAccount : seeded.expenseAccount;
     const actions = page.getByRole("button", { name: `${entity} Actions` });
-    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    const primaryAction = page.getByRole("button", {
+      name: entity === "Account" ? "Import Statement" : "Edit",
+      exact: true,
+    });
     await beforeHydration(page, async () => {
       await page.goto(`/${seeded.accountBookId}/${account.id}`, {
         waitUntil: "commit",
       });
       await expect(actions).toBeVisible();
       await expect(actions).toBeDisabled();
-      await expect(edit).toBeDisabled();
+      await expect(primaryAction).toBeDisabled();
     });
 
-    await expect(edit).toBeEnabled();
+    await expect(primaryAction).toBeEnabled();
     await actions.click();
     await expect(
       page.getByRole("menuitem", { name: "Delete", exact: true }),
+    ).toBeVisible();
+    if (entity === "Account") {
+      await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+    } else {
+      await page.keyboard.press("Escape");
+      await primaryAction.click();
+    }
+    await expect(
+      page.getByRole("dialog", { name: `Edit ${entity}`, exact: true }),
     ).toBeVisible();
   });
 }

@@ -1,609 +1,13 @@
-import { defaultAssetClassIds } from "../../../../shared/asset-class";
-import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Box, Text, Button } from "@mantine/core";
-import { useEffect, useMemo, useState } from "react";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "@/.prisma-client/enums";
-import {
-  accountOptions as baseAccountOptions,
-  editTransactionInitialValues,
-} from "@/components/testing/storybook-fixtures";
-import { formatMonthPeriodValue } from "@/shared/period";
-import {
-  buildPeriodSelectorModel,
-  getMonthPickerValue,
-  getPeriodModeChangeValue,
-  getPeriodStepValue,
-  getYearPickerValue,
-  type PeriodMode,
-} from "@/shared/period-selector-model";
-import type { StatementImportCsvFormat } from "@/shared/statement-import-csv-format";
-import { useLedgerColumnDefs } from "./page-columns";
-import type { SimpleTransactionEditInitialValues } from "./page-data";
-import { PeriodFilterAction } from "../../-period-filter-action";
-import { parseLedgerExplicitPeriod, type LedgerRow } from "./page-types";
-import {
-  LedgerPageView,
-  type EditMode,
-  type LedgerPageViewProps,
-  type RebookingState,
-  type SimpleTransactionValues,
-  type SplitModalInitialValues,
-  type TransactionMutationValues,
-} from "./page-view";
-
-const statementImportCsvFormat: StatementImportCsvFormat = {
-  hasHeader: true,
-  delimitersToGuess: [",", ";"],
-  columns: [
-    "date",
-    "amount",
-    "original amount",
-    "original currency",
-    "exchange rate",
-    "description",
-  ],
-  dateFormat: "yyyy-MM-dd",
-  numberFormat: {
-    decimalSeparator: ".",
-  },
-};
-
-const assetAccount = {
-  assetClassId: null,
-  trackingMethod: "INDIVIDUAL_UNITS" as const,
-
-  id: "account-checking",
-  name: "Checking",
-  isActive: true,
-  type: AccountType.BALANCE,
-  equityAccountSubtype: null,
-  unit: Unit.CURRENCY,
-  currency: "CHF",
-  cryptocurrency: null,
-  symbol: null,
-  tradeCurrency: null,
-  statementImportCsvFormat,
-  isCashAccount: true,
-  groupPathSegments: ["Assets", "Cash"],
-};
-
-const rows: LedgerRow[] = [
-  {
-    id: "booking-2",
-    transactionId: "transaction-2",
-    bookingValue: -84.5,
-    date: "15.01.2026",
-    counterpartyAccounts: [{ id: "account-groceries", name: "Groceries" }],
-    description: "Grocery shopping",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    isOpeningBalancesTransaction: false,
-    debit: null,
-    credit: 84.5,
-    referenceDebit: null,
-    referenceCredit: null,
-    balance: 915.5,
-    isVirtualCarryOver: false,
-  },
-  {
-    id: "booking-1",
-    transactionId: "transaction-1",
-    bookingValue: 1000,
-    date: "10.01.2026",
-    counterpartyAccounts: [{ id: "account-salary", name: "Salary" }],
-    description: "Salary",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    isOpeningBalancesTransaction: false,
-    debit: 1000,
-    credit: null,
-    referenceDebit: null,
-    referenceCredit: null,
-    balance: 1000,
-    isVirtualCarryOver: false,
-  },
-];
-
-const createSplitInitialValues: SplitModalInitialValues = {
-  description: "Groceries",
-  bookings: [
-    {
-      date: "2026-01-15",
-      account: "account-groceries",
-      description: "",
-      unit: Unit.CURRENCY,
-      currency: "CHF",
-      debit: 84.5,
-    },
-    {
-      date: "2026-01-15",
-      account: "account-checking",
-      description: "",
-      unit: Unit.CURRENCY,
-      currency: "CHF",
-      credit: 84.5,
-    },
-  ],
-};
-
-function LedgerPageStoryHarness({
-  routeSmoke = false,
-  includePeriodFilterControls = false,
-  accountType = AccountType.BALANCE,
-  startWithSimpleModal = false,
-  startWithSplitModal = false,
-  startWithEditModal = false,
-  accountActive = true,
-  accountActionsDisabled = false,
-  equitySubtype,
-  returnLabel,
-  assetClassId = null,
-}: {
-  routeSmoke?: boolean;
-  includePeriodFilterControls?: boolean;
-  accountType?: AccountType;
-  startWithSimpleModal?: boolean;
-  startWithSplitModal?: boolean;
-  startWithEditModal?: boolean;
-  accountActive?: boolean;
-  accountActionsDisabled?: boolean;
-  equitySubtype?: EquityAccountSubtype;
-  returnLabel?: string;
-  assetClassId?: string | null;
-}) {
-  const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
-  const [archivingAccount, setArchivingAccount] = useState<
-    { id: string; name: string } | undefined
-  >();
-  const [deletingAccount, setDeletingAccount] = useState<
-    { id: string; name: string } | undefined
-  >();
-  const [simpleModalOpened, setSimpleModalOpened] =
-    useState(startWithSimpleModal);
-  const [splitModalOpened, setSplitModalOpened] = useState(startWithSplitModal);
-  const [editModalOpened, setEditModalOpened] = useState(startWithEditModal);
-  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
-  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
-  const [editMode, setEditMode] = useState<EditMode>("SPLIT");
-  const [rebookModalOpened, setRebookModalOpened] = useState(false);
-  const [editingTransactionData, setEditingTransactionData] = useState<
-    LedgerPageViewProps["editingTransactionData"]
-  >(
-    startWithEditModal
-      ? {
-          id: "transaction-2",
-          description: editTransactionInitialValues.description,
-          bookings: editTransactionInitialValues.bookings,
-        }
-      : undefined,
-  );
-  const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
-    SimpleTransactionEditInitialValues | undefined
-  >();
-  const [deletingTransaction, setDeletingTransaction] = useState<
-    { id: string; description: string } | undefined
-  >();
-  const [rebooking, setRebooking] = useState<RebookingState | undefined>();
-  const [pickerOpened, setPickerOpened] = useState(false);
-  const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
-    useState<PeriodMode>("month");
-
-  const navigate = useNavigate({ from: "/$accountBookId/$accountId" });
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
-  const routeSearch = useRouterState({
-    select: (state) => state.location.search,
-  });
-  const routeSearchPeriod =
-    typeof routeSearch.period === "string" ? routeSearch.period : undefined;
-  const selectedPeriod = useMemo(
-    () => parseLedgerExplicitPeriod(routeSearchPeriod),
-    [routeSearchPeriod],
-  );
-  useEffect(() => {
-    if (!selectedPeriod) {
-      return;
-    }
-    setUnfilteredPeriodMode(selectedPeriod.granularity);
-  }, [selectedPeriod]);
-  const maxDate = useMemo(() => new Date("2026-03-28T00:00:00.000Z"), []);
-  const minBookingDate = useMemo(
-    () => new Date("2021-03-01T00:00:00.000Z"),
-    [],
-  );
-  const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
-  const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
-  const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
-  const periodSelectorModel = useMemo(
-    () =>
-      buildPeriodSelectorModel({
-        selectedGranularity: periodMode,
-        selectedYear,
-        selectedMonth: periodMode === "month" ? selectedMonth : null,
-        minBookingDate,
-        maxDate,
-      }),
-    [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
-  );
-  const hasPeriodFilter = selectedPeriod != null;
-  const account =
-    accountType === AccountType.EQUITY
-      ? {
-          ...assetAccount,
-          id: "account-equity",
-          name:
-            equitySubtype === EquityAccountSubtype.EXPENSE
-              ? "Groceries"
-              : equitySubtype === EquityAccountSubtype.INCOME
-                ? "Salary"
-                : "System Activity",
-          equityAccountSubtype: equitySubtype ?? null,
-          isActive: accountActive,
-          type: AccountType.EQUITY,
-          isCashAccount: false,
-          groupPathSegments: ["Equity"],
-        }
-      : {
-          ...assetAccount,
-          type: accountType,
-          isActive: accountActive,
-          assetClassId,
-          trackingMethod: "INDIVIDUAL_UNITS" as const,
-        };
-
-  const setPeriodFilter = (nextPeriodValue: string | undefined) => {
-    navigate({
-      search: (previousSearch) => ({
-        ...previousSearch,
-        period: nextPeriodValue,
-      }),
-    });
-  };
-
-  const columnDefs = useLedgerColumnDefs({
-    accountBookId: "storybook-book",
-    hasPeriodFilter,
-    referenceCurrency: null,
-    isEquity: accountType === AccountType.EQUITY,
-    isOpeningBalances: false,
-    isIncome: false,
-    isExpense: false,
-    onEditClick: (transactionId) => {
-      setEditingTransactionData({
-        id: transactionId,
-        description: editTransactionInitialValues.description,
-        bookings: editTransactionInitialValues.bookings,
-      });
-      setEditModalOpened(true);
-      setEditMode("SPLIT");
-    },
-    onRebookClick: (args) => {
-      setRebooking(args);
-      setRebookModalOpened(true);
-    },
-    onCopyClick: () => {
-      setSplitModalOpened(true);
-    },
-    onDeleteClick: (transactionId, description) => {
-      setDeletingTransaction({ id: transactionId, description });
-    },
-  });
-
-  return (
-    <Box
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100dvh",
-      }}
-    >
-      <LedgerPageView
-        returnNavigation={
-          returnLabel
-            ? {
-                target: {
-                  href: "/storybook-book/report?period=2026-01",
-                  label: returnLabel,
-                },
-                onReturn: () =>
-                  void navigate({
-                    to: "/$accountBookId/report",
-                    params: { accountBookId: "storybook-book" },
-                    search: { period: "2026-01" },
-                  }),
-              }
-            : undefined
-        }
-        onManageCategory={
-          equitySubtype === EquityAccountSubtype.EXPENSE ||
-          equitySubtype === EquityAccountSubtype.INCOME
-            ? () =>
-                void navigate({
-                  to: "/$accountBookId/settings/categories",
-                  params: { accountBookId: "storybook-book" },
-                  search: {
-                    tab:
-                      equitySubtype === EquityAccountSubtype.INCOME
-                        ? "EQUITY-INCOME"
-                        : "EQUITY-EXPENSE",
-                    showArchived: !accountActive,
-                  },
-                })
-            : undefined
-        }
-        backTab="BALANCE"
-        account={account}
-        accountGroups={[]}
-        existingNodes={[]}
-        rows={rows}
-        columnDefs={columnDefs}
-        currentAccountLabel="Checking"
-        unitLabel="CHF"
-        accountBookStartDate={new Date("2026-01-04T00:00:00.000Z")}
-        simpleTransactionDisabledReason={null}
-        simpleModalOpened={simpleModalOpened}
-        splitModalOpened={splitModalOpened}
-        accountEditModalOpened={accountEditModalOpened}
-        accountEditInitialValues={{
-          assetClassId: account.assetClassId,
-          name: account.name,
-          type: account.type,
-          equityAccountSubtype: account.equityAccountSubtype,
-          groupId: undefined,
-          sortOrder: undefined,
-          unit: account.unit,
-          currency: account.currency,
-          cryptocurrency: account.cryptocurrency,
-          symbol: account.symbol,
-          tradeCurrency: account.tradeCurrency,
-          openingBalance: 1000,
-        }}
-        editModalOpened={editModalOpened}
-        isSimpleSubmitting={isSimpleSubmitting}
-        isCreateSplitSubmitting={isCreateSplitSubmitting}
-        isEditSubmitting={isEditSubmitting}
-        isRebookSubmitting={isRebookSubmitting}
-        editMode={editMode}
-        createSplitInitialValues={createSplitInitialValues}
-        editingTransactionData={editingTransactionData}
-        editingSimpleInitialValues={editingSimpleInitialValues}
-        deletingAccount={deletingAccount}
-        archivingAccount={archivingAccount}
-        deletingTransaction={deletingTransaction}
-        rebooking={rebooking}
-        rebookModalOpened={rebookModalOpened}
-        hasCompleteBookingUnit={true}
-        unitUsage={{
-          currencies: ["CHF", "EUR", "USD"],
-          cryptocurrencies: ["BTC"],
-        }}
-        accountOptions={baseAccountOptions}
-        editAccountOptions={baseAccountOptions}
-        simpleCounterAccountOptions={baseAccountOptions}
-        editSimpleCounterAccountOptions={baseAccountOptions}
-        rebookTargetAccountOptions={[
-          { value: "account-groceries", label: "Groceries (Expense)" },
-        ]}
-        accountArchivable={accountActive && !accountActionsDisabled}
-        accountArchiveLabel={
-          accountActionsDisabled
-            ? "Cannot archive account because its current or scheduled balance is not 0"
-            : "Archive"
-        }
-        accountUnarchivable={!accountActive && !accountActionsDisabled}
-        accountUnarchiveLabel={
-          accountActionsDisabled
-            ? "Cannot unarchive account because its parent group is archived"
-            : "Unarchive"
-        }
-        accountDeletable={!accountActionsDisabled}
-        accountDeleteLabel={
-          accountActionsDisabled
-            ? "Cannot delete account because it has bookings"
-            : "Delete"
-        }
-        statementImportDisabledReason={
-          accountType === AccountType.EQUITY
-            ? "Statement imports are only available for asset and liability accounts."
-            : null
-        }
-        periodFilterControls={
-          includePeriodFilterControls ? (
-            <PeriodFilterAction
-              periodMode={periodMode}
-              selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
-              pickerOpened={pickerOpened}
-              onPickerOpenedChange={setPickerOpened}
-              canGoToPreviousPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToPreviousPeriod
-              }
-              canGoToNextPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
-              }
-              onPeriodModeChange={(nextMode) => {
-                const nextPeriodMode = nextMode as PeriodMode;
-                if (!hasPeriodFilter) {
-                  setUnfilteredPeriodMode(nextPeriodMode);
-                  return;
-                }
-
-                const nextPeriodValue = getPeriodModeChangeValue({
-                  nextMode: nextPeriodMode,
-                  periodMode,
-                  selectedYear,
-                  selectedYearMaxMonth:
-                    periodSelectorModel.selectedYearMonthBounds.maxMonth,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              onPeriodStep={(step) => {
-                if (!hasPeriodFilter) {
-                  return;
-                }
-
-                setPickerOpened(false);
-                const nextPeriodValue = getPeriodStepValue({
-                  periodMode,
-                  step,
-                  selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
-                  minMonthIndex: periodSelectorModel.minMonthIndex,
-                  maxMonthIndex: periodSelectorModel.maxMonthIndex,
-                  selectedYear,
-                  minYear: periodSelectorModel.minYear,
-                  maxYear: periodSelectorModel.maxYear,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              selectedMonthValue={
-                hasPeriodFilter
-                  ? formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-                  : null
-              }
-              selectedYearValue={
-                hasPeriodFilter
-                  ? `${String(selectedYear).padStart(4, "0")}-01-01`
-                  : null
-              }
-              monthPickerDefaultValue={
-                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-              }
-              yearPickerDefaultValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
-              minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-              maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-              minYearPickerDate={periodSelectorModel.minYearPickerDate}
-              maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-              onMonthPickerChange={(nextValue) => {
-                const nextPeriodValue = getMonthPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              onYearPickerChange={(nextValue) => {
-                const nextPeriodValue = getYearPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              clearFilterDisabled={!hasPeriodFilter}
-              onClearFilter={() => {
-                setPickerOpened(false);
-                setPeriodFilter(undefined);
-              }}
-            />
-          ) : undefined
-        }
-        onRowDataUpdated={() => undefined}
-        onOpenAccountEdit={() => setAccountEditModalOpened(true)}
-        onCloseAccountEdit={() => setAccountEditModalOpened(false)}
-        onSubmitUpdateAccount={async () => {
-          setAccountEditModalOpened(false);
-        }}
-        onOpenArchiveAccount={() =>
-          setArchivingAccount({ id: account.id, name: account.name })
-        }
-        onCloseArchiveAccount={() => setArchivingAccount(undefined)}
-        onConfirmArchiveAccount={async () => {
-          setArchivingAccount(undefined);
-        }}
-        onUnarchiveAccount={async () => undefined}
-        onOpenDeleteAccount={() =>
-          setDeletingAccount({ id: account.id, name: account.name })
-        }
-        onCloseDeleteAccount={() => setDeletingAccount(undefined)}
-        onConfirmDeleteAccount={async () => {
-          setDeletingAccount(undefined);
-        }}
-        onAddTransactionClick={() => {
-          setSplitModalOpened(false);
-          setSimpleModalOpened(true);
-        }}
-        onCloseSimpleModal={() => setSimpleModalOpened(false)}
-        onSimpleModalExitTransitionEnd={() => undefined}
-        onSimpleSubmittingChange={setIsSimpleSubmitting}
-        onSwitchCreateToSplit={() => {
-          setSimpleModalOpened(false);
-          setSplitModalOpened(true);
-        }}
-        onSubmitCreateSimpleTransaction={async (
-          _values: SimpleTransactionValues,
-        ) => {
-          setSimpleModalOpened(false);
-        }}
-        onOpenImportPage={() => undefined}
-        onCloseSplitModal={() => setSplitModalOpened(false)}
-        onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
-        onSubmitCreateTransaction={async (
-          _values: TransactionMutationValues,
-        ) => {
-          setSplitModalOpened(false);
-        }}
-        onCloseEditModal={() => setEditModalOpened(false)}
-        onEditSubmittingChange={setIsEditSubmitting}
-        onEditModalExitTransitionEnd={() => {
-          setEditingTransactionData(undefined);
-          setEditingSimpleInitialValues(undefined);
-          setEditMode("SPLIT");
-        }}
-        onSwitchToSplit={() => {
-          setEditMode("SPLIT");
-          setEditingSimpleInitialValues(undefined);
-        }}
-        onSubmitUpdateSimpleTransaction={async (
-          _values: SimpleTransactionValues,
-        ) => {
-          setEditModalOpened(false);
-        }}
-        onSubmitUpdateTransaction={async (
-          _values: TransactionMutationValues,
-        ) => {
-          setEditModalOpened(false);
-        }}
-        onCloseRebookModal={() => setRebookModalOpened(false)}
-        onRebookSubmittingChange={setIsRebookSubmitting}
-        onRebookModalExitTransitionEnd={() => setRebooking(undefined)}
-        onSubmitRebookBooking={async () => {
-          setRebookModalOpened(false);
-        }}
-        onCloseDeleteModal={() => setDeletingTransaction(undefined)}
-        onConfirmDeleteTransaction={async () => {
-          setDeletingTransaction(undefined);
-        }}
-      />
-      {routeSmoke ? <Text data-testid="router-path">{pathname}</Text> : null}
-      {routeSmoke ? (
-        <Text data-testid="router-search-period">
-          {routeSearchPeriod ?? "(none)"}
-        </Text>
-      ) : null}
-    </Box>
-  );
-}
+import { Button, Text } from "@mantine/core";
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import { defaultAssetClassIds } from "@/shared/asset-class";
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
+import { LedgerPageView } from "./page-view";
+import { LedgerPageStoryHarness } from "./page-view.story-harness";
 
 const meta: Meta<typeof LedgerPageView> = {
   title: "Routes/LedgerPageView",
@@ -626,7 +30,12 @@ export const HappyPath: Story = {
     await expect(canvas.getByText("CHF")).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
-    ).toHaveAttribute("data-variant", "outline");
+    ).toHaveTextContent("Asset Class: Unclassified");
+    const metadata = canvas.getByTestId("ledger-header-metadata");
+    await expect(metadata).toHaveTextContent(
+      "Account Group: Assets / Cash · Asset Class: Unclassified",
+    );
+    await expect(metadata.textContent?.match(/·/g)).toEqual(["·"]);
     await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
@@ -647,7 +56,16 @@ export const ClassifiedAsset: Story = {
       within(canvasElement).getByTitle(
         "Asset Class: Commodities & Precious Metals",
       ),
-    ).toHaveAttribute("data-variant", "light");
+    ).toHaveTextContent("Asset Class: Commodities & Precious Metals");
+  },
+};
+
+export const TopLevelAccount: Story = {
+  render: () => <LedgerPageStoryHarness groupPathSegments={[]} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByTestId("ledger-header-metadata"),
+    ).toHaveTextContent("Account Group: Top Level · Asset Class: Unclassified");
   },
 };
 
@@ -658,7 +76,7 @@ export const UnclassifiedLiability: Story = {
     await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
-    ).toHaveAttribute("data-variant", "outline");
+    ).toHaveTextContent("Asset Class: Unclassified");
   },
 };
 
@@ -675,7 +93,12 @@ export const ArchivedClassifiedLiability: Story = {
     await expect(canvas.getByText("Archived", { exact: true })).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Fixed Income"),
-    ).toHaveAttribute("data-variant", "light");
+    ).toHaveTextContent("Asset Class: Fixed Income");
+    await expect(
+      canvas.getByTestId("ledger-header-metadata"),
+    ).toHaveTextContent(
+      "Account Group: Assets / Cash · Asset Class: Fixed Income",
+    );
   },
 };
 
@@ -685,28 +108,59 @@ export const EquityWithoutAssetClass: Story = {
     await expect(
       within(canvasElement).queryByTitle(/^Asset Class:/),
     ).not.toBeInTheDocument();
+    await expect(
+      within(canvasElement).queryByTestId("ledger-header-metadata"),
+    ).not.toBeInTheDocument();
   },
 };
 
 export const AccountActionsMenu: Story = {
-  render: () => <LedgerPageStoryHarness />,
-  play: async ({ canvasElement }) => {
+  args: { onOpenImportPage: fn() },
+  render: (args) => (
+    <LedgerPageStoryHarness onOpenImportPage={args.onOpenImportPage} />
+  ),
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
+    );
 
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    );
+    await expect(args.onOpenImportPage).toHaveBeenCalledTimes(1);
+    await expect(
+      actionButtons.queryByRole("button", { name: "Edit" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Account Actions" }),
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
     });
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    });
+    await expect(screen.getAllByRole("menuitem")[0]).toHaveTextContent("Edit");
+    await expect(
+      screen.queryByRole("menuitem", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit Account" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    );
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
   },
 };
@@ -721,6 +175,9 @@ export const ArchivedAccountActionsMenu: Story = {
     ).toBeVisible();
     await expect(canvas.getByText("Archived")).toBeVisible();
     await expect(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    ).toBeEnabled();
+    await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
     await expect(
@@ -732,9 +189,7 @@ export const ArchivedAccountActionsMenu: Story = {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
       expect(screen.getByRole("menuitem", { name: "Unarchive" })).toBeVisible();
@@ -755,16 +210,100 @@ export const DisabledAccountActionsMenu: Story = {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("menuitem", { name: "Import Statement" }),
-      ).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     });
     await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeDisabled();
     });
     await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeDisabled();
     });
+  },
+};
+
+export const MissingStatementImportCsvFormat: Story = {
+  render: () => <LedgerPageStoryHarness hasStatementImportCsvFormat={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
+    );
+    await expect(
+      actionButtons.getByRole("button", { name: "Edit" }),
+    ).toBeEnabled();
+    await expect(
+      canvas.queryByRole("button", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    const importItem = await screen.findByRole("menuitem", {
+      name: "Import Statement",
+    });
+    await expect(importItem).toBeDisabled();
+    await userEvent.hover(importItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Statement imports require a CSV format configured on this account.",
+    );
+  },
+};
+
+export const CategoryActionsMenu: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.EXPENSE}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const actionButtons = within(
+      canvas.getByRole("button", { name: "Category Actions" }).parentElement!,
+    );
+    await expect(
+      actionButtons.getByRole("button", { name: "Edit" }),
+    ).toBeEnabled();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Category Actions" }),
+    );
+    await expect(
+      await screen.findByRole("menuitem", { name: "Manage Category" }),
+    ).toBeEnabled();
+    const importItem = screen.getByRole("menuitem", {
+      name: "Import Statement",
+    });
+    await expect(importItem).toBeDisabled();
+    await userEvent.hover(importItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Statement imports are only available for accounts.",
+    );
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(actionButtons.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit Category" });
+    await waitFor(() => expect(dialog).toBeVisible());
+  },
+};
+
+export const DisabledEditMenuAction: Story = {
+  render: () => (
+    <LedgerPageStoryHarness accountEditDisabledReason="This account cannot be edited." />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Import Statement" }),
+    ).toBeEnabled();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    const editItem = await screen.findByRole("menuitem", {
+      name: "Edit",
+    });
+    await expect(editItem).toBeDisabled();
+    await userEvent.hover(editItem.parentElement!);
+    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "This account cannot be edited.",
+    );
   },
 };
 

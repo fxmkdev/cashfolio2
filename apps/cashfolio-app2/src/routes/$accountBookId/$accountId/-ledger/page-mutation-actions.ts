@@ -23,7 +23,7 @@ import type {
   SimpleTransactionValues,
   SplitModalInitialValues,
   TransactionMutationValues,
-} from "./page-view";
+} from "./page-view.types";
 
 export type LedgerTransactionApi = {
   createSimpleTransaction: typeof createSimpleTransaction;

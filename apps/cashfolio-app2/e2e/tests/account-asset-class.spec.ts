@@ -42,7 +42,7 @@ for (const type of ["BALANCE"] as const) {
       await page.goto(`/${seeded.accountBookId}/${account.id}`);
       await expect(
         page.getByTitle("Asset Class: Unclassified", { exact: true }),
-      ).toHaveAttribute("data-variant", "outline");
+      ).toHaveText("Asset Class: Unclassified");
       await page
         .getByRole("button", { name: "Edit", exact: true, disabled: false })
         .click();
@@ -52,10 +52,12 @@ for (const type of ["BALANCE"] as const) {
       await selectClassificationOption(page, label);
       await dialog.getByRole("button", { name: "Save", exact: true }).click();
       await expect(dialog).not.toBeVisible();
-      const pill = page.getByTitle(`Asset Class: ${label}`, { exact: true });
-      await expect(pill).toHaveAttribute("data-variant", "light");
+      const metadata = page.getByTitle(`Asset Class: ${label}`, {
+        exact: true,
+      });
+      await expect(metadata).toHaveText(`Asset Class: ${label}`);
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect(pill).toBeInViewport();
+      await expect(metadata).toBeInViewport();
       await expect
         .poll(() =>
           page.evaluate(
@@ -92,7 +94,7 @@ for (const type of ["BALANCE"] as const) {
   }
 }
 
-test("equity accounts have no classification column or ledger pill", async ({
+test("equity accounts have no classification column or ledger metadata", async ({
   page,
 }) => {
   for (const tab of ["EQUITY-INCOME", "EQUITY-EXPENSE"]) {
@@ -206,7 +208,7 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   await expect(edit).not.toBeVisible();
   await expect(
     page.getByTitle("Asset Class: Unclassified", { exact: true }),
-  ).toHaveAttribute("data-variant", "outline");
+  ).toHaveText("Asset Class: Unclassified");
   await page.reload();
   await page
     .getByRole("button", { name: "Edit", exact: true, disabled: false })

@@ -11,7 +11,7 @@ import {
 import type {
   SimpleTransactionValues,
   SplitModalInitialValues,
-} from "./page-view";
+} from "./page-view.types";
 
 type CurrentAccountForSimpleTransaction = {
   id: string;

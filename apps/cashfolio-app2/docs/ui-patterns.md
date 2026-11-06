@@ -420,10 +420,14 @@ validation rechecks every submitted account inside one authorized book mutation
 and rejects the whole request if any target is missing or no longer eligible.
 Groups do not store or inherit a tracking method.
 
-Assets and liabilities show classification beside the type and unit badges in
-the ledger header. The gray pill uses the light variant for a selected class and
-the outline variant for Unclassified, including on archived accounts. Its title
-includes the field name and full label. Equity accounts have no pill.
+Assets and liabilities show `Account Group: … · Asset Class: …` as small, muted
+text beneath the ledger name and compact type/unit/status badges, including on
+archived accounts. Show the complete group and classification hierarchies in
+their original capitalization, with `/` between path segments. Accounts with no
+group show `Account Group: Top Level`; unclassified accounts show
+`Asset Class: Unclassified`. Separate the fields with a spaced middle dot (`·`,
+U+00B7), keeping it attached to the preceding field when text wraps. Allow long
+paths to wrap. Category/equity ledger headers omit this metadata line.
 
 The current classification applies to all historical periods in Report and
 History. Calculated and recorded gains/losses support either Account Structure
@@ -545,13 +549,23 @@ callers to override it when needed.
 
 - Use `TopPageHeader` (`src/components/layout/top-page-header.tsx`) for
   page-level headers on account-book routes.
-- Keep layout props centralized in `TopPageHeader`: `mb="lg"`,
-  `justify="space-between"`, `align="center"`, `mih={36}`, and
+- Keep layout props centralized in `TopPageHeader`. The default layout uses
+  `mb="lg"`, `justify="space-between"`, `align="center"`, `mih={36}`, and
   `flex="0 0 auto"`. Headers retain their full content height inside constrained
   page flex columns, including when actions wrap or have labels above their
   inputs.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
+- An optional `description` slot places secondary metadata beneath the heading.
+- Ledger pages opt into `layout="responsive"`; other callers keep the default
+  layout. The responsive header uses its available container width, so changing
+  sidebar width also changes the layout. At 80rem and wider, identity sits left
+  and actions right, aligned at the top. Below 80rem, actions occupy a
+  full-width second row. The ledger toolbar places the period selector left and
+  commands right from 48rem to 80rem; below 48rem, the period selector, split
+  button, and Add Transaction occupy separate full-width rows. The split
+  button's dropdown segment stays compact. Names and metadata wrap without
+  truncation.
 - For hierarchical subpages, pass `PageBreadcrumbs`
   (`src/components/navigation/page-breadcrumbs.tsx`) as the `heading`.
 - Breadcrumb parent items are links and the current page item is plain text. Do
@@ -1246,8 +1260,11 @@ creation and eligible edit of two-booking transactions from the ledger route
 
 ## Account Statement Import
 
-The account ledger exposes `Import Statement` in the account actions menu for
-asset and liability accounts with complete unit metadata. The action opens a
+The account ledger exposes `Import Statement` as the split button's main action
+for asset and liability accounts with complete unit metadata and a configured
+CSV format, including archived accounts. `Edit` is the first menu item. When
+importing is unavailable, `Edit` remains the main action and `Import Statement`
+stays in the menu, disabled with a reason tooltip. The import action opens a
 dedicated import page. The v1 importer accepts a strict CSV with a header row,
 but header names are ignored. The first six columns must be ordered as: `date`,
 `amount`, `original amount`, `original currency`, `exchange rate`, and

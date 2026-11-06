@@ -4,6 +4,7 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconFileImport,
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react";
@@ -26,13 +27,14 @@ type Story = StoryObj<typeof meta>;
 export const AccountAction: Story = {
   render: () => (
     <SplitButton
-      leftSection={<IconPencil size={16} />}
+      leftSection={<IconFileImport size={16} />}
       menuLabel="Account Actions"
       onClick={() => undefined}
       menuItems={[
         {
-          key: "import",
-          label: "Import Statement",
+          key: "edit",
+          label: "Edit",
+          leftSection: <IconPencil size={16} />,
           onClick: () => undefined,
         },
         { type: "divider", key: "danger-divider" },
@@ -45,7 +47,7 @@ export const AccountAction: Story = {
         },
       ]}
     >
-      Edit
+      Import Statement
     </SplitButton>
   ),
 };

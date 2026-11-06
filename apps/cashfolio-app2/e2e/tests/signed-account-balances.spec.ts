@@ -160,8 +160,7 @@ test("liability import keeps configured sign inversion, negative previews, and d
   const description = "Signed card purchase";
   const upload = async () => {
     await page.goto(`/${seeded.accountBookId}/${card.id}`);
-    await page.getByRole("button", { name: "Account Actions" }).click();
-    await page.getByRole("menuitem", { name: "Import Statement" }).click();
+    await page.getByRole("button", { name: "Import Statement" }).click();
     await expect(page.getByText("Drop CSV File Here")).toBeVisible();
     await uploadStatementFile(page, {
       name: "card.csv",

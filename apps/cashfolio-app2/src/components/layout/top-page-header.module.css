@@ -1,0 +1,31 @@
+.container {
+  container: top-page-header / inline-size;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--mantine-spacing-sm);
+}
+
+.identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.heading > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.actions {
+  min-width: 0;
+}
+
+@container top-page-header (width >= 80rem) {
+  .layout:has(.actions) {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+}
