@@ -140,24 +140,10 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   await expect(
     page.getByRole("button", { name: "Delete Account Book" }),
   ).toHaveCount(0);
-  const dangerZoneTab = page.getByRole("tab", { name: "Danger Zone" });
-  await dangerZoneTab.click();
-  await expect(page).toHaveURL(`/${accountBookId}/settings/danger-zone`);
-  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
-  await page.reload();
-  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
-  await page.goBack();
-  await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.goForward();
-  await expect(dangerZoneTab).toHaveAttribute("aria-selected", "true");
-
-  await page
-    .getByRole("button", { name: "Delete Account Book" })
-    .first()
-    .click();
+  await expect(page.getByRole("tab", { name: "Danger Zone" })).toHaveCount(0);
+  await page.getByRole("button", { name: "More Account Book Actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
+  await expect(page).toHaveURL(`/${accountBookId}/settings`);
   const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
   await expect(dialog).toBeVisible();
 

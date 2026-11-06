@@ -3,9 +3,7 @@ import { notifications } from "@mantine/notifications";
 import { IconCheck, IconTrash } from "@tabler/icons-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
-import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { useHydrated } from "@/hooks/use-hydrated";
 
 function showAccountBookDeletedNotification() {
   notifications.show({
@@ -24,16 +22,18 @@ export function isDeleteAccountBookConfirmationMatch(args: {
   return args.confirmationName.trim() === args.accountBookName;
 }
 
-function DeleteAccountBookModal(args: {
+export function DeleteAccountBookModal(args: {
   opened: boolean;
   accountBookName: string;
   onClose: () => void;
   onConfirm: (values: { confirmationName: string }) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
 }) {
   const submitState = useDialogSubmitState({
     captureErrors: true,
     onRefreshConstraints: args.onRefreshConstraints,
+    onSubmittingChange: args.onSubmittingChange,
   });
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const [confirmationName, setConfirmationName] = useState("");
@@ -120,41 +120,5 @@ function DeleteAccountBookModal(args: {
         </Stack>
       </form>
     </Modal>
-  );
-}
-
-export function DangerZonePageView(args: {
-  accountBookName: string;
-  onDelete: (values: { confirmationName: string }) => Promise<void>;
-  onRefreshConstraints?: () => Promise<void>;
-}) {
-  const isHydrated = useHydrated();
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-
-  return (
-    <NarrowPageShell>
-      <Group justify="space-between" align="flex-start" gap="lg">
-        <Text size="sm" c="dimmed">
-          Permanently delete this account book and all data inside it.
-        </Text>
-        <Button
-          color="red"
-          variant="outline"
-          leftSection={<IconTrash size={16} />}
-          onClick={() => setDeleteModalOpened(true)}
-          disabled={!isHydrated}
-        >
-          Delete Account Book
-        </Button>
-      </Group>
-
-      <DeleteAccountBookModal
-        opened={deleteModalOpened}
-        accountBookName={args.accountBookName}
-        onClose={() => setDeleteModalOpened(false)}
-        onConfirm={args.onDelete}
-        onRefreshConstraints={args.onRefreshConstraints}
-      />
-    </NarrowPageShell>
   );
 }

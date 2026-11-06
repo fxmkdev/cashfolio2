@@ -33,7 +33,6 @@ import { Route as AccountBookIdReportIndexRouteImport } from "./routes/$accountB
 import { Route as AccountBookIdSettingsIndexRouteImport } from "./routes/$accountBookId/settings/index";
 import { Route as AccountBookIdSettingsCategoriesRouteRouteImport } from "./routes/$accountBookId/settings/categories/route";
 import { Route as AccountBookIdSettingsClassificationsRouteRouteImport } from "./routes/$accountBookId/settings/classifications/route";
-import { Route as AccountBookIdSettingsDangerZoneRouteRouteImport } from "./routes/$accountBookId/settings/danger-zone/route";
 import { Route as AccountBookIdTransactionsIndexRouteImport } from "./routes/$accountBookId/transactions/index";
 import { Route as ApiLogtoActionRouteImport } from "./routes/api/logto/$action";
 import { Route as AccountBookIdReportGainsLossesAccountIdRouteRouteImport } from "./routes/$accountBookId/report/gains-losses/$accountId/route";
@@ -172,12 +171,6 @@ const AccountBookIdSettingsClassificationsRouteRoute =
     path: "/classifications",
     getParentRoute: () => AccountBookIdSettingsRouteRoute,
   } as any);
-const AccountBookIdSettingsDangerZoneRouteRoute =
-  AccountBookIdSettingsDangerZoneRouteRouteImport.update({
-    id: "/danger-zone",
-    path: "/danger-zone",
-    getParentRoute: () => AccountBookIdSettingsRouteRoute,
-  } as any);
 const AccountBookIdTransactionsIndexRoute =
   AccountBookIdTransactionsIndexRouteImport.update({
     id: "/",
@@ -217,7 +210,6 @@ export interface FileRoutesByFullPath {
   "/admin/": typeof AdminIndexRoute;
   "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
   "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
-  "/$accountBookId/settings/danger-zone": typeof AccountBookIdSettingsDangerZoneRouteRoute;
   "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
   "/api/logto/$action": typeof ApiLogtoActionRoute;
   "/$accountBookId/$accountId/": typeof AccountBookIdAccountIdIndexRoute;
@@ -241,7 +233,6 @@ export interface FileRoutesByTo {
   "/admin": typeof AdminIndexRoute;
   "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
   "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
-  "/$accountBookId/settings/danger-zone": typeof AccountBookIdSettingsDangerZoneRouteRoute;
   "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
   "/api/logto/$action": typeof ApiLogtoActionRoute;
   "/$accountBookId/$accountId": typeof AccountBookIdAccountIdIndexRoute;
@@ -272,7 +263,6 @@ export interface FileRoutesById {
   "/admin/": typeof AdminIndexRoute;
   "/$accountBookId/settings/categories": typeof AccountBookIdSettingsCategoriesRouteRoute;
   "/$accountBookId/settings/classifications": typeof AccountBookIdSettingsClassificationsRouteRoute;
-  "/$accountBookId/settings/danger-zone": typeof AccountBookIdSettingsDangerZoneRouteRoute;
   "/$accountBookId/$accountId/import-statement": typeof AccountBookIdAccountIdImportStatementRoute;
   "/api/logto/$action": typeof ApiLogtoActionRoute;
   "/$accountBookId/$accountId/": typeof AccountBookIdAccountIdIndexRoute;
@@ -304,7 +294,6 @@ export interface FileRouteTypes {
     | "/admin/"
     | "/$accountBookId/settings/categories"
     | "/$accountBookId/settings/classifications"
-    | "/$accountBookId/settings/danger-zone"
     | "/$accountBookId/$accountId/import-statement"
     | "/api/logto/$action"
     | "/$accountBookId/$accountId/"
@@ -328,7 +317,6 @@ export interface FileRouteTypes {
     | "/admin"
     | "/$accountBookId/settings/categories"
     | "/$accountBookId/settings/classifications"
-    | "/$accountBookId/settings/danger-zone"
     | "/$accountBookId/$accountId/import-statement"
     | "/api/logto/$action"
     | "/$accountBookId/$accountId"
@@ -358,7 +346,6 @@ export interface FileRouteTypes {
     | "/admin/"
     | "/$accountBookId/settings/categories"
     | "/$accountBookId/settings/classifications"
-    | "/$accountBookId/settings/danger-zone"
     | "/$accountBookId/$accountId/import-statement"
     | "/api/logto/$action"
     | "/$accountBookId/$accountId/"
@@ -549,13 +536,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AccountBookIdSettingsClassificationsRouteRouteImport;
       parentRoute: typeof AccountBookIdSettingsRouteRoute;
     };
-    "/$accountBookId/settings/danger-zone": {
-      id: "/$accountBookId/settings/danger-zone";
-      path: "/danger-zone";
-      fullPath: "/$accountBookId/settings/danger-zone";
-      preLoaderRoute: typeof AccountBookIdSettingsDangerZoneRouteRouteImport;
-      parentRoute: typeof AccountBookIdSettingsRouteRoute;
-    };
     "/$accountBookId/transactions/": {
       id: "/$accountBookId/transactions/";
       path: "/";
@@ -617,7 +597,6 @@ const AccountBookIdReportRouteRouteWithChildren =
 interface AccountBookIdSettingsRouteRouteChildren {
   AccountBookIdSettingsCategoriesRouteRoute: typeof AccountBookIdSettingsCategoriesRouteRoute;
   AccountBookIdSettingsClassificationsRouteRoute: typeof AccountBookIdSettingsClassificationsRouteRoute;
-  AccountBookIdSettingsDangerZoneRouteRoute: typeof AccountBookIdSettingsDangerZoneRouteRoute;
   AccountBookIdSettingsIndexRoute: typeof AccountBookIdSettingsIndexRoute;
 }
 
@@ -627,8 +606,6 @@ const AccountBookIdSettingsRouteRouteChildren: AccountBookIdSettingsRouteRouteCh
       AccountBookIdSettingsCategoriesRouteRoute,
     AccountBookIdSettingsClassificationsRouteRoute:
       AccountBookIdSettingsClassificationsRouteRoute,
-    AccountBookIdSettingsDangerZoneRouteRoute:
-      AccountBookIdSettingsDangerZoneRouteRoute,
     AccountBookIdSettingsIndexRoute: AccountBookIdSettingsIndexRoute,
   };
 

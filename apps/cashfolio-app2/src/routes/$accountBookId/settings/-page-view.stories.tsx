@@ -3,6 +3,7 @@ import { Box } from "@mantine/core";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { SettingsPageView } from "./-page-view";
 import { SettingsNavigation } from "./-settings-navigation";
+import { SettingsActions } from "./-settings-actions";
 
 const meta = {
   title: "Routes/SettingsPageView",
@@ -26,6 +27,12 @@ const meta = {
       <SettingsNavigation
         accountBookId={args.accountBookId}
         categories={false}
+        actions={
+          <SettingsActions
+            accountBookName={args.settings.name}
+            onDelete={fn(async () => undefined)}
+          />
+        }
       />
       <SettingsPageView {...args} />
     </Box>
@@ -55,8 +62,11 @@ export const General: Story = {
       canvas.queryByRole("button", { name: "Delete Account Book" }),
     ).not.toBeInTheDocument();
     await expect(
-      tabs.getByRole("tab", { name: "Danger Zone" }),
-    ).toHaveAttribute("href", "/storybook-book/settings/danger-zone");
+      tabs.queryByRole("tab", { name: "Danger Zone" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "More Account Book Actions" }),
+    ).toBeVisible();
   },
 };
 

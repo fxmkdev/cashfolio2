@@ -166,9 +166,9 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     path: "/settings/categories",
     component: () => <Story />,
   });
-  const accountBookDangerZoneRoute = createRoute({
+  const accountBookClassificationsRoute = createRoute({
     getParentRoute: () => accountBookRoute,
-    path: "/settings/danger-zone",
+    path: "/settings/classifications",
     component: () => <Story />,
   });
   const accountBookUserSettingsRoute = createRoute({
@@ -241,7 +241,7 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     accountBookTimelineRoute,
     accountBookSettingsRoute,
     accountBookCategoriesRoute,
-    accountBookDangerZoneRoute,
+    accountBookClassificationsRoute,
     accountBookUserSettingsRoute,
     accountBookValuationCacheRoute,
     accountLedgerRouteTree,

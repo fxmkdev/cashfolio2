@@ -96,25 +96,31 @@ test("settings stay disabled until hydration and preserve the first edit", async
   await expect(name).toHaveValue("Hydrated First Edit");
 });
 
-test("account-book deletion stays disabled until hydration and opens on the first click", async ({
+test("settings More menu stays disabled until hydration and opens deletion on the first selection", async ({
   page,
 }) => {
-  const deleteBook = page.getByRole("button", { name: "Delete Account Book" });
+  const more = page.getByRole("button", { name: "More Account Book Actions" });
   await beforeHydration(page, async () => {
-    await page.goto(`/${seeded.accountBookId}/settings/danger-zone`, {
+    await page.goto(`/${seeded.accountBookId}/settings`, {
       waitUntil: "commit",
     });
-    await expect(deleteBook).toBeVisible();
-    await expect(deleteBook).toBeDisabled();
+    await expect(more).toBeVisible();
+    await expect(more).toBeDisabled();
   });
 
-  await expect(deleteBook).toBeEnabled();
-  await deleteBook.click();
+  await expect(more).toBeEnabled();
+  await more.click();
+  await page.getByRole("menuitem", { name: "Delete Account Book…" }).click();
   const dialog = page.getByRole("dialog", { name: "Delete Account Book" });
   await expect(dialog).toBeVisible();
   await expect(
     dialog.getByRole("button", { name: "Delete Account Book" }),
   ).toBeDisabled();
+  await expect(
+    dialog.getByRole("textbox", { name: "Account Book Name" }),
+  ).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(more).toBeFocused();
 });
 
 test("statement upload stays disabled until hydration and accepts the first file", async ({
