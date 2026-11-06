@@ -3,27 +3,32 @@ import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import { buildGainsLossesWaterfallModel } from "./-gains-losses-waterfall-model";
 
 describe("buildGainsLossesWaterfallModel", () => {
-  test("reconciles rounded bars to the scope total without making rounding drillable", () => {
-    const model = buildGainsLossesWaterfallModel({
-      nodes: ["a", "b"].map((id) => ({
-        id: `account:${id}`,
-        label: id,
-        realizedGainLoss: 0.01,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 0.01,
-        children: [],
-      })),
-      totalGainLoss: 0.01,
-    });
-    expect(model.totalGainLoss).toBe(0.01);
-    expect(model.data.at(-1)).toEqual({
-      id: "rounding",
-      label: "Rounding",
-      totalGainLoss: -0.01,
-      isDrillable: false,
-    });
-    expect(model.totals[0].index).toBe(2);
-  });
+  test.each([0.01, 0.03])(
+    "preserves scope total %s without adding a rounding category",
+    (totalGainLoss) => {
+      const model = buildGainsLossesWaterfallModel({
+        nodes: ["a", "b"].map((id) => ({
+          id: `account:${id}`,
+          label: id,
+          realizedGainLoss: 0.01,
+          unrealizedGainLoss: 0,
+          totalGainLoss: 0.01,
+          children: [],
+        })),
+        totalGainLoss,
+      });
+      expect(model.totalGainLoss).toBe(totalGainLoss);
+      expect(model.data).toEqual(
+        ["a", "b"].map((id) => ({
+          id: `account:${id}`,
+          label: id,
+          totalGainLoss: 0.01,
+          isDrillable: false,
+        })),
+      );
+      expect(model.totals[0].index).toBe(1);
+    },
+  );
   test("keeps top-level node order in chart data", () => {
     const model = buildGainsLossesWaterfallModel({
       nodes: [
@@ -133,19 +138,25 @@ describe("buildGainsLossesWaterfallModel", () => {
     expect(model.totalGainLoss).toBe(12.5);
   });
 
-  test("does not render synthetic total metadata for single-bar levels", () => {
-    const model = buildGainsLossesWaterfallModel({
-      nodes: [
-        {
-          id: "unit:fx:USD",
-          label: "USD",
-          totalGainLoss: 7,
-          children: [],
-        },
-      ] as unknown as GainsLossesBreakdownNode[],
-    });
+  test.each([7, 7.01])(
+    "keeps single-bar levels without synthetic total metadata for scope total %s",
+    (totalGainLoss) => {
+      const model = buildGainsLossesWaterfallModel({
+        nodes: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            totalGainLoss: 7,
+            children: [],
+          },
+        ] as unknown as GainsLossesBreakdownNode[],
+        totalGainLoss,
+      });
 
-    expect(model.totals).toEqual([]);
-    expect(model.data).toHaveLength(1);
-  });
+      expect(model.totals).toEqual([]);
+      expect(model.data).toHaveLength(1);
+      expect(model.data[0].totalGainLoss).toBe(7);
+      expect(model.totalGainLoss).toBe(totalGainLoss);
+    },
+  );
 });

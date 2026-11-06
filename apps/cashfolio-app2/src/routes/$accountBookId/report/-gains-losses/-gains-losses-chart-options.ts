@@ -51,6 +51,14 @@ export function useGainsLossesWaterfallChartOptions(args: {
     onNodeDoubleClick,
   } = args;
   const safeTotalGainLoss = toFiniteNumber(totalGainLoss);
+  // Compare at report precision so floating-point noise adds no rounding note.
+  const hasRoundingDifference = useMemo(() => {
+    const displayedTotal = chartData.reduce(
+      (sum, datum) => sum + toFiniteNumber(datum.totalGainLoss),
+      0,
+    );
+    return Number((safeTotalGainLoss - displayedTotal).toFixed(2)) !== 0;
+  }, [chartData, safeTotalGainLoss]);
   const labelById = useMemo(
     () => new Map(chartData.map((datum) => [datum.id, datum.label])),
     [chartData],
@@ -105,6 +113,12 @@ export function useGainsLossesWaterfallChartOptions(args: {
             heading: isAggregateItem
               ? totalAxisLabel
               : String(node?.label ?? totalAxisLabel),
+            ...(isAggregateItem && hasRoundingDifference
+              ? {
+                  title:
+                    "Group amounts may differ slightly from the total due to rounding.",
+                }
+              : {}),
             data: [
               {
                 label: "Total",
@@ -143,6 +157,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
     }),
     [
       currencyFormatter,
+      hasRoundingDifference,
       onNodeDoubleClick,
       totalAxisLabel,
       safeTotalGainLoss,

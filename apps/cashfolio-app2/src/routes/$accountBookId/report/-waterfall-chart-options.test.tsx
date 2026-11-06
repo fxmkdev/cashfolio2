@@ -124,6 +124,69 @@ describe("contribution waterfall v14 callbacks", () => {
 });
 
 describe("gains/losses waterfall v14 callbacks", () => {
+  test.each([
+    { amounts: [0.01, 0.01], total: 0.01, hasRoundingDifference: true },
+    { amounts: [0.01, 0.01], total: 0.03, hasRoundingDifference: true },
+    { amounts: [-0.01, -0.01], total: -0.01, hasRoundingDifference: true },
+    { amounts: [0.1, 0.2], total: 0.3, hasRoundingDifference: false },
+    { amounts: [-0.1, -0.2], total: -0.3, hasRoundingDifference: false },
+    { amounts: [-15, 5], total: -10, hasRoundingDifference: false },
+  ])(
+    "explains cent differences only on aggregate tooltips: %j",
+    ({ amounts, total, hasRoundingDifference }) => {
+      const chartData = amounts.map((amount, index) => ({
+        id: `group:${index}`,
+        label: `Group ${index}`,
+        totalGainLoss: amount,
+        isDrillable: true,
+      }));
+      function Harness() {
+        capturedOptions = useGainsLossesWaterfallChartOptions({
+          chartData,
+          totals: [{ totalType: "total", index: 1, axisLabel: "Total" }],
+          totalGainLoss: total,
+          totalAxisLabel: "Total",
+          colors: mockColors,
+          waterfallPalette,
+          currencyFormatter,
+          onNodeDoubleClick: vi.fn(),
+        });
+        return null;
+      }
+      renderToStaticMarkup(createElement(Harness));
+      const series = getWaterfallSeries();
+      expect(capturedOptions.data).toEqual(chartData);
+      for (const itemType of ["total", "subtotal"] as const) {
+        expect(renderTooltip(series, { itemType })).toEqual({
+          heading: "Total",
+          ...(hasRoundingDifference
+            ? {
+                title:
+                  "Group amounts may differ slightly from the total due to rounding.",
+              }
+            : {}),
+          data: [{ label: "Total", value: currencyFormatter.format(total) }],
+        });
+      }
+      for (const datum of chartData) {
+        expect(
+          renderTooltip(series, {
+            itemType: datum.totalGainLoss >= 0 ? "positive" : "negative",
+            datum,
+          }),
+        ).toEqual({
+          heading: datum.label,
+          data: [
+            {
+              label: "Total",
+              value: currencyFormatter.format(datum.totalGainLoss),
+            },
+          ],
+        });
+      }
+    },
+  );
+
   test("formats aggregates and ignores aggregate clicks while preserving node drilldown", () => {
     const datum = {
       id: "group:security",
