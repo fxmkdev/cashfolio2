@@ -36,7 +36,7 @@ describe("account classification columns", () => {
     return columns;
   }
 
-  it("follows the balance columns with label filtering, tooltips, and resizing", () => {
+  it("follows the G/L columns with label filtering, tooltips, and resizing", () => {
     const columns = readColumns(false);
     expect(columns).toMatchObject([
       {
@@ -48,12 +48,12 @@ describe("account classification columns", () => {
       },
       { field: "balance" },
       { field: "balanceInReferenceCurrency" },
+      { groupId: "holding-gain-loss" },
       { colId: "assetClass" },
       { colId: "trackingMethod" },
-      { groupId: "holding-gain-loss" },
       { colId: "actions", pinned: "right" },
     ]);
-    expect(columns[3]).toMatchObject({
+    expect(columns[4]).toMatchObject({
       colId: "assetClass",
       headerName: "Asset Class",
       width: 220,
@@ -75,7 +75,8 @@ describe("account classification columns", () => {
 
   it("replaces Asset Class with Account Group in the same position and keeps neighboring columns", () => {
     const columns = readColumns(false, "assetClass");
-    expect(columns[3]).toMatchObject({
+    expect(columns[3]).toMatchObject({ groupId: "holding-gain-loss" });
+    expect(columns[4]).toMatchObject({
       colId: "path",
       headerName: "Account Group",
       width: 220,
@@ -83,7 +84,7 @@ describe("account classification columns", () => {
       sortable: false,
       filter: "agTextColumnFilter",
     });
-    expect(columns[4]).toMatchObject({ colId: "trackingMethod" });
+    expect(columns[5]).toMatchObject({ colId: "trackingMethod" });
     expect(
       columns.some(
         (column) => "colId" in column && column.colId === "assetClass",
@@ -93,7 +94,7 @@ describe("account classification columns", () => {
   });
 
   it("uses original group paths for Account Group display, filtering and tooltips on active and archived accounts", () => {
-    const column = readColumns(false, "assetClass")[3];
+    const column = readColumns(false, "assetClass")[4];
     if (
       !("valueGetter" in column) ||
       typeof column.valueGetter !== "function" ||
@@ -144,7 +145,7 @@ describe("account classification columns", () => {
   });
 
   it("places Tracking Method after Asset Class with label filtering and tooltips", () => {
-    const column = readColumns(false)[4];
+    const column = readColumns(false)[5];
     expect(column).toMatchObject({
       colId: "trackingMethod",
       headerName: "Tracking Method",

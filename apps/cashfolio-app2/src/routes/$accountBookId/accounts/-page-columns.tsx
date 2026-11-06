@@ -55,12 +55,12 @@ export function useAccountTreeColumnDefs(
               isReferenceBalancesLoadingRef,
               balanceInReferenceCurrencyByGroupIdRef,
             }),
-            ...buildAccountMetadataColumns({ grouping, assetClasses }),
             buildAccountGainLossColumns({
               referenceCurrency,
               data: gainLossData,
               loading: isGainLossLoading ?? false,
             }),
+            ...buildAccountMetadataColumns({ grouping, assetClasses }),
           ]
         : []),
       buildAccountActionsColumn(
