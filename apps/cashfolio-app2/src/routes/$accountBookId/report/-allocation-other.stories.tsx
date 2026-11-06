@@ -131,6 +131,30 @@ async function openOther(canvasElement: HTMLElement) {
   return within(dialog);
 }
 
+async function navigateToOtherAction(
+  dialog: ReturnType<typeof within>,
+  name: string,
+  secondRow = false,
+) {
+  const header = dialog.getByRole("columnheader", { name: "Name" });
+  // Start from the modal's normal autofocus and enter the grid using real Tab.
+  for (
+    let attempt = 0;
+    attempt < 12 && header.ownerDocument.activeElement !== header;
+    attempt++
+  ) {
+    await userEvent.tab();
+  }
+  await expect(header).toHaveFocus();
+  await userEvent.keyboard("{ArrowDown}{ArrowRight}{ArrowRight}{ArrowRight}");
+  if (secondRow) await userEvent.keyboard("{ArrowDown}");
+  const actionCell = dialog
+    .getByRole("button", { name })
+    .closest('[role="gridcell"]');
+  await expect(actionCell).toHaveFocus();
+  return actionCell;
+}
+
 export const OtherDetailsAndNavigation: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -160,10 +184,7 @@ export const OtherDetailsAndNavigation: Story = {
     await expect(dialog.getByText("6.5%", { exact: true })).toBeVisible();
     await expect(dialog.getByText("3.2%", { exact: true })).toBeVisible();
     await expect(dialog.getByText("9.7%", { exact: true })).toBeVisible();
-    const drill = dialog.getByRole("button", {
-      name: "Drill Down: Smaller Group",
-    });
-    drill.focus();
+    await navigateToOtherAction(dialog, "Drill Down: Smaller Group");
     await userEvent.keyboard("{Enter}");
     await waitFor(() =>
       expect(
@@ -195,9 +216,16 @@ export const OtherDetailsAndNavigation: Story = {
     );
     await userEvent.click(card.getByRole("button", { name: "Up" }));
     const rootDialog = await openOther(canvasElement);
-    await userEvent.click(
-      rootDialog.getByRole("button", { name: "Open Ledger: Account 5" }),
+    const ledgerCell = await navigateToOtherAction(
+      rootDialog,
+      "Open Ledger: Account 5",
+      true,
     );
+    await userEvent.tab({ shift: true });
+    await expect(ledgerCell).not.toHaveFocus();
+    await userEvent.tab();
+    await expect(ledgerCell).toHaveFocus();
+    await userEvent.keyboard(" ");
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenLastCalledWith(
       "other-5",
     );

@@ -1,5 +1,34 @@
 import { expect, test } from "vitest";
-import { getAllocationOtherAction } from "./-allocation-other-actions";
+import {
+  getAllocationOtherAction,
+  isAllocationActionKey,
+} from "./-allocation-other-actions";
+
+const unmodified = {
+  altKey: false,
+  ctrlKey: false,
+  metaKey: false,
+  shiftKey: false,
+};
+test.each(["Enter", " "])("%j activates the focused action cell", (key) => {
+  expect(isAllocationActionKey({ key, ...unmodified })).toBe(true);
+});
+test.each(["Tab", "ArrowDown", "a"])(
+  "%s keeps its normal grid behavior",
+  (key) => {
+    expect(isAllocationActionKey({ key, ...unmodified })).toBe(false);
+  },
+);
+test.each(["altKey", "ctrlKey", "metaKey", "shiftKey"] as const)(
+  "%s shortcuts do not activate a row",
+  (modifier) => {
+    for (const key of ["Enter", " "]) {
+      expect(
+        isAllocationActionKey({ key, ...unmodified, [modifier]: true }),
+      ).toBe(false);
+    }
+  },
+);
 
 test.each([
   {

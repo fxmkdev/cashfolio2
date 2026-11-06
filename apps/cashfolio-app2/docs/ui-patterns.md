@@ -637,6 +637,9 @@ callers to override it when needed.
   navigation or whenever the period, book, grouping, side, mode, drill path, or
   data changes. Other is a synthetic chart datum and never enters persisted
   hierarchy paths.
+- Other's Actions cells support Enter and Space after Tab/arrow-key navigation.
+  Nested buttons stay outside the tab order so keyboard handling follows AG
+  Grid's cell focus; synthetic balances and subtotal rows cannot act.
 - Synthetic transfer-clearing balances remain visible in Other details and its
   subtotal, but have no ledger action or double-click navigation.
 - Gains/Losses processes each native double-click once across the chart's node

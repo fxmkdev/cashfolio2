@@ -1,6 +1,21 @@
 import type { PeriodBreakdownChartDatum } from "./-breakdown-chart-options";
 import { parseBreakdownAccountId } from "./-breakdown-drill";
 
+export function isAllocationActionKey(
+  event: Pick<
+    KeyboardEvent,
+    "key" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
+  >,
+) {
+  return (
+    (event.key === "Enter" || event.key === " ") &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey
+  );
+}
+
 export function getAllocationOtherAction(
   datum: Pick<PeriodBreakdownChartDatum, "id" | "kind" | "isDrillable">,
 ): "Drill Down" | "Open Ledger" | null {

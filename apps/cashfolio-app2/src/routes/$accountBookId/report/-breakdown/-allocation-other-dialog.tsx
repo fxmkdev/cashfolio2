@@ -4,7 +4,10 @@ import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import type { PeriodBreakdownChartDatum } from "./-breakdown-chart-options";
-import { getAllocationOtherAction } from "./-allocation-other-actions";
+import {
+  getAllocationOtherAction,
+  isAllocationActionKey,
+} from "./-allocation-other-actions";
 
 export function AllocationOtherDialog({
   opened,
@@ -48,6 +51,7 @@ export function AllocationOtherDialog({
         colId: "actions",
         headerName: "Actions",
         width: 130,
+        suppressKeyboardEvent: ({ event }) => isAllocationActionKey(event),
         cellRenderer: ({
           data,
           node,
@@ -60,6 +64,7 @@ export function AllocationOtherDialog({
               variant="subtle"
               size="compact-xs"
               aria-label={`${label}: ${data.label}`}
+              tabIndex={-1}
               onClick={(event) => {
                 event.stopPropagation();
                 onRowOpen(data);
@@ -84,7 +89,8 @@ export function AllocationOtherDialog({
         <Text size="sm" c="dimmed">
           Shares are percentages of the allocation total at the current chart
           level, including categories outside Other. Double-click a group to
-          drill down or an eligible account to open its ledger.
+          drill down or an eligible account to open its ledger. Use Tab or arrow
+          keys to reach Actions, then press Enter or Space.
         </Text>
         <DataGrid
           containerStyle={{ height: 360 }}
@@ -93,6 +99,26 @@ export function AllocationOtherDialog({
           pinnedBottomRowData={subtotalRows}
           defaultColDef={{ sortable: false, suppressHeaderMenuButton: true }}
           getRowId={({ data }) => data.id}
+          onCellKeyDown={(event) => {
+            const key = event.event;
+            if (
+              !("column" in event) ||
+              event.column.getColId() !== "actions" ||
+              !(key instanceof KeyboardEvent) ||
+              !isAllocationActionKey(key)
+            )
+              return;
+            key.preventDefault();
+            if (
+              !key.repeat &&
+              !key.isComposing &&
+              event.data &&
+              !event.node.rowPinned &&
+              getAllocationOtherAction(event.data)
+            ) {
+              onRowOpen(event.data);
+            }
+          }}
           onRowDoubleClicked={({ data, node }) => {
             if (data && !node.rowPinned && getAllocationOtherAction(data))
               onRowOpen(data);
