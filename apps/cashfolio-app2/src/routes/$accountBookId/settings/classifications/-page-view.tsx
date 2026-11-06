@@ -1,3 +1,4 @@
+import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
@@ -73,11 +74,8 @@ export function ClassificationsPageView(props: {
       },
       {
         colId: "actions",
-        headerName: "Actions",
+        ...rowActionsColumnProps,
         pinned: "right",
-        width: 180,
-        minWidth: 160,
-        cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<AssetClassGridRow>) =>
           data ? (
             <AssetClassActionsCell

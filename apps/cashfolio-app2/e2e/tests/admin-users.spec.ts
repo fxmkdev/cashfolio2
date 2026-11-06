@@ -1,3 +1,4 @@
+import { getRowAction } from "../support/grid";
 import { UserRole } from "../../src/.prisma-client/enums";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
@@ -34,9 +35,9 @@ test("admin users page manages a user's Admin role from the row action dialog", 
     .filter({ hasText: targetUserExternalId });
   await expect(targetRow).toContainText("None");
 
-  await targetRow.getByRole("button", { name: "Manage roles" }).click();
+  await (await getRowAction(targetRow, "Manage Roles")).click();
 
-  const dialog = page.getByRole("dialog", { name: "Manage roles" });
+  const dialog = page.getByRole("dialog", { name: "Manage Roles" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(targetUserExternalId);
 
@@ -74,10 +75,8 @@ test("pending deletions show inactive Admin status and a retry action", async ({
       .filter({ hasText: targetUserExternalId });
     await expect(row).toContainText("Deletion pending");
     await expect(row).toContainText("Admin (inactive)");
-    await expect(
-      row.getByRole("button", { name: "Manage Roles" }),
-    ).toBeDisabled();
-    await row.getByRole("button", { name: "Retry Deletion" }).click();
+    await expect(await getRowAction(row, "Manage Roles")).toBeDisabled();
+    await page.getByRole("menuitem", { name: "Retry Deletion" }).click();
     const dialog = page.getByRole("dialog", { name: "Retry Deletion" });
     await expect(dialog).toContainText("Deletion has started");
     await expect(

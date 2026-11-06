@@ -8,8 +8,15 @@
   transition: opacity 150ms ease;
 }
 
+.ag-cell.actions-cell:has([data-row-actions-trigger]) {
+  padding-inline: 8px;
+}
+
 .ag-row:hover .ag-cell.actions-cell,
-.ag-row.ag-row-hover .ag-cell.actions-cell {
+.ag-row.ag-row-hover .ag-cell.actions-cell,
+.ag-row:focus-within .ag-cell.actions-cell,
+.ag-root:focus-within .ag-row.ag-row-focus .ag-cell.actions-cell,
+.ag-cell.actions-cell:has([data-row-actions-open]) {
   opacity: 1;
 }
 

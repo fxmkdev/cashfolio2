@@ -1,4 +1,4 @@
-import { ActionIcon, Group, Menu, Tooltip } from "@mantine/core";
+import { RowActionsMenu } from "@/components/grid/row-actions-menu";
 import {
   IconArrowsSort,
   IconArchive,
@@ -8,9 +8,8 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 
-const TOOLTIP_TRIGGER_STYLE = { display: "inline-flex" } as const;
-
 export function ArchivedAccountTreeActionsCell({
+  rowLabel,
   reorderLabel,
   reorderEnabled = true,
   deleteLabel,
@@ -23,6 +22,7 @@ export function ArchivedAccountTreeActionsCell({
   onUnarchive,
   unarchivePending = false,
 }: {
+  rowLabel: string;
   reorderLabel?: string;
   reorderEnabled?: boolean;
   deleteLabel: string;
@@ -45,64 +45,49 @@ export function ArchivedAccountTreeActionsCell({
       : reorderActionLabel;
 
   return (
-    <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip label={resolvedReorderTooltipLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            disabled={!canReorder}
-            onClick={onReorder}
-            aria-label="Reorder Siblings"
-          >
-            <IconArrowsSort size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <Tooltip label="Edit">
-        <ActionIcon
-          variant="subtle"
-          size="sm"
-          onClick={onEdit}
-          aria-label="Edit"
-        >
-          <IconPencil size={16} />
-        </ActionIcon>
-      </Tooltip>
-      <Tooltip label={deleteLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            color="red"
-            disabled={!deletable}
-            onClick={onDelete}
-            aria-label="Delete"
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <Tooltip label={unarchiveLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            color="blue"
-            disabled={!unarchivable || unarchivePending}
-            onClick={onUnarchive}
-            aria-label="Unarchive"
-          >
-            <IconArchiveOff size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-    </Group>
+    <RowActionsMenu
+      rowLabel={rowLabel}
+      actions={[
+        {
+          id: "reorder",
+          label: "Reorder Siblings",
+          icon: <IconArrowsSort size={16} />,
+          onClick: () => onReorder?.(),
+          disabled: !canReorder,
+          disabledReason: resolvedReorderTooltipLabel,
+        },
+        {
+          id: "edit",
+          label: "Edit",
+          icon: <IconPencil size={16} />,
+          onClick: onEdit,
+        },
+        {
+          id: "delete",
+          label: "Delete",
+          icon: <IconTrash size={16} />,
+          onClick: onDelete,
+          color: "red",
+          disabled: !deletable,
+          disabledReason: deleteLabel,
+          separatorBefore: true,
+        },
+        {
+          id: "unarchive",
+          label: "Unarchive",
+          icon: <IconArchiveOff size={16} />,
+          onClick: onUnarchive,
+          color: "blue",
+          disabled: !unarchivable || unarchivePending,
+          disabledReason: unarchivePending ? "Unarchiving…" : unarchiveLabel,
+        },
+      ]}
+    />
   );
 }
 
 export function ActiveAccountTreeActionsCell({
-  addChildLabel,
+  rowLabel,
   addAccountLabel,
   onAddAccount,
   onAddGroup,
@@ -117,7 +102,7 @@ export function ActiveAccountTreeActionsCell({
   onDelete,
   onReorder,
 }: {
-  addChildLabel?: string;
+  rowLabel: string;
   addAccountLabel?: string;
   onAddAccount?: () => void;
   onAddGroup?: () => void;
@@ -142,83 +127,59 @@ export function ActiveAccountTreeActionsCell({
       : reorderActionLabel;
 
   return (
-    <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip label={resolvedReorderTooltipLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            disabled={!canReorder}
-            onClick={onReorder}
-            aria-label="Reorder Siblings"
-          >
-            <IconArrowsSort size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <Tooltip label="Edit">
-        <ActionIcon
-          variant="subtle"
-          size="sm"
-          onClick={onEdit}
-          aria-label="Edit"
-        >
-          <IconPencil size={16} />
-        </ActionIcon>
-      </Tooltip>
-      {onAddAccount && onAddGroup && (
-        <Menu position="bottom-end" shadow="md" width={220}>
-          <Menu.Target>
-            <Tooltip label={addChildLabel}>
-              <ActionIcon variant="subtle" size="sm" aria-label={addChildLabel}>
-                <IconPlus size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<IconPlus size={16} />}
-              onClick={onAddAccount}
-            >
-              {addAccountLabel ?? "Add Account"}
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconPlus size={16} />}
-              onClick={onAddGroup}
-            >
-              Add Group
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      )}
-      <Tooltip label={archiveLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            color="yellow"
-            disabled={!archivable}
-            onClick={onArchive}
-            aria-label="Archive"
-          >
-            <IconArchive size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-      <Tooltip label={deleteLabel}>
-        <span style={TOOLTIP_TRIGGER_STYLE}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            color="red"
-            disabled={!deletable}
-            onClick={onDelete}
-            aria-label="Delete"
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
-        </span>
-      </Tooltip>
-    </Group>
+    <RowActionsMenu
+      rowLabel={rowLabel}
+      actions={[
+        {
+          id: "reorder",
+          label: "Reorder Siblings",
+          icon: <IconArrowsSort size={16} />,
+          onClick: () => onReorder?.(),
+          disabled: !canReorder,
+          disabledReason: resolvedReorderTooltipLabel,
+        },
+        {
+          id: "edit",
+          label: "Edit",
+          icon: <IconPencil size={16} />,
+          onClick: onEdit,
+        },
+        ...(onAddAccount && onAddGroup
+          ? [
+              {
+                id: "add-account",
+                label: addAccountLabel ?? "Add Account",
+                icon: <IconPlus size={16} />,
+                onClick: onAddAccount,
+              },
+              {
+                id: "add-group",
+                label: "Add Group",
+                icon: <IconPlus size={16} />,
+                onClick: onAddGroup,
+              },
+            ]
+          : []),
+        {
+          id: "archive",
+          label: "Archive",
+          icon: <IconArchive size={16} />,
+          onClick: onArchive,
+          color: "yellow",
+          disabled: !archivable,
+          disabledReason: archiveLabel,
+          separatorBefore: true,
+        },
+        {
+          id: "delete",
+          label: "Delete",
+          icon: <IconTrash size={16} />,
+          onClick: onDelete,
+          color: "red",
+          disabled: !deletable,
+          disabledReason: deleteLabel,
+        },
+      ]}
+    />
   );
 }

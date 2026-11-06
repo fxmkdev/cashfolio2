@@ -1,3 +1,4 @@
+import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import {
@@ -68,6 +69,7 @@ function renderAccountRowActions({
   if (!data.isActive) {
     return (
       <ArchivedAccountTreeActionsCell
+        rowLabel={data.name}
         unarchivePending={unarchivePending}
         reorderEnabled={hasSiblings}
         reorderLabel={reorderLabel}
@@ -100,7 +102,7 @@ function renderAccountRowActions({
 
   return (
     <ActiveAccountTreeActionsCell
-      addChildLabel={`Add Child to ${data.name}`}
+      rowLabel={data.name}
       addAccountLabel={
         isEquityTab
           ? categoryType === "INCOME"
@@ -153,14 +155,8 @@ export function buildAccountActionsColumn(
 ): ColDef<AccountsGridRow> {
   return {
     colId: "actions",
-    headerName: "",
-    width: 170,
+    ...rowActionsColumnProps,
     pinned: "right",
-    sortable: false,
-    filter: false,
-    resizable: false,
-    suppressHeaderMenuButton: true,
-    cellClass: "actions-cell",
     cellRenderer: ({ data }: ICellRendererParams<AccountsGridRow>) =>
       renderAccountRowActions({
         data,

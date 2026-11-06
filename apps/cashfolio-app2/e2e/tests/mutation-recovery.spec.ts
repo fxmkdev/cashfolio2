@@ -1,3 +1,4 @@
+import { getRowAction } from "../support/grid";
 import { uploadStatementFile } from "../support/ui";
 import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
@@ -77,9 +78,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     const row = agGridRowByText(page, name);
     await expect(row).toBeVisible();
     const actionRow = await revealRowActions(row);
-    await expect(
-      actionRow.getByRole("button", { name: "Unarchive" }),
-    ).toBeEnabled();
+    await expect(await getRowAction(actionRow, "Unarchive")).toBeEnabled();
     await prisma.accountGroup.update({
       where: {
         id_accountBookId: { id: parentId, accountBookId: seeded.accountBookId },
@@ -106,7 +105,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expandArchivedGroups(page);
     const refreshedActionRow = await revealRowActions(row);
     await expect(
-      refreshedActionRow.getByRole("button", { name: "Unarchive" }),
+      await getRowAction(refreshedActionRow, "Unarchive"),
     ).toBeDisabled();
     await page.getByRole("button", { name: "Refresh Choices" }).click();
     await expect(page.getByRole("alert")).toContainText(
