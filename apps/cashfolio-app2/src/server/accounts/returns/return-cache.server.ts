@@ -86,6 +86,7 @@ export async function getOrLoadAccountReturnSummaries(
     data: AccountReturnSummaries;
     revision: string;
     cacheable: boolean;
+    expiresAt?: number;
   }>,
 ): Promise<AccountReturnSummaries> {
   const asOfDate = formatUtcDateKey(startOfUtcDay(new Date()));
@@ -132,7 +133,16 @@ export async function getOrLoadAccountReturnSummaries(
       const serialized = JSON.stringify(result.data);
       if (Buffer.byteLength(serialized, "utf8") <= MAX_BYTES) {
         checkResourceBudget();
-        await redis.setEx(key, PERIOD_CACHE_TTL_SECONDS, serialized);
+        const ttl = Math.min(
+          PERIOD_CACHE_TTL_SECONDS,
+          Math.floor(
+            ((result.expiresAt ??
+              Date.now() + PERIOD_CACHE_TTL_SECONDS * 1000) -
+              Date.now()) /
+              1000,
+          ),
+        );
+        if (ttl > 0) await redis.setEx(key, ttl, serialized);
       }
     } catch (error) {
       reportWrite(error);

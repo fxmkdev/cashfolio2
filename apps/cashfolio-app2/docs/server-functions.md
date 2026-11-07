@@ -25,41 +25,55 @@ group with an `id`, or `{ kind: "total" }`. Individual targets optionally accept
 the ledger's `period`. `includeDetails` defaults to false; true includes dated
 valuation/TWR-factor and capital-movement tables with transaction references.
 Both functions authorize book access on every request before starting their
-bounded read. Responses are `{ status: "pending", continuation }`,
-`{ status: "restart" }`, or `{ status: "complete", data }`. Callers resume with
-`continuation` until complete; only complete data is published. Optional
-`batchSize` is an integer from 1 to 128 (default 128). The browser loader halves
-it after workload-limit errors, retains the continuation, and stops on abort.
-Repeated invalidations restart at most twice before presenting a retry action.
+bounded read. Responses are
+`{ status: "pending", continuation, progress, retryAfterMs }`,
+`{ status: "restart" }`, or `{ status: "complete", data }`. The complete data
+shape is unchanged. Pending progress includes an immutable context hash,
+verified revision, work ID, monotonic sequence, phase, target counts, dates,
+completed displayed rows, and an optional completed footer. Callers merge
+completed rows by displayed ID and keep dots only on pending rows. They reject
+aborted or older responses, clear progress synchronously on scope or revision
+changes, and preserve completed rows during a retry in the same context. The
+grid explicitly refreshes return cells on progress/loading transitions,
+including null-to-null transitions. Optional `batchSize` remains 1–128 for
+transport compatibility; historical batches perform at most four provider tasks
+and calculation batches at most four distinct memberships or ten seconds.
 
-Continuations are opaque server-generated IDs, bound to the verified user, book,
-revision, scope/target, selected period, table-detail option, reporting day, and
-publication cutoff. Missing, expired, or mismatched checkpoints request a
-restart. Book access is checked again even when resuming cached work. Account
-details load only transactions involving that account, retaining complete peers.
+Continuations bind verified user, book revision, sorted membership/scope,
+target, period, detail option, reporting day, and publication cutoff. An index
+lets reloads and concurrent tabs reuse active/completed work. A 65-second Redis
+lease serializes advancement within the existing 60-second read deadline. A
+bounded local lease/checkpoint fallback works without Redis. Missing, expired,
+or mismatched work requests a restart; repeated invalidations restart at most
+twice. Every request authorizes book access again. Account details load relevant
+transactions with their complete peers.
 
-Capital conversions and scope valuation dependencies are planned/deduplicated
-before fetching, with four concurrent lookups. Requests stop between lookup
-chunks after ten seconds, 128 lookups, or a provider-budget reserve; calculation
-requests stop between scopes after ten seconds or four scopes. Request-wide
-60-second/250-attempt limits remain enforced. Completed dependencies survive a
-failed sibling lookup. Calculation never performs unplanned provider requests.
+`account:returns-work:v3` stores small mutable envelopes (256 KiB limit), with a
+15-minute lifetime. Separate immutable artifacts hold a coherent transaction
+basis, canonical membership plans, and individual scope results (8 MiB each).
+Account indexes retain complete transaction peers. Distinct memberships
+calculate once and attach all displayed IDs/names; both grouping modes share
+matching results. Process-local artifacts are bounded to 64 MiB/4096 entries and
+15 minutes, checkpoints to 16 entries, and work indexes to 64. Redis artifacts
+last at most 24 hours. These keys participate in existing book/user deletion and
+restore cleanup. Each batch rechecks revision, reporting day, and cutoff before
+publishing.
 
-Temporary `account:returns-work:v2` checkpoints have a 15-minute TTL and an 8
-MiB size limit. A process-local fallback retains at most 16 checkpoints and 64
-MiB, including when Redis is unavailable. Expired/evicted checkpoints restart
-safely; temporary provider/fallback results never enter the stable summary
-cache. Checkpoints participate in book/user deletion and restore cleanup. Final
-completion rechecks revision, reporting day, and publication cutoff.
+The shared historical-series loader reads each raw Redis series/window plus its
+predecessor once per batch, resolves dates in memory, and shares FX dependencies
+across all conversions. Provider requests use supported paginated ranges or
+grouped per-date fallback on explicit subscription restrictions. Provider/auth/
+quota/transient failures do not prove historical gaps. See
+[historical series caching](valuation-caching.md#historical-series-loading-for-account-returns).
 
-Implementations live under `src/server/accounts/returns/`. A repeatable-read
-snapshot loads balances, complete transaction peers, and grouping metadata.
-Returns use the existing conversion scheduler and execution-pricing helpers,
-independently of the G/L FIFO caches. Return summaries use `account:returns:v3`
-with revision, date, publication-cutoff, grouping, and account-state keys.
-Persistence requires stable valuation sources and matching snapshot/committed
-revisions. Cache failures fall back to calculation; resource failures propagate.
-Book/user deletion and restore cleanup cover all return-cache versions.
+Implementations live under `src/server/accounts/returns/`. Return summaries use
+`account:returns:v4` with revision, date, cutoff, grouping, and account-state
+keys. Stable complete results retain the 24-hour TTL. Complete results with
+temporary dependencies expire no later than their earliest dependency or the
+work's 15-minute lifetime; reads never extend validity. Missing-price results
+and request failures cannot enter the successful summary cache. Cache failures
+fall back to calculation, while resource errors propagate. Balances and G/L
+remain usable independently.
 
 See
 [return calculation behavior](valuation-reference-balances.md#time-weighted-and-money-weighted-returns)

@@ -92,7 +92,27 @@ export function accountReturnExplanation(
   );
 }
 
+export type AccountReturnProgress = {
+  context: string;
+  workId: string;
+  revision: string;
+  sequence: number;
+  phase: "history" | "calculation" | "complete";
+  completed: number;
+  total: number;
+  referenceCurrency: string;
+  startDate: string;
+  asOfDate: string;
+  publication: string;
+  rows: AccountReturnSummaries["rows"];
+  totalResult?: AccountReturnResult;
+};
 export type AccountReturnWorkResponse<T> =
-  | { status: "pending"; continuation: string }
+  | {
+      status: "pending";
+      continuation: string;
+      progress?: AccountReturnProgress;
+      retryAfterMs?: number;
+    }
   | { status: "restart" }
-  | { status: "complete"; data: T };
+  | { status: "complete"; data: T; progress?: AccountReturnProgress };

@@ -16,7 +16,7 @@ export const getAccountReturnSummaries = createServerFn({ method: "GET" })
     if (result.status !== "complete") return result;
     if (!("rows" in result.data))
       throw new Error("Invalid return summary response.");
-    return { status: "complete" as const, data: result.data };
+    return { ...result, data: result.data };
   });
 
 export const getAccountReturnDetails = createServerFn({ method: "GET" })
@@ -28,5 +28,5 @@ export const getAccountReturnDetails = createServerFn({ method: "GET" })
     if (result.status !== "complete") return result;
     if ("rows" in result.data)
       throw new Error("Invalid return detail response.");
-    return { status: "complete" as const, data: result.data };
+    return { ...result, data: result.data };
   });

@@ -952,8 +952,13 @@ sign; debt amounts are positive magnitudes in those reports.
   duplicate loader markup in cell renderers.
 - Supply a sentence-case accessible loading label. Keep the cell dimensions,
   existing delay/eligibility rules, and numeric placeholder alignment stable.
-  Loading continues across automatic batches and retries; show actionable errors
-  separately. Page-level loading still uses the global progress bar.
+  For progressive tables, track completion by displayed row ID. Completed rows
+  leave loading immediately, including null/inapplicable results; slow totals
+  must not hold completed account rows behind a global flag. Explicitly refresh
+  cells when status changes even if the numeric value remains null. Preserve
+  completed rows during retries in the same context and clear them immediately
+  on scope/revision changes. Show actionable errors separately. Page-level
+  loading still uses the global progress bar.
 
 ## Action Availability Pattern
 
