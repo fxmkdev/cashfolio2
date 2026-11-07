@@ -380,7 +380,7 @@ Cache key prefixes, current versions, and key builders are owned by
 `src/shared/book-cache-keys.ts`. Family constants, version-independent cleanup
 patterns, and book-ownership checks belong to the dependency-free workspace
 package
-[`@cashfolio/book-cache-contracts`](../../../packages/book-cache-contracts/README.md),
+[`@cashfolio/book-cache-contracts`](../../../libs/book-cache-contracts/README.md),
 consumed directly by the app and CLI through its compiled public export. Add new
 book-scoped cache families to that package so restore and deletion cleanup stay
 aligned; version bumps within existing families remain app-local and need no

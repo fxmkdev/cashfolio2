@@ -15,7 +15,7 @@ manifest pins the exact pnpm version.
   - [Cashfolio domain diagram](docs/cashfolio.excalidraw)
   - [Preview environments](docs/preview-environments.md)
 - App/package docs live alongside code:
-  - [Shared book-cache contracts](packages/book-cache-contracts/README.md)
+  - [Shared book-cache contracts](libs/book-cache-contracts/README.md)
   - `apps/cashfolio-app2/docs/`
     - [Overview](apps/cashfolio-app2/docs/README.md)
     - [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
@@ -46,8 +46,8 @@ basis data); global `valuation:*` caches and unrelated keys are retained.
 The app and CLI share cache namespaces and cleanup contracts through
 `@cashfolio/book-cache-contracts`. Consumer scripts build its JavaScript and
 declarations before use; see the
-[package documentation](packages/book-cache-contracts/README.md) for ownership
-and focused checks.
+[package documentation](libs/book-cache-contracts/README.md) for ownership and
+focused checks.
 
 The Redis URL is required before database restoration begins. Cleanup uses
 incremental scans and bounded deletion batches, reports the number of keys

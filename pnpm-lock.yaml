@@ -204,7 +204,7 @@ importers:
     dependencies:
       '@cashfolio/book-cache-contracts':
         specifier: workspace:*
-        version: link:../../packages/book-cache-contracts
+        version: link:../../libs/book-cache-contracts
       '@logto/node':
         specifier: ^4.0.0
         version: 4.0.0
@@ -375,7 +375,7 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@26.6.5)(@vitest/browser-playwright@5.0.5)(@vitest/coverage-v8@5.0.5)(@vitest/ui@5.0.5)(msw@3.0.3(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(graphql@16.14.2)(supports-color@8.1.1)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(sugarss@5.0.2(postcss@8.5.29))(tsx@4.23.15)))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(sugarss@5.0.2(postcss@8.5.29))(tsx@4.23.15))
 
-  packages/book-cache-contracts:
+  libs/book-cache-contracts:
     devDependencies:
       '@types/node':
         specifier: ^26.6.5
@@ -388,7 +388,7 @@ importers:
     dependencies:
       '@cashfolio/book-cache-contracts':
         specifier: workspace:*
-        version: link:../../packages/book-cache-contracts
+        version: link:../../libs/book-cache-contracts
       commander:
         specifier: ^15.0.0
         version: 15.0.0

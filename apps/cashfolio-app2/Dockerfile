@@ -31,14 +31,14 @@ RUN corepack enable pnpm
 # Install node modules
 COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/cashfolio-app2/package.json apps/cashfolio-app2/
-COPY --link packages/book-cache-contracts/package.json packages/book-cache-contracts/
+COPY --link libs/book-cache-contracts/package.json libs/book-cache-contracts/
 RUN pnpm config set store-dir /pnpm/store
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm --filter cashfolio-app2 install --prod=false --frozen-lockfile
 
 # Copy application code
 COPY --link apps/cashfolio-app2 apps/cashfolio-app2
-COPY --link packages/book-cache-contracts packages/book-cache-contracts
+COPY --link libs/book-cache-contracts libs/book-cache-contracts
 
 RUN pnpm --filter cashfolio-app2 prisma:generate
 

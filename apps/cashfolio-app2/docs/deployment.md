@@ -67,8 +67,8 @@ app's build commands compile the package to ESM JavaScript and declarations, and
 Vite bundles it into the server artifact. The final image continues to copy
 `.output` without workspace sources or a workspace dependency installation.
 Package checks run separately in CI and gate staging deployment. See the
-[package documentation](../../../packages/book-cache-contracts/README.md) for
-the shared contract boundary and local checks.
+[package documentation](../../../libs/book-cache-contracts/README.md) for the
+shared contract boundary and local checks.
 
 ## Nitro version pin
 
