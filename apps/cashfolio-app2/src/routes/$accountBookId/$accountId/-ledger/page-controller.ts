@@ -1,3 +1,4 @@
+import { useTransactionWorkflow } from "./use-transaction-workflow";
 import { useRefreshAssetClasses } from "@/classification-context";
 import {
   getAccountConstraintMessage,
@@ -13,11 +14,7 @@ import {
   createAccountInitialValues,
   type TransformedFormValues,
 } from "@/components/account-editor/edit-account-modal";
-import type {
-  SimpleTransactionDraftValues,
-  SimpleTransactionInitialValues,
-} from "@/components/transactions/simple-transaction-modal";
-import { createCopyTransactionInitialValues } from "@/components/transaction-editor/edit-transaction-modal-values";
+import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
 import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import {
   getSystemManagedAccountSubtypeMessage,
@@ -25,32 +22,19 @@ import {
 } from "@/shared/system-managed-equity-subtypes";
 import { useLedgerColumnDefs } from "./page-columns";
 import { useLedgerAccountOptions } from "./page-account-options";
-import {
-  deriveSimpleTransactionEditState,
-  getUnitLabel,
-  type SimpleTransactionEditInitialValues,
-} from "./page-data";
-import {
-  createEditTransactionPatchFromSimpleDraft,
-  createSplitInitialValuesFromSimpleDraft,
-  createUpdateTransactionPayloadFromSimpleValues,
-} from "./page-edit-flow";
-import { createCopySimpleTransactionInitialValues } from "./page-transaction-utils";
+import { getUnitLabel } from "./page-data";
+import { createUpdateTransactionPayloadFromSimpleValues } from "./page-edit-flow";
 import { loadLedgerPageData } from "./page-loader";
 import {
   createLedgerAccountMutationActions,
   createLedgerMutationActions,
-  type LedgerTransactionApi,
 } from "./page-mutation-actions";
 import { useLedgerRebookFlow } from "./page-rebook-flow";
 import { getStatementImportDisabledReason } from "../-statement-import";
 import {
-  type EditMode,
   type LedgerPageViewProps,
   type RebookingState,
   type SimpleTransactionValues,
-  type SplitModalInitialValues,
-  type TransactionMutationValues,
 } from "./page-view.types";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
@@ -92,33 +76,20 @@ export function useLedgerPageController(args: {
     [accounts, loaderData.referenceCurrency],
   );
 
-  const [modalOpened, setModalOpened] = useState(false);
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState(false);
-  const [simpleModalOpened, setSimpleModalOpened] = useState(false);
-  const [editModalOpened, setEditModalOpened] = useState(false);
-  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
-  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [createSplitInitialValues, setCreateSplitInitialValues] = useState<
-    SplitModalInitialValues | undefined
-  >();
-  const [createSplitInitialValuesSource, setCreateSplitInitialValuesSource] =
-    useState<"COPY" | "DRAFT" | undefined>();
-  const [createSimpleInitialValues, setCreateSimpleInitialValues] = useState<
-    SimpleTransactionInitialValues | undefined
-  >();
-  const [editMode, setEditMode] = useState<EditMode>("SPLIT");
-  const [editingTransactionId, setEditingTransactionId] = useState<
-    string | undefined
-  >();
-  const [editingTransactionData, setEditingTransactionData] = useState<
-    Awaited<ReturnType<LedgerTransactionApi["getTransaction"]>> | undefined
-  >();
-  const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
-    SimpleTransactionEditInitialValues | undefined
-  >();
+  const workflow = useTransactionWorkflow(
+    `${args.accountBookId}:${account.id}`,
+    account.id,
+  );
+  const {
+    editingTransactionId,
+    editingTransactionData,
+    editingSimpleInitialValues,
+    createSplitInitialValues,
+    createSimpleInitialValues,
+  } = workflow;
   const [deletingTransaction, setDeletingTransaction] = useState<
     { id: string; description: string } | undefined
   >();
@@ -178,11 +149,9 @@ export function useLedgerPageController(args: {
       getEditingTransactionId: () => editingTransactionId,
       getDeletingTransaction: () => deletingTransaction,
       getRebooking: () => rebooking,
-      setModalOpened,
-      setSimpleModalOpened,
-      setEditModalOpened,
-      setCreateSplitInitialValues,
-      setCreateSimpleInitialValues,
+      closeSplitCreate: workflow.close,
+      closeSimpleCreate: workflow.close,
+      closeEdit: workflow.close,
       setDeletingTransaction,
       setRebookModalOpened,
     },
@@ -197,56 +166,20 @@ export function useLedgerPageController(args: {
     tradeCurrency: currentAccountOption.tradeCurrency,
   };
 
-  const handleSwitchCreateToSplit = (draft: SimpleTransactionDraftValues) => {
-    const nextCreateSplitInitialValuesSource = createSimpleInitialValues
-      ? "COPY"
-      : "DRAFT";
-    setCreateSplitInitialValuesSource(nextCreateSplitInitialValuesSource);
-    setCreateSplitInitialValues(
-      createSplitInitialValuesFromSimpleDraft({
-        draft,
-        fallback: {
-          date: new Date(),
-          description: "",
-          counterAccountId: "",
-          amount: 0,
-          direction: "DEBIT",
-        },
-        allAccountOptions,
-        currentAccount: currentAccountForSimpleTransaction,
-      }),
+  const handleSwitchCreateToSplit = (draft: SimpleTransactionDraftValues) =>
+    workflow.switchCreateToSplit(draft, {
+      allAccountOptions,
+      currentAccount: currentAccountForSimpleTransaction,
+    });
+  const handleEditClick = (transactionId: string) =>
+    workflow.loadTransaction(
+      "edit",
+      () =>
+        actions.getTransaction({
+          data: { transactionId, accountBookId: args.accountBookId },
+        }),
+      simpleTransactionDisabledReason === null,
     );
-    setSimpleModalOpened(false);
-    setModalOpened(true);
-  };
-
-  const handleEditClick = useCallback(
-    async (transactionId: string) => {
-      const data = await actions.getTransaction({
-        data: { transactionId, accountBookId: args.accountBookId },
-      });
-      const simpleEditState = deriveSimpleTransactionEditState({
-        transaction: data,
-        currentAccountId: account.id,
-      });
-
-      setEditingTransactionId(transactionId);
-      setEditingTransactionData(data);
-      if (
-        simpleEditState.eligible &&
-        simpleTransactionDisabledReason === null
-      ) {
-        setEditMode("SIMPLE");
-        setEditingSimpleInitialValues(simpleEditState.initialValues);
-      } else {
-        setEditMode("SPLIT");
-        setEditingSimpleInitialValues(undefined);
-      }
-      setEditModalOpened(true);
-    },
-    [account.id, actions, args.accountBookId, simpleTransactionDisabledReason],
-  );
-
   const handleUpdateSimpleTransaction = async (
     values: SimpleTransactionValues,
   ) => {
@@ -267,68 +200,31 @@ export function useLedgerPageController(args: {
       },
     });
 
-    setEditModalOpened(false);
+    workflow.close();
     args.pendingScrollRef.current = editingId;
     args.invalidate();
   };
 
-  const handleSwitchToSplit = (draft: SimpleTransactionDraftValues) => {
-    if (!editingSimpleInitialValues || !editingTransactionData) {
-      return;
-    }
-
-    setEditingTransactionData({
-      ...editingTransactionData,
-      ...createEditTransactionPatchFromSimpleDraft({
-        draft,
-        fallback: editingSimpleInitialValues,
-        allAccountOptions,
-        currentAccount: currentAccountForSimpleTransaction,
-        transactionId: editingTransactionData.id,
-      }),
+  const handleSwitchToSplit = (draft: SimpleTransactionDraftValues) =>
+    workflow.switchEditToSplit(draft, {
+      allAccountOptions,
+      currentAccount: currentAccountForSimpleTransaction,
     });
-    setEditMode("SPLIT");
-  };
 
   const handleRebookClick = useCallback((nextRebooking: RebookingState) => {
     setRebooking(nextRebooking);
     setRebookModalOpened(true);
   }, []);
 
-  const handleCopyClick = useCallback(
-    async (transactionId: string) => {
-      const data = await actions.getTransaction({
-        data: { transactionId, accountBookId: args.accountBookId },
-      });
-      const simpleEditState = deriveSimpleTransactionEditState({
-        transaction: data,
-        currentAccountId: account.id,
-      });
-
-      setCreateSplitInitialValues(undefined);
-      setCreateSplitInitialValuesSource(undefined);
-      setCreateSimpleInitialValues(undefined);
-
-      if (
-        simpleEditState.eligible &&
-        simpleTransactionDisabledReason === null
-      ) {
-        setCreateSplitInitialValuesSource("COPY");
-        setCreateSimpleInitialValues(
-          createCopySimpleTransactionInitialValues(
-            simpleEditState.initialValues,
-          ),
-        );
-        setSimpleModalOpened(true);
-        return;
-      }
-
-      setCreateSplitInitialValues(createCopyTransactionInitialValues(data));
-      setCreateSplitInitialValuesSource("COPY");
-      setModalOpened(true);
-    },
-    [account.id, actions, args.accountBookId, simpleTransactionDisabledReason],
-  );
+  const handleCopyClick = (transactionId: string) =>
+    workflow.loadTransaction(
+      "copy",
+      () =>
+        actions.getTransaction({
+          data: { transactionId, accountBookId: args.accountBookId },
+        }),
+      simpleTransactionDisabledReason === null,
+    );
 
   const { hasCompleteBookingUnit, rebookTargetAccountOptions } =
     useLedgerRebookFlow({
@@ -461,20 +357,8 @@ export function useLedgerPageController(args: {
     unitLabel,
     accountBookStartDate,
     simpleTransactionDisabledReason,
-    simpleModalOpened,
-    splitModalOpened: modalOpened,
-    editModalOpened,
-    isSimpleSubmitting,
-    isCreateSplitSubmitting,
-    isEditSubmitting,
+    ...workflow.viewProps,
     isRebookSubmitting,
-    editMode,
-    createSplitInitialValues,
-    createSplitIsCopy: createSplitInitialValuesSource === "COPY",
-    createSplitDateAutoFocus: createSplitInitialValuesSource === "COPY",
-    createSimpleInitialValues,
-    editingTransactionData,
-    editingSimpleInitialValues,
     deletingTransaction,
     rebooking,
     rebookModalOpened,
@@ -502,52 +386,12 @@ export function useLedgerPageController(args: {
     onOpenDeleteAccount: () => setDeletingAccount(true),
     onCloseDeleteAccount: () => setDeletingAccount(false),
     onConfirmDeleteAccount: accountActions.handleDeleteAccount,
-    onAddTransactionClick: () => {
-      setCreateSplitInitialValues(undefined);
-      setCreateSplitInitialValuesSource(undefined);
-      setCreateSimpleInitialValues(undefined);
-      if (simpleTransactionDisabledReason) {
-        setModalOpened(true);
-        return;
-      }
-      setSimpleModalOpened(true);
-    },
-    onCloseSimpleModal: () => {
-      setSimpleModalOpened(false);
-    },
-    onSimpleModalExitTransitionEnd: () => {
-      setCreateSimpleInitialValues(undefined);
-      if (!modalOpened) {
-        setCreateSplitInitialValuesSource(undefined);
-      }
-    },
-    onSimpleSubmittingChange: setIsSimpleSubmitting,
+    onAddTransactionClick: () =>
+      workflow.openCreate(simpleTransactionDisabledReason === null),
     onSwitchCreateToSplit: handleSwitchCreateToSplit,
-    onSubmitCreateSimpleTransaction: async (
-      values: SimpleTransactionValues,
-    ) => {
-      await actions.handleCreateSimpleTransaction(values);
-      setCreateSplitInitialValuesSource(undefined);
-    },
+    onSubmitCreateSimpleTransaction: actions.handleCreateSimpleTransaction,
     onOpenImportPage: args.onOpenImportPage,
-    onCloseSplitModal: () => {
-      setModalOpened(false);
-      setCreateSplitInitialValues(undefined);
-      setCreateSplitInitialValuesSource(undefined);
-    },
-    onCreateSplitSubmittingChange: setIsCreateSplitSubmitting,
-    onSubmitCreateTransaction: async (values: TransactionMutationValues) => {
-      await actions.handleCreateTransaction(values);
-      setCreateSplitInitialValuesSource(undefined);
-    },
-    onCloseEditModal: () => setEditModalOpened(false),
-    onEditSubmittingChange: setIsEditSubmitting,
-    onEditModalExitTransitionEnd: () => {
-      setEditingTransactionId(undefined);
-      setEditingTransactionData(undefined);
-      setEditingSimpleInitialValues(undefined);
-      setEditMode("SPLIT");
-    },
+    onSubmitCreateTransaction: actions.handleCreateTransaction,
     onSwitchToSplit: handleSwitchToSplit,
     onSubmitUpdateSimpleTransaction: handleUpdateSimpleTransaction,
     onSubmitUpdateTransaction: actions.handleUpdateTransaction,

@@ -285,12 +285,21 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
     - `$accountBookId/$accountId/-ledger/page-rebook-flow.ts`
     - `$accountBookId/$accountId/-ledger/page-transaction-utils.ts`
     - `$accountBookId/$accountId/-ledger/page-columns.tsx`
-    - `page-view.tsx` composes the ledger layout; `page-view.types.ts` owns its
-      shared contracts, with compatibility type re-exports from the view.
+    - `page-view.tsx` composes the ledger layout; `page-view.types.ts` composes
+      page contracts. `transaction-dialog.types.ts` owns narrow create/edit
+      dialog contracts and payload types, with compatibility type re-exports
+      from the page contracts and view.
     - Account, transaction creation, transaction editing, and rebook/delete
       dialogs have separate renderers that preserve submission-dismissal guards.
-      Controllers retain ownership of dialog state, draft transitions, and exit
-      cleanup.
+      `use-transaction-workflow.ts` owns transaction create/copy/edit states,
+      simple-to-split draft transitions, submission flags, and exit cleanup
+      through a discriminated reducer. `transaction-flow-builders.ts` constructs
+      flow states and converts drafts; `transaction-workflow-presentation.ts`
+      adapts states and events to the dialog contracts. Request identity and
+      account/book scope tokens prevent superseded loads or callbacks from
+      replacing newer state. Closed drafts survive until their matching exit;
+      old exits cannot clear a reopened workflow. Account management and
+      rebooking remain separate.
     - Ledger stories share a small harness backed by fixture data, dialog-state
       helpers, and the existing explicit-period filter with fixed story bounds.
   - statement-import modules:

@@ -1,5 +1,4 @@
 import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
-import type { SimpleTransactionInitialValues } from "@/components/transactions/simple-transaction-modal";
 import {
   archiveAccount,
   deleteAccount,
@@ -21,7 +20,6 @@ import {
 import type {
   RebookingState,
   SimpleTransactionValues,
-  SplitModalInitialValues,
   TransactionMutationValues,
 } from "./page-view.types";
 
@@ -45,15 +43,9 @@ export type LedgerMutationState = {
   getEditingTransactionId: () => string | undefined;
   getDeletingTransaction: () => { id: string; description: string } | undefined;
   getRebooking: () => RebookingState | undefined;
-  setModalOpened: (opened: boolean) => void;
-  setSimpleModalOpened: (opened: boolean) => void;
-  setEditModalOpened: (opened: boolean) => void;
-  setCreateSplitInitialValues: (
-    values: SplitModalInitialValues | undefined,
-  ) => void;
-  setCreateSimpleInitialValues: (
-    values: SimpleTransactionInitialValues | undefined,
-  ) => void;
+  closeSplitCreate: () => void;
+  closeSimpleCreate: () => void;
+  closeEdit: () => void;
   setDeletingTransaction: (
     value: { id: string; description: string } | undefined,
   ) => void;
@@ -99,8 +91,7 @@ export function createLedgerMutationActions(args: {
       const transaction = await api.createTransaction({
         data: { accountBookId: args.accountBookId, ...values },
       });
-      args.state.setModalOpened(false);
-      args.state.setCreateSplitInitialValues(undefined);
+      args.state.closeSplitCreate();
       args.pendingScrollRef.current = transaction.id;
       reloadTransactionPeriod(args, values);
     },
@@ -113,8 +104,7 @@ export function createLedgerMutationActions(args: {
           ...values,
         },
       });
-      args.state.setSimpleModalOpened(false);
-      args.state.setCreateSimpleInitialValues(undefined);
+      args.state.closeSimpleCreate();
       args.pendingScrollRef.current = transaction.id;
       reloadSimpleTransactionPeriod(args, values);
     },
@@ -130,7 +120,7 @@ export function createLedgerMutationActions(args: {
           ...values,
         },
       });
-      args.state.setEditModalOpened(false);
+      args.state.closeEdit();
       args.pendingScrollRef.current = editingTransactionId;
       reloadTransactionPeriod(args, values);
     },
