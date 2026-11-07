@@ -7,7 +7,6 @@ import {
   createUserScopedSharedWork,
   isSharedResourceWork,
 } from "../../resource-context.server";
-import { rethrowResourceError } from "../../resource-error";
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
 import { isReportingGrouping } from "../../../shared/reporting-grouping";
@@ -199,7 +198,6 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
       }
     } catch (error) {
-      rethrowResourceError(error);
       reportHistoryMetricsCacheWriteFailure(error);
     }
 

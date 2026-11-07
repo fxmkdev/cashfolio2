@@ -161,7 +161,6 @@ export async function loadAccountGainLossSummaryRange(args: {
             await redis.setEx(cacheKey, TTL_SECONDS, encoded);
           }
         } catch (error) {
-          rethrowResourceError(error);
           reportWriteFailure(error);
         }
       },

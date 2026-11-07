@@ -89,6 +89,7 @@ describe("defensive money cache reads", () => {
     }
     expect(warning).toHaveBeenCalledTimes(1);
     const cancelled = new ResourceLimitError("Cancelled", 503, 5, "cancelled");
+    expect(() => reportFailure(cancelled)).toThrow(cancelled);
     await expect(
       readValidatedMoneyCache({
         read: async () => {

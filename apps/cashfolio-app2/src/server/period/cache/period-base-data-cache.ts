@@ -7,7 +7,6 @@ import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../../resource-context.server";
-import { rethrowResourceError } from "../../resource-error";
 import {
   PERIOD_BASE_CACHE_ENTRY_PREFIX,
   getPeriodBaseCacheEntryKey,
@@ -135,7 +134,6 @@ export async function getOrLoadPeriodBaseData(args: {
         );
       }
     } catch (error) {
-      rethrowResourceError(error);
       reportPeriodBaseCacheWriteFailure(error);
     }
 
@@ -179,7 +177,6 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
       await redis.del(indexKey);
     }
   } catch (error) {
-    rethrowResourceError(error);
     reportPeriodBaseCacheInvalidationFailure(error);
   }
 }

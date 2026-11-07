@@ -6,7 +6,6 @@ import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../resource-context.server";
-import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
 import { startOfUtcDay } from "../../shared/date";
 import { getAccountGainLossCacheEntryKey } from "../../shared/book-cache-keys";
@@ -86,7 +85,6 @@ export async function getOrLoadAccountGainLossSummaries(
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
       }
     } catch (error) {
-      rethrowResourceError(error);
       reportWriteFailure(error);
     }
     return data;
