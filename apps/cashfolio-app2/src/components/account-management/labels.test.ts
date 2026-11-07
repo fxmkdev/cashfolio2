@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getManagementTabs } from "@/shared/account-tabs";
-import { getAccountsPageTitle, getEntityLabel } from "./types";
+import { getAccountsPageTitle, getEntityLabel } from "./labels";
 
 describe("getAccountsPageTitle", () => {
   it("separates editable category tabs from balance accounts and system accounts", () => {

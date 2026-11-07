@@ -4,8 +4,9 @@ import {
   calculateReferenceCurrencyBalanceTotal,
   type GroupBalanceAggregation,
 } from "./reference-balance-aggregation";
-import { ROOT_PARENT_KEY } from "../types";
 import { type GroupAssetClassSummary, type TreeRow } from "./rows";
+
+const ROOT_PARENT_KEY = "__root__";
 
 export function useRowsByParentKey(rows: TreeRow[]): Map<string, TreeRow[]> {
   return useMemo(() => {

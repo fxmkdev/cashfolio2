@@ -9,8 +9,6 @@ export function getAccountsPageTitle(
   if (context === "categories") return "Income & Expense Categories";
   return "Accounts";
 }
-export const ROOT_PARENT_KEY = "__root__";
-
 export function getEntityLabel(
   nodeType: RowTarget["nodeType"],
   context: AccountManagementContext = "accounts",

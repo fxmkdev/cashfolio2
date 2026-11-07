@@ -85,19 +85,20 @@ feature dependency.
 Within `account-management/`, root modules compose the page, controller, and
 feature contracts. Concern folders own the implementation:
 
-| Folder         | Responsibility                                                                                           |
-| -------------- | -------------------------------------------------------------------------------------------------------- |
-| `loading/`     | Page loading/refresh, reference-balance requests, cancellation, and loading visibility                   |
-| `grid/`        | Row models, hierarchy projections, summaries, presentation, columns/cells, selection, and grid lifecycle |
-| `dialogs/`     | Editor/confirmation state, prop assembly, and dialog components                                          |
-| `assignments/` | Assignment forms, frozen bulk targets, submission, and toolbar                                           |
-| `management/`  | Mutation payloads, management actions, organizer API, and guarded hierarchy callbacks                    |
-| `gain-loss/`   | Gain/loss columns, header, and asset-class projection                                                    |
+| Folder         | Responsibility                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `loading/`     | Page loading/refresh, reference-balance requests, cancellation, and loading visibility                            |
+| `grid/`        | Row models, hierarchy projections, summaries, presentation, columns/cells, filters, selection, and grid lifecycle |
+| `dialogs/`     | Editor/confirmation state, prop assembly, and dialog components                                                   |
+| `assignments/` | Assignment forms, frozen bulk targets, submission, and toolbar                                                    |
+| `management/`  | Mutation payloads, management actions, organizer API, and guarded hierarchy callbacks                             |
+| `gain-loss/`   | Gain/loss columns, header, and asset-class projection                                                             |
 
 Import row contracts from `grid/rows.ts` and view contracts from `view-types.ts`
-directly. Tests, component stories, and fixtures stay with their owner; the
-cross-feature story harness stays in `stories/`. Folder names supply context, so
-implementation filenames omit redundant account/page prefixes.
+directly. Shared page/entity copy belongs in `labels.ts`. Tests, component
+stories, and fixtures stay with their owner; the cross-feature story harness
+stays in `stories/`. Folder names supply context, so implementation filenames
+omit redundant account/page prefixes.
 
 ## Page Loading
 

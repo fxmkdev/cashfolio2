@@ -15,7 +15,7 @@ import { IconArrowsMove, IconPlus } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
-import { getAccountsPageTitle } from "./types";
+import { getAccountsPageTitle } from "./labels";
 import type { AccountsPageViewProps } from "./view-types";
 import type { ReactNode } from "react";
 import classes from "./header.module.css";

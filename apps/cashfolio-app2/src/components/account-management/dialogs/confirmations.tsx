@@ -1,7 +1,7 @@
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
-import { getEntityLabel } from "../types";
+import { getEntityLabel } from "../labels";
 import type { AccountsPageViewProps } from "../view-types";
 type ArchiveConfirmationProps = Pick<
   AccountsPageViewProps,

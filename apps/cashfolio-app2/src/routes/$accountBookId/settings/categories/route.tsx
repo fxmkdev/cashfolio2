@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { getAccountsPageTitle } from "@/components/account-management/types";
+import { getAccountsPageTitle } from "@/components/account-management/labels";
 import {
   parseCategoriesSearch,
   getCategoriesRedirect,
