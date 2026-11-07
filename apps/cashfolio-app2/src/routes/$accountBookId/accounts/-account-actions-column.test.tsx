@@ -2,17 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountType } from "@/.prisma-client/enums";
-import type { TreeRow } from "./-page-types";
+import { toAccountGridTreeRow, type AccountsGridRow } from "./-page-types";
 import { useAccountTreeColumnDefs } from "./-page-columns";
-import { createAccountRow, createGroupRow } from "./-column-test-fixtures";
+import {
+  createAccountRow,
+  createGroupRow,
+  footerRow,
+} from "./-column-test-fixtures";
 describe("account tree Delete explanations", () => {
   it.each([true, false])(
     "protects synthetic headings and omits reorder in Asset Class view (active=%s)",
     (isActive) => {
-      let render!: (params: { data: TreeRow }) => ReactElement<{
+      let render!: (params: {
+        data: AccountsGridRow | undefined;
+      }) => ReactElement<{
         onEdit: () => void;
+        onAddAccount?: () => void;
+        onAddGroup?: () => void;
       }> | null;
       const onEdit = vi.fn();
+      const onAddChild = vi.fn();
       function Harness() {
         const columns = useAccountTreeColumnDefs({
           grouping: "assetClass",
@@ -22,6 +31,7 @@ describe("account tree Delete explanations", () => {
           isReferenceBalancesLoading: false,
           balanceInReferenceCurrencyByGroupId: new Map(),
           onEditRow: onEdit,
+          onAddChild,
           onUnarchiveRow: async () => {},
           onArchiveRow: () => {},
           onDeleteRow: () => {},
@@ -42,14 +52,43 @@ describe("account tree Delete explanations", () => {
         "archived",
       ] as const) {
         expect(
-          render({ data: { ...createGroupRow(), presentationKind, isActive } }),
+          render({
+            data: toAccountGridTreeRow({
+              ...createGroupRow(),
+              presentationKind,
+              isActive,
+            }),
+          }),
         ).toBeNull();
       }
+      expect(
+        render({
+          data: toAccountGridTreeRow({
+            ...createGroupRow(),
+            isVirtualArchivedGroup: true,
+            isActive,
+          }),
+        }),
+      ).toBeNull();
+      expect(render({ data: footerRow })).toBeNull();
+      expect(render({ data: undefined })).toBeNull();
       const account = createAccountRow({ isActive });
       const action = render({ data: account })!;
       expect(action.props).not.toHaveProperty("onReorder");
       action.props.onEdit();
       expect(onEdit).toHaveBeenCalledWith(account);
+      expect(action.props.onAddAccount).toBeUndefined();
+      expect(action.props.onAddGroup).toBeUndefined();
+      if (isActive) {
+        const group = createGroupRow();
+        const groupAction = render({ data: group })!;
+        groupAction.props.onAddAccount!();
+        groupAction.props.onAddGroup!();
+        expect(onAddChild.mock.calls).toEqual([
+          [group, "account"],
+          [group, "accountGroup"],
+        ]);
+      }
     },
   );
 

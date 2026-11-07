@@ -11,7 +11,11 @@ import {
   deleteAccountGroup,
 } from "@/server/accounts";
 import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
-import { getManagementTabs } from "./-page-types";
+import {
+  getManagementTabs,
+  isPersistedTreeRow,
+  isPersistedGroupRow,
+} from "./-page-types";
 import { useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import { loadAccountsPageData } from "./-page-loader";
@@ -169,7 +173,7 @@ export function useAccountsPageController(args: {
   return {
     onEditHierarchyNode: (node) => {
       const row = rows.find((row) => row.id === node.id);
-      if (row)
+      if (isPersistedTreeRow(row))
         modalState.handleEditRow({
           ...row,
           name: node.name,
@@ -185,7 +189,7 @@ export function useAccountsPageController(args: {
     },
     onAddHierarchyChild: (node, kind) => {
       const row = rows.find((row) => row.id === node.id);
-      if (row) onAddChild(row, kind);
+      if (isPersistedGroupRow(row)) onAddChild(row, kind);
     },
     onOrganizeSaved: args.invalidate,
     organize: args.organize,

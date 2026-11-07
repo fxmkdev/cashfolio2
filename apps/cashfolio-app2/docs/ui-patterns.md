@@ -26,11 +26,11 @@ The Accounts grid adapts wire/projection `TreeRow` values to a client-only
 headings, and the total footer. Convert rows at the presentation boundary with
 `toAccountGridTreeRow`; server payloads, IDs, hierarchy ordering, and expansion
 keys remain unchanged. Use `isPersistedTreeRow`, `isPersistedAccountRow`, or
-`isPersistedGroupRow` before edit/delete/reorder/child-creation actions.
-Mutation target builders accept only persisted variants. Synthetic headings can
-retain group checkboxes for descendant selection, but bulk targets include
-persisted account leaves only. Read-only projection helpers can still consume
-source rows.
+`isPersistedGroupRow` before edit/delete/child-creation actions, including
+callbacks from the shared hierarchy editor. Mutation target builders accept only
+persisted variants. Synthetic headings can retain group checkboxes for
+descendant selection, but bulk targets include persisted account leaves only.
+Read-only projection helpers can still consume source rows.
 
 The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
 production modules in `src/shared/` and `src/server/` into `src/components/` or

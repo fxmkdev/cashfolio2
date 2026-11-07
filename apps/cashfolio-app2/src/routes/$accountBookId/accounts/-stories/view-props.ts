@@ -1,4 +1,8 @@
-import { getManagementTabs } from "../-page-types";
+import {
+  getManagementTabs,
+  isPersistedTreeRow,
+  isPersistedGroupRow,
+} from "../-page-types";
 import type { AccountsPageViewProps } from "../-page-view-types";
 import { isVirtualArchivedGroup } from "../-archived-grid-rows";
 import { accountGroups, existingNodes } from "./fixtures";
@@ -17,7 +21,7 @@ export function getStoryViewProps(
     ...getStoryModalProps(modalState),
     onEditHierarchyNode: (node) => {
       const row = rows.find((row) => row.id === node.id);
-      if (row)
+      if (isPersistedTreeRow(row))
         modalState.handleEditRow({
           ...row,
           name: node.name,
@@ -26,10 +30,12 @@ export function getStoryViewProps(
           groupId: node.parentId ?? undefined,
         });
     },
-    onAddHierarchyChild: (node, kind) =>
-      kind === "account"
-        ? modalState.openCreateAccount(node.id)
-        : modalState.openCreateGroup(node.id),
+    onAddHierarchyChild: (node, kind) => {
+      const row = rows.find((row) => row.id === node.id);
+      if (!isPersistedGroupRow(row)) return;
+      if (kind === "account") modalState.openCreateAccount(row.id);
+      else modalState.openCreateGroup(row.id);
+    },
     grouping: model.grouping,
     organize: routing.routeSearch.organize === true,
     onGroupingChange: model.setGrouping,
