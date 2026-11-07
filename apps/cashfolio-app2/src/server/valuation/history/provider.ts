@@ -46,6 +46,7 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
     task.series.map((s) => [s.key, [] as { date: string; value: number }[]]),
   );
   let offset = 0;
+  let expectedTotal: number | undefined;
   for (let page = 0; page < 100; page++) {
     checkResourceBudget();
     const params = new URLSearchParams({ access_key: apiKey });
@@ -168,6 +169,15 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
           pagination.count !== body.data.length)
       )
         throw new Error("Invalid stock history pagination.");
+      if (object(pagination)) {
+        if (
+          typeof pagination.total !== "number" ||
+          pagination.total < offset + body.data.length ||
+          (expectedTotal !== undefined && pagination.total !== expectedTotal)
+        )
+          throw new Error("Inconsistent stock history pagination.");
+        expectedTotal = pagination.total;
+      }
       const seen = new Set<string>();
       for (const item of body.data) {
         if (!object(item) || typeof item.symbol !== "string")

@@ -35,7 +35,7 @@ afterEach(() => {
 it("uses Redis checkpoints across local eviction and rejects corrupt data", async () => {
   const entries = new Map<string, string>();
   const redis = {
-    eval: vi.fn(),
+    expire: vi.fn(),
     get: vi.fn(async (key) => entries.get(key) ?? null),
     setEx: vi.fn(async (key, _ttl, encoded) => {
       entries.set(key, encoded);
@@ -47,12 +47,12 @@ it("uses Redis checkpoints across local eviction and rejects corrupt data", asyn
   for (let i = 0; i < 18; i++) await store.save(String(i), state());
   expect(await store.read("0")).toMatchObject({ revision: "r1", sequence: 1 });
   expect(redis.setEx).toHaveBeenCalledWith(
-    "account:returns-work:v3:test:redis-book:user:0",
+    "account:returns-work:v4:test:redis-book:user:0",
     900,
     expect.any(String),
   );
   entries.set(
-    "account:returns-work:v3:test:redis-book:user:0",
+    "account:returns-work:v4:test:redis-book:user:0",
     '{"phase":"invalid"}',
   );
   expect(await store.read("0")).toBeUndefined();
@@ -62,7 +62,7 @@ it("uses Redis checkpoints across local eviction and rejects corrupt data", asyn
 it("retains newer local progress across stale Redis data, failed writes and a Redis outage", async () => {
   let encoded: string | null = null;
   const redis = {
-    eval: vi.fn(),
+    expire: vi.fn(),
     get: vi.fn(async () => encoded),
     setEx: vi.fn(async (_key, _ttl, data) => {
       encoded = data;
@@ -129,4 +129,61 @@ it("returns independent checkpoint objects to concurrent readers", async () => {
   a!.done.push("new");
   expect(b!.done).toEqual([]);
   expect((await store.read("job"))!.done).toEqual([]);
+});
+it("uses the production read/write-only Redis ACL and safely releases only its own lease token", async () => {
+  const lists = new Map<string, string[]>();
+  const strings = new Map<string, string>();
+  const redis = {
+    get: vi.fn(async (key: string) => strings.get(key) ?? null),
+    setEx: vi.fn(async (key: string, _ttl: number, value: string) => {
+      strings.set(key, value);
+    }),
+    lPush: vi.fn(async (key: string, value: string) => {
+      lists.set(key, [value, ...(lists.get(key) ?? [])]);
+    }),
+    lIndex: vi.fn(async (key: string) => lists.get(key)?.at(-1) ?? null),
+    lRem: vi.fn(async (key: string, _count: number, value: string) => {
+      lists.set(
+        key,
+        (lists.get(key) ?? []).filter((v) => v !== value),
+      );
+    }),
+    expire: vi.fn(),
+    eval: vi.fn(() => {
+      throw new Error("NOPERM eval");
+    }),
+  };
+  mocks.redis.mockResolvedValue(redis);
+  const store = await returnWorkStore("acl-book", "user");
+  expect(
+    await Promise.all([
+      store.indexed("context", "first"),
+      store.indexed("context", "second"),
+    ]),
+  ).toEqual(["first", "first"]);
+  const release = await store.lease("first");
+  expect(release).toBeTypeOf("function");
+  await release!();
+  expect(
+    [...lists.values()].every(
+      (list) => !list.some((value) => value.includes('"expires"')),
+    ),
+  ).toBe(true);
+  // An abandoned token expires independently of a newer owner's token.
+  const leaseKey = "account:returns-work:v4:test:acl-book:user:lease:first";
+  lists.set(leaseKey, [
+    JSON.stringify({ id: "abandoned", expires: Date.now() - 1 }),
+  ]);
+  const next = await store.lease("first");
+  expect(next).toBeTypeOf("function");
+  const otherToken = JSON.stringify({
+    id: "newer",
+    expires: Date.now() + 100000,
+  });
+  lists.set(leaseKey, [otherToken, ...lists.get(leaseKey)!]);
+  await next!();
+  expect(lists.get(leaseKey)).toEqual([otherToken]);
+  await store.invalidate("context", "first");
+  expect(await store.indexed("context", "third")).toBe("third");
+  expect(redis.eval).not.toHaveBeenCalled();
 });

@@ -45,18 +45,23 @@ const redis = {
       keys.delete(name);
     }
   }),
-  eval: vi.fn(
-    async (_script: string, args: { keys: string[]; arguments: string[] }) => {
-      const key = args.keys[0]!;
-      keys.set(
-        key,
-        JSON.stringify([
-          ...JSON.parse(keys.get(key) ?? "[]"),
-          JSON.parse(args.arguments[1]!),
-        ]),
-      );
-    },
+  zRangeByScore: vi.fn(async (key: string) =>
+    JSON.parse(keys.get(key) ?? "[]").map((value: unknown) =>
+      JSON.stringify(value),
+    ),
   ),
+  zAdd: vi.fn(async (key: string, entry: { value: string }) => {
+    keys.set(
+      key,
+      JSON.stringify([
+        ...JSON.parse(keys.get(key) ?? "[]"),
+        JSON.parse(entry.value),
+      ]),
+    );
+  }),
+  zRemRangeByScore: vi.fn(),
+  zRemRangeByRank: vi.fn(),
+  expire: vi.fn(),
 };
 beforeEach(() => {
   vi.clearAllMocks();
@@ -99,7 +104,8 @@ it("reads distinct raw series once for thousands of composite dates and shares U
     expect((await loader.lookup(input)).rate?.toNumber()).toBe(90);
   expect(redis.ts.range).toHaveBeenCalledTimes(3);
   expect(redis.ts.revRange).toHaveBeenCalledTimes(3);
-  expect(redis.get).toHaveBeenCalledTimes(3);
+  expect(redis.zRangeByScore).toHaveBeenCalledTimes(3);
+  expect(redis.get).not.toHaveBeenCalled();
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
 it("reuses verified weekend gaps, obeys publication boundaries and expires proofs without extending reads", async () => {
@@ -188,7 +194,7 @@ it("does not establish coverage on transient failures and bounds retries", async
     vi.setSystemTime(Date.now() + 1001);
   }
   await expect(loader.pump()).rejects.toThrow("quota");
-  expect(redis.eval).not.toHaveBeenCalled();
+  expect(redis.zAdd).not.toHaveBeenCalled();
   expect(mocks.fetch).toHaveBeenCalledTimes(3);
 });
 it("uses bounded local data during Redis outage, then expires it and clears prices together with proofs", async () => {

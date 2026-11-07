@@ -517,16 +517,18 @@ quota, HTTP, and transient failures remain failures, with bounded retries; no
 subscription upgrade is requested. Requests retain cancellation, timeout,
 provider-attempt budgets, and four-task concurrency.
 
-Coverage proofs (`valuation:coverage:v1:<raw-series-key>`) identify symbol,
-currency, inclusive dates and publication cutoff. They are written only after
-all pages, currencies, symbols, dates, prices, and pagination are validated and
-every quote write completes. Truncation and failed pages create no proof. A
-proof lets backtracking skip verified empty dates without guessing from
-weekdays. Exact quotes remain stable TimeSeries dependencies; carried quotes are
-`covered` dependencies whose validity includes the proof expiry. Explicit
-provider no-data retains the existing security-versus-FX/crypto behavior.
-Coverage lasts at most 24 hours (explicit no-data one hour), with a bounded
-15-minute process-local fallback.
+Coverage proofs in a bounded sorted set
+(`valuation:coverage:v2:<raw-series-key>`) identify symbol, currency, inclusive
+dates and publication cutoff. They are written only after all pages, currencies,
+symbols, dates, prices, and pagination are validated and every quote write
+completes. Atomic `ZADD`/`ZREM` operations need only the existing read/write
+Redis ACL; no Lua, transactions, or permission changes are required. Truncation
+and failed pages create no proof. A proof lets backtracking skip verified empty
+dates without guessing from weekdays. Exact quotes remain stable TimeSeries
+dependencies; carried quotes are `covered` dependencies whose validity includes
+the proof expiry. Explicit provider no-data retains the existing
+security-versus-FX/crypto behavior. Coverage lasts at most 24 hours (explicit
+no-data one hour), with a bounded 15-minute process-local fallback.
 
 Operational clearing must call `clearHistorySeries`, which removes the raw price
 series, its coverage proof, and local fallback together. A whole valuation-cache

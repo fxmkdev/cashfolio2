@@ -112,5 +112,5 @@ export function getRestoreBookCacheKeyPatterns(): string[] {
 export function getAccountReturnWorkKey(
   args: BookCacheScope & { userId: string; id: string },
 ): string {
-  return `${ACCOUNT_RETURN_WORK_FAMILY}:v3:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }

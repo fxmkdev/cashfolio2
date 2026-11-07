@@ -74,8 +74,6 @@ function prune() {
   while (local.size > 16) local.delete(local.keys().next().value!);
   while (indices.size > 64) indices.delete(indices.keys().next().value!);
 }
-const releaseScript =
-  "if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end";
 export async function returnWorkStore(accountBookId: string, userId: string) {
   const redis = await getRedisClient();
   const cacheEnv = redis
@@ -91,15 +89,14 @@ export async function returnWorkStore(accountBookId: string, userId: string) {
       const name = memoryKey(`index:${context}`);
       if (redis)
         try {
-          const existing = await redis.get(key(`index:${context}`));
-          const id =
-            existing ??
-            ((await redis.set(key(`index:${context}`), proposed, {
-              NX: true,
-              EX: TTL,
-            }))
-              ? proposed
-              : ((await redis.get(key(`index:${context}`))) ?? proposed));
+          const indexKey = key(`index:${context}`);
+          let id = await redis.lIndex(indexKey, -1);
+          if (!id) {
+            await redis.lPush(indexKey, proposed);
+            await redis.expire(indexKey, TTL);
+            id = (await redis.lIndex(indexKey, -1)) ?? proposed;
+            if (id !== proposed) await redis.lRem(indexKey, 1, proposed);
+          }
           indices.set(name, { id, expires: Date.now() + TTL * 1000 });
           return id;
         } catch (e) {
@@ -111,13 +108,11 @@ export async function returnWorkStore(accountBookId: string, userId: string) {
       return proposed;
     },
     async invalidate(context: string, id: string) {
-      indices.delete(memoryKey(`index:${context}`));
+      const name = memoryKey(`index:${context}`);
+      if (indices.get(name)?.id === id) indices.delete(name);
       if (redis)
         try {
-          await redis.eval(releaseScript, {
-            keys: [key(`index:${context}`)],
-            arguments: [id],
-          });
+          await redis.lRem(key(`index:${context}`), 1, id);
         } catch (e) {
           rethrowResourceError(e);
         }
@@ -159,31 +154,51 @@ export async function returnWorkStore(accountBookId: string, userId: string) {
       if (redis)
         try {
           await redis.setEx(key(id), TTL, raw);
-          await redis.eval(
-            "if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('EXPIRE',KEYS[1],ARGV[2]) else return 0 end",
-            {
-              keys: [key(`index:${state.context}`)],
-              arguments: [id, String(TTL)],
-            },
-          );
+          await redis.expire(key(`index:${state.context}`), TTL);
         } catch (e) {
           warning(e);
         }
     },
     async lease(id: string) {
       const name = memoryKey(id);
-      const token = createId();
+      const token = JSON.stringify({
+        id: createId(),
+        expires: Date.now() + 65_000,
+      });
+      const leaseKey = key(`lease:${id}`);
       if (busy.has(name)) return;
       busy.add(name);
       if (redis)
         try {
-          if (
-            !(await redis.set(key(`lease:${id}`), token, { NX: true, EX: 65 }))
+          // FIFO insertion and removal of a unique token require only the
+          // existing +@read/+@write ACL. No Lua, transactions, or unsafe DEL.
+          await redis.lPush(leaseKey, token);
+          await redis.expire(leaseKey, 65);
+          let owner = await redis.lIndex(leaseKey, -1);
+          for (
+            let expired = 0;
+            owner && owner !== token && expired < 16;
+            expired++
           ) {
+            let expiry = 0;
+            try {
+              const value: unknown = JSON.parse(owner);
+              if (record(value) && typeof value.expires === "number")
+                expiry = value.expires;
+            } catch {
+              /* Remove corrupt tokens as well as abandoned ones. */
+            }
+            if (expiry > Date.now()) break;
+            await redis.lRem(leaseKey, 1, owner);
+            owner = await redis.lIndex(leaseKey, -1);
+          }
+          if (owner !== token) {
+            await redis.lRem(leaseKey, 1, token);
             busy.delete(name);
             return;
           }
         } catch (e) {
+          await redis.lRem(leaseKey, 1, token).catch(() => {});
           try {
             warning(e);
           } catch (resource) {
@@ -191,14 +206,12 @@ export async function returnWorkStore(accountBookId: string, userId: string) {
             throw resource;
           }
         }
+
       return async () => {
         busy.delete(name);
         if (redis)
           try {
-            await redis.eval(releaseScript, {
-              keys: [key(`lease:${id}`)],
-              arguments: [token],
-            });
+            await redis.lRem(leaseKey, 1, token);
           } catch (e) {
             rethrowResourceError(e);
           }
