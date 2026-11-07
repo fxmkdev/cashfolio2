@@ -92,7 +92,10 @@ export const organizeStoryNodes: OrganizeNode[] = [
 export function createOrganizerStoryApi(
   failure?: "busy" | "network" | "load",
   initialNodes: OrganizeNode[] = organizeStoryNodes,
-): OrganizerApi & Required<Pick<OrganizerApi, "archive" | "unarchive">> {
+): OrganizerApi &
+  Required<Pick<OrganizerApi, "archive" | "unarchive">> & {
+    rename: (id: string, name: string) => void;
+  } {
   let nodes = structuredClone(initialNodes);
   let failed = false;
   const snapshot = (): OrganizeSnapshot => ({
@@ -158,6 +161,9 @@ export function createOrganizerStoryApi(
           );
   }
   return {
+    rename: (id, name) => {
+      nodes = nodes.map((node) => (node.id === id ? { ...node, name } : node));
+    },
     load: async () => {
       if (failure === "load" && !failed) {
         failed = true;

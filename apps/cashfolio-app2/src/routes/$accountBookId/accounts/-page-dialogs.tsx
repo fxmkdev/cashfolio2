@@ -153,6 +153,7 @@ export function AccountsPageDialogs({
         typeDescriptor={tab}
       />
       <EditAccountModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         opened={editModalOpen}
         onClose={onCloseEditAccount}
@@ -170,6 +171,7 @@ export function AccountsPageDialogs({
         typeDescriptor={tab}
       />
       <EditAccountGroupModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         opened={editGroupModalOpen}
         onClose={onCloseEditGroup}
