@@ -14,6 +14,9 @@ import { CategoriesPageView } from "./categories-page";
 import { useState } from "react";
 import { AccountOrganizeDialogs } from "./organize-dialogs";
 import { AccountRowMoveDialog } from "./row-move-dialog";
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { useOrganizeNavigationGuard } from "@/components/hierarchy-organize/use-organize-navigation-guard";
 export type { AccountsPageViewProps } from "./page-view-types";
 
 export function AccountsPageView(props: AccountsPageViewProps) {
@@ -129,6 +132,21 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   const isCategories = managementContext === "categories";
   const grouping = props.grouping ?? "accountStructure";
   const canOrganize = grouping === "accountStructure" && !!props.organizerApi;
+  const internalSubmitState = useDialogSubmitState({
+    captureErrors: true,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(message, "accounts") ?? message,
+    onRefreshConstraints: props.onRefreshConstraints,
+  });
+  const normalSubmitState = props.editorSubmitState ?? internalSubmitState;
+  const normalPending =
+    normalSubmitState.isSubmitting || normalSubmitState.isRefreshing;
+  useOrganizeNavigationGuard(props.accountBookId, normalPending, "accounts");
+  const editorOpened =
+    props.createModalOpened ||
+    props.createGroupModalOpened ||
+    props.editModalOpen ||
+    props.editGroupModalOpen;
   const session = useOrganizeSession<AccountsGridRow>({
     accountBookId: props.accountBookId,
     requested: !!props.organize,
@@ -138,14 +156,15 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     onSaved: props.onOrganizeSaved ?? (() => {}),
     onActivate: () => bulkAccountActions?.clearSelection(),
     refreshMetadata: props.onRefreshConstraints,
+    entryBlocked:
+      normalPending ||
+      (editorOpened &&
+        !!(
+          normalSubmitState.submissionError || normalSubmitState.refreshError
+        )),
   });
   const { organizer, navigation, isOrganizing } = session;
   const [interactionBlocked, setInteractionBlocked] = useState(false);
-  const editorOpened =
-    props.createModalOpened ||
-    props.createGroupModalOpened ||
-    props.editModalOpen ||
-    props.editGroupModalOpen;
 
   return (
     <PageShell>
@@ -188,7 +207,7 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         canOrganize={canOrganize}
       />
       <AccountOrganizeDialogs
-        props={props}
+        props={{ ...props, editorSubmitState: normalSubmitState }}
         organizer={isOrganizing ? organizer : undefined}
       />
       <AccountRowMoveDialog props={props} />

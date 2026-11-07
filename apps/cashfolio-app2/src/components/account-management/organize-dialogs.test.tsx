@@ -1,11 +1,4 @@
 import { expect, it, vi } from "vitest";
-vi.mock("@/hooks/use-dialog-submit-state", () => ({
-  useDialogSubmitState: () => ({ isSubmitting: false, isRefreshing: false }),
-}));
-vi.mock(
-  "@/components/hierarchy-organize/use-organize-navigation-guard",
-  () => ({ useOrganizeNavigationGuard: vi.fn() }),
-);
 import { AccountOrganizeDialogs } from "./organize-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import type { Organizer } from "@/components/hierarchy-organize/use-organizer";

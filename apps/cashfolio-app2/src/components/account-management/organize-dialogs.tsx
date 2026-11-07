@@ -1,9 +1,6 @@
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { AccountsPageDialogs } from "./page-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import type { Organizer } from "@/components/hierarchy-organize/use-organizer";
-import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { useOrganizeNavigationGuard } from "@/components/hierarchy-organize/use-organize-navigation-guard";
 
 export function AccountOrganizeDialogs({
   props,
@@ -12,19 +9,6 @@ export function AccountOrganizeDialogs({
   props: AccountsPageViewProps;
   organizer?: Organizer;
 }) {
-  const internalSubmitState = useDialogSubmitState({
-    captureErrors: true,
-    formatErrorMessage: (message) =>
-      getAccountConstraintMessage(message, "accounts") ?? message,
-    onRefreshConstraints: props.onRefreshConstraints,
-  });
-  const normalSubmitState = props.editorSubmitState ?? internalSubmitState;
-  // Finish a normal editor submission/recovery before switching controllers.
-  useOrganizeNavigationGuard(
-    props.accountBookId,
-    normalSubmitState.isSubmitting || normalSubmitState.isRefreshing,
-    "accounts",
-  );
   // Keep editor instances mounted when browser history changes the page mode.
   const dialogProps: AccountsPageViewProps = organizer
     ? {
@@ -53,6 +37,6 @@ export function AccountOrganizeDialogs({
               : undefined,
           ),
       }
-    : { ...props, editorSubmitState: normalSubmitState };
+    : props;
   return <AccountsPageDialogs {...dialogProps} />;
 }

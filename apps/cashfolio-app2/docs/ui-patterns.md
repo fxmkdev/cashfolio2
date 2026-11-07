@@ -1669,18 +1669,21 @@ metadata after commit, and reveals the new row. Open editors block conflicting
 actions; pending submissions and recovery queue navigation. A failed refresh
 never replays a committed creation. Keep existing editors mounted across mode
 changes through browser history; finish normal editor submissions/recovery
-before switching controllers. Retained edits share the organizer controller,
-block conflicting actions, and refresh canonical hierarchy after saving. Row
-actions use an unlabeled, fixed-width, right-pinned column with shared
-hover/focus styling: Move To (`IconArrowsMove`, blue), Add Account and Add Group
-(`IconPlus`, blue) on active groups, Archive (`IconArchive`, yellow) or
-Unarchive (`IconArchiveOff`, blue), then Delete (`IconTrash`, red). Use
-accessible labels identifying the row and disabled-reason tooltips.
-Archive/delete reuse the shared confirmation dialogs; unarchive runs directly.
-Existing eligibility remains authoritative: groups with active children cannot
-be archived, nonempty groups cannot be deleted, booked accounts cannot be
-deleted, and archived ancestors prevent unarchiving. Row lifecycle actions
-affect only that row.
+before switching controllers, including submissions begun while initial Organize
+loading is already in progress. Discard any overlapping initial read and
+activate only after a fresh hierarchy/metadata read. Failed normal editors
+retain their controller, draft, and feedback until saved or cancelled. Retained
+edits share the organizer controller, block conflicting actions, and refresh
+canonical hierarchy after saving. Row actions use an unlabeled, fixed-width,
+right-pinned column with shared hover/focus styling: Move To (`IconArrowsMove`,
+blue), Add Account and Add Group (`IconPlus`, blue) on active groups, Archive
+(`IconArchive`, yellow) or Unarchive (`IconArchiveOff`, blue), then Delete
+(`IconTrash`, red). Use accessible labels identifying the row and
+disabled-reason tooltips. Archive/delete reuse the shared confirmation dialogs;
+unarchive runs directly. Existing eligibility remains authoritative: groups with
+active children cannot be archived, nonempty groups cannot be deleted, booked
+accounts cannot be deleted, and archived ancestors prevent unarchiving. Row
+lifecycle actions affect only that row.
 
 Account List Organize also offers Archive and Delete beside Move To in its
 selection toolbar. Lifecycle actions use every explicitly selected row; movement
