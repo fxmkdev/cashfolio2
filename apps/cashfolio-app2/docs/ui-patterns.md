@@ -1370,13 +1370,15 @@ The account ledger exposes `Import Statement` as the split button's main action
 for asset and liability accounts with complete unit metadata and a configured
 CSV format, including archived accounts. `Edit` is the first menu item. When
 importing is unavailable, `Edit` remains the main action and `Import Statement`
-stays in the menu, disabled with a reason tooltip. The import action opens a
-dedicated import page. The v1 importer accepts a strict CSV with a header row,
-but header names are ignored. The first six columns must be ordered as: `date`,
-`amount`, `original amount`, `original currency`, `exchange rate`, and
-`description`. Comma and semicolon delimiters are supported, and extra trailing
-columns are ignored. The fifth `exchange rate` column is reserved for source CSV
-compatibility but ignored by the importer.
+stays in the menu, disabled with a reason tooltip. Income, expense, and
+gain/loss categories omit the import action entirely and keep `Edit` as the main
+action. The import action opens a dedicated import page. The v1 importer accepts
+a strict CSV with a header row, but header names are ignored. The first six
+columns must be ordered as: `date`, `amount`, `original amount`,
+`original currency`, `exchange rate`, and `description`. Comma and semicolon
+delimiters are supported, and extra trailing columns are ignored. The fifth
+`exchange rate` column is reserved for source CSV compatibility but ignored by
+the importer.
 
 - Imported rows are virtual transaction drafts until the user confirms import.
 - Modified statement reviews require confirmation before returning to Upload or

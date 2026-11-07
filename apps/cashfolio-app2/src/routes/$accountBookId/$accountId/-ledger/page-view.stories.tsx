@@ -252,14 +252,10 @@ export const MissingStatementImportCsvFormat: Story = {
   },
 };
 
-export const CategoryActionsMenu: Story = {
-  render: () => (
-    <LedgerPageStoryHarness
-      accountType={AccountType.EQUITY}
-      equitySubtype={EquityAccountSubtype.EXPENSE}
-    />
-  ),
-  play: async ({ canvasElement }) => {
+function categoryActionsMenuPlay(
+  equitySubtype: EquityAccountSubtype,
+): NonNullable<Story["play"]> {
+  return async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const actionButtons = within(
       canvas.getByRole("button", { name: "Category Actions" }).parentElement!,
@@ -267,25 +263,65 @@ export const CategoryActionsMenu: Story = {
     await expect(
       actionButtons.getByRole("button", { name: "Edit" }),
     ).toBeEnabled();
+    await expect(
+      canvas.queryByRole("button", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Category Actions" }),
     );
     await expect(
-      await screen.findByRole("menuitem", { name: "Manage Category" }),
-    ).toBeEnabled();
-    const importItem = screen.getByRole("menuitem", {
-      name: "Import Statement",
-    });
-    await expect(importItem).toBeDisabled();
-    await userEvent.hover(importItem.parentElement!);
-    await expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "Statement imports are only available for accounts.",
-    );
+      await screen.findByRole("menuitem", { name: "Archive" }),
+    ).toBeVisible();
+    await expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeVisible();
+    if (equitySubtype !== EquityAccountSubtype.GAIN_LOSS) {
+      await expect(
+        screen.getByRole("menuitem", { name: "Manage Category" }),
+      ).toBeEnabled();
+    } else {
+      await expect(
+        screen.queryByRole("menuitem", { name: "Manage Category" }),
+      ).not.toBeInTheDocument();
+    }
+    await expect(
+      screen.queryByRole("menuitem", { name: "Import Statement" }),
+    ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     await userEvent.click(actionButtons.getByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit Category" });
     await waitFor(() => expect(dialog).toBeVisible());
-  },
+  };
+}
+
+export const CategoryActionsMenu: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.EXPENSE}
+    />
+  ),
+  play: categoryActionsMenuPlay(EquityAccountSubtype.EXPENSE),
+};
+
+export const IncomeCategoryActionsMenu: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.INCOME}
+    />
+  ),
+  play: categoryActionsMenuPlay(EquityAccountSubtype.INCOME),
+};
+
+export const GainLossCategoryActionsMenu: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.GAIN_LOSS}
+    />
+  ),
+  play: categoryActionsMenuPlay(EquityAccountSubtype.GAIN_LOSS),
 };
 
 export const DisabledEditMenuAction: Story = {
