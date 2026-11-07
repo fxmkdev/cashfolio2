@@ -430,14 +430,15 @@ Return summaries have their own versioned, revision-scoped Redis cache,
 including the grouping, account state, UTC as-of day, and publication cutoff.
 Stable valuation sources, committed revision checks, 24-hour TTL, size limits,
 workload budgets, and book-deletion/restore cleanup follow the existing G/L
-cache policy. Summary cache version 2 separates the revised solver behavior.
-Both summaries and details use resumable capital-valuation, scope-valuation, and
-calculation phases. Dependencies are deduplicated across all scopes and fetched
-with the existing four-lookup scheduler. Large books finish across bounded
-requests, rather than repeating a monolithic calculation after timeout.
-Temporary checkpoints retain completed rates and scopes, are user/revision/date/
-publication-bound, expire after 15 minutes, and use a bounded local fallback
-without Redis. Only complete, current results reach the UI or stable cache. See
+cache policy. Summary cache version 3 separates the revised solver and
+archived-group membership behavior. Both summaries and details use resumable
+capital-valuation, scope-valuation, and calculation phases. Dependencies are
+deduplicated across all scopes and fetched with the existing four-lookup
+scheduler. Large books finish across bounded requests, rather than repeating a
+monolithic calculation after timeout. Temporary checkpoints retain completed
+rates and scopes, are user/revision/date/ publication-bound, expire after 15
+minutes, and use a bounded local fallback without Redis. Only complete, current
+results reach the UI or stable cache. See
 [account return requests](server-functions.md#account-returns) for limits and
 continuation/restart behavior. Return request failures have their own retry
 action and do not hide balances or G/L.

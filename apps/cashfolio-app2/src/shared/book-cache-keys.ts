@@ -61,7 +61,7 @@ export function getAccountReturnCacheEntryKey(
     scopeKey: string;
   },
 ): string {
-  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v2:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
+  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v3:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
 }
 
 function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {
@@ -112,5 +112,5 @@ export function getRestoreBookCacheKeyPatterns(): string[] {
 export function getAccountReturnWorkKey(
   args: BookCacheScope & { userId: string; id: string },
 ): string {
-  return `${ACCOUNT_RETURN_WORK_FAMILY}:v1:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v2:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }
