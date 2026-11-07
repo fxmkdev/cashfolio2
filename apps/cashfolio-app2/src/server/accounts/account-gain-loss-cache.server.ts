@@ -1,12 +1,15 @@
 import {
+  createCacheFailureReporter,
+  readValidatedMoneyCache,
+} from "../money-cache-read";
+import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../resource-context.server";
-import { rethrowResourceError } from "../resource-error";
 import { getRedisClient } from "../../redis.server";
 import { startOfUtcDay } from "../../shared/date";
 import { getAccountGainLossCacheEntryKey } from "../../shared/book-cache-keys";
-import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
+import { encodeMoneyCache } from "../money-cache-codec";
 import {
   PERIOD_CACHE_TTL_SECONDS,
   formatUtcDateKey,
@@ -23,8 +26,12 @@ import {
 
 const MAX_SERIALIZED_BYTES = 512 * 1024;
 const runSharedLoad = createUserScopedSharedWork<AccountGainLossCacheData>();
-let hasWarnedReadFailure = false;
-let hasWarnedWriteFailure = false;
+const reportReadFailure = createCacheFailureReporter(
+  "Failed to read account G/L cache; continuing uncached.",
+);
+const reportWriteFailure = createCacheFailureReporter(
+  "Failed to write account G/L cache; continuing uncached.",
+);
 
 export async function getOrLoadAccountGainLossSummaries(
   accountBookId: string,
@@ -50,26 +57,15 @@ export async function getOrLoadAccountGainLossSummaries(
     latestFetchableDate: formatUtcDateKey(latestFetchableDate),
   });
   return runSharedLoad(cacheKey, async () => {
-    try {
-      const cached = await redis.get(cacheKey);
-      if (cached && Buffer.byteLength(cached, "utf8") <= MAX_SERIALIZED_BYTES) {
-        const parsed = decodeMoneyCache<unknown>(JSON.parse(cached));
-        if (
-          isAccountGainLossCacheData(parsed) &&
-          parsed.asOfDate === asOfDate.toISOString()
-        )
-          return parsed;
-      }
-    } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedReadFailure) {
-        console.warn(
-          "Failed to read account G/L cache; continuing uncached.",
-          error,
-        );
-        hasWarnedReadFailure = true;
-      }
-    }
+    const cached = await readValidatedMoneyCache({
+      read: () => redis.get(cacheKey),
+      maxBytes: MAX_SERIALIZED_BYTES,
+      validate: (value: unknown): value is AccountGainLossCacheData =>
+        isAccountGainLossCacheData(value) &&
+        value.asOfDate === asOfDate.toISOString(),
+      reportFailure: reportReadFailure,
+    });
+    if (cached !== undefined) return cached;
 
     const range = await load();
     const data = toAccountGainLossCacheData(range);
@@ -89,14 +85,7 @@ export async function getOrLoadAccountGainLossSummaries(
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
       }
     } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedWriteFailure) {
-        console.warn(
-          "Failed to write account G/L cache; continuing uncached.",
-          error,
-        );
-        hasWarnedWriteFailure = true;
-      }
+      reportWriteFailure(error);
     }
     return data;
   });

@@ -1,13 +1,16 @@
 import {
+  createCacheFailureReporter,
+  readValidatedMoneyCache,
+} from "../../money-cache-read";
+import {
   checkResourceBudget,
   createUserScopedSharedWork,
   isSharedResourceWork,
 } from "../../resource-context.server";
-import { rethrowResourceError } from "../../resource-error";
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
 import { isReportingGrouping } from "../../../shared/reporting-grouping";
-import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
+import { encodeMoneyCache } from "../../money-cache-codec";
 import { moneyIsFinite, type Money } from "../../../shared/money";
 import { getRedisClient } from "../../../redis.server";
 import {
@@ -31,8 +34,12 @@ const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
 const runSharedLoad = createUserScopedSharedWork<PeriodHistoryPointMetrics>();
 
-let hasWarnedHistoryMetricsCacheReadFailure = false;
-let hasWarnedHistoryMetricsCacheWriteFailure = false;
+const reportHistoryMetricsCacheReadFailure = createCacheFailureReporter(
+  "Failed to read period history metrics cache entry; continuing uncached.",
+);
+const reportHistoryMetricsCacheWriteFailure = createCacheFailureReporter(
+  "Failed to write period history metrics cache entry; continuing uncached.",
+);
 
 function getScopeKey(
   metricScopeFilter: HistoryMetricScopeFilter | undefined,
@@ -150,24 +157,14 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
   });
 
   return runSharedLoad(cacheKey, async () => {
-    try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        const parsed = decodeMoneyCache<unknown>(JSON.parse(cached));
-        if (isHistoryMetricsCacheEntry(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedHistoryMetricsCacheReadFailure) {
-        console.warn(
-          "Failed to read period history metrics cache entry; continuing uncached.",
-          error,
-        );
-        hasWarnedHistoryMetricsCacheReadFailure = true;
-      }
-    }
+    const cached = await readValidatedMoneyCache({
+      read: () => redis.get(cacheKey),
+      maxBytes: PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES,
+      validate: (value: unknown): value is PeriodHistoryPointMetrics =>
+        isHistoryMetricsCacheEntry(value),
+      reportFailure: reportHistoryMetricsCacheReadFailure,
+    });
+    if (cached !== undefined) return cached;
 
     const result = await loadPeriodHistoryPointMetricsWithCacheability({
       accountBookId: args.accountBookId,
@@ -201,14 +198,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
         await redis.setEx(cacheKey, PERIOD_CACHE_TTL_SECONDS, serialized);
       }
     } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedHistoryMetricsCacheWriteFailure) {
-        console.warn(
-          "Failed to write period history metrics cache entry; continuing uncached.",
-          error,
-        );
-        hasWarnedHistoryMetricsCacheWriteFailure = true;
-      }
+      reportHistoryMetricsCacheWriteFailure(error);
     }
 
     return result.metrics;

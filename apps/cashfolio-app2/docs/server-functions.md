@@ -439,6 +439,21 @@ namespaces and preserves global valuation caches.
   transactions containing an `OPENING_BALANCES` booking are shifted to the day
   before the new start date, preserving the opening-balance date invariant.
 
+### Defensive cache reads
+
+Book-scoped period and account gain/loss caches use
+`src/server/money-cache-read.ts` for bounded UTF-8 reads, JSON/Decimal/date
+decoding, and payload-specific validation. Missing, oversized, malformed, or
+structurally invalid entries are cache misses. Object validators require a
+type-compatible check for every field, including optional fields, so payload
+type changes require corresponding validator updates. Period base snapshots
+validate nested collections and match the requested book and period; History
+metrics enforce their 512 KiB limit before parsing. The shared failure reporter
+warns once per fixed operation per process and preserves resource cancellation
+errors. Revision checks, publication windows, watermarks, TTLs, and persistence
+eligibility remain domain-owned. Valid current payloads retain their keys and
+wire format; no cache generation bump is required.
+
 ## Auth and Authorization
 
 - Logto integration uses `@logto/node` with `CookieStorage` in

@@ -201,6 +201,22 @@ describe("period history metrics cache", () => {
     delete process.env.PERIOD_BASE_CACHE_ENV;
   });
 
+  it("reloads oversized metrics before parsing even if their structure is valid", async () => {
+    const input = { accountBookId: "book-1", period: "2026-04" };
+    await getOrLoadPeriodHistoryPointMetrics(input);
+    const key = redisClient.setEx.mock.calls[0]![0];
+    redisState.kv.set(
+      key,
+      JSON.stringify(
+        encodeMoneyCache({ ...createMetrics(), extra: "x".repeat(512 * 1024) }),
+      ),
+    );
+    await getOrLoadPeriodHistoryPointMetrics(input);
+    expect(loadPeriodHistoryPointMetricsWithCacheability).toHaveBeenCalledTimes(
+      2,
+    );
+  });
+
   it("stores and reuses env-scoped generated history metrics entries", async () => {
     const first = await getOrLoadPeriodHistoryPointMetrics({
       accountBookId: "book-1",
