@@ -425,12 +425,17 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
 
 ## Statement Import Settings Prototype
 
-Storybook **Prototypes/StatementImportSettingsDialog** explores a separate,
-frontend-only settings dialog. Its implementation is isolated under
+Storybook **Prototypes/StatementImportSettingsPage** explores a dedicated,
+frontend-only settings page. Its implementation is isolated under
 `src/components/statement-import-settings/` and is not connected to the Account
 editor, import routes, or backend. The story harness saves settings in memory;
-closing a draft discards changes, and reopening restores the last saved format.
+Back and Cancel discard drafts, and reopening restores the last saved format.
 CSV samples are read locally and preview only the first 20 data rows. Sample
 loading never assigns mappings automatically. Configuration validation gates
-saving; sample-data errors do not. The dialog supports existing ordered-column
+saving; sample-data errors do not. The page supports existing ordered-column
 formats and emits explicit mappings using the shared CSV format contract.
+Settings use a compact left column beside a flexible sample/preview area on
+desktop, stacking on smaller screens. Sample upload uses a single-file CSV
+dropzone with picker and drag-and-drop support, following the production
+importer's visual pattern without depending on its route-private components.
+Rejected or unreadable files leave the current sample and mappings intact.

@@ -2,18 +2,15 @@ import {
   Alert,
   Badge,
   Box,
-  Button,
-  FileButton,
   Group,
   Paper,
-  Select,
   Stack,
   Tabs,
   Text,
   Title,
 } from "@mantine/core";
-import { IconFileTypeCsv, IconUpload } from "@tabler/icons-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { IconFileTypeCsv } from "@tabler/icons-react";
+import { useMemo } from "react";
 import { NumericFormat } from "react-number-format";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "../grid/data-grid";
@@ -27,10 +24,8 @@ import {
   type ParsedPreviewRow,
   type SamplePreview,
 } from "./csv-preview";
-import { SAMPLE_EXAMPLES, type ExampleKey } from "./examples";
-import classes from "./settings-dialog.module.css";
-
-export type SampleSource = { name: string; text: string };
+import { SampleUpload, type SampleSource } from "./sample-upload";
+import classes from "./settings-page.module.css";
 
 function PreviewAmount({
   value,
@@ -85,16 +80,6 @@ export function SamplePanel({
   sample: SamplePreview | null;
   format: StatementImportCsvFormat | null;
 }) {
-  const [fileError, setFileError] = useState("");
-  const [reading, setReading] = useState(false);
-  const request = useRef(0);
-  useEffect(
-    () => () => {
-      request.current += 1;
-    },
-    [],
-  );
-  const fileReset = useRef<() => void>(null);
   const parsedRows = useMemo(
     () => (sample && format ? createParsedPreview(sample, format) : []),
     [sample, format],
@@ -123,31 +108,6 @@ export function SamplePanel({
       })),
     ];
   }, [sample]);
-  function changeSource(next: SampleSource | null) {
-    request.current += 1;
-    setReading(false);
-    setFileError("");
-    fileReset.current?.();
-    onSourceChange(next);
-  }
-  async function readFile(file: File | null) {
-    if (!file) return;
-    const token = ++request.current;
-    setReading(true);
-    setFileError("");
-    try {
-      const text = await file.text();
-      if (request.current === token) onSourceChange({ name: file.name, text });
-    } catch {
-      if (request.current === token)
-        setFileError(
-          "The file could not be read. Choose it again or try another CSV.",
-        );
-    } finally {
-      if (request.current === token) setReading(false);
-      fileReset.current?.();
-    }
-  }
   const invalidRowCount = parsedRows.filter((row) => row.errors).length;
   return (
     <Paper withBorder p="md" radius="md" className={classes.preview}>
@@ -165,58 +125,7 @@ export function SamplePanel({
           Use a statement to check your settings. The file stays in your
           browser. Choose mappings to see parsed values.
         </Text>
-        <div className={classes.sampleActions}>
-          <FileButton
-            onChange={readFile}
-            accept=".csv,text/csv,text/plain"
-            resetRef={fileReset}
-          >
-            {(props) => (
-              <Button
-                {...props}
-                variant="light"
-                loading={reading}
-                leftSection={<IconUpload size={16} />}
-              >
-                Choose CSV
-              </Button>
-            )}
-          </FileButton>
-          <Select
-            label="Load an Example"
-            placeholder="Choose sample data"
-            value={null}
-            data={Object.entries(SAMPLE_EXAMPLES).map(([value, example]) => ({
-              value,
-              label: example.label,
-            }))}
-            onChange={(value) => {
-              if (value) {
-                const example = SAMPLE_EXAMPLES[value as ExampleKey];
-                changeSource({ name: example.label, text: example.text });
-              }
-            }}
-          />
-        </div>
-        {fileError && (
-          <Alert color="red" role="alert">
-            {fileError}
-          </Alert>
-        )}
-        {source && (
-          <Group justify="space-between">
-            <Text size="sm" fw={500} truncate>
-              {source.name}
-            </Text>
-            <Button
-              variant="subtle"
-              size="xs"
-              onClick={() => changeSource(null)}
-            >
-              Clear Sample
-            </Button>
-          </Group>
-        )}
+        <SampleUpload source={source} onSourceChange={onSourceChange} />
         {!sample ? (
           <Box className={classes.emptyPreview}>
             <Text fw={500}>See How Your Statement Will Be Read</Text>
@@ -244,7 +153,7 @@ export function SamplePanel({
                 <Tabs.Tab value="parsed">Parsed Preview</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="source" pt="sm">
-                <Box h={320}>
+                <Box className={classes.previewGrid}>
                   <DataGrid
                     rowData={sample.rows}
                     columnDefs={sourceColumns}
@@ -276,7 +185,7 @@ export function SamplePanel({
                         settings.
                       </Alert>
                     )}
-                    <Box h={320}>
+                    <Box className={classes.previewGrid}>
                       <DataGrid
                         rowData={parsedRows}
                         columnDefs={parsedColumns}
