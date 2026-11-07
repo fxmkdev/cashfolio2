@@ -87,7 +87,8 @@ export function createSetFilterParams<TData>(
 ) {
   return {
     values: (params) => params.success(getOptions().values),
-    refreshValuesOnOpen: true,
+    // Row updates refresh supplied values. Refreshing again as the popup opens
+    // can restore its old selection while the user is already changing it.
     suppressClearModelOnRefreshValues: true,
     suppressSorting: true,
     caseSensitive: true,

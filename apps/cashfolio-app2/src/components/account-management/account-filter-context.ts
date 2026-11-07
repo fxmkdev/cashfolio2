@@ -24,6 +24,22 @@ function emptyDimension(): AccountFilterContext[AccountFilterDimension] {
   };
 }
 
+function getMixedAncestors(
+  row: TreeRow,
+  displayedById: ReadonlyMap<string, TreeRow>,
+) {
+  const mixed = { assetClass: false, trackingMethod: false };
+  const seen = new Set<string>([row.id]);
+  let parent = row.parentId ? displayedById.get(row.parentId) : undefined;
+  while (parent && !seen.has(parent.id)) {
+    seen.add(parent.id);
+    mixed.assetClass ||= parent.groupAssetClass === "Mixed";
+    mixed.trackingMethod ||= parent.groupTrackingMethod === "Mixed";
+    parent = parent.parentId ? displayedById.get(parent.parentId) : undefined;
+  }
+  return mixed;
+}
+
 export function buildAccountFilterContext(
   sourceRows: readonly TreeRow[],
   displayedRows: readonly TreeRow[],
@@ -59,23 +75,10 @@ export function buildAccountFilterContext(
     const classValues = [
       classId ? setFilterEntityKey(classId) : SET_FILTER_SPECIAL.unclassified,
     ];
-    const trackingValues = [
-      row.trackingMethod ?? "INDIVIDUAL_UNITS",
-    ] as string[];
-    const seen = new Set<string>([row.id]);
-    let parent = row.parentId ? displayedById.get(row.parentId) : undefined;
-    while (parent && !seen.has(parent.id)) {
-      seen.add(parent.id);
-      if (parent.groupAssetClass === "Mixed") {
-        if (!classValues.includes(SET_FILTER_SPECIAL.mixed))
-          classValues.push(SET_FILTER_SPECIAL.mixed);
-      }
-      if (parent.groupTrackingMethod === "Mixed") {
-        if (!trackingValues.includes(SET_FILTER_SPECIAL.mixed))
-          trackingValues.push(SET_FILTER_SPECIAL.mixed);
-      }
-      parent = parent.parentId ? displayedById.get(parent.parentId) : undefined;
-    }
+    const trackingValues: string[] = [row.trackingMethod ?? "INDIVIDUAL_UNITS"];
+    const mixed = getMixedAncestors(row, displayedById);
+    if (mixed.assetClass) classValues.push(SET_FILTER_SPECIAL.mixed);
+    if (mixed.trackingMethod) trackingValues.push(SET_FILTER_SPECIAL.mixed);
     context.assetClass.valuesByAccountId.set(row.id, classValues);
     context.trackingMethod.valuesByAccountId.set(row.id, trackingValues);
     context.path.valuesByAccountId.set(row.id, [
@@ -83,6 +86,17 @@ export function buildAccountFilterContext(
     ]);
   }
 
+  populateFilterOptions(context, groups, classes, usedClasses, usedGroups);
+  return context;
+}
+
+function populateFilterOptions(
+  context: AccountFilterContext,
+  groups: readonly TreeRow[],
+  classes: readonly ClassificationNode[],
+  usedClasses: ReadonlySet<string>,
+  usedGroups: ReadonlySet<string>,
+) {
   context.assetClass.options = buildHierarchySetFilterOptions(
     classes,
     usedClasses,
@@ -128,5 +142,4 @@ export function buildAccountFilterContext(
       );
     }
   }
-  return context;
 }
