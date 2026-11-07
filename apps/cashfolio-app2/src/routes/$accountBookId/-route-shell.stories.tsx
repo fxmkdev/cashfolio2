@@ -1,13 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box, Text, Title } from "@mantine/core";
-import { Notifications } from "@mantine/notifications";
 import { useRouterState } from "@tanstack/react-router";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { findVisibleMenuItem } from "@/storybook-test-utils";
-import { AccountBookShell } from "./-account-book-shell";
+import { AccountBookStoryShell } from "./-story-shell";
 import { DESKTOP_RAIL_COLLAPSED_STORAGE_KEY } from "./-route-helpers";
-
-const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
 
 function getHeadingLabel(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -30,47 +27,19 @@ function AccountBookShellSmokeHarness({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const href = useRouterState({
-    select: (state) => state.location.href,
-  });
   const search = useRouterState({
     select: (state) => state.location.search,
   });
-  const accountBookId =
-    pathname.split("/").filter(Boolean)[0] ?? STORYBOOK_ACCOUNT_BOOK_ID;
-
   return (
-    <>
-      <Notifications />
-      <AccountBookShell
-        userSecurityUrl="https://tenant.logto.app/account/security"
-        accountBookId={accountBookId}
-        canAccessAdmin
-        currentHref={href}
-        accountBooks={[
-          { id: "storybook-book", name: "Storybook Book" },
-          { id: "storybook-alt-book", name: "Storybook Alt Book" },
-        ]}
-        appVersion="storybook"
-        userProfile={{
-          displayName: "Storybook User",
-          avatarUrl: null,
-          initials: "SU",
-        }}
-        pathname={pathname}
-        activeSection={neutralLedger ? null : undefined}
-        accountsLinkSearch={{ tab: "BALANCE", mode: "active" }}
-        periodLinkSearch={{}}
-      >
-        <Box px="xl" py="xl">
-          <Title order={2}>
-            {neutralLedger ? "Category Activity" : getHeadingLabel(pathname)}
-          </Title>
-          <Text data-testid="router-path">{pathname}</Text>
-          <Text data-testid="router-search">{JSON.stringify(search)}</Text>
-        </Box>
-      </AccountBookShell>
-    </>
+    <AccountBookStoryShell activeSection={neutralLedger ? null : undefined}>
+      <Box px="xl" py="xl">
+        <Title order={2}>
+          {neutralLedger ? "Category Activity" : getHeadingLabel(pathname)}
+        </Title>
+        <Text data-testid="router-path">{pathname}</Text>
+        <Text data-testid="router-search">{JSON.stringify(search)}</Text>
+      </Box>
+    </AccountBookStoryShell>
   );
 }
 

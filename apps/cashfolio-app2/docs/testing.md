@@ -320,6 +320,68 @@ This command keeps running until you stop it:
 pnpm --filter cashfolio-app2 storybook
 ```
 
+## Accounts Layout Experiments
+
+Start `pnpm --filter cashfolio-app2 storybook` from the repository root and open
+**Design Experiments / Accounts / Baseline Screen** or **Controls Row Screen**.
+Both render the real account-book shell and the same fixture-backed Accounts
+model. No backend, database, authentication session, or E2E environment is
+needed.
+
+The harness in `src/routes/$accountBookId/accounts/-stories/harness.tsx`
+accepts:
+
+- `View`: a React component receiving `AccountsPageViewProps`; defaults to the
+  production `AccountsPageView`.
+- `showDebugControls`: defaults to `true`; set to `false` to hide helper
+  controls and route diagnostics without disabling their underlying
+  interactions.
+- `withShell`: defaults to `false`; enables the shared `AccountBookStoryShell`
+  with fixture user/account-book props and memory-router location.
+
+```tsx
+<AccountsPageStoryHarness
+  initialMode="active"
+  View={ControlsRowAccountsLayout}
+  expandGroups
+  organize
+  bulkAssignment
+  withShell
+  showDebugControls={false}
+/>
+```
+
+Keep experimental layouts under `-stories/`. Reuse `useAccountsPageInteractions`
+for organizer lifecycle/navigation and grid-ready coordination,
+`AccountsPageBody` for the grid, feedback, and dialogs, and
+`AccountsGroupingControl`/`AccountsPageActions` for rearrangeable header
+controls. Preserve the production account-book/context/tab key boundary around
+the component using the hook; see `controls-row-layout.tsx`. Keep the normal
+grid mounted while organizing. Grid configuration stays in `AccountsPageGrid`;
+fixture state and simulated callbacks stay in the existing story model.
+Categories use their existing view and are outside these Accounts layout
+experiments.
+
+Example instruction for an agent: “Create an Accounts layout under `-stories/`,
+pass it as `View` to `AccountsPageStoryHarness`, and reuse the shared
+coordination hook and page components. Use `withShell` and
+`showDebugControls={false}` for previews; reuse the existing story model.”
+
+Grouping, selection, bulk assignments, organizer entry/exit, and dialog forms
+run locally. Create/edit/archive/delete dialog submissions retain the existing
+simulation: they close dialogs without persisting changes to grid fixtures.
+Organizer and assignment simulations use their existing separate fixture state.
+Navigation uses the shared memory router and does not render real destination
+pages. Authentication actions, external security links, and persistent mutations
+are outside these previews; the real shell's authentication actions are not
+simulated. Remount the story to reset in-memory fixture state.
+
+Run only these new interaction checks with:
+
+```bash
+pnpm --filter cashfolio-app2 exec vitest run --project storybook 'src/routes/$accountBookId/accounts/-stories/design-experiments.stories.tsx'
+```
+
 ## CI Quality Gates
 
 Current CI gates for `cashfolio-app2`:

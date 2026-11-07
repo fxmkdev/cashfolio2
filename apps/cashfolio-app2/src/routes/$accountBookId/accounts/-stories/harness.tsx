@@ -1,14 +1,27 @@
 import { Box, Text } from "@mantine/core";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ComponentType } from "react";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { SettingsNavigation } from "../../settings/-settings-navigation";
 import { AccountsPageView } from "../-page-view";
+import type { AccountsPageViewProps } from "../-page-view-types";
+import { AccountBookStoryShell } from "../../-story-shell";
 import { StoryControls } from "./controls";
 import { useAccountsStoryModel } from "./use-story-model";
 import { getStoryViewProps } from "./view-props";
 import type { AccountsStoryOptions } from "./types";
 
-export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
+export type AccountsPageStoryHarnessProps = AccountsStoryOptions & {
+  View?: ComponentType<AccountsPageViewProps>;
+  showDebugControls?: boolean;
+  withShell?: boolean;
+};
+
+export function AccountsPageStoryHarness({
+  View = AccountsPageView,
+  showDebugControls = true,
+  withShell = false,
+  ...options
+}: AccountsPageStoryHarnessProps) {
   const [organizerApi] = useState(
     () =>
       options.organizerApi ??
@@ -56,13 +69,21 @@ export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
     };
     return { ...api, kind: "categories" as const };
   }, [routing.tab]);
-  return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100dvh" }}>
-      <StoryControls model={model} options={options} />
+  const content = (
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: withShell ? undefined : "100dvh",
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      {showDebugControls && <StoryControls model={model} options={options} />}
       {routing.isEquityTab && (
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
-      <AccountsPageView
+      <View
         {...getStoryViewProps(model, options)}
         organizerApi={
           routing.isEquityTab
@@ -70,7 +91,7 @@ export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
             : organizerApi
         }
       />
-      {options.routeSmoke && (
+      {showDebugControls && options.routeSmoke && (
         <>
           <Text data-testid="router-path">{routing.pathname}</Text>
           <Text data-testid="router-search">
@@ -79,5 +100,10 @@ export function AccountsPageStoryHarness(options: AccountsStoryOptions) {
         </>
       )}
     </Box>
+  );
+  return withShell ? (
+    <AccountBookStoryShell>{content}</AccountBookStoryShell>
+  ) : (
+    content
   );
 }

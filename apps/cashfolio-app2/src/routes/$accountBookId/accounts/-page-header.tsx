@@ -80,6 +80,112 @@ export function AccountsPageHeader({
     </Tabs>
   );
   const managementActions = (
+    <AccountsPageActions
+      managementContext={managementContext}
+      grouping={grouping}
+      accountBookId={accountBookId}
+      tab={tab}
+      onOpenCreateGroup={onOpenCreateGroup}
+      onOpenCreateAccount={onOpenCreateAccount}
+      onOrganize={onOrganize}
+      organizePending={organizePending}
+      managementPending={managementPending}
+    />
+  );
+
+  return (
+    <>
+      {isCategories ? (
+        <>
+          <VisuallyHidden component="div">
+            <Title order={2}>
+              {getAccountsPageTitle(undefined, managementContext)}
+            </Title>
+          </VisuallyHidden>
+          <Group justify="space-between" align="center" gap="md" mb="md">
+            <Group gap="md">
+              {managementTabs}
+              <Checkbox
+                label="Show Archived"
+                disabled={managementPending}
+                checked={showArchived}
+                onChange={(event) =>
+                  onShowArchivedChange?.(event.currentTarget.checked)
+                }
+              />
+            </Group>
+            {managementActions}
+          </Group>
+        </>
+      ) : (
+        <TopPageHeader
+          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+          headingAccessory={
+            organizing ? (
+              <Badge variant="light" size="lg">
+                Organizing
+              </Badge>
+            ) : (
+              <AccountsGroupingControl
+                grouping={grouping}
+                onGroupingChange={onGroupingChange}
+              />
+            )
+          }
+          actions={organizing ? organizerActions : managementActions}
+        />
+      )}
+    </>
+  );
+}
+
+export function AccountsGroupingControl({
+  grouping = "accountStructure",
+  onGroupingChange,
+}: Pick<AccountsPageViewProps, "grouping" | "onGroupingChange">) {
+  return (
+    <Group gap="xs" wrap="nowrap">
+      <Text size="sm">Group By</Text>
+      <Select
+        aria-label="Group By"
+        w={180}
+        data={reportingGroupingOptions}
+        value={grouping}
+        allowDeselect={false}
+        onChange={(value) => {
+          if (value === "accountStructure" || value === "assetClass")
+            onGroupingChange?.(value);
+        }}
+      />
+    </Group>
+  );
+}
+
+export function AccountsPageActions({
+  managementContext = "accounts",
+  grouping = "accountStructure",
+  accountBookId,
+  tab,
+  onOpenCreateGroup,
+  onOpenCreateAccount,
+  onOrganize,
+  organizePending,
+  managementPending = false,
+}: Pick<
+  AccountsPageViewProps,
+  | "managementContext"
+  | "grouping"
+  | "accountBookId"
+  | "tab"
+  | "onOpenCreateGroup"
+  | "onOpenCreateAccount"
+> & {
+  onOrganize?: () => void;
+  organizePending?: boolean;
+  managementPending?: boolean;
+}) {
+  const isCategories = managementContext === "categories";
+  return (
     <Group gap={isCategories ? "sm" : "md"}>
       {!isCategories && grouping === "accountStructure" && onOrganize && (
         <Button
@@ -126,60 +232,5 @@ export function AccountsPageHeader({
           : "Add Account"}
       </Button>
     </Group>
-  );
-
-  return (
-    <>
-      {isCategories ? (
-        <>
-          <VisuallyHidden component="div">
-            <Title order={2}>
-              {getAccountsPageTitle(undefined, managementContext)}
-            </Title>
-          </VisuallyHidden>
-          <Group justify="space-between" align="center" gap="md" mb="md">
-            <Group gap="md">
-              {managementTabs}
-              <Checkbox
-                label="Show Archived"
-                disabled={managementPending}
-                checked={showArchived}
-                onChange={(event) =>
-                  onShowArchivedChange?.(event.currentTarget.checked)
-                }
-              />
-            </Group>
-            {managementActions}
-          </Group>
-        </>
-      ) : (
-        <TopPageHeader
-          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
-          headingAccessory={
-            organizing ? (
-              <Badge variant="light" size="lg">
-                Organizing
-              </Badge>
-            ) : (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">Group By</Text>
-                <Select
-                  aria-label="Group By"
-                  w={180}
-                  data={reportingGroupingOptions}
-                  value={grouping}
-                  allowDeselect={false}
-                  onChange={(value) => {
-                    if (value === "accountStructure" || value === "assetClass")
-                      onGroupingChange?.(value);
-                  }}
-                />
-              </Group>
-            )
-          }
-          actions={organizing ? organizerActions : managementActions}
-        />
-      )}
-    </>
   );
 }
