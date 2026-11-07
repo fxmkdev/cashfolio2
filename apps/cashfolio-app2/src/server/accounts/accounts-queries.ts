@@ -1,3 +1,12 @@
+import {
+  readAccountBookInput,
+  readAccountInput,
+} from "../read-input-validation";
+import {
+  readAccountSelectorsInput,
+  readAccountsScopeInput,
+  readAccountTreeInput,
+} from "./accounts-read-input";
 import { startReadBudget } from "../resource-context.server";
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
@@ -5,10 +14,6 @@ import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
 import { createGroupPathSegmentsResolver } from "../accounts/accounts-helpers";
 import {
-  type AccountReferenceBalancesInput,
-  type AccountsPageDataInput,
-  type AccountTreeDataInput,
-  type LedgerAccountActionDataInput,
   queryActiveAccountBookUnitUsage,
   queryAccountGroups,
   queryAccountReferenceBalances,
@@ -19,7 +24,7 @@ import {
 } from "./accounts-queries-orchestration";
 
 export const getAccounts = createServerFn({ method: "GET" })
-  .validator((data: { accountBookId: string }) => data)
+  .validator(readAccountBookInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [accounts, allGroups] = await Promise.all([
@@ -69,34 +74,28 @@ export const getAccountNavigationGroups = createServerFn({ method: "GET" })
   });
 
 export const getAccountGroups = createServerFn({ method: "GET" })
-  .validator(
-    (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
-      data,
-  )
+  .validator(readAccountSelectorsInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountGroups(data.accountBookId, data.accountState);
   });
 
 export const getExistingNodes = createServerFn({ method: "GET" })
-  .validator(
-    (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
-      data,
-  )
+  .validator(readAccountSelectorsInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryExistingNodes(data.accountBookId, data.accountState);
   });
 
 export const getActiveAccountBookUnitUsage = createServerFn({ method: "GET" })
-  .validator((data: { accountBookId: string }) => data)
+  .validator(readAccountBookInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryActiveAccountBookUnitUsage(data.accountBookId);
   });
 
 export const getAccountTreeData = createServerFn({ method: "GET" })
-  .validator((data: AccountTreeDataInput) => data)
+  .validator(readAccountTreeInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -104,7 +103,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
   });
 
 export const getAccountsPageData = createServerFn({ method: "GET" })
-  .validator((data: AccountsPageDataInput) => data)
+  .validator(readAccountsScopeInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -112,7 +111,7 @@ export const getAccountsPageData = createServerFn({ method: "GET" })
   });
 
 export const getLedgerAccountActionData = createServerFn({ method: "GET" })
-  .validator((data: LedgerAccountActionDataInput) => data)
+  .validator(readAccountInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -120,7 +119,7 @@ export const getLedgerAccountActionData = createServerFn({ method: "GET" })
   });
 
 export const getAccountReferenceBalances = createServerFn({ method: "GET" })
-  .validator((data: AccountReferenceBalancesInput) => data)
+  .validator(readAccountsScopeInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -128,7 +127,7 @@ export const getAccountReferenceBalances = createServerFn({ method: "GET" })
   });
 
 export const getGainLossEquityAccountId = createServerFn({ method: "GET" })
-  .validator((data: { accountBookId: string }) => data)
+  .validator(readAccountBookInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findFirst({

@@ -118,6 +118,17 @@ Reconciliation calculation inputs and callbacks stay in server modules.
 - Account-book mutations should use `src/server/mutation-guard.server.ts` to
   enforce same-origin and account-book authorization consistently.
 
+### Read request validation
+
+Account, ledger, transaction, and accumulated gain/loss reads parse unknown
+request objects before authorization or query execution. Reuse the identifier
+readers in `src/server/read-input-validation.ts` and domain-specific readers for
+enums and flags; a TypeScript annotation alone is not runtime validation.
+Construct response input objects explicitly to discard unknown properties.
+Omitted options retain their existing defaults. Ledger flags also accept the
+existing `"true"`/`"false"` transport values; optional account hints still fall
+back to persisted data when absent, invalid, or stale.
+
 ## Native Collection APIs
 
 Server-only code runs on Node 26 and may use `Map.getOrInsertComputed()` to
