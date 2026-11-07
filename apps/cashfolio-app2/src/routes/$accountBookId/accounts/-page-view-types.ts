@@ -1,5 +1,7 @@
+import type { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import type { OrganizeNode } from "@/shared/hierarchy-organize/types";
 import { type ReportingGrouping } from "@/shared/reporting-grouping";
-import type { OrganizerApi } from "./-organize/use-organizer";
+import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
 import { type AccountManagementContext } from "@/shared/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
@@ -9,7 +11,6 @@ import { type AccountGroupTransformedFormValues } from "@/components/account-edi
 import type { AccountInitialValues } from "@/components/account-editor/edit-account-modal";
 import { type TransformedFormValues } from "@/components/account-editor/edit-account-modal";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
-import { type ReorderGroupChildRow } from "@/components/account-tree/reorder-group-children-modal";
 import type {
   AccountsGridRow,
   AccountsMode,
@@ -26,6 +27,12 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  editorSubmitState?: ReturnType<typeof useDialogSubmitState>;
+  onEditHierarchyNode?: (node: OrganizeNode) => void;
+  onAddHierarchyChild?: (
+    node: OrganizeNode,
+    kind: "account" | "accountGroup",
+  ) => void;
   organizerApi?: OrganizerApi;
   organize?: boolean;
   onOrganizeSaved?: () => void;
@@ -68,8 +75,6 @@ export type AccountsPageViewProps = {
   editingGroup?: { id: string; initialValues: AccountGroupInitialValues };
   deletingRow?: RowTarget;
   archivingRow?: RowTarget;
-  reorderingRow?: { name: string; parentKey: string };
-  selectedSiblingRows: ReorderGroupChildRow[];
   onOpenCreateGroup: () => void;
   onOpenCreateAccount: () => void;
   onOpenLedger: (accountId: string) => void;
@@ -91,8 +96,4 @@ export type AccountsPageViewProps = {
   onConfirmDelete: () => Promise<void>;
   onCloseArchive: () => void;
   onConfirmArchive: () => Promise<void>;
-  onCloseReorder: () => void;
-  onReorderSiblings: (
-    rows: { id: string; nodeType: "account" | "accountGroup" }[],
-  ) => Promise<void>;
 };

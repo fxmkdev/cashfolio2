@@ -117,7 +117,7 @@ pnpm lint:workflows                           # actionlint check for GitHub work
   [action icon reference](apps/cashfolio-app2/docs/ui-patterns.md#action-icons),
   [contextual child creation](apps/cashfolio-app2/docs/ui-patterns.md#contextual-child-creation),
   and
-  [sibling reorder pattern](apps/cashfolio-app2/docs/ui-patterns.md#sibling-reorder-pattern)
+  [hierarchy organization pattern](apps/cashfolio-app2/docs/ui-patterns.md#hierarchy-organize-mode)
   for hierarchy management, including row-action order and submission feedback.
 - Use `@paralleldrive/cuid2` for unique IDs.
 - Use Temporal through `src/shared/temporal.ts` for calendar operations on the

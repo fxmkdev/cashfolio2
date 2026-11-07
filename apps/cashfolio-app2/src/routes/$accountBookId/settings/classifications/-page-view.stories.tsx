@@ -1,5 +1,5 @@
-import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
-import { Button, Stack } from "@mantine/core";
+import { createAssetClassStoryApi } from "@/components/hierarchy-organize/asset-class-story-fixtures";
+import { Stack } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState, type ComponentProps } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -14,7 +14,39 @@ async function gridRow(canvasElement: HTMLElement, id: string) {
 }
 async function rowActions(canvasElement: HTMLElement, id: string) {
   const row = await gridRow(canvasElement, id);
-  return openRowActionsMenu(row);
+  await userEvent.hover(row);
+  return (label: string) =>
+    within(row).getByRole("button", { name: new RegExp(`^${label} `) });
+}
+
+function ManagementHarness(
+  props: ComponentProps<typeof ClassificationsPageView>,
+) {
+  const [api] = useState(() =>
+    createAssetClassStoryApi(
+      props.nodes.map((node) => ({ ...node, nodeType: "assetClass" as const })),
+    ),
+  );
+  const [organizerApi] = useState(() => ({
+    ...api,
+    delete: async (
+      target: Parameters<typeof api.delete>[0],
+      replacementId?: string | null,
+    ) => {
+      await props.onDelete(target.id, replacementId ?? null);
+      await api.delete(target, replacementId);
+    },
+  }));
+  return (
+    <ClassificationsPageView
+      {...props}
+      organizerApi={organizerApi}
+      onSave={async (draft) => {
+        await props.onSave(draft);
+        await api.save(draft);
+      }}
+    />
+  );
 }
 
 const meta = {
@@ -27,6 +59,7 @@ const meta = {
       </Stack>
     ),
   ],
+  render: (args) => <ManagementHarness {...args} />,
   args: {
     nodes: [
       {
@@ -56,7 +89,6 @@ const meta = {
     ],
     onSave: fn(async () => {}),
     onDelete: fn(async () => {}),
-    onReorder: fn(async () => {}),
     onRefresh: fn(async () => {}),
   },
 } satisfies Meta<typeof ClassificationsPageView>;
@@ -96,23 +128,14 @@ export const Hierarchy: Story = {
     ).toHaveTextContent("1 active, 0 archived");
     await expect(equities).toHaveAttribute("aria-expanded", "true");
     const actions = await rowActions(canvasElement, "equities");
-    await expect(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    ).toBeEnabled();
-    await expect(
-      actions.getByRole("menuitem", { name: "Delete" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    const swiss = await rowActions(canvasElement, "swiss");
-    await expect(
-      swiss.getByRole("menuitem", { name: "Reorder Siblings" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    await expect(actions("Delete")).toBeDisabled();
   },
 };
 export const CreateChild: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Add Child" }));
+    await userEvent.click(actions("Add Child"));
     const dialog = within(
       await body.findByRole("dialog", { name: "New Asset Class" }),
     );
@@ -135,11 +158,9 @@ export const DeleteAssignedLeaf: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const parent = await rowActions(canvasElement, "equities");
-    await expect(
-      parent.getByRole("menuitem", { name: "Delete" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    await expect(parent("Delete")).toBeDisabled();
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(actions("Delete"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -161,7 +182,7 @@ export const ParentSelectionExcludesSubtree: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -187,7 +208,7 @@ export const ClearParentToTopLevel: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -242,7 +263,7 @@ export const NestedReplacementSelection: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "cash");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(actions("Delete"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Delete Asset Class" }),
     );
@@ -281,14 +302,14 @@ export const SaveFailurePreservesDraft: Story = {
     await expect(dialog.getByRole("textbox", { name: /^Name/ })).toHaveValue(
       "My Class",
     );
-    await expect(args.onRefresh).toHaveBeenCalled();
+    await expect(dialog.getByRole("button", { name: "Save" })).toBeEnabled();
   },
 };
-export const EditAndReorder: Story = {
+export const Edit: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     let actions = await rowActions(canvasElement, "swiss");
-    await userEvent.click(actions.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(actions("Edit"));
     const dialog = within(
       await body.findByRole("dialog", { name: "Edit Asset Class" }),
     );
@@ -306,23 +327,6 @@ export const EditAndReorder: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    );
-    const reorder = within(
-      await body.findByRole("dialog", { name: "Reorder Siblings" }),
-    );
-    await waitFor(() =>
-      expect(reorder.getByText("Siblings of Equities")).toBeVisible(),
-    );
-    await expect(
-      await reorder.findByText("Cash", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      reorder.queryByText("Swiss Equities", { exact: true }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(reorder.getByRole("button", { name: "Close" }));
   },
 };
 export const Empty: Story = {
@@ -330,33 +334,12 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByText(
-        "No asset classes. Create one to start classifying accounts.",
+        "There are no asset classes to organize.",
       ),
     ).toBeVisible();
   },
 };
-function RefreshHarness(props: ComponentProps<typeof ClassificationsPageView>) {
-  const [nodes, setNodes] = useState(props.nodes);
-  return (
-    <>
-      <ClassificationsPageView {...props} nodes={nodes} />
-      <Button
-        onClick={() =>
-          setNodes((current) =>
-            current.map((node) => ({
-              ...node,
-              name: node.id === "equities" ? "Equities Updated" : node.name,
-            })),
-          )
-        }
-      >
-        Refresh Fixture
-      </Button>
-    </>
-  );
-}
 export const ExpansionSurvivesRefresh: Story = {
-  render: (args) => <RefreshHarness {...args} />,
   play: async ({ canvasElement }) => {
     const parent = await gridRow(canvasElement, "equities");
     await userEvent.click(parent.querySelector(".ag-group-expanded")!);
@@ -367,8 +350,20 @@ export const ExpansionSurvivesRefresh: Story = {
         ),
       ).toBeNull(),
     );
-    await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Refresh Fixture" }),
+    const actions = await rowActions(canvasElement, "equities");
+    await userEvent.click(actions("Edit"));
+    const body = within(canvasElement.ownerDocument.body);
+    const editor = within(
+      await body.findByRole("dialog", { name: "Edit Asset Class" }),
+    );
+    await userEvent.clear(editor.getByRole("textbox", { name: /^Name/ }));
+    await userEvent.type(
+      editor.getByRole("textbox", { name: /^Name/ }),
+      "Equities Updated",
+    );
+    await userEvent.click(editor.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     await waitFor(() =>
       expect(
@@ -407,92 +402,5 @@ export const DeepHierarchy: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(await gridRow(canvasElement, "grandchild")).toBeVisible();
-  },
-};
-
-async function dragClassSibling(
-  dialog: HTMLElement,
-  sourceId: string,
-  targetId: string,
-) {
-  const source = dialog.querySelector<HTMLElement>(
-    `.ag-row[row-id="${sourceId}"] .ag-row-drag`,
-  )!;
-  const target = dialog.querySelector<HTMLElement>(
-    `.ag-row[row-id="${targetId}"]`,
-  )!;
-  // Modal and row transitions can move the drop target after it becomes visible.
-  await waitFor(async () => {
-    expect(source).toBeVisible();
-    const bounds = () =>
-      [source.getBoundingClientRect(), target.getBoundingClientRect()].map(
-        (rect) => [rect.x, rect.y, rect.width, rect.height],
-      );
-    const before = bounds();
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    expect(bounds()).toEqual(before);
-  });
-  const from = source.getBoundingClientRect(),
-    to = target.getBoundingClientRect();
-  const clientX = from.left + from.width / 2;
-  await userEvent.pointer([
-    {
-      target: source,
-      coords: { clientX, clientY: from.top + from.height / 2 },
-      keys: "[MouseLeft>]",
-    },
-    {
-      target: source,
-      coords: { clientX, clientY: from.top + from.height / 2 - 8 },
-    },
-    { target, coords: { clientX, clientY: to.top + to.height / 2 } },
-    { target, coords: { clientX, clientY: to.top + 8 } },
-    { target, coords: { clientX, clientY: to.top + 8 }, keys: "[/MouseLeft]" },
-  ]);
-}
-
-export const ReorderFailureRestoresConfirmedOrder: Story = {
-  play: async ({ canvasElement, args }) => {
-    args.onReorder.mockRejectedValueOnce(
-      new Error("The siblings changed. Refresh and reorder the updated list."),
-    );
-    const actions = await rowActions(canvasElement, "equities");
-    await userEvent.click(
-      actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-    );
-    const dialog = await within(canvasElement.ownerDocument.body).findByRole(
-      "dialog",
-      { name: "Reorder Siblings" },
-    );
-    await waitFor(() =>
-      expect(
-        dialog.querySelector('.ag-row[row-id="cash"] .ag-row-drag'),
-      ).not.toBeNull(),
-    );
-    await dragClassSibling(dialog, "cash", "equities");
-    await waitFor(() =>
-      expect(args.onReorder).toHaveBeenCalledWith(null, ["cash", "equities"]),
-    );
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "The siblings changed",
-    );
-    expect(args.onRefresh).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(
-        dialog.querySelector('.ag-row[row-index="0"] [col-id="name"]'),
-      ).toHaveTextContent("Equities"),
-    );
-    await waitFor(() =>
-      expect(
-        within(dialog).getByRole("button", { name: "Close" }),
-      ).toBeEnabled(),
-    );
-    await dragClassSibling(dialog, "cash", "equities");
-    await waitFor(() => expect(args.onReorder).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument(),
-    );
   },
 };

@@ -18,14 +18,16 @@ export function ClassDialog(props: {
   onRefresh: () => Promise<void>;
   onSave: (draft: ClassDraft) => Promise<void>;
   onDelete: (id: string, replacementId: string | null) => Promise<void>;
+  submitState?: ReturnType<typeof useDialogSubmitState>;
 }) {
   const [name, setName] = useState(props.draft.name),
     [parentId, setParentId] = useState<string | null>(props.draft.parentId),
     [replacement, setReplacement] = useState<string | null>(null);
-  const state = useDialogSubmitState({
+  const internalState = useDialogSubmitState({
     captureErrors: true,
     onRefreshConstraints: props.onRefresh,
   });
+  const state = props.submitState ?? internalState;
   const current = props.nodes.find((n) => n.id === props.draft.id);
   const parentNodes = props.nodes.filter((n) => {
     let id: string | null = n.id;
@@ -58,6 +60,8 @@ export function ClassDialog(props: {
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          if (state.isSubmitting || state.isRefreshing || state.refreshError)
+            return;
           void state.runSubmit(async () => {
             if (props.deleting) {
               if (replacement === null)
@@ -137,7 +141,9 @@ export function ClassDialog(props: {
               type="submit"
               loading={state.isSubmitting}
               disabled={
-                state.isRefreshing || (props.deleting && replacement === null)
+                state.isRefreshing ||
+                !!state.refreshError ||
+                (props.deleting && replacement === null)
               }
             >
               {props.deleting ? "Delete" : "Save"}

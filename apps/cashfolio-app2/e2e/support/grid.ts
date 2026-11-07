@@ -59,14 +59,7 @@ export async function revealRowActions(row: Locator) {
 
 export async function clickRowAction(
   row: Locator,
-  actionLabel:
-    | "Edit"
-    | "Copy"
-    | "Rebook"
-    | "Delete"
-    | "Archive"
-    | "Unarchive"
-    | "Reorder Siblings",
+  actionLabel: "Edit" | "Copy" | "Rebook" | "Delete" | "Archive" | "Unarchive",
 ) {
   await (await getRowAction(row, actionLabel)).click();
   await row
@@ -94,6 +87,11 @@ export async function getRowAction(row: Locator, actionLabel: string) {
     exact: true,
   });
   if (await direct.count()) return direct;
+  const escapedLabel = actionLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const namedDirect = stableRow.getByRole("button", {
+    name: new RegExp(`^${escapedLabel} `),
+  });
+  if (await namedDirect.count()) return namedDirect;
   const trigger = stableRow.getByRole("button", { name: /^More Actions for / });
   if ((await trigger.getAttribute("aria-expanded")) !== "true") {
     await trigger.click();

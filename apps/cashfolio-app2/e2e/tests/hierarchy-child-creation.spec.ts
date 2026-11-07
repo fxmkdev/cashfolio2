@@ -128,7 +128,10 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       `.ag-grid-scrolling-container > .ag-row[row-id="${child.id}"]`,
     );
     await childRow.hover();
-    await childRow.getByRole("button", { name: /^More Actions for / }).click();
+    if (!isCategory)
+      await childRow
+        .getByRole("button", { name: /^More Actions for / })
+        .click();
     await expect(
       page.getByRole("menuitem", { name: createLabel, exact: true }),
     ).toHaveCount(0);

@@ -7,7 +7,6 @@ import {
   calculateBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
-  useSelectedSiblingRows,
 } from "./-page-data";
 
 function row(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
@@ -39,7 +38,7 @@ function row(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
   };
 }
 
-it("includes archived leaves once in balances and keeps virtual rows out of reordering", () => {
+it("includes archived leaves once in balances", () => {
   const source = [
     row("group", {
       nodeType: "accountGroup",
@@ -69,18 +68,6 @@ it("includes archived leaves once in balances and keeps virtual rows out of reor
     });
     expect(balances.get("__archived__:group:group")?.sum).toBe(20);
     expect(useReferenceCurrencyBalanceTotal(rows)).toBe(40);
-    expect(
-      useSelectedSiblingRows(byParent, {
-        name: "active",
-        parentKey: "group",
-      }).map((item) => item.id),
-    ).toEqual(["active"]);
-    expect(
-      useSelectedSiblingRows(byParent, {
-        name: "archived",
-        parentKey: "__archived__:group:group",
-      }).map((item) => item.id),
-    ).toEqual(["archived", "archived-other"]);
     return null;
   }
   renderToStaticMarkup(createElement(Harness));

@@ -134,13 +134,8 @@ export const AssetClassSwitchingAndExpansion: Story = {
         canvasElement.querySelector<HTMLElement>(selector)!,
       );
       await expect(
-        actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-      ).toHaveAttribute("aria-disabled", "true");
-      await expect(
-        actions.getByRole("menuitem", { name: "Reorder Siblings" }),
-      ).toHaveAccessibleDescription(
-        "Switch to Account Structure to reorder siblings",
-      );
+        actions.queryByRole("menuitem", { name: "Reorder Siblings" }),
+      ).not.toBeInTheDocument();
       await expect(
         actions.getByRole("menuitem", { name: "Edit" }),
       ).toBeEnabled();

@@ -24,7 +24,6 @@ export function useAccountTreeColumnDefs(
     isGainLossLoading,
     isEquityTab,
     categoryType,
-    rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
@@ -34,10 +33,7 @@ export function useAccountTreeColumnDefs(
     unarchivePending,
     onArchiveRow,
     onDeleteRow,
-    onReorderRow,
   } = params;
-  const rowsByParentKeyRef = useRef(rowsByParentKey);
-  rowsByParentKeyRef.current = rowsByParentKey;
   const isReferenceBalancesLoadingRef = useRef(isReferenceBalancesLoading);
   isReferenceBalancesLoadingRef.current = isReferenceBalancesLoading;
   const balanceInReferenceCurrencyByGroupIdRef = useRef(
@@ -63,21 +59,16 @@ export function useAccountTreeColumnDefs(
             ...buildAccountMetadataColumns({ grouping, assetClasses }),
           ]
         : []),
-      buildAccountActionsColumn(
-        {
-          grouping,
-          isEquityTab,
-          categoryType,
-          onEditRow,
-          onAddChild,
-          onUnarchiveRow,
-          unarchivePending,
-          onArchiveRow,
-          onDeleteRow,
-          onReorderRow,
-        },
-        rowsByParentKeyRef,
-      ),
+      buildAccountActionsColumn({
+        isEquityTab,
+        categoryType,
+        onEditRow,
+        onAddChild,
+        onUnarchiveRow,
+        unarchivePending,
+        onArchiveRow,
+        onDeleteRow,
+      }),
     ],
     [
       grouping,
@@ -93,7 +84,6 @@ export function useAccountTreeColumnDefs(
       unarchivePending,
       onArchiveRow,
       onDeleteRow,
-      onReorderRow,
     ],
   );
 }

@@ -1,3 +1,4 @@
+import type { AccountOrganizeScope } from "../../shared/account-organize/scope";
 import { createServerFn } from "@tanstack/react-start";
 import type { Prisma } from "../../.prisma-client/client";
 import { prisma } from "../../prisma.server";
@@ -26,7 +27,7 @@ export const getAccountOrganizeData = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return prisma.$transaction(
-      (tx) => readOrganizeSnapshot(tx, data.accountBookId),
+      (tx) => readOrganizeSnapshot(tx, data.accountBookId, data.scope),
       { isolationLevel: "RepeatableRead" },
     );
   });
@@ -36,6 +37,7 @@ async function persistOrganize(
   accountBookId: string,
   before: OrganizeSnapshot,
   next: OrganizeSnapshot["nodes"],
+  scope: AccountOrganizeScope = "balance",
 ) {
   const changes = organizeChanges(before.nodes, next);
   const newRoots = next.filter(
@@ -49,11 +51,33 @@ async function persistOrganize(
     // Existing editors also check root names against categories/system accounts.
     const [accounts, groups] = await Promise.all([
       tx.account.findMany({
-        where: { accountBookId, type: { not: "BALANCE" }, groupId: null },
+        where:
+          scope === "balance"
+            ? { accountBookId, type: { not: "BALANCE" }, groupId: null }
+            : {
+                accountBookId,
+                groupId: null,
+                id: {
+                  notIn: before.nodes
+                    .filter((node) => node.nodeType === "account")
+                    .map((node) => node.id),
+                },
+              },
         select: { name: true },
       }),
       tx.accountGroup.findMany({
-        where: { accountBookId, type: { not: "BALANCE" }, parentGroupId: null },
+        where:
+          scope === "balance"
+            ? { accountBookId, type: { not: "BALANCE" }, parentGroupId: null }
+            : {
+                accountBookId,
+                parentGroupId: null,
+                id: {
+                  notIn: before.nodes
+                    .filter((node) => node.nodeType === "accountGroup")
+                    .map((node) => node.id),
+                },
+              },
         select: { name: true },
       }),
     ]);
@@ -79,7 +103,9 @@ async function persistOrganize(
         data: {
           groupId: change.parentId,
           sortOrder: change.sortOrder,
-          isCashAccount: change.isCashAccount,
+          ...(scope === "balance"
+            ? { isCashAccount: change.isCashAccount }
+            : {}),
         },
       });
     } else {
@@ -88,13 +114,15 @@ async function persistOrganize(
         data: {
           parentGroupId: change.parentId,
           sortOrder: change.sortOrder,
-          isCashAccount: change.isCashAccount,
+          ...(scope === "balance"
+            ? { isCashAccount: change.isCashAccount }
+            : {}),
         },
       });
     }
   }
   const snapshot = changes.length
-    ? await readOrganizeSnapshot(tx, accountBookId)
+    ? await readOrganizeSnapshot(tx, accountBookId, scope)
     : before;
   return { snapshot, changed: changes.length > 0 };
 }
@@ -116,10 +144,20 @@ export const moveAccountTreeItems = createServerFn({ method: "POST" })
   .validator(validateOrganizeMove)
   .handler(async ({ data }): Promise<OrganizeMoveResult> => {
     const result = await mutateOrganize(data.accountBookId, async (tx) => {
-      const before = await readOrganizeSnapshot(tx, data.accountBookId);
+      const before = await readOrganizeSnapshot(
+        tx,
+        data.accountBookId,
+        data.scope,
+      );
       assertOrganizeVersion(before, data.version);
       const next = planAccountMove(before.nodes, data);
-      const saved = await persistOrganize(tx, data.accountBookId, before, next);
+      const saved = await persistOrganize(
+        tx,
+        data.accountBookId,
+        before,
+        next,
+        data.scope,
+      );
       return saved;
     });
     return result;

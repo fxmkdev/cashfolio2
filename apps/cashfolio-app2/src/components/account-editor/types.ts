@@ -1,3 +1,4 @@
+import type { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
   type AccountTrackingMethod,
   EquityAccountSubtype,
@@ -95,6 +96,7 @@ export type AccountInitialValuesSource = Pick<
 >;
 
 export type EditAccountModalProps = {
+  submitState?: ReturnType<typeof useDialogSubmitState>;
   defaultGroupId?: string;
   opened: boolean;
   onClose: () => void;

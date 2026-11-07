@@ -75,22 +75,6 @@ export function addGroupAssetClassSummaries(
   });
 }
 
-export function useSelectedSiblingRows(
-  rowsByParentKey: Map<string, TreeRow[]>,
-  reorderingRow: { name: string; parentKey: string } | undefined,
-) {
-  return useMemo(() => {
-    if (!reorderingRow) return [];
-    return (rowsByParentKey.get(reorderingRow.parentKey) ?? [])
-      .filter((row) => !row.isVirtualArchivedGroup)
-      .map((row) => ({
-        id: row.id,
-        name: row.name,
-        nodeType: row.nodeType,
-      }));
-  }, [rowsByParentKey, reorderingRow]);
-}
-
 export function useReferenceCurrencyBalanceTotal(
   rows: TreeRow[],
   enabled = true,

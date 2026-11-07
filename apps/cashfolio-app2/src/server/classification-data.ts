@@ -1,5 +1,27 @@
 import type { Prisma } from "../.prisma-client/client";
 import { ASSET_CLASS_SCHEME_ID } from "../shared/asset-class";
+
+/** Settings and Organize use the same class metadata and assignment counts. */
+export async function readManagedAssetClasses(
+  tx: Pick<Prisma.TransactionClient, "classificationNode">,
+  accountBookId: string,
+) {
+  const nodes = await tx.classificationNode.findMany({
+    where: { accountBookId, schemeId: ASSET_CLASS_SCHEME_ID },
+    select: {
+      id: true,
+      name: true,
+      parentId: true,
+      sortOrder: true,
+      assignments: { select: { account: { select: { isActive: true } } } },
+    },
+  });
+  return nodes.map(({ assignments, ...node }) => ({
+    ...node,
+    activeCount: assignments.filter((item) => item.account.isActive).length,
+    archivedCount: assignments.filter((item) => !item.account.isActive).length,
+  }));
+}
 export const assetClassSelection = {
   where: { schemeId: ASSET_CLASS_SCHEME_ID },
   select: { nodeId: true },

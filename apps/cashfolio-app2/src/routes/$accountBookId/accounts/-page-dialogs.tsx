@@ -5,7 +5,6 @@ import { EditAccountGroupModal } from "@/components/account-editor/edit-account-
 import { EditAccountModal } from "@/components/account-editor/edit-account-modal";
 import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
-import { ReorderGroupChildrenModal } from "@/components/account-tree/reorder-group-children-modal";
 import { getEntityLabel } from "./-page-types";
 import type { AccountsPageViewProps } from "./-page-view-types";
 export function AccountsBulkAssignmentDialogs({
@@ -34,6 +33,7 @@ export function AccountsBulkAssignmentDialogs({
 }
 export function AccountsPageDialogs({
   managementContext = "accounts",
+  editorSubmitState,
   rows,
   editingAccount,
   editingGroup,
@@ -52,8 +52,6 @@ export function AccountsPageDialogs({
   editGroupModalOpen,
   archivingRow,
   deletingRow,
-  reorderingRow,
-  selectedSiblingRows,
   onCloseCreateAccount,
   onSubmitCreateAccount,
   onCloseCreateGroup,
@@ -68,11 +66,10 @@ export function AccountsPageDialogs({
   onConfirmArchive,
   onCloseDelete,
   onConfirmDelete,
-  onCloseReorder,
-  onReorderSiblings,
 }: Pick<
   AccountsPageViewProps,
   | "managementContext"
+  | "editorSubmitState"
   | "rows"
   | "editingAccount"
   | "editingGroup"
@@ -91,8 +88,6 @@ export function AccountsPageDialogs({
   | "editGroupModalOpen"
   | "archivingRow"
   | "deletingRow"
-  | "reorderingRow"
-  | "selectedSiblingRows"
   | "onCloseCreateAccount"
   | "onSubmitCreateAccount"
   | "onCloseCreateGroup"
@@ -107,8 +102,6 @@ export function AccountsPageDialogs({
   | "onConfirmArchive"
   | "onCloseDelete"
   | "onConfirmDelete"
-  | "onCloseReorder"
-  | "onReorderSiblings"
 >) {
   const isEditingArchivedAccount = rows.some(
     (row) => row.id === editingAccount?.id && !row.isActive,
@@ -123,6 +116,7 @@ export function AccountsPageDialogs({
     <>
       <>
         <EditAccountModal
+          submitState={editorSubmitState}
           onRefreshConstraints={onRefreshConstraints}
           defaultGroupId={createAccountGroupId}
           opened={createModalOpened}
@@ -148,6 +142,7 @@ export function AccountsPageDialogs({
         />
       </>
       <EditAccountGroupModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         defaultParentGroupId={createGroupParentId}
         opened={createGroupModalOpened}
@@ -158,6 +153,7 @@ export function AccountsPageDialogs({
         typeDescriptor={tab}
       />
       <EditAccountModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         opened={editModalOpen}
         onClose={onCloseEditAccount}
@@ -175,6 +171,7 @@ export function AccountsPageDialogs({
         typeDescriptor={tab}
       />
       <EditAccountGroupModal
+        submitState={editorSubmitState}
         onRefreshConstraints={onRefreshConstraints}
         opened={editGroupModalOpen}
         onClose={onCloseEditGroup}
@@ -202,15 +199,6 @@ export function AccountsPageDialogs({
         }
         name={deletingRow?.name}
         onConfirm={onConfirmDelete}
-      />
-      <ReorderGroupChildrenModal
-        key={reorderingRow?.parentKey}
-        onRefreshConstraints={onRefreshConstraints}
-        opened={!!reorderingRow}
-        onClose={onCloseReorder}
-        rowName={reorderingRow?.name ?? ""}
-        initialRows={selectedSiblingRows}
-        onReorder={onReorderSiblings}
       />
     </>
   );

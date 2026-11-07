@@ -1,7 +1,5 @@
 import { defaultAssetClassIds } from "../../shared/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Prisma } from "../../.prisma-client/client";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../shared/mutation-errors";
 import {
   AccountType,
   AccountTrackingMethod,
@@ -115,7 +113,6 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
   updateAccount,
@@ -152,13 +149,6 @@ describe("account mutation boundary validation", () => {
         name: "Name",
         type: AccountType.BALANCE,
         isCashAccount: "true",
-      },
-    ],
-    [
-      reorderAccountTreeItems,
-      {
-        accountBookId: "book-1",
-        updates: [{ id: "a-1", nodeType: "account", sortOrder: 0.5 }],
       },
     ],
     ...[
@@ -1419,73 +1409,6 @@ describe("createAccountGroup", () => {
 
     expect(tx.accountGroup.update).not.toHaveBeenCalled();
     expect(tx.accountGroup.updateMany).not.toHaveBeenCalled();
-  });
-});
-
-describe("reorderAccountTreeItems conflict recovery", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    tx.classificationNode.findUnique.mockResolvedValue({ id: "class" });
-    tx.accountClassification.deleteMany.mockResolvedValue({ count: 0 });
-    tx.accountClassification.createMany.mockResolvedValue({ count: 1 });
-    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
-    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
-    tx.account.update.mockResolvedValue({ id: "account" });
-  });
-
-  it.each([
-    { code: "55P03" },
-    { driverAdapterError: { cause: { originalCode: "55P03" } } },
-  ])("does not automatically retry a busy-book rollback: %j", async (meta) => {
-    tx.$queryRaw.mockRejectedValueOnce(
-      new Prisma.PrismaClientKnownRequestError("lock timeout", {
-        code: "P2010",
-        clientVersion: "test",
-        meta,
-      }),
-    );
-    await expect(
-      reorderAccountTreeItems({
-        data: {
-          accountBookId: "book-1",
-          updates: [{ id: "a", nodeType: "account", sortOrder: 0 }],
-        },
-      }),
-    ).rejects.toThrow(ACCOUNT_BOOK_BUSY_MESSAGE);
-    expect(prisma.$transaction).toHaveBeenCalledOnce();
-    expect(tx.account.update).not.toHaveBeenCalled();
-    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
-  });
-
-  it("recreates reorder queries on conflict with authorization and cleanup outside retries", async () => {
-    tx.account.update.mockRejectedValueOnce(
-      new Prisma.PrismaClientKnownRequestError("deadlock", {
-        code: "P2034",
-        clientVersion: "test",
-      }),
-    );
-
-    await reorderAccountTreeItems({
-      data: {
-        accountBookId: "book-1",
-        updates: [
-          { id: "account-a", nodeType: "account", sortOrder: 1 },
-          { id: "account-b", nodeType: "account", sortOrder: 2 },
-        ],
-      },
-    });
-
-    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
-    const first = prisma.$transaction.mock.calls[0]![0];
-    const second = prisma.$transaction.mock.calls[1]![0];
-    expect(second).not.toBe(first);
-    expect(tx.account.update).toHaveBeenCalledTimes(4);
-    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
-    expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
-    expect(
-      invalidatePeriodBaseDataCacheForAccountBook,
-    ).toHaveBeenCalledExactlyOnceWith("book-1");
   });
 });
 

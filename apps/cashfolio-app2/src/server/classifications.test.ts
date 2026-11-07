@@ -52,7 +52,6 @@ import {
   getAssetClasses,
   getAssetClassNodes,
   saveAssetClass,
-  reorderAssetClasses,
   deleteAssetClass,
 } from "./classifications";
 const nodes = [
@@ -99,18 +98,6 @@ describe("classification endpoints", () => {
           accountBookId: "book",
           name: "Class",
           parentId: "x".repeat(RESOURCE_LIMITS.identifier + 1),
-        },
-      }),
-    ).toThrow("cannot exceed");
-    expect(() =>
-      reorderAssetClasses({
-        data: {
-          accountBookId: "book",
-          parentId: null,
-          orderedIds: Array.from(
-            { length: RESOURCE_LIMITS.bulkItems + 1 },
-            (_, index) => String(index),
-          ),
         },
       }),
     ).toThrow("cannot exceed");
@@ -174,101 +161,6 @@ describe("classification endpoints", () => {
       },
       data: { name: "Cash Holdings", parentId: "equities", sortOrder: 0 },
     });
-  });
-  it("reorders the complete root sibling set", async () => {
-    await reorderAssetClasses({
-      data: {
-        accountBookId: "book",
-        parentId: null,
-        orderedIds: ["cash", "equities"],
-      },
-    });
-    expect(mocks.tx.classificationNode.update).toHaveBeenNthCalledWith(1, {
-      where: {
-        id_schemeId_accountBookId: {
-          id: "cash",
-          schemeId: "assetClass",
-          accountBookId: "book",
-        },
-      },
-      data: { sortOrder: 0 },
-    });
-    expect(mocks.tx.classificationNode.update).toHaveBeenNthCalledWith(2, {
-      where: {
-        id_schemeId_accountBookId: {
-          id: "equities",
-          schemeId: "assetClass",
-          accountBookId: "book",
-        },
-      },
-      data: { sortOrder: 1 },
-    });
-    expect(mocks.invalidate).toHaveBeenCalledWith("book");
-  });
-  it("reorders nested siblings only", async () => {
-    mocks.tx.classificationNode.findMany.mockResolvedValueOnce([
-      { ...nodes[0], id: "first", parentId: "parent" },
-      { ...nodes[0], id: "second", parentId: "parent" },
-    ]);
-    await reorderAssetClasses({
-      data: {
-        accountBookId: "book",
-        parentId: "parent",
-        orderedIds: ["second", "first"],
-      },
-    });
-    expect(mocks.tx.classificationNode.findMany).toHaveBeenCalledWith({
-      where: {
-        accountBookId: "book",
-        schemeId: "assetClass",
-        parentId: "parent",
-      },
-    });
-  });
-  it.each([["cash"], ["cash", "foreign"], ["cash", "equities", "new"]])(
-    "rejects a stale or foreign sibling set %j before writing",
-    async (...orderedIds) => {
-      await expect(
-        reorderAssetClasses({
-          data: { accountBookId: "book", parentId: null, orderedIds },
-        }),
-      ).rejects.toThrow("siblings changed");
-      expect(mocks.tx.classificationNode.update).not.toHaveBeenCalled();
-      expect(mocks.invalidate).not.toHaveBeenCalled();
-    },
-  );
-  it("rejects duplicate IDs without opening a transaction", () => {
-    expect(() =>
-      reorderAssetClasses({
-        data: {
-          accountBookId: "book",
-          parentId: null,
-          orderedIds: ["cash", "cash"],
-        },
-      }),
-    ).toThrow("exactly once");
-    expect(mocks.lock).not.toHaveBeenCalled();
-  });
-  it("rejects stale parents and does not invalidate failed writes", async () => {
-    mocks.tx.classificationNode.findUnique.mockResolvedValueOnce(null);
-    await expect(
-      reorderAssetClasses({
-        data: { accountBookId: "book", parentId: "deleted", orderedIds: [] },
-      }),
-    ).rejects.toThrow("parent is no longer available");
-    mocks.tx.classificationNode.update.mockRejectedValueOnce(
-      new Error("Write failed"),
-    );
-    await expect(
-      reorderAssetClasses({
-        data: {
-          accountBookId: "book",
-          parentId: null,
-          orderedIds: ["cash", "equities"],
-        },
-      }),
-    ).rejects.toThrow("Write failed");
-    expect(mocks.invalidate).not.toHaveBeenCalled();
   });
   it.each(["cash", null])(
     "reassigns all accounts before deleting a leaf (%s)",
@@ -343,21 +235,6 @@ describe("classification endpoints", () => {
       }),
     ).rejects.toThrow("Denied");
     expect(mocks.lock).not.toHaveBeenCalled();
-    expect(mocks.invalidate).not.toHaveBeenCalled();
-  });
-  it("authorizes sibling reordering before reading or writing membership", async () => {
-    mocks.guard.mockRejectedValueOnce(new Error("Denied"));
-    await expect(
-      reorderAssetClasses({
-        data: {
-          accountBookId: "foreign-book",
-          parentId: null,
-          orderedIds: ["cash", "equities"],
-        },
-      }),
-    ).rejects.toThrow("Denied");
-    expect(mocks.lock).not.toHaveBeenCalled();
-    expect(mocks.tx.classificationNode.findMany).not.toHaveBeenCalled();
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
   it("keeps cache invalidation out of rolled-back failures", async () => {

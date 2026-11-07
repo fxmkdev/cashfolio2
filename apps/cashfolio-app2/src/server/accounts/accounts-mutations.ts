@@ -9,7 +9,6 @@ import {
   validateAccountGroupMutationInput,
   validateAccountGroupUpdateInput,
   validateAccountBookNodeIdInput,
-  validateReorderAccountTreeItemsInput,
 } from "./accounts-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { withDatabaseConflictRetry } from "../database-conflict-retry";
@@ -23,7 +22,6 @@ import {
   createAccountOperation,
   deleteAccountGroupOperation,
   deleteAccountOperation,
-  reorderAccountTreeItemsOperation,
   unarchiveAccountGroupOperation,
   unarchiveAccountOperation,
   updateAccountGroupOperation,
@@ -124,14 +122,6 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, (tx) =>
       unarchiveAccountGroupOperation(data, tx),
-    ),
-  );
-
-export const reorderAccountTreeItems = createServerFn({ method: "POST" })
-  .validator(validateReorderAccountTreeItemsInput)
-  .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, (tx) =>
-      reorderAccountTreeItemsOperation(data, tx),
     ),
   );
 

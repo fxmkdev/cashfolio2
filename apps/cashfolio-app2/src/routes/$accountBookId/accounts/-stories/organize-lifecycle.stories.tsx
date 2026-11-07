@@ -4,7 +4,7 @@ import { AccountsPageView } from "../-page-view";
 import {
   createOrganizerStoryApi,
   organizeStoryNodes,
-} from "../-organize/story-fixtures";
+} from "@/components/hierarchy-organize/story-fixtures";
 import { AccountsPageStoryHarness } from "./harness";
 
 const meta: Meta<typeof AccountsPageView> = {

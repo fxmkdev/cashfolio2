@@ -17,7 +17,6 @@ export {
   unarchiveAccountOperation,
   unarchiveAccountGroupOperation,
 } from "./mutations/status";
-export { reorderAccountTreeItemsOperation } from "./mutations/reorder";
 
 export { setAccountsAssetClassOperation } from "./mutations/asset-class";
 export { setAccountsTrackingMethodOperation } from "./mutations/tracking-method";

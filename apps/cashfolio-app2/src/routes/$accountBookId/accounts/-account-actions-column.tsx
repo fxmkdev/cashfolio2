@@ -6,17 +6,13 @@ import {
   ArchivedAccountTreeActionsCell,
 } from "@/components/account-tree/account-tree-actions-cells";
 import {
-  ROOT_PARENT_KEY,
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
   toRowTarget,
-  type TreeRow,
 } from "./-page-types";
-import type { RefObject } from "react";
 import type { AccountTreeColumnParams } from "./-account-column-types";
 type AccountActionsParams = Pick<
   AccountTreeColumnParams,
-  | "grouping"
   | "isEquityTab"
   | "categoryType"
   | "onEditRow"
@@ -25,20 +21,16 @@ type AccountActionsParams = Pick<
   | "unarchivePending"
   | "onArchiveRow"
   | "onDeleteRow"
-  | "onReorderRow"
 >;
 
 function renderAccountRowActions({
   data,
   params,
-  rowsByParentKey,
 }: {
   data: AccountsGridRow | undefined;
   params: AccountActionsParams;
-  rowsByParentKey: Map<string, TreeRow[]>;
 }) {
   const {
-    grouping = "accountStructure",
     isEquityTab,
     categoryType,
     onEditRow,
@@ -47,32 +39,16 @@ function renderAccountRowActions({
     unarchivePending,
     onArchiveRow,
     onDeleteRow,
-    onReorderRow,
   } = params;
   if (!data) return null;
   if (isReferenceCurrencyTotalFooterRow(data)) return null;
   if (data.isVirtualArchivedGroup || data.presentationKind) return null;
-
-  const parentKey = data.parentId ?? ROOT_PARENT_KEY;
-  const siblingCount =
-    (rowsByParentKey
-      .get(parentKey)
-      ?.filter((row) => !row.isVirtualArchivedGroup).length ?? 0) - 1;
-  const hasSiblings = grouping === "accountStructure" && siblingCount >= 1;
-  const reorderLabel =
-    grouping === "assetClass"
-      ? "Switch to Account Structure to reorder siblings"
-      : hasSiblings
-        ? "Reorder Siblings"
-        : "Cannot reorder because this row has no siblings";
 
   if (!data.isActive) {
     return (
       <ArchivedAccountTreeActionsCell
         rowLabel={data.name}
         unarchivePending={unarchivePending}
-        reorderEnabled={hasSiblings}
-        reorderLabel={reorderLabel}
         deleteLabel={
           getAccountConstraintMessage(
             data.deleteDisabledReason,
@@ -89,12 +65,6 @@ function renderAccountRowActions({
         unarchivable={data.unarchivable}
         onEdit={() => onEditRow(data)}
         onDelete={() => onDeleteRow(toRowTarget(data))}
-        onReorder={() =>
-          onReorderRow({
-            name: data.name,
-            parentKey,
-          })
-        }
         onUnarchive={() => void onUnarchiveRow(data)}
       />
     );
@@ -134,24 +104,15 @@ function renderAccountRowActions({
       }
       archivable={data.archivable}
       deletable={data.deletable}
-      reorderEnabled={hasSiblings}
-      reorderLabel={reorderLabel}
       onEdit={() => onEditRow(data)}
       onArchive={() => onArchiveRow(toRowTarget(data))}
       onDelete={() => onDeleteRow(toRowTarget(data))}
-      onReorder={() =>
-        onReorderRow({
-          name: data.name,
-          parentKey,
-        })
-      }
     />
   );
 }
 
 export function buildAccountActionsColumn(
   params: AccountActionsParams,
-  rowsByParentKeyRef: RefObject<Map<string, TreeRow[]>>,
 ): ColDef<AccountsGridRow> {
   return {
     colId: "actions",
@@ -161,7 +122,6 @@ export function buildAccountActionsColumn(
       renderAccountRowActions({
         data,
         params,
-        rowsByParentKey: rowsByParentKeyRef.current,
       }),
   };
 }

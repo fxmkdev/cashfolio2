@@ -9,7 +9,6 @@ import {
   validateAccountGroupUpdateInput,
   validateAccountMutationInput,
   validateAccountUpdateInput,
-  validateReorderAccountTreeItemsInput,
 } from "./accounts-input-validation";
 
 const account = {
@@ -264,7 +263,6 @@ describe("account mutation input contracts", () => {
         validateAccountBookNodeIdInput,
         validateAccountUpdateInput,
         validateAccountGroupUpdateInput,
-        validateReorderAccountTreeItemsInput,
       ]) {
         expect(() => validate(input)).toThrow("Input must be an object.");
       }
@@ -291,40 +289,6 @@ describe("account mutation input contracts", () => {
     expect(() => validateAccountGroupUpdateInput(account)).toThrow(
       "Account group id is required.",
     );
-  });
-
-  it("validates every reorder item and strips unknown properties", () => {
-    expect(
-      validateReorderAccountTreeItemsInput({
-        accountBookId: "book-1",
-        updates: [
-          { id: "account-1", nodeType: "account", sortOrder: 0, ignored: true },
-          { id: "group-1", nodeType: "accountGroup", sortOrder: 1 },
-        ],
-      }).updates,
-    ).toEqual([
-      { id: "account-1", nodeType: "account", sortOrder: 0 },
-      { id: "group-1", nodeType: "accountGroup", sortOrder: 1 },
-    ]);
-    for (const update of [
-      null,
-      {},
-      { id: "a", nodeType: "other", sortOrder: 1 },
-      { id: "a", nodeType: "account", sortOrder: 0.5 },
-    ]) {
-      expect(() =>
-        validateReorderAccountTreeItemsInput({
-          accountBookId: "book-1",
-          updates: [update],
-        }),
-      ).toThrow();
-    }
-    expect(() =>
-      validateReorderAccountTreeItemsInput({
-        accountBookId: "book-1",
-        updates: {},
-      }),
-    ).toThrow("Updates are required.");
   });
 });
 

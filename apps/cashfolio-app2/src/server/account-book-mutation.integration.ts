@@ -805,14 +805,11 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
       );
     try {
       await Promise.race([childLocked, holder]);
-      const mutation = mutations.reorderAccountTreeItems({
+      const mutation = mutations.setAccountsTrackingMethod({
         data: {
           accountBookId: bookId,
-          updates: [free.id, locked.id].map((id, sortOrder) => ({
-            id,
-            nodeType: "account" as const,
-            sortOrder,
-          })),
+          accountIds: [free.id, locked.id],
+          trackingMethod: "TOTAL_PORTFOLIO_VALUE",
         },
       });
       results = Promise.allSettled([holder, mutation]);
@@ -834,11 +831,13 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
         where: { id: { in: [free.id, locked.id] }, accountBookId: bookId },
         orderBy: { sortOrder: "asc" },
       });
-      expect(saved.map((row) => [row.id, row.sortOrder])).toEqual([
-        [free.id, 0],
-        [locked.id, 1],
+      expect(saved.map((row) => row.trackingMethod)).toEqual([
+        "TOTAL_PORTFOLIO_VALUE",
+        "TOTAL_PORTFOLIO_VALUE",
       ]);
-      expect(saved[1].name).toBe("External writer");
+      expect(saved.find((row) => row.id === locked.id)?.name).toBe(
+        "External writer",
+      );
     } finally {
       releaseHolder();
       await results;

@@ -15,6 +15,21 @@ export function getStoryViewProps(
   const { rows } = presentation;
   return {
     ...getStoryModalProps(modalState),
+    onEditHierarchyNode: (node) => {
+      const row = rows.find((row) => row.id === node.id);
+      if (row)
+        modalState.handleEditRow({
+          ...row,
+          name: node.name,
+          parentId: node.parentId ?? undefined,
+          persistedParentId: node.parentId,
+          groupId: node.parentId ?? undefined,
+        });
+    },
+    onAddHierarchyChild: (node, kind) =>
+      kind === "account"
+        ? modalState.openCreateAccount(node.id)
+        : modalState.openCreateGroup(node.id),
     grouping: model.grouping,
     organize: routing.routeSearch.organize === true,
     onGroupingChange: model.setGrouping,
@@ -77,7 +92,6 @@ export function getStoryViewProps(
     onRowGroupOpened: options.rememberExpansion
       ? model.expansion.onRowGroupOpened
       : () => undefined,
-    selectedSiblingRows: model.selectedSiblingRows,
     onOpenLedger: (nextAccountId) => {
       if (options.routeSmoke) {
         void navigate({

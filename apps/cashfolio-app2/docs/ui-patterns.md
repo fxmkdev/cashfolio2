@@ -45,7 +45,7 @@ responsibility that owns it:
 | Folder                | Responsibility                                                         |
 | --------------------- | ---------------------------------------------------------------------- |
 | `account-editor/`     | Account/group editing, form values, and cash-flow inclusion form rules |
-| `account-tree/`       | Account/group tree selection, row actions, and sibling reordering      |
+| `account-tree/`       | Account/group tree selection and row actions                           |
 | `transaction-editor/` | Split transaction editing, booking columns, validation, and form state |
 | `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy   |
 | `grid/`               | DataGrid, column editors, filters, locale, and grid theme/CSS          |
@@ -102,7 +102,7 @@ row actions consistent. Apply this guideline when adding or changing tables;
 existing tables elsewhere can be migrated in focused follow-ups.
 
 Use native tree data for hierarchical records, with stable row IDs. Keep stored
-manual ordering authoritative when rows have explicit reorder actions. Follow
+manual ordering authoritative in hierarchy management and Organize mode. Follow
 the shared column and actions-cell conventions below.
 
 ## Hierarchical Selection
@@ -504,30 +504,30 @@ Use the following shared icon reference for hierarchy actions:
 | ------------------ | ---------------- | ------ |
 | Create / Add Child | `IconPlus`       | Blue   |
 | Edit               | `IconPencil`     | Blue   |
-| Reorder Siblings   | `IconArrowsSort` | Blue   |
 | Archive            | `IconArchive`    | Yellow |
 | Unarchive          | `IconArchiveOff` | Blue   |
 | Delete             | `IconTrash`      | Red    |
 
-Keep row actions in **Reorder → Edit → Add Child → Archive/Delete** order,
-showing only applicable actions. Multi-action rows use the shared
-`RowActionsMenu` with labelled menu items and the same icons. Separate
-Archive/Delete from the preceding actions; preserve Unarchive on archived rows.
-Use the shared grid action-cell styles so actions appear on row hover and
-keyboard focus. Disabled menu items show their reason in a multiline tooltip on
-whole-item hover and keyboard focus, using the global tooltip delay. A visually
-hidden description keeps the reason accessible while the tooltip is closed. Use
-`aria-disabled`, preserve arrow-key focus, and guard activation and menu
-closing; style disabled items with the shared CSS module. Disabled direct
+Keep row actions in **Edit → Add Child → Archive/Delete** order, showing only
+applicable actions. Outside the hierarchy management pages, multi-action rows
+use the shared `RowActionsMenu` with labelled menu items and the same icons.
+Separate Archive/Delete from the preceding actions; preserve Unarchive on
+archived rows. Use the shared grid action-cell styles so actions appear on row
+hover and keyboard focus. Disabled menu items show their reason in a multiline
+tooltip on whole-item hover and keyboard focus, using the global tooltip delay.
+A visually hidden description keeps the reason accessible while the tooltip is
+closed. Use `aria-disabled`, preserve arrow-key focus, and guard activation and
+menu closing; style disabled items with the shared CSS module. Disabled direct
 buttons retain an explanatory tooltip. Pending mutations prevent duplicate
 submission.
 
 ## Contextual Child Creation
 
-Active, real account/category groups expose child-creation items directly in
-their row-actions menu, without a nested Add Child menu. Financial groups offer
-**Add Account** and **Add Group**; category groups offer the current tab's **Add
-Income Category** or **Add Expense Category**, plus **Add Group**. Leaf
+Active, real financial account groups expose child-creation items in their
+row-actions menu, without a nested Add Child menu. Category groups expose direct
+child-creation icons on hover/focus in the hierarchy editor. Financial groups
+offer **Add Account** and **Add Group**; category groups offer the current tab's
+**Add Income Category** or **Add Expense Category**, plus **Add Group**. Leaf
 accounts/categories, archived groups, virtual Archived rows, and totals have no
 child-creation action. Asset classes can contain children at any level, so their
 Add Child action opens the class editor directly.
@@ -886,6 +886,12 @@ sign; debt amounts are positive magnitudes in those reports.
   **Archive/Unarchive**, and **Delete**, making its structural tools immediately
   accessible. It uses `rowActionsColumnProps` for keyboard access and grid event
   isolation, overriding width/minWidth/maxWidth to 120px.
+- Categories and Asset Classes are always hierarchy editors. Use direct
+  hover/focus icons, with no More menu. Order: Move To, Edit, applicable child
+  creation, Archive/Unarchive (categories only), Delete. Categories provide two
+  distinct child controls for a category and a group; asset classes provide Add
+  Child at every level. Keep controls pinned right with room for all icons and
+  accessible row-specific names, disabled reasons, and dialog focus restoration.
 - Spread `rowActionsColumnProps` into menu column definitions: blank header,
   fixed 56px width, no sorting/filtering/resizing/header menu, grid event
   isolation, keyboard access to renderer buttons, and
@@ -1483,66 +1489,76 @@ Columns use AG Grid's built-in filter UI (not URL search params):
 The AG Grid Quartz theme responds to this attribute to switch between light and
 dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 
-## Sibling Reorder Pattern
+## Hierarchy Organize Mode
 
-- Normal hierarchy grids do not use row dragging. Accounts, categories, and
-  asset classes share this pattern. The Account List's explicit Organize mode
-  additionally supports structural movement and ordering as described below.
-- Reorder action availability follows the generic `Action Availability Pattern`.
-- Availability is based on sibling count under the same parent.
-- Clicking the action opens `ReorderGroupChildrenModal`
-  (`src/components/account-tree/reorder-group-children-modal.tsx`) and shows all
-  siblings of the clicked row, including that row, independent of main-grid
-  expansion. Accounts and categories include both leaves and groups.
-- The modal uses a compact AG Grid with:
-  - no header (`headerHeight={0}`)
-  - one draggable name column
-  - `rowDragManaged` for in-modal reordering
-- This also supports root-level rows (no parent group), so root groups can be
-  reordered.
-- Save on each drop through the existing authorized, serialized mutation.
-  Validate a unique complete permutation of the current same-parent membership
-  before any writes. Reject stale, foreign, or missing IDs atomically.
-- Reordering changes order only; reparenting belongs in the edit dialog.
-- Reuse the shared hook's confirmed-order restoration and option refresh after
-  failure, busy retries, and uncertain-outcome feedback. Refresh the tree and
-  invalidate affected reporting caches after a successful save.
+Accounts, Categories, and Asset Classes share the organizer in
+`src/components/hierarchy-organize` and structural helpers in
+`src/shared/hierarchy-organize`. Domain planners supply account/category rules
+and asset-class validation; Cash Account propagation remains in the account
+planner.
 
-### Account List Organize Mode
+Categories and Asset Classes open directly into one drag-enabled hierarchy grid.
+They have no Organize button, Organizing badge, Done button, alternate grid, or
+mode-entry history state. Creation buttons stay available, including on empty
+pages. Direct row icons appear on whole-row hover and keyboard focus. The
+management presentation extends the organizer with editor/child callbacks and
+supplemental columns; Account List keeps its separate mode unchanged.
 
-**Organize** switches the Account List to a compact, separate `DataGrid` while
-keeping the normal financial grid mounted, preserving its columns, filters,
-scrolling, and expansion. Entry loads one fresh structural snapshot using the
-global progress bar while the financial grid remains visible. Activate only
-after success; on failure retain the financial grid with retry feedback. Hide
-the financial grid while organizing. **Done** returns to it. Categories and
-Asset Classes retain their existing management interactions and sibling dialog.
+Categories show the selected Income or Expenses hierarchy. Tabs preserve the
+URL-backed Show Archived setting and clear selection/dialogs when switching
+hierarchy. Show Archived sits beside the tabs, defaults off on fresh URLs, and
+filters real persisted rows without virtual Archived branches. Selection moves
+complete subtrees, including hidden archived descendants. Category leaf
+double-click opens its ledger. Existing lifecycle rules apply, including
+archiving nonzero-balance categories. Expansion survives visibility changes.
+
+Asset Classes retains direct assignment counts and explanatory copy. Every class
+can contain children. It has no Type/Status columns, archive actions, or Show
+Archived control. Delete retains replacement class/Unclassified selection and
+child restrictions. Structural moves preserve assignments.
+
+Management editors optionally share the organizer submission controller. While
+an editor or confirmation is open, block conflicting actions and dragging. While
+a mutation or recovery request is pending, queue navigation. After a confirmed
+create/edit, close the editor and refresh canonical hierarchy and editor
+metadata before more operations. Preserve expansion, prune selection, and reveal
+the affected row, including after read-only recovery. Never replay a confirmed
+create, edit, or deletion to recover from a failed refresh.
+
+### Shared Interaction
+
+On Account List, **Organize** switches the page to a compact, separate
+`DataGrid` while keeping the normal grid mounted, preserving its columns,
+filters, scrolling, and expansion. Entry loads one fresh structural snapshot
+using the global progress bar while the normal grid remains visible. Activate
+only after success; on failure retain the financial grid with retry feedback.
+Hide the financial grid while organizing. **Done** returns to it. On Accounts,
 Organize is available only under Account Structure grouping, not Asset Class
 grouping. Changing grouping while entry is loading cancels that entry attempt
 and releases its loading state. The Group By control is hidden while organizing;
 Done restores the financial grid.
 
-Organize is represented by `organize=true` in the Accounts URL. Entering pushes
-one browser-history entry before loading, so Back exits even during loading and
-Forward reopens a fresh session. Done returns to the verified normal Accounts
-origin or replaces a directly visited Organize URL. Loading retries and saved
-moves add no history entries. During movement, lifecycle mutations, and recovery
-requests, wait for the request to settle before continuing the first queued
-navigation attempt. There is no unsaved-changes confirmation for a settled
-organizer. Organize has no Undo or Redo; Back never reverses a change, and
-Forward never replays one. Exiting clears selection, visibility, expansion, and
-dialogs; reentry uses defaults. See [Routing](routing.md) for return-target
-rules.
+Account List Organize is represented by `organize=true` in the Accounts URL.
+Entering pushes one browser-history entry before loading, so Back exits even
+during loading and Forward reopens a fresh session. Done returns to the verified
+normal same-page origin or replaces a directly visited Organize URL. Loading
+retries and saved moves add no history entries. During movement, lifecycle
+mutations, and recovery requests, wait for the request to settle before
+continuing the first queued navigation attempt. There is no unsaved-changes
+confirmation for a settled organizer. Organize has no Undo or Redo; Back never
+reverses a change, and Forward never replays one. Exiting clears selection,
+visibility, expansion, and dialogs; reentry uses defaults. See
+[Routing](routing.md) for return-target rules.
 
-Keep **Accounts** as the heading with an **Organizing** badge and standard
-header spacing, without a mode-specific background. Use a large Organizing badge
-beside the heading. **Done** uses the same right-aligned header toolbar as
-normal management actions. Selection actions appear only after selection,
-replacing the instruction row without shifting the grid. Routine drag/save
-feedback shares that row, with no separate empty status line. Keep routine
-feedback on one line, retaining full text for assistive technology and hover, so
-long drag previews cannot shift the grid. Use the normal header and grid
-spacing; avoid standalone loading spinners. Use global progress for initial
+On Accounts, keep **Accounts** as the heading with an **Organizing** badge and
+standard header spacing, without a mode-specific background. Use a large
+Organizing badge beside the heading. **Done** uses the same right-aligned header
+toolbar as normal management actions. Selection actions appear only after
+selection, replacing the instruction row without shifting the grid. Routine
+drag/save feedback shares that row, with no separate empty status line. Keep
+routine feedback on one line, retaining full text for assistive technology and
+hover, so long drag previews cannot shift the grid. Use the normal header and
+grid spacing; avoid standalone loading spinners. Use global progress for initial
 hierarchy loading and recovery, and shared local feedback for mutations.
 Announce mode entry and movement results accessibly.
 
@@ -1596,14 +1612,15 @@ Organize displays saved manual order, without search or sorting in the grid.
 Null or tied sort orders use a fixed `en-US` fallback collation and ID
 tie-breaker in both browser planning and server persistence.
 
-Moves inherit existing parent Cash Account rules, including subtree propagation
-and non-currency restrictions. Moving to Top Level preserves flags; reordering
-does not change them. Both movement controls preview the destination and any
-Cash Account changes. Success reveals the moved items and announces the result.
+Account moves inherit existing parent Cash Account rules, including subtree
+propagation and non-currency restrictions. Moving to Top Level preserves flags;
+reordering does not change them. Both movement controls preview the destination
+and any Cash Account changes. Success reveals the moved items and announces the
+result.
 
 Each move autosaves through an authorized serialized book mutation. A coherent
-balance-hierarchy metadata snapshot supplies a version checked under the book
-lock before moving, preventing stale writes. Unrelated booking and balance
+scope-specific hierarchy metadata snapshot supplies a version checked under the
+book lock before moving, preventing stale writes. Unrelated booking and balance
 changes do not affect that version. There is no Undo, Redo, or stored undo
 history.
 
@@ -1754,13 +1771,11 @@ markers and balance previews. It retains draft edits and inclusion decisions,
 even when new matches are discovered, and revalidates against refreshed account
 choices and start dates. Review remains open until a successful import.
 
-Sibling reorder uses the same submission feedback, but restores the last
-confirmed order on rejection rather than retaining an unsaved arrangement. AG
-Grid remounts to undo its internally managed drag order, then an authorized
-refresh reloads saved siblings. A busy rollback retains the attempted order for
-explicit retry only while the sibling membership is unchanged; otherwise the
-user must drag the refreshed rows again. Dragging is disabled during saves and
-refreshes.
+Hierarchy Organize uses the same submission feedback. Failed moves restore the
+confirmed hierarchy and refresh canonical choices. Only confirmed busy rollbacks
+allow explicit retry while the hierarchy version and eligibility remain valid.
+Uncertain outcomes require refresh before another action. Movement is disabled
+during saves and recovery; committed lifecycle actions are never resubmitted.
 
 Direct unarchive on the accounts page and ledger uses `useUnarchiveMutation`.
 Page-level feedback names the affected account/group, refreshes eligibility, and
@@ -1846,15 +1861,16 @@ Settings → Asset Classes exposes the Asset Class tree through the shared
 `DataGrid` with native tree data. The tab and document title are Asset Classes;
 the page has no additional visible headings. Class identities and the generic
 classification model remain unchanged. Users can create roots and children,
-rename, change parents, and reorder siblings through the shared sibling dialog.
-The grid starts fully expanded and retains expansion state across data refreshes
-using stable class IDs. Siblings retain their configured order; sorting and
-filtering are disabled. The flexible name column and direct active/archived
-assignment counts are resizable, and row actions are pinned on the right using
-the shared row-hover styling. The grid handles scrolling and its empty state.
-The scheme is protected; all default nodes remain editable. Parent selectors
-exclude the edited class and descendants, with the same checks repeated on the
-server. Names follow existing sibling-name validation.
+rename, and change parents in the editor. The default hierarchy editor supports
+subtree moves and sibling ordering through dragging and Move To. The grid starts
+fully expanded and retains expansion state across data refreshes using stable
+class IDs. Siblings retain their configured order; sorting and filtering are
+disabled. The flexible name column and direct active/archived assignment counts
+are resizable, and row actions are pinned on the right using the shared
+row-hover styling. The grid handles scrolling and its empty state. The scheme is
+protected; all default nodes remain editable. Parent selectors exclude the
+edited class and descendants, with the same checks repeated on the server. Names
+follow existing sibling-name validation.
 
 Parents cannot be deleted until their children are moved or deleted. Leaf
 deletion shows direct active/archived assignment counts and requires choosing a

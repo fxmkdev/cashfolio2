@@ -109,7 +109,7 @@ beforeEach(() => {
   mocks.failId = "";
   mocks.bookings.mockResolvedValue([]);
   mocks.accountRead.mockImplementation(async (query) =>
-    typeof query.where.type === "object"
+    typeof query.where.type === "object" || query.where.id
       ? mocks.otherAccountNames
       : mocks.nodes
           .filter((n) => n.nodeType === "account")
@@ -119,7 +119,7 @@ beforeEach(() => {
           })),
   );
   mocks.groupRead.mockImplementation(async (query) =>
-    typeof query.where.type === "object"
+    typeof query.where.type === "object" || query.where.id
       ? []
       : mocks.nodes
           .filter((n) => n.nodeType === "accountGroup")
@@ -146,7 +146,9 @@ beforeEach(() => {
     Object.assign(node, {
       parentId: "groupId" in data ? data.groupId : data.parentGroupId,
       sortOrder: data.sortOrder,
-      isCashAccount: data.isCashAccount,
+      ...(data.isCashAccount === undefined
+        ? {}
+        : { isCashAccount: data.isCashAccount }),
     });
     return node;
   };
@@ -343,6 +345,114 @@ describe("organize server boundary", () => {
 });
 
 describe("organize input contracts", () => {
+  it.each(["income", "expense"] as const)(
+    "organizes the %s scope without accepting financial fields",
+    async (scope) => {
+      mocks.nodes = mocks.nodes.map((node) => ({
+        ...node,
+        isCashAccount: false,
+        unit: null,
+      }));
+      mocks.bookings.mockResolvedValue([
+        { accountId: "account", _count: 2, _sum: { value: 10 } },
+      ]);
+      const before = await getAccountOrganizeData({
+        data: { accountBookId, scope },
+      });
+      for (const read of [mocks.accountRead, mocks.groupRead]) {
+        expect(read).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              accountBookId,
+              type: "EQUITY",
+              equityAccountSubtype: scope.toUpperCase(),
+            },
+          }),
+        );
+      }
+      expect(before.actionAvailability.account).toMatchObject({
+        archivable: true,
+        deletable: false,
+      });
+      const result = await moveAccountTreeItems({
+        data: {
+          accountBookId,
+          scope,
+          version: before.version,
+          items: [initial[0]],
+          parentId: "cash",
+          placement: "last",
+        },
+      });
+      expect(result.changed).toBe(true);
+      expect(
+        result.snapshot.nodes.find((node) => node.id === "group")?.parentId,
+      ).toBe("cash");
+      for (const write of [mocks.accountWrite, mocks.groupWrite]) {
+        for (const [call] of write.mock.calls)
+          expect(call.data).not.toHaveProperty("isCashAccount");
+      }
+      expect(result.snapshot.nodes.every((node) => !node.isCashAccount)).toBe(
+        true,
+      );
+      for (const move of [
+        {
+          items: [{ id: "other-category-type", nodeType: "account" as const }],
+          parentId: "cash",
+        },
+        { items: [initial[2]], parentId: "system-equity-group" },
+      ]) {
+        await expect(
+          moveAccountTreeItems({
+            data: {
+              accountBookId,
+              scope,
+              version: result.snapshot.version,
+              placement: "last",
+              ...move,
+            },
+          }),
+        ).rejects.toThrow();
+      }
+    },
+  );
+  it("rejects unsupported hierarchy scopes", () => {
+    expect(() =>
+      validateOrganizeBook({ accountBookId, scope: "opening-balances" }),
+    ).toThrow();
+  });
+  it("checks category Top Level names against roots outside the selected subtype, including legacy system roots", async () => {
+    mocks.nodes = mocks.nodes.map((node) => ({
+      ...node,
+      isCashAccount: false,
+      unit: null,
+    }));
+    mocks.otherAccountNames = [{ name: "Account" }];
+    const before = await getAccountOrganizeData({
+      data: { accountBookId, scope: "income" },
+    });
+    await expect(
+      moveAccountTreeItems({
+        data: {
+          accountBookId,
+          scope: "income",
+          version: before.version,
+          items: [initial[2]],
+          parentId: null,
+          placement: "last",
+        },
+      }),
+    ).rejects.toThrow("already exists");
+    expect(mocks.accountRead).toHaveBeenCalledWith({
+      where: {
+        accountBookId,
+        groupId: null,
+        id: { notIn: ["account", "archived"] },
+      },
+      select: { name: true },
+    });
+    expect(mocks.accountWrite).not.toHaveBeenCalled();
+  });
   it("strips unrelated account and financial fields from moves", () => {
     expect(validateOrganizeBook({ accountBookId, ignored: true })).toEqual({
       accountBookId,

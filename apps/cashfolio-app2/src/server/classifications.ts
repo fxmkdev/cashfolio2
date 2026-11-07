@@ -8,14 +8,16 @@ import { validateClassificationChange } from "../shared/classification-rules";
 import {
   assertRecord,
   requireStringField,
-  requireArrayField,
   optionalField,
 } from "./input-validation";
 import { ensureAuthorizedAccountBookMutation } from "./mutation-guard.server";
 import { withAccountBookMutation } from "./account-book-mutation.server";
 import { withDatabaseConflictRetry } from "./database-conflict-retry";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "./period/cache/period-base-data-cache";
-import { writeAssetClass } from "./classification-data";
+import {
+  readManagedAssetClasses,
+  writeAssetClass,
+} from "./classification-data";
 
 function bookInput(value: unknown) {
   assertRecord(value);
@@ -49,21 +51,7 @@ export const getAssetClasses = createServerFn({ method: "GET" })
   .validator(bookInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const nodes = await prisma.classificationNode.findMany({
-      where: {
-        accountBookId: data.accountBookId,
-        schemeId: ASSET_CLASS_SCHEME_ID,
-      },
-      select: {
-        ...nodeSelection,
-        assignments: { select: { account: { select: { isActive: true } } } },
-      },
-    });
-    return nodes.map(({ assignments, ...node }) => ({
-      ...node,
-      activeCount: assignments.filter((a) => a.account.isActive).length,
-      archivedCount: assignments.filter((a) => !a.account.isActive).length,
-    }));
+    return readManagedAssetClasses(prisma, data.accountBookId);
   });
 async function mutate(
   accountBookId: string,
@@ -117,53 +105,6 @@ export const saveAssetClass = createServerFn({ method: "POST" })
             parentId: data.parentId,
             sortOrder,
           },
-        });
-    }),
-  );
-export const reorderAssetClasses = createServerFn({ method: "POST" })
-  .validator((value: unknown) => {
-    assertRecord(value);
-    const orderedIds = requireArrayField(value, "orderedIds").map((id) =>
-      requireStringField({ id }, "id"),
-    );
-    if (new Set(orderedIds).size !== orderedIds.length)
-      throw new Error("Each asset class must appear exactly once.");
-    return {
-      ...bookInput(value),
-      parentId: nullableId(value, "parentId"),
-      orderedIds,
-    };
-  })
-  .handler(async ({ data }) =>
-    mutate(data.accountBookId, async (tx) => {
-      const where = {
-        accountBookId: data.accountBookId,
-        schemeId: ASSET_CLASS_SCHEME_ID,
-      };
-      if (
-        data.parentId &&
-        !(await tx.classificationNode.findUnique({
-          where: { id_schemeId_accountBookId: { ...where, id: data.parentId } },
-        }))
-      )
-        throw new Error(
-          "The selected parent is no longer available. Refresh and try again.",
-        );
-      const siblings = await tx.classificationNode.findMany({
-        where: { ...where, parentId: data.parentId },
-      });
-      const ids = new Set(siblings.map((node) => node.id));
-      if (
-        data.orderedIds.length !== siblings.length ||
-        data.orderedIds.some((id) => !ids.has(id))
-      )
-        throw new Error(
-          "The siblings changed. Refresh and reorder the updated list.",
-        );
-      for (const [sortOrder, id] of data.orderedIds.entries())
-        await tx.classificationNode.update({
-          where: { id_schemeId_accountBookId: { ...where, id } },
-          data: { sortOrder },
         });
     }),
   );

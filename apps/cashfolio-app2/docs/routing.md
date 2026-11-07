@@ -194,10 +194,10 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   defaults to false and is preserved across Income/Expenses tabs. Legacy
   category `mode` parameters normalize to the new visibility state; a valid
   explicit boolean takes precedence. The document title remains Income & Expense
-  Categories. Reuses the account-management controller and grid with category
-  presentation. The General form is not mounted on this route. Category ledgers
-  retain their existing URLs and remain directly accessible from transactions
-  and reports.
+  Categories. Reuses account-management editor metadata and the shared hierarchy
+  grid. The General form is not mounted on this route. Category ledgers retain
+  their existing URLs and remain directly accessible from transactions and
+  reports.
 - `$accountBookId/report/route.tsx` - period layout route with shared period
   search validation and loader data used by nested report pages
 - `$accountBookId/report/index.tsx` - report overview page with contribution,
@@ -445,3 +445,21 @@ current path after reparenting; only paths with no surviving ancestor reset to
 the root. Invalid History scopes fall back to Total. Asset/liability allocation
 retains the Account Structure / Asset Class grouping lens; the latter uses the
 current class hierarchy and sibling order.
+
+### Hierarchy Editor Navigation
+
+Account List retains optional `organize=true`, its entry/exit history markers,
+and normal-grid state preservation. Settings Categories and Asset Classes are
+always hierarchy editors; old Settings URLs containing `organize` normalize with
+replacement navigation, preserving category tab and archived visibility. There
+is no mode entry, exit, or Done history state on the Settings pages.
+
+Categories scope snapshots and moves to the selected Income or Expenses tab.
+Show Archived is URL-backed, defaults false, and is preserved across tabs and
+reloads. It changes visibility without reloading the structural snapshot or
+replacing the grid. Tab changes clear selection/dialogs and load the new scoped
+hierarchy. Asset Classes has no archived visibility state.
+
+All hierarchy pages reuse the pending-navigation queue for movement, creation,
+editing, lifecycle actions, and recovery. Navigation continues after requests
+settle. Settled sessions add no unsaved-changes prompt.

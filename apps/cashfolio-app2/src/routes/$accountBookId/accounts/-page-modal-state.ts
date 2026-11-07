@@ -12,7 +12,10 @@ export type RowTarget = {
   name: string;
 };
 
-export function useAccountsPageModalState(scopeKey?: string) {
+export function useAccountsPageModalState(
+  scopeKey?: string,
+  resetEditorsOnScopeChange = false,
+) {
   const [createModalOpened, setCreateAccountOpened] = useState(false);
   const [createGroupModalOpened, setCreateGroupOpened] = useState(false);
   const [createAccountGroupId, setCreateAccountGroupId] = useState<string>();
@@ -47,9 +50,15 @@ export function useAccountsPageModalState(scopeKey?: string) {
   const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
   const [archivingRow, setArchivingRow] = useState<RowTarget | undefined>();
   const [deletingRow, setDeletingRow] = useState<RowTarget | undefined>();
-  const [reorderingRow, setReorderingRow] = useState<
-    { name: string; parentKey: string } | undefined
-  >();
+  useEffect(() => {
+    if (!resetEditorsOnScopeChange) return;
+    setEditModalOpen(false);
+    setEditGroupModalOpen(false);
+    setEditingAccount(undefined);
+    setEditingGroup(undefined);
+    setArchivingRow(undefined);
+    setDeletingRow(undefined);
+  }, [scopeKey, resetEditorsOnScopeChange]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.isVirtualArchivedGroup || data.presentationKind) return;
@@ -100,8 +109,6 @@ export function useAccountsPageModalState(scopeKey?: string) {
     setArchivingRow,
     deletingRow,
     setDeletingRow,
-    reorderingRow,
-    setReorderingRow,
     handleEditRow,
   };
 }

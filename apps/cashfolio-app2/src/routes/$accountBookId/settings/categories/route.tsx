@@ -23,21 +23,20 @@ const AccountsPageView = lazy(async () => {
 export const Route = createFileRoute("/$accountBookId/settings/categories")({
   validateSearch: parseCategoriesSearch,
   loaderDeps: ({ search }) => ({
-    showArchived: search.showArchived,
     tab: search.tab,
   }),
   beforeLoad: ({ location, params, search }) => {
-    if (new URLSearchParams(location.searchStr).has("mode")) {
+    if (
+      new URLSearchParams(location.searchStr).has("mode") ||
+      new URLSearchParams(location.searchStr).has("organize")
+    ) {
       throw redirect({ ...getCategoriesRedirect(search), params });
     }
   },
-  loader: async ({
-    params: { accountBookId },
-    deps: { showArchived, tab },
-  }) => {
+  loader: async ({ params: { accountBookId }, deps: { tab } }) => {
     const pageData = await loadAccountsPageData({
       accountBookId,
-      showArchived,
+      showArchived: true,
       tab,
     });
     return {

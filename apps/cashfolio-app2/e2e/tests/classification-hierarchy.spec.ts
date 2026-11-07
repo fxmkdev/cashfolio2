@@ -10,6 +10,7 @@ import {
   scrollGridToRight,
 } from "../support/grid";
 import { selectClassificationOption } from "../support/classifications";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 test("creates, assigns, reports, reparents and deletes an asset class", async ({
   page,
   e2eExternalId,
@@ -22,7 +23,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     accountBookId: book.accountBookId,
     counterAccountId: book.cashAccount.id,
   });
-  await page.goto(`/${book.accountBookId}/settings/classifications`);
+  await page.goto(
+    `/${book.accountBookId}/settings/classifications?organize=true`,
+  );
+  await expect(page).not.toHaveURL(/organize=/);
   await expect(
     page.getByRole("tab", { name: "Asset Classes", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
@@ -36,30 +40,23 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   await expect(
     page.getByRole("treegrid", { name: "Asset Classes", exact: true }),
   ).toBeVisible();
-  // Open root reordering from the first root; later roots may be virtualized.
-  await clickPinnedRowAction({
-    row: page.locator('[row-id="CASH_AND_CASH_EQUIVALENTS"]').first(),
-    actionLabel: "Reorder Siblings",
+  const organizer = page.getByRole("region", {
+    name: "Asset Classes Hierarchy",
   });
-  const reorder = page.getByRole("dialog", { name: "Reorder Siblings" });
-  // Hover waits for the opening transition before measuring drag coordinates.
-  await reorder.locator('[row-id="OTHER_ASSETS"] .ag-row-drag').hover();
-  const source = await reorder
-    .locator('[row-id="OTHER_ASSETS"] .ag-row-drag')
-    .boundingBox();
-  const target = await reorder
-    .locator('[row-id="CASH_AND_CASH_EQUIVALENTS"]')
-    .boundingBox();
-  if (!source || !target) throw new Error("Missing sibling drag rows");
-  await page.mouse.move(
-    source.x + source.width / 2,
-    source.y + source.height / 2,
+  // The fully expanded taxonomy virtualizes roots below the initial viewport.
+  await organizer.locator(".ag-grid-viewport").evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await organizer
+    .getByRole("button", { name: "Move Other Assets", exact: true })
+    .click();
+  const move = page.getByRole("dialog", { name: "Move To…" });
+  await selectSegmentedControlOption(
+    move.getByRole("radiogroup", { name: "Position", exact: true }),
+    "First",
   );
-  await page.mouse.down();
-  await page.mouse.move(source.x + source.width / 2, target.y + 3, {
-    steps: 16,
-  });
-  await page.mouse.up();
+  await move.getByRole("button", { name: "Move", exact: true }).click();
+  await expect(move).not.toBeVisible();
   await expect
     .poll(
       async () =>
@@ -75,7 +72,6 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
         )[0]?.id,
     )
     .toBe("OTHER_ASSETS");
-  await reorder.getByRole("button", { name: "Close", exact: true }).click();
   await page.reload();
   await expect(
     page.locator('.ag-grid-scrolling-container > .ag-row[row-index="0"]'),
@@ -125,14 +121,13 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await clickPinnedRowAction({
-    row: page.locator(`[row-id="${node.id}"]`).first(),
-    actionLabel: "Edit",
-  });
-  dialog = page.getByRole("dialog", { name: "Edit Asset Class", exact: true });
-  await dialog.getByLabel("Parent Class", { exact: true }).click();
+  await organizer
+    .getByRole("button", { name: "Move Pension Equities", exact: true })
+    .click();
+  dialog = page.getByRole("dialog", { name: "Move To…", exact: true });
+  await dialog.getByLabel("Destination", { exact: true }).click();
   await selectClassificationOption(page, "Fixed Income");
-  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await dialog.getByRole("button", { name: "Move", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.goto(
     `/${book.accountBookId}/history?metric=gainsLosses&gainLossScope=asset-class:${node.id}`,
@@ -141,10 +136,9 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
     "Pension Equities",
   );
   await page.goto(`/${book.accountBookId}/settings/classifications`);
-  await clickPinnedRowAction({
-    row: page.locator(`[row-id="${node.id}"]`).first(),
-    actionLabel: "Delete",
-  });
+  await organizer
+    .getByRole("button", { name: "Delete Pension Equities", exact: true })
+    .click();
   dialog = page.getByRole("dialog", {
     name: "Delete Asset Class",
     exact: true,
