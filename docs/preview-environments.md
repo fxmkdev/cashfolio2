@@ -10,8 +10,8 @@ On pull requests (non-forks), CI now:
 1. Builds and pushes the `cashfolio-app2` image
 2. Creates or reuses a Neon branch named
    `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from staging using
-   `neondatabase/create-branch-action` (new branches inherit the synthetic
-   dataset from enabled staging seeding)
+   `neondatabase/create-branch-action` (new branches inherit staging's current
+   data)
 3. Runs the shared Neon branch post-provision hook when the Neon branch was
    newly created
 4. Creates or reuses a Fly app named
@@ -45,11 +45,14 @@ reserved app-name terms before applying the same truncation rule. For example,
 `github` becomes `gh` so branch names such as `fix-github-actions` do not
 produce Fly app names that are rejected for phishing prevention.
 
-Staging replaces its synthetic application data on each enabled deployment and
-at the daily refresh. Preview releases only run migrations and never receive the
-staging seed connection secret. Existing previews retain their previously copied
-data rather than refreshing automatically. See
-[Synthetic staging data](staging-database-refresh.md) for setup and lifecycle.
+Staging and preview releases run migrations only. Seeding is manual-only: open
+**Seed Database** in GitHub Actions, choose **Run workflow**, and select `main`
+for staging or the open PR's branch for its existing preview. The job uses that
+app's deployed seed code and replaces its application data without recreating
+the Neon branch. Existing previews retain their data across subsequent
+deployments; new previews continue to inherit staging's current data. See
+[Synthetic staging and preview data](staging-database-refresh.md) for
+configuration, replacement behavior, and first-deployment requirements.
 
 Redis cache note:
 
@@ -106,6 +109,7 @@ deployment.
 - `LOGTO_APP_SECRET`
 - `LOGTO_MANAGEMENT_API_APP_SECRET`
 - `NEON_API_KEY`
+- `SEED_USER_EXTERNAL_IDS` (manual seeding only; existing repository secret)
 - `CURRENCYLAYER_API_KEY`
 - `COINLAYER_API_KEY`
 - `MARKETSTACK_API_KEY`

@@ -162,8 +162,6 @@ jobs:
         uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
-      - name: Verify staging release ordering and failure behavior
-        run: pnpm --filter cashfolio-app2 test:staging-release
       - name: Verify transactional seed against PostgreSQL
         run: pnpm --filter cashfolio-app2 test:staging-seed
       - name: Verify concurrent accounting mutations against PostgreSQL

@@ -415,7 +415,7 @@ describe("staging seed against disposable PostgreSQL", () => {
         },
         dataset,
       ),
-    ).rejects.toThrow("existing staging administrator");
+    ).rejects.toThrow("existing administrator");
     expect(await snapshot()).toEqual(initial);
   });
 

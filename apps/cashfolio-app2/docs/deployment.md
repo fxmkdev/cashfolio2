@@ -147,7 +147,7 @@ revisions are restored with the database backup.
 The accepted interruption does not change backup, verification, or rollback
 requirements. No additional deployment gate is required for this migration.
 
-## Staging release seed
+## Manual database seed
 
 The seed CLI lives inside `cashfolio-app2` because it is an app-specific
 deployment task that uses the app’s generated Prisma client and accounting
@@ -155,21 +155,18 @@ conventions. This avoids making `tools/cli` depend on application internals. If
 both projects later need it, extract an independent workspace package for shared
 use.
 
-Staging selects `scripts/release-staging.sh` as its Fly release command. With
-`STAGING_SEED_ENABLED=true`, it verifies the approved seed and migration targets
-read-only before applying migrations, then transactionally replaces staging
-application data. Seeding defaults to disabled until destination and credential
-isolation are verified. Production and preview use the original migration-only
-command and never receive the dedicated seed URL.
+All environments use the migration-only Fly release command. Dataset replacement
+runs only through the **Seed Database** workflow: select `main` for staging or
+an open same-repository PR's branch for its existing preview. There is no daily
+staging refresh.
 
-Operators manually provision `STAGING_SEED_DATABASE_URL`, `STAGING_SEED_TARGET`,
-and `STAGING_SEED_USER_EXTERNAL_IDS` as secrets on staging's Fly app, following
-the staging/production convention. CI does not set or copy these secrets. The
-`STAGING_SEED_ENABLED` GitHub environment variable remains the non-secret
-deployment flag and defaults to disabled. Missing seed configuration fails the
-enabled release's read-only preflight before migrations. Dynamic previews retain
-automatic provisioning of their ordinary app secrets and receive no seed
-configuration.
+The job shares the app deployment concurrency group, resolves the expected Neon
+branch using read-only API requests, warms the app, and runs its deployed seed
+bundle over Fly SSH. The `--manual` command reads expected project/branch IDs
+and configured tester IDs from JSON on stdin. It uses the app's existing
+`DATABASE_URL`, verifies the expected server identity, and replaces data in a
+transaction. Production and unknown app environments are rejected. No build,
+migration, deployment, or Neon resource creation occurs during the seed job.
 
 `pnpm build:staging-seed` uses an independent Vite SSR configuration with
 bundled dependencies to produce `dist/staging-seed/seed.mjs` and its dynamic
@@ -178,8 +175,11 @@ entire output directory into the release payload; the seed does not need a
 workspace install in the runtime image. Keep generated chunks beside the entry
 point.
 
-See [Synthetic staging data](../../../docs/staging-database-refresh.md) for the
-approved target, staging-only role, tester access, and enablement procedure.
+See
+[Synthetic staging and preview data](../../../docs/staging-database-refresh.md)
+for workflow configuration, tester access, replacement behavior, and rollout.
+Deploy the updated bundle before the first manual seed; older images reject the
+new command without modifying data.
 
 ## Provider usage cleanup
 
@@ -253,12 +253,12 @@ cutoff, batching, and failure semantics.
 
 ## Fly CLI version
 
-CI pins `flyctl` to `0.4.115` across build, deployment, database refresh, and
-preview cleanup workflows. Fly changed its public IP assignment API to reject
-`org_slug`; the old `0.4.25` CLI sent that field during first deployment. This
-left preview apps without public addresses even though `flyctl deploy` returned
-success, and HTTP warm-up failed with `Could not resolve host`. The upstream fix
-shipped in
+CI pins `flyctl` to `0.4.115` across build, deployment, manual database seeding,
+and preview cleanup workflows. Fly changed its public IP assignment API to
+reject `org_slug`; the old `0.4.25` CLI sent that field during first deployment.
+This left preview apps without public addresses even though `flyctl deploy`
+returned success, and HTTP warm-up failed with `Could not resolve host`. The
+upstream fix shipped in
 [flyctl 0.4.97](https://github.com/superfly/flyctl/releases/tag/v0.4.97).
 
 Rerunning a historical workflow attempt still uses its original CLI pin;

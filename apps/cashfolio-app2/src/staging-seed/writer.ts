@@ -242,9 +242,9 @@ async function replaceStagingDataOnce(
   return prisma.$transaction(
     async (tx) => {
       await verifyServerIdentity(tx, config.target);
-      // Serialize manual invocations as well as deployment releases.
+      // Serialize manual invocations of the replacement transaction.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(216177609, 1)::text`;
-      // Existing app machines remain live during a Fly release. Hold write locks
+      // Existing app machines remain live while seeding. Hold write locks
       // for every replacement table so app mutations cannot slip between deletes.
       // Reads can continue until the complete replacement commits.
       await tx.$executeRaw`
@@ -260,7 +260,7 @@ async function replaceStagingDataOnce(
       });
       if (!retainedAdmins) {
         throw new SeedSafetyError(
-          "Configured testers must include an existing staging administrator before replacement.",
+          "Configured testers must include an existing administrator before replacement.",
         );
       }
       await tx.booking.deleteMany();
