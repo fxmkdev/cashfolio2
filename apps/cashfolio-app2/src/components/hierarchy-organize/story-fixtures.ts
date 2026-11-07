@@ -95,6 +95,7 @@ export function createOrganizerStoryApi(
 ): OrganizerApi &
   Required<Pick<OrganizerApi, "archive" | "unarchive">> & {
     rename: (id: string, name: string) => void;
+    create: (node: OrganizeNode) => void;
   } {
   let nodes = structuredClone(initialNodes);
   let failed = false;
@@ -160,7 +161,28 @@ export function createOrganizerStoryApi(
               : node,
           );
   }
+  function mutateMany(
+    action: "archive" | "delete",
+    targets: Parameters<NonNullable<OrganizerApi["archiveMany"]>>[0],
+  ) {
+    const before = structuredClone(nodes);
+    const availability = snapshot().actionAvailability;
+    try {
+      for (const target of targets) {
+        const allowed = availability[target.id];
+        if (!(action === "archive" ? allowed?.archivable : allowed?.deletable))
+          throw new Error("Action unavailable");
+      }
+      for (const target of targets) mutate(action, target.id);
+    } catch (error) {
+      nodes = before;
+      throw error;
+    }
+  }
   return {
+    create: (node) => {
+      nodes = [...nodes, node];
+    },
     rename: (id, name) => {
       nodes = nodes.map((node) => (node.id === id ? { ...node, name } : node));
     },
@@ -203,5 +225,7 @@ export function createOrganizerStoryApi(
     delete: async (target) => {
       mutate("delete", target.id);
     },
+    archiveMany: async (targets) => mutateMany("archive", targets),
+    deleteMany: async (targets) => mutateMany("delete", targets),
   };
 }

@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import {
   getAccountOrganizeData,
+  archiveAccountTreeItems,
+  deleteAccountTreeItems,
   moveAccountTreeItems,
   archiveAccount,
   archiveAccountGroup,
@@ -13,6 +15,8 @@ import { createAccountOrganizerApi } from "./account-organizer-api";
 
 vi.mock("@/server/accounts", () => ({
   getAccountOrganizeData: vi.fn(),
+  archiveAccountTreeItems: vi.fn(),
+  deleteAccountTreeItems: vi.fn(),
   moveAccountTreeItems: vi.fn(),
   archiveAccount: vi.fn(),
   archiveAccountGroup: vi.fn(),
@@ -92,3 +96,27 @@ it.each(["account", "accountGroup"] as const)(
       });
   },
 );
+
+it("routes explicit bulk selections to atomic endpoints only for Accounts", async () => {
+  const api = createAccountOrganizerApi({
+    accountBookId: "book",
+    tab: "BALANCE",
+  });
+  const items = [
+    { id: "a", nodeType: "account" as const },
+    { id: "g", nodeType: "accountGroup" as const },
+  ];
+  await api.archiveMany!(items);
+  await api.deleteMany!(items);
+  for (const endpoint of [archiveAccountTreeItems, deleteAccountTreeItems])
+    expect(endpoint).toHaveBeenCalledExactlyOnceWith({
+      data: { accountBookId: "book", items },
+    });
+  const categories = createAccountOrganizerApi({
+    accountBookId: "book",
+    tab: "EQUITY-INCOME",
+    managementContext: "categories",
+  });
+  expect(categories.archiveMany).toBeUndefined();
+  expect(categories.deleteMany).toBeUndefined();
+});

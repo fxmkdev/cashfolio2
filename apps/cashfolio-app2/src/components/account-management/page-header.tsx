@@ -60,6 +60,7 @@ type ManagementActionProps = Pick<
   | "managementPending"
   | "onOpenCreateAccount"
   | "tab"
+  | "organizing"
 >;
 type CategoriesHeaderProps = Pick<
   HeaderLayoutProps,
@@ -121,6 +122,7 @@ function ManagementActions(props: ManagementActionProps) {
   return (
     <Group gap={isCategories ? "sm" : "md"}>
       {!isCategories &&
+        !props.organizing &&
         props.grouping === "accountStructure" &&
         props.onOrganize && (
           <Button
@@ -236,7 +238,16 @@ function AccountsHeader({
           />
         )
       }
-      actions={organizing ? organizerActions : managementActions}
+      actions={
+        organizing ? (
+          <Group gap="md">
+            {managementActions}
+            {organizerActions}
+          </Group>
+        ) : (
+          managementActions
+        )
+      }
     />
   );
 }

@@ -26,6 +26,8 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  movingRow?: RowTarget;
+  onCloseMove?: () => void;
   editorSubmitState?: ReturnType<typeof useDialogSubmitState>;
   onEditHierarchyNode?: (node: OrganizeNode) => void;
   onAddHierarchyChild?: (

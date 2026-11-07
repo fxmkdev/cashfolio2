@@ -22,19 +22,25 @@ import { MoveDialog } from "./move-dialog";
 import type { Organizer } from "./use-organizer";
 import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
-import type { HierarchyManagement } from "./management";
+import type { HierarchyManagement, HierarchyCreation } from "./management";
 import { useManagementFocus } from "./use-management-focus";
 import { useOrganizeSelection } from "./use-organize-selection";
+import {
+  OrganizerBulkLifecycleDialog,
+  type BulkLifecycleDialog,
+} from "./bulk-lifecycle-dialog";
 
 export function HierarchyOrganizer({
   accountBookId,
   organizer,
   renderLifecycleDialog,
   management,
+  creation,
 }: {
   accountBookId: string;
   organizer: Organizer;
   management?: HierarchyManagement;
+  creation?: HierarchyCreation;
   renderLifecycleDialog?: (
     dialog: LifecycleDialog | undefined,
     onClose: () => void,
@@ -51,11 +57,14 @@ export function HierarchyOrganizer({
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
   const [lifecycleDialog, setLifecycleDialog] = useState<LifecycleDialog>();
+  const [bulkDialog, setBulkDialog] = useState<BulkLifecycleDialog>();
   const movementBlocked =
     organizer.blocked ||
     !!dialogItems ||
     !!lifecycleDialog ||
-    !!management?.editorOpened;
+    !!bulkDialog ||
+    !!management?.editorOpened ||
+    !!creation?.editorOpened;
   useManagementFocus(region, !!management, movementBlocked);
   const nodes = useMemo(
     () => organizer.snapshot?.nodes ?? [],
@@ -78,7 +87,9 @@ export function HierarchyOrganizer({
     saveMove: organizer.saveMove,
     formatErrorMessage: organizer.formatErrorMessage,
   });
-  const onInteractionBlockedChange = management?.onInteractionBlockedChange;
+  const onInteractionBlockedChange =
+    management?.onInteractionBlockedChange ??
+    creation?.onInteractionBlockedChange;
   useEffect(() => {
     onInteractionBlockedChange?.(movementBlocked || drag.dragging);
   }, [onInteractionBlockedChange, movementBlocked, drag.dragging]);
@@ -109,9 +120,13 @@ export function HierarchyOrganizer({
     >
       <OrganizerToolbar
         selectedCount={selected.length}
+        selected={selected}
         roots={roots}
         onMove={() => setDialogItems(roots)}
         onClear={clearSelection}
+        onBulkLifecycle={(action) =>
+          setBulkDialog({ action, items: [...selected] })
+        }
         blocked={movementBlocked}
         dragging={drag.dragging}
         hint={drag.hint}
@@ -121,7 +136,7 @@ export function HierarchyOrganizer({
         supportsArchived={supportsArchived && !management}
         onVisibility={changeArchivedVisibility}
       />
-      {!dialogItems && !lifecycleDialog && (
+      {!dialogItems && !lifecycleDialog && !bulkDialog && (
         <OrganizerMutationFeedback organizer={organizer} />
       )}
       <VisuallyHidden role="status" aria-live="polite">
@@ -153,8 +168,9 @@ export function HierarchyOrganizer({
         api={api}
         organizer={organizer}
         management={management}
+        creation={creation}
         drag={drag}
-        blocked={management ? movementBlocked : organizer.blocked}
+        blocked={movementBlocked}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
         onMoveItems={setDialogItems}
@@ -174,6 +190,11 @@ export function HierarchyOrganizer({
         onClose={() => setDialogItems(undefined)}
         onMove={organizer.saveMove}
         formatErrorMessage={organizer.formatErrorMessage}
+      />
+      <OrganizerBulkLifecycleDialog
+        dialog={bulkDialog}
+        organizer={organizer}
+        onClose={() => setBulkDialog(undefined)}
       />
       {renderLifecycleDialog ? (
         renderLifecycleDialog(lifecycleDialog, () =>

@@ -10,13 +10,14 @@ import type {
 } from "@/shared/hierarchy-organize/types";
 import { OrganizerRowActions } from "./organizer-row-actions";
 import type { Organizer } from "./use-organizer";
-import type { HierarchyManagement } from "./management";
+import type { HierarchyManagement, HierarchyCreation } from "./management";
 import type { LifecycleDialog } from "./lifecycle-dialogs";
 
 type ColumnOptions = {
   organizer: Organizer;
   blocked: boolean;
   management?: HierarchyManagement;
+  creation?: HierarchyCreation;
   onMoveItems: (items: OrganizeNodeRef[]) => void;
   onLifecycle: (dialog: LifecycleDialog) => void;
 };
@@ -53,6 +54,7 @@ function OrganizerActionsCell({
   availability,
   blocked,
   management,
+  creation,
   onMoveItems,
   onLifecycle,
   onUnarchive,
@@ -72,18 +74,18 @@ function OrganizerActionsCell({
       availability={availability}
       blocked={blocked}
       onMove={() => onMoveItems([node])}
-      addChildLabel={management?.addChildLabel}
+      addChildLabel={creation ? "Add Account" : management?.addChildLabel}
       onEdit={management ? () => management.onEdit(node) : undefined}
       onAddChild={
-        management && canAddChild
-          ? () => management.onAddChild(node)
+        (management || creation) && canAddChild
+          ? () => (creation ?? management)?.onAddChild(node)
           : undefined
       }
       onAddGroup={
-        management?.onAddGroup &&
+        (creation?.onAddGroup || management?.onAddGroup) &&
         node.nodeType === "accountGroup" &&
         node.isActive
-          ? () => management.onAddGroup?.(node)
+          ? () => (creation ?? management)?.onAddGroup?.(node)
           : undefined
       }
       onArchive={() => onLifecycle({ action: "archive", node })}
@@ -97,6 +99,7 @@ export function useOrganizerColumns({
   organizer,
   blocked,
   management,
+  creation,
   onMoveItems,
   onLifecycle,
 }: ColumnOptions) {
@@ -111,11 +114,13 @@ export function useOrganizerColumns({
     onMoveItems,
     onLifecycle,
   };
-  const width = management
-    ? organizer.kind === "categories"
-      ? 200
-      : 144
-    : 120;
+  const width = creation
+    ? 176
+    : management
+      ? organizer.kind === "categories"
+        ? 200
+        : 144
+      : 120;
   return useMemo<ColDef<OrganizeDisplayRow>[]>(
     () => [
       ...(management?.columns ?? []),
@@ -135,6 +140,7 @@ export function useOrganizerColumns({
               availability={organizer.snapshot?.actionAvailability[data.id]}
               blocked={blocked}
               management={management}
+              creation={creation}
               onMoveItems={(items) => current.current.onMoveItems(items)}
               onLifecycle={(dialog) => current.current.onLifecycle(dialog)}
               onUnarchive={() =>
@@ -151,6 +157,7 @@ export function useOrganizerColumns({
       organizer.kind,
       organizer.snapshot?.actionAvailability,
       management,
+      creation,
       width,
     ],
   );

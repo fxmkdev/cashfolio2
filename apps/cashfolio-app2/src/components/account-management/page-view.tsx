@@ -14,6 +14,9 @@ import {
 } from "./page-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import { CategoriesPageView } from "./categories-page";
+import { useState } from "react";
+import { AccountOrganizeDialogs } from "./organize-dialogs";
+import { AccountRowMoveDialog } from "./row-move-dialog";
 export type { AccountsPageViewProps } from "./page-view-types";
 
 export function AccountsPageView(props: AccountsPageViewProps) {
@@ -137,24 +140,45 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     api: props.organizerApi,
     onSaved: props.onOrganizeSaved ?? (() => {}),
     onActivate: () => bulkAccountActions?.clearSelection(),
+    refreshMetadata: props.onRefreshConstraints,
   });
   const { organizer, navigation, isOrganizing } = session;
+  const [interactionBlocked, setInteractionBlocked] = useState(false);
+  const editorOpened = props.createModalOpened || props.createGroupModalOpened;
 
   return (
     <PageShell>
       <AccountsPageHeader
         {...props}
         organizing={isOrganizing}
-        onOrganize={canOrganize ? navigation.enter : undefined}
+        managementPending={
+          isOrganizing
+            ? organizer.blocked || interactionBlocked || editorOpened
+            : !!props.movingRow
+        }
+        onOrganize={
+          canOrganize && !props.movingRow ? navigation.enter : undefined
+        }
         organizePending={organizer.loading}
         organizerActions={
-          <OrganizerActions organizer={organizer} onDone={navigation.exit} />
+          <OrganizerActions
+            organizer={organizer}
+            blocked={editorOpened || interactionBlocked}
+            onDone={navigation.exit}
+          />
         }
       />
       {isOrganizing && (
         <HierarchyOrganizer
           accountBookId={props.accountBookId}
           organizer={organizer}
+          creation={{
+            editorOpened,
+            onAddChild: (node) => props.onAddHierarchyChild?.(node, "account"),
+            onAddGroup: (node) =>
+              props.onAddHierarchyChild?.(node, "accountGroup"),
+            onInteractionBlockedChange: setInteractionBlocked,
+          }}
         />
       )}
       <AccountsNormalContent
@@ -162,7 +186,12 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         session={session}
         canOrganize={canOrganize}
       />
-      <AccountsPageDialogs {...props} />
+      {isOrganizing ? (
+        <AccountOrganizeDialogs props={props} organizer={organizer} />
+      ) : (
+        <AccountsPageDialogs {...props} />
+      )}
+      <AccountRowMoveDialog props={props} />
     </PageShell>
   );
 }

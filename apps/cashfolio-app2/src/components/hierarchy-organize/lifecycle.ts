@@ -35,6 +35,30 @@ export function organizeLifecycleAvailability(
   };
 }
 
+export function bulkLifecycleAvailability(
+  snapshot: OrganizeSnapshot | undefined,
+  targets: OrganizeNodeRef[],
+  action: "archive" | "delete",
+) {
+  if (!targets.length)
+    return { enabled: false, reason: "Select at least one account or group." };
+  for (const target of targets) {
+    const availability = organizeLifecycleAvailability(
+      snapshot,
+      target,
+      action,
+    );
+    if (!availability.enabled) {
+      const node = snapshot?.nodes.find((node) => node.id === target.id);
+      return {
+        enabled: false,
+        reason: `${node?.name ?? "Selected item"}: ${availability.reason}`,
+      };
+    }
+  }
+  return { enabled: true, reason: undefined };
+}
+
 /** Reflect a confirmed commit while its canonical version/eligibility reloads. */
 export function committedLifecycleView(
   before: OrganizeSnapshot,

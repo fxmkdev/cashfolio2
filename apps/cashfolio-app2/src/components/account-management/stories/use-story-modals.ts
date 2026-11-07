@@ -26,15 +26,20 @@ export function useStoryModals({
   return state;
 }
 
-export function getStoryModalProps(state: ReturnType<typeof useStoryModals>) {
+export function getStoryModalProps(
+  state: ReturnType<typeof useStoryModals>,
+  options: AccountsStoryOptions,
+) {
   return getAccountsModalViewProps(state, {
-    handleCreateAccount: async () => {
+    handleCreateAccount: async (values) => {
+      await options.submitCreateAccount?.(values);
       state.setCreateModalOpened(false);
     },
     handleUpdateAccount: async () => {
       state.setEditModalOpen(false);
     },
-    handleCreateGroup: async () => {
+    handleCreateGroup: async (values) => {
+      await options.submitCreateGroup?.(values);
       state.setCreateGroupModalOpened(false);
     },
     handleUpdateGroup: async () => {

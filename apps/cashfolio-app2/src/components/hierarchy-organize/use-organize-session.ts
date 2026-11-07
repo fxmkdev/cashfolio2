@@ -14,6 +14,7 @@ export function useOrganizeSession<Row>({
   api,
   onSaved,
   onActivate,
+  refreshMetadata,
 }: {
   accountBookId: string;
   requested: boolean;
@@ -22,9 +23,10 @@ export function useOrganizeSession<Row>({
   api?: OrganizerApi;
   onSaved: () => void;
   onActivate?: () => void;
+  refreshMetadata?: () => Promise<void>;
 }) {
   const [active, setActive] = useState(false);
-  const organizer = useOrganizer(onSaved, api, false);
+  const organizer = useOrganizer(onSaved, api, false, refreshMetadata);
   useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
   const navigation = useOrganizeNavigation(
     accountBookId,

@@ -16,6 +16,7 @@ type AccountActionsParams = Pick<
   AccountTreeColumnParams,
   | "isEquityTab"
   | "categoryType"
+  | "onMoveRow"
   | "onEditRow"
   | "onAddChild"
   | "onUnarchiveRow"
@@ -46,6 +47,7 @@ function commonActionProps({ data, params }: PersistedActionProps) {
     deletable: data.deletable,
     deleteLabel: constraintLabel(data.deleteDisabledReason, params, "Delete"),
     onEdit: () => params.onEditRow(data),
+    onMove: params.onMoveRow ? () => params.onMoveRow?.(data) : undefined,
     onDelete: () => params.onDeleteRow(toRowTarget(data)),
   };
 }

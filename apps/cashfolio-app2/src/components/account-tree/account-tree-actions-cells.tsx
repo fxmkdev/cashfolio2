@@ -1,6 +1,7 @@
 import { RowActionsMenu } from "@/components/grid/row-actions-menu";
 import {
   IconArchive,
+  IconArrowsMove,
   IconArchiveOff,
   IconPencil,
   IconPlus,
@@ -12,6 +13,7 @@ export function ArchivedAccountTreeActionsCell({
   deleteLabel,
   deletable,
   unarchiveLabel,
+  onMove,
   onEdit,
   onDelete,
   unarchivable,
@@ -22,6 +24,7 @@ export function ArchivedAccountTreeActionsCell({
   deleteLabel: string;
   deletable: boolean;
   unarchiveLabel: string;
+  onMove?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   unarchivable: boolean;
@@ -32,6 +35,17 @@ export function ArchivedAccountTreeActionsCell({
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
+        ...(onMove
+          ? [
+              {
+                id: "move",
+                label: "Move To…",
+                icon: <IconArrowsMove size={16} />,
+                onClick: onMove,
+                color: "blue",
+              },
+            ]
+          : []),
         {
           id: "edit",
           label: "Edit",
@@ -71,6 +85,7 @@ export function ActiveAccountTreeActionsCell({
   deleteLabel,
   archivable,
   deletable,
+  onMove,
   onEdit,
   onArchive,
   onDelete,
@@ -83,6 +98,7 @@ export function ActiveAccountTreeActionsCell({
   deleteLabel: string;
   archivable: boolean;
   deletable: boolean;
+  onMove?: () => void;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -91,6 +107,17 @@ export function ActiveAccountTreeActionsCell({
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
+        ...(onMove
+          ? [
+              {
+                id: "move",
+                label: "Move To…",
+                icon: <IconArrowsMove size={16} />,
+                onClick: onMove,
+                color: "blue",
+              },
+            ]
+          : []),
         {
           id: "edit",
           label: "Edit",

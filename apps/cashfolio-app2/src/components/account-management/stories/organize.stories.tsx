@@ -36,8 +36,8 @@ export const OrganizeEntryAndExit: Story = {
       canvas.queryByRole("toolbar", { name: "Organize Account Actions" }),
     ).not.toBeInTheDocument();
     await expect(
-      canvas.queryByRole("button", { name: "Add Account" }),
-    ).not.toBeInTheDocument();
+      canvas.getByRole("button", { name: "Add Account" }),
+    ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Set Asset Class" }),
     ).not.toBeInTheDocument();

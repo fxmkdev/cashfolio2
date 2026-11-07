@@ -538,3 +538,128 @@ describe("management editor submissions", () => {
     expect(render(api, saved, true, metadata).blocked).toBe(false);
   });
 });
+
+describe("Account List bulk lifecycle", () => {
+  const targets = [
+    { id: "checking", nodeType: "account" as const },
+    { id: "empty", nodeType: "accountGroup" as const },
+  ];
+  it.each(["archive", "delete"] as const)(
+    "commits a mixed %s selection once and refreshes canonically",
+    async (action) => {
+      const api = createOrganizerStoryApi();
+      const operation = vi.spyOn(
+        api,
+        action === "archive" ? "archiveMany" : "deleteMany",
+      );
+      const organizer = await ready(api);
+      const close = vi.fn();
+      await organizer.submitState.runSubmit(() =>
+        organizer.performBulkLifecycle(action, targets, close),
+      );
+      expect(operation).toHaveBeenCalledExactlyOnceWith(targets);
+      expect(close).toHaveBeenCalledOnce();
+      expect(saved).toHaveBeenCalledOnce();
+      expect(render(api).snapshot).toEqual(await api.load());
+      expect(render(api).revealIds).toEqual(["checking", "empty"]);
+    },
+  );
+  it("does not normalize selected children out of lifecycle validation", async () => {
+    const api = createOrganizerStoryApi();
+    const operation = vi.spyOn(api, "archiveMany");
+    const organizer = await ready(api);
+    await expect(
+      organizer.performBulkLifecycle("archive", [
+        { id: "investments", nodeType: "accountGroup" },
+        { id: "nested", nodeType: "accountGroup" },
+      ]),
+    ).rejects.toThrow("Investments");
+    expect(operation).not.toHaveBeenCalled();
+  });
+  it("blocks duplicate submissions and retries only a confirmed busy rollback", async () => {
+    const api = createOrganizerStoryApi("busy");
+    const operation = vi.spyOn(api, "archiveMany");
+    const organizer = await ready(api);
+    const pending = organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("archive", targets),
+    );
+    expect(
+      await organizer.submitState.runSubmit(() =>
+        organizer.performBulkLifecycle("archive", targets),
+      ),
+    ).toBe(false);
+    await pending;
+    expect(render(api).retryDisabled).toBe(false);
+    render(api).retry();
+    for (let i = 0; i < 24; i++) await Promise.resolve();
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "checking")
+        ?.isActive,
+    ).toBe(false);
+  });
+  it("disables a busy retry when booking eligibility changes without changing the version", async () => {
+    const api = createOrganizerStoryApi("busy");
+    const organizer = await ready(api);
+    const before = organizer.snapshot!;
+    const operation = vi.spyOn(api, "deleteMany");
+    vi.spyOn(api, "load").mockResolvedValue({
+      ...before,
+      actionAvailability: {
+        ...before.actionAvailability,
+        checking: {
+          ...before.actionAvailability.checking,
+          deletable: false,
+          deleteDisabledReason: "Has bookings",
+        },
+      },
+    });
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("delete", targets),
+    );
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    expect(operation).toHaveBeenCalledOnce();
+  });
+  it("recovers a committed batch by reading without submitting it again", async () => {
+    const api = createOrganizerStoryApi();
+    const organizer = await ready(api);
+    const operation = vi.spyOn(api, "archiveMany");
+    const close = vi.fn();
+    const load = vi.spyOn(api, "load").mockRejectedValue(new Error("Offline"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("archive", targets, close),
+    );
+    expect(close).toHaveBeenCalledOnce();
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    load.mockRestore();
+    await render(api).submitState.refreshConstraints();
+    expect(operation).toHaveBeenCalledOnce();
+    expect(render(api).blocked).toBe(false);
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "empty")?.isActive,
+    ).toBe(false);
+  });
+  it("requires refresh after an uncertain network outcome", async () => {
+    const api = createOrganizerStoryApi("network");
+    const organizer = await ready(api);
+    const operation = vi.spyOn(api, "deleteMany");
+    const load = vi
+      .spyOn(api, "load")
+      .mockRejectedValueOnce(new Error("Offline"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("delete", targets),
+    );
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).submitState.submissionError?.isUncertainOutcome).toBe(
+      true,
+    );
+    render(api).retry();
+    expect(operation).toHaveBeenCalledOnce();
+    await render(api).submitState.refreshConstraints();
+    expect(render(api).blocked).toBe(false);
+    load.mockRestore();
+  });
+});

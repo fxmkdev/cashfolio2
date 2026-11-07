@@ -35,3 +35,7 @@ export {
   updateAccount,
   updateAccountGroup,
 } from "./accounts/accounts-mutations";
+export {
+  archiveAccountTreeItems,
+  deleteAccountTreeItems,
+} from "./accounts/bulk-lifecycle";
