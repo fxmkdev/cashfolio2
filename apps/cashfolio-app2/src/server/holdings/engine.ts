@@ -14,6 +14,7 @@ import type {
   HoldingGainLossResult,
   HoldingGainLossWorkingState,
   HoldingLot,
+  HoldingRateConvertibleAccount,
   InitializeHoldingGainLossArgs,
 } from "./types";
 
@@ -25,54 +26,9 @@ export async function initializeHoldingGainLossState(
   let skippedCount = 0;
 
   const initialStates = await Promise.all(
-    args.holdingAccounts.map(async (account) => {
-      const lots: HoldingLot[] = [];
-      let skipped = false;
-      let skippedIncrement = 0;
-      const initialBalance =
-        args.initialBalanceByAccountId.get(account.id) ?? toMoney(0);
-
-      if (!isNearZero(initialBalance)) {
-        const initialRate = await args.resolveRate({
-          unit: account.unit,
-          currency: account.currency,
-          cryptocurrency: account.cryptocurrency,
-          symbol: account.symbol,
-          tradeCurrency: account.tradeCurrency,
-          date: args.initialRateDate,
-        });
-
-        if (initialRate == null) {
-          skippedIncrement = 1;
-          skipped = true;
-          args.onSkippedItem?.({
-            accountId: account.id,
-            reason: "missingInitialRate",
-            date: args.initialRateDate,
-          });
-        } else {
-          lots.push({
-            quantity: initialBalance,
-            unitCostInReference: initialRate,
-            acquisitionSortKey: toLotAcquisitionSortKey({
-              date: args.initialRateDate,
-              bookingId: `opening:${account.id}`,
-            }),
-          });
-        }
-      }
-
-      return {
-        accountId: account.id,
-        state: {
-          account,
-          lots,
-          executionEvents: [],
-          skipped,
-        } satisfies HoldingAccountState,
-        skippedIncrement,
-      };
-    }),
+    args.holdingAccounts.map((account) =>
+      initializeHoldingAccount(args, account),
+    ),
   );
 
   for (const initialState of initialStates) {
@@ -215,3 +171,55 @@ export async function computeHoldingGainLossSplit(
 
 export { hasOpenHoldingLots } from "./account-finalization";
 export { applyPendingHoldingExecutions } from "./executions";
+
+async function initializeHoldingAccount(
+  args: InitializeHoldingGainLossArgs,
+  account: HoldingRateConvertibleAccount,
+) {
+  const lots: HoldingLot[] = [];
+  let skipped = false;
+  let skippedIncrement = 0;
+  const initialBalance =
+    args.initialBalanceByAccountId.get(account.id) ?? toMoney(0);
+
+  if (!isNearZero(initialBalance)) {
+    const initialRate = await args.resolveRate({
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+      symbol: account.symbol,
+      tradeCurrency: account.tradeCurrency,
+      date: args.initialRateDate,
+    });
+
+    if (initialRate == null) {
+      skippedIncrement = 1;
+      skipped = true;
+      args.onSkippedItem?.({
+        accountId: account.id,
+        reason: "missingInitialRate",
+        date: args.initialRateDate,
+      });
+    } else {
+      lots.push({
+        quantity: initialBalance,
+        unitCostInReference: initialRate,
+        acquisitionSortKey: toLotAcquisitionSortKey({
+          date: args.initialRateDate,
+          bookingId: `opening:${account.id}`,
+        }),
+      });
+    }
+  }
+
+  return {
+    accountId: account.id,
+    state: {
+      account,
+      lots,
+      executionEvents: [],
+      skipped,
+    } satisfies HoldingAccountState,
+    skippedIncrement,
+  };
+}

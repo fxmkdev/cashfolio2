@@ -14,8 +14,7 @@ import type {
   HoldingTransactionSkippedItem,
 } from "./types";
 
-/** Price one non-transfer transaction and append its holding execution events. */
-export async function applyHoldingTransactionExecutionPricing(args: {
+type ExecutionPricingArgs = {
   state: HoldingGainLossWorkingState;
   inPeriodHoldingBookings: HoldingTransactionBooking[];
   allNonExplicitBookings: HoldingTransactionBooking[];
@@ -23,7 +22,12 @@ export async function applyHoldingTransactionExecutionPricing(args: {
   nonExplicitUnitIdentifiers: Set<string | null>;
   convertBookingToReference: HoldingBookingConverter;
   onSkippedItem?: (item: HoldingTransactionSkippedItem) => void;
-}) {
+};
+
+/** Price one non-transfer transaction and append its holding execution events. */
+export async function applyHoldingTransactionExecutionPricing(
+  args: ExecutionPricingArgs,
+) {
   const inPeriodHoldingBookingIds = new Set(
     args.inPeriodHoldingBookings.map((booking) => booking.id),
   );
@@ -35,6 +39,28 @@ export async function applyHoldingTransactionExecutionPricing(args: {
     ...counterpartBookings,
   ];
 
+  const convertedByBookingId = await convertExecutionBookings(
+    args,
+    bookingsToConvert,
+  );
+  if (
+    args.inPeriodHoldingBookings.some(
+      (booking) => convertedByBookingId.get(booking.id) == null,
+    )
+  )
+    return;
+  const pricing = prepareExecutionPricing(
+    args,
+    counterpartBookings,
+    convertedByBookingId,
+  );
+  appendPricedExecutions(args, pricing);
+}
+
+async function convertExecutionBookings(
+  args: ExecutionPricingArgs,
+  bookingsToConvert: HoldingTransactionBooking[],
+) {
   const convertedByBookingId = new Map<string, Money | null>();
   const convertedValues = await Promise.all(
     bookingsToConvert.map((booking) =>
@@ -72,14 +98,14 @@ export async function applyHoldingTransactionExecutionPricing(args: {
     }
   }
 
-  if (
-    args.inPeriodHoldingBookings.some(
-      (booking) => convertedByBookingId.get(booking.id) == null,
-    )
-  ) {
-    return;
-  }
+  return convertedByBookingId;
+}
 
+function shouldUseMarketFallbackPricing(
+  args: ExecutionPricingArgs,
+  counterpartBookings: HoldingTransactionBooking[],
+  convertedByBookingId: Map<string, Money | null>,
+) {
   const counterpartHasMissingConversions = counterpartBookings.some(
     (booking) => convertedByBookingId.get(booking.id) == null,
   );
@@ -99,6 +125,19 @@ export async function applyHoldingTransactionExecutionPricing(args: {
     counterpartHasMissingConversions ||
     (counterpartBookings.length === 0 && !shouldAllocateAllHoldingResidual);
 
+  return shouldUseMarketFallback;
+}
+
+function prepareExecutionPricing(
+  args: ExecutionPricingArgs,
+  counterpartBookings: HoldingTransactionBooking[],
+  convertedByBookingId: Map<string, Money | null>,
+) {
+  const shouldUseMarketFallback = shouldUseMarketFallbackPricing(
+    args,
+    counterpartBookings,
+    convertedByBookingId,
+  );
   const holdingMarketValueByBookingId = new Map<string, Money>(
     args.inPeriodHoldingBookings.map((booking) => [
       booking.id,
@@ -131,6 +170,24 @@ export async function applyHoldingTransactionExecutionPricing(args: {
     ? toMoney(0)
     : moneySubtract(counterpartTotalInReference, holdingMarketTotalInReference);
 
+  return {
+    shouldUseMarketFallback,
+    holdingMarketValueByBookingId,
+    residualAllocationWeights,
+    residualInReference,
+  };
+}
+
+function appendPricedExecutions(
+  args: ExecutionPricingArgs,
+  pricing: ReturnType<typeof prepareExecutionPricing>,
+) {
+  const {
+    shouldUseMarketFallback,
+    holdingMarketValueByBookingId,
+    residualAllocationWeights,
+    residualInReference,
+  } = pricing;
   for (let index = 0; index < args.inPeriodHoldingBookings.length; index += 1) {
     const booking = args.inPeriodHoldingBookings[index]!;
     const marketReferenceAmount =

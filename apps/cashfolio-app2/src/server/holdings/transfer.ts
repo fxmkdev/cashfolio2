@@ -76,10 +76,14 @@ function drainTransferLots(args: {
   return drainedLots;
 }
 
-export function resolveHoldingTransferDirection(args: {
+type HoldingTransferDirectionArgs = {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
-}): HoldingTransferDirection | null {
+};
+
+export function resolveHoldingTransferDirection(
+  args: HoldingTransferDirectionArgs,
+): HoldingTransferDirection | null {
   const outgoingByAccountId = new Map<string, Money>();
   const incomingByAccountId = new Map<string, Money>();
   let netQuantity: Money = toMoney(0);
@@ -106,59 +110,15 @@ export function resolveHoldingTransferDirection(args: {
     return null;
   }
 
-  let canTransferLong = true;
-  for (const [accountId, netDelta] of outgoingByAccountId) {
-    if (toMoney(netDelta).comparedTo(-QUANTITY_EPSILON) >= 0) {
-      continue;
-    }
-
-    const state = args.stateByHoldingAccountId.get(accountId);
-    if (!state) {
-      canTransferLong = false;
-      break;
-    }
-
-    if (
-      moneyAdd(
-        getPositiveOpenQuantity(state.lots),
-        QUANTITY_EPSILON,
-      ).comparedTo(toMoney(netDelta).neg()) < 0
-    ) {
-      canTransferLong = false;
-      break;
-    }
-  }
-
-  let canTransferShort = true;
-  for (const [accountId, netDelta] of incomingByAccountId) {
-    if (toMoney(netDelta).comparedTo(QUANTITY_EPSILON) <= 0) {
-      continue;
-    }
-
-    const state = args.stateByHoldingAccountId.get(accountId);
-    if (!state) {
-      canTransferShort = false;
-      break;
-    }
-
-    if (
-      moneyAdd(
-        getOpenQuantityByLotSign({
-          lots: state.lots,
-          lotSign: -1,
-        }),
-        QUANTITY_EPSILON,
-      ).comparedTo(netDelta) < 0
-    ) {
-      canTransferShort = false;
-      break;
-    }
-  }
-
-  if (canTransferLong === canTransferShort) {
-    return null;
-  }
-
+  const canTransferLong = canTransferLongLots(
+    args.stateByHoldingAccountId,
+    outgoingByAccountId,
+  );
+  const canTransferShort = canTransferShortLots(
+    args.stateByHoldingAccountId,
+    incomingByAccountId,
+  );
+  if (canTransferLong === canTransferShort) return null;
   return canTransferLong ? "LONG" : "SHORT";
 }
 
@@ -219,4 +179,67 @@ export function applyHoldingTransfer(args: {
       captureLotMatches: args.captureLotMatches,
     });
   }
+}
+
+function canTransferLongLots(
+  stateByHoldingAccountId: Map<string, HoldingAccountState>,
+  outgoingByAccountId: Map<string, Money>,
+): boolean {
+  let canTransferLong = true;
+  for (const [accountId, netDelta] of outgoingByAccountId) {
+    if (toMoney(netDelta).comparedTo(-QUANTITY_EPSILON) >= 0) {
+      continue;
+    }
+
+    const state = stateByHoldingAccountId.get(accountId);
+    if (!state) {
+      canTransferLong = false;
+      break;
+    }
+
+    if (
+      moneyAdd(
+        getPositiveOpenQuantity(state.lots),
+        QUANTITY_EPSILON,
+      ).comparedTo(toMoney(netDelta).neg()) < 0
+    ) {
+      canTransferLong = false;
+      break;
+    }
+  }
+
+  return canTransferLong;
+}
+
+function canTransferShortLots(
+  stateByHoldingAccountId: Map<string, HoldingAccountState>,
+  incomingByAccountId: Map<string, Money>,
+): boolean {
+  let canTransferShort = true;
+  for (const [accountId, netDelta] of incomingByAccountId) {
+    if (toMoney(netDelta).comparedTo(QUANTITY_EPSILON) <= 0) {
+      continue;
+    }
+
+    const state = stateByHoldingAccountId.get(accountId);
+    if (!state) {
+      canTransferShort = false;
+      break;
+    }
+
+    if (
+      moneyAdd(
+        getOpenQuantityByLotSign({
+          lots: state.lots,
+          lotSign: -1,
+        }),
+        QUANTITY_EPSILON,
+      ).comparedTo(netDelta) < 0
+    ) {
+      canTransferShort = false;
+      break;
+    }
+  }
+
+  return canTransferShort;
 }

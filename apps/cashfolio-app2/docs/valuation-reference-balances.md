@@ -320,6 +320,11 @@ Group and footer amounts sum account leaves using Decimal arithmetic before
 conversion to display numbers. Zero-balance and archived accounts retain
 realised gains.
 
+Private calculation stages separate pricing, replay, diagnostic propagation,
+closing-rate preparation, and detail collection. Their extraction retains the
+same conversion scheduling, basis publication timing, private-copy revaluation,
+and rounded versus exact explain output.
+
 The Accounts list caches one book-wide summary dataset in Redis before filtering
 by account type. Warm hits skip transaction loading, valuation lookups, and FIFO
 replay. Ledger summaries and calculation drawers continue calculating

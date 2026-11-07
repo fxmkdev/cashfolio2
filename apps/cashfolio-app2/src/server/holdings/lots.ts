@@ -33,31 +33,12 @@ export function applyExecutionToLots(args: {
       moneyAbs(remainingQuantity),
       moneyAbs(lot.quantity),
     );
-    let lotRealizedGainLossDelta: Money = toMoney(0);
-
-    if (
-      toMoney(lot.quantity).comparedTo(0) > 0 &&
-      toMoney(remainingQuantity).comparedTo(0) < 0
-    ) {
-      lotRealizedGainLossDelta = moneyMultiply(
-        closeQuantity,
-        moneySubtract(
-          args.executionUnitPriceInReference,
-          lotUnitCostInReference,
-        ),
-      );
-    } else if (
-      toMoney(lot.quantity).comparedTo(0) < 0 &&
-      toMoney(remainingQuantity).comparedTo(0) > 0
-    ) {
-      lotRealizedGainLossDelta = moneyMultiply(
-        closeQuantity,
-        moneySubtract(
-          lotUnitCostInReference,
-          args.executionUnitPriceInReference,
-        ),
-      );
-    }
+    const lotRealizedGainLossDelta = calculateLotMatchGain(
+      lot,
+      remainingQuantity,
+      closeQuantity,
+      args.executionUnitPriceInReference,
+    );
     realizedGainLoss = moneyAdd(realizedGainLoss, lotRealizedGainLossDelta);
     args.onLotMatched?.({
       acquisitionSortKey: lotAcquisitionSortKey,
@@ -91,4 +72,33 @@ export function applyExecutionToLots(args: {
   }
 
   return realizedGainLoss;
+}
+
+function calculateLotMatchGain(
+  lot: HoldingLot,
+  remainingQuantity: Money,
+  closeQuantity: Money,
+  executionUnitPriceInReference: Money,
+): Money {
+  const lotUnitCostInReference = lot.unitCostInReference;
+  let lotRealizedGainLossDelta: Money = toMoney(0);
+
+  if (
+    toMoney(lot.quantity).comparedTo(0) > 0 &&
+    toMoney(remainingQuantity).comparedTo(0) < 0
+  ) {
+    lotRealizedGainLossDelta = moneyMultiply(
+      closeQuantity,
+      moneySubtract(executionUnitPriceInReference, lotUnitCostInReference),
+    );
+  } else if (
+    toMoney(lot.quantity).comparedTo(0) < 0 &&
+    toMoney(remainingQuantity).comparedTo(0) > 0
+  ) {
+    lotRealizedGainLossDelta = moneyMultiply(
+      closeQuantity,
+      moneySubtract(lotUnitCostInReference, executionUnitPriceInReference),
+    );
+  }
+  return lotRealizedGainLossDelta;
 }

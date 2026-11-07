@@ -348,6 +348,16 @@ money/date/contracts, Prisma enums, and server resource-budget checks, never on
 Period or Accounts. Caller-supplied converters/resolvers retain valuation
 scheduling and memoization.
 
+Calculation entrypoints sequence private stages rather than combining their
+mechanics. Execution pricing separates ordered conversion and counters, pricing
+strategy, residual allocation, and event construction. Account finalization
+separates replayed-event emission from closing valuation. Replay scheduling,
+quantity simulation, and rescheduling have separate owners; transaction matching
+separates graph construction, augmenting paths, and match assembly. Transfer
+receipts separately select carried lots, close opposite positions, insert the
+remaining basis, and assemble explain events. Mixed-period transfers prepare
+conversions once before applying their dated carry legs.
+
 `period/holdings/period-holding-gain-loss.ts` remains the period adapter. It
 prepares opening balances and virtual transfer-clearing accounts, batches
 synthetic transactions, accumulates report contributions, and combines holding
@@ -355,6 +365,17 @@ results with period execution-residual realization. Residual attribution,
 loaders, and report assembly stay in Period. Account gain/loss owns its
 basis/summary caches, availability propagation, diagnostic presentation, and
 private-copy revaluation.
+
+Within Accounts, `gain-loss/basis-diagnostics.ts` owns affected-account indexing
+and propagation of unavailable basis. `valuation-state.ts` owns private copies,
+closing-rate warmup, and availability assembly; `valuation-details.ts` collects
+unrounded detail callbacks. The calculation entrypoint retains basis publication
+and phase sequencing. Period holding orchestration similarly delegates opening
+balances, synthetic batches, and contribution callbacks. Execution residuals
+separate selection, conversion, and attribution; transfer-clearing calculation
+separates opening basis, execution pricing, and closing valuation. Global
+transfer-clearing totals are updated in execution order, not recomputed from
+per-unit totals, because regrouping Decimal additions can change cancellation.
 
 Accounts and transactions retain their existing processing order, Decimal
 precision, quantity threshold, pricing fallbacks, counters, and explain callback
@@ -364,6 +385,16 @@ and running totals. Period-specific summaries, diagnostics, and virtual-account
 IDs stay in reconciliation. Public server facades retain their exports; internal
 consumers import their actual owner directly. Working-state cache shapes,
 codecs, keys, and publication boundaries remain unchanged.
+
+Holding and consumer tests are grouped by behavior, with colocated typed
+`*.test-support.ts` fixtures. Fixtures create mutable state per case. Mocked
+prefetch, Decimal-pipeline, and reconciliation suites use feature-local
+harnesses that register hoisted mocks before dynamically importing the tested
+modules; they export local module bindings rather than direct re-exports that
+could load dependencies before mock registration. Each suite explicitly installs
+its reset, fake-timer, and cleanup hooks. Parameterized cases, concurrency
+gates, snapshot no-reread assertions, and full test names remain intact when
+suites are split.
 
 ## Concurrent Account-Book Mutations
 

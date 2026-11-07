@@ -19,15 +19,17 @@ import type {
   HoldingRateResolver,
 } from "./types";
 
+type HoldingAccountExecutionArgs = {
+  state: HoldingAccountState;
+  event: HoldingExecutionEvent;
+} & Pick<
+  HoldingGainLossFinalizationCallbacks,
+  "onAccountExecutionEvent" | "onSkippedItem"
+>;
+
 /** Apply one priced execution to FIFO lots without requesting a closing valuation. */
 export function applyHoldingAccountExecution(
-  args: {
-    state: HoldingAccountState;
-    event: HoldingExecutionEvent;
-  } & Pick<
-    HoldingGainLossFinalizationCallbacks,
-    "onAccountExecutionEvent" | "onSkippedItem"
-  >,
+  args: HoldingAccountExecutionArgs,
 ): number {
   const { event } = args;
   if (isNearZero(event.quantity)) {
@@ -76,24 +78,12 @@ export function applyHoldingAccountExecution(
     args.state.realizedGainLoss ?? toMoney(0),
     realizedGainLossDelta,
   );
-  args.onAccountExecutionEvent?.({
-    ...(event.portion ? { portion: event.portion } : {}),
-    accountId: args.state.account.id,
-    bookingId: event.bookingId,
-    bookingDescription: event.bookingDescription,
-    transactionDescription: event.transactionDescription,
-    transactionId: event.transactionId ?? null,
-    date: event.date,
-    quantity: event.quantity,
-    pricingSource: event.pricingSource,
-    marketReferenceAmount: event.marketReferenceAmount,
-    residualAllocationAmount: event.residualAllocationAmount,
-    effectiveReferenceAmount: event.effectiveReferenceAmount,
+  emitHoldingExecution(
+    args,
     executionUnitPriceInReference,
     realizedGainLossDelta,
-    runningRealizedGainLoss: args.state.realizedGainLoss,
-    lotMatches: lotMatches ?? [],
-  });
+    lotMatches,
+  );
   return 0;
 }
 
@@ -105,17 +95,28 @@ export function hasOpenHoldingLots(state: HoldingAccountState): boolean {
   return openQuantity.comparedTo(QUANTITY_EPSILON) > 0;
 }
 
+type HoldingAccountFinalizationArgs = {
+  state: HoldingAccountState;
+  periodEnd: Date;
+  resolveRate: HoldingRateResolver;
+} & Omit<HoldingGainLossFinalizationCallbacks, "onAccountGainLoss">;
+
 /** Apply ordered executions to one account's FIFO lots, then value open lots. */
 export async function finalizeHoldingAccountGainLoss(
-  args: {
-    state: HoldingAccountState;
-    periodEnd: Date;
-    resolveRate: HoldingRateResolver;
-  } & Omit<HoldingGainLossFinalizationCallbacks, "onAccountGainLoss">,
+  args: HoldingAccountFinalizationArgs,
 ) {
-  let skippedCount = 0;
-  let accountUnrealizedGainLoss: Money = toMoney(0);
+  let skippedCount = emitHoldingAccountExecutions(args);
+  const valuation = await valueHoldingOpenLots(args);
+  skippedCount += valuation.skippedCount;
+  return {
+    realizedGainLoss: args.state.realizedGainLoss ?? toMoney(0),
+    unrealizedGainLoss: valuation.unrealizedGainLoss,
+    skippedCount,
+  };
+}
 
+function emitHoldingAccountExecutions(args: HoldingAccountFinalizationArgs) {
+  let skippedCount = 0;
   args.state.executionEvents.sort((left, right) => {
     const dateDiff = left.date.getTime() - right.date.getTime();
     if (dateDiff !== 0) {
@@ -149,6 +150,12 @@ export async function finalizeHoldingAccountGainLoss(
   }
   args.state.processedExecutionEvents = [];
 
+  return skippedCount;
+}
+
+async function valueHoldingOpenLots(args: HoldingAccountFinalizationArgs) {
+  let skippedCount = 0;
+  let accountUnrealizedGainLoss: Money = toMoney(0);
   if (hasOpenHoldingLots(args.state)) {
     const periodEndRate = await args.resolveRate({
       unit: args.state.account.unit,
@@ -193,9 +200,32 @@ export async function finalizeHoldingAccountGainLoss(
     }
   }
 
-  return {
-    realizedGainLoss: args.state.realizedGainLoss ?? toMoney(0),
-    unrealizedGainLoss: accountUnrealizedGainLoss,
-    skippedCount,
-  };
+  return { unrealizedGainLoss: accountUnrealizedGainLoss, skippedCount };
+}
+
+function emitHoldingExecution(
+  args: HoldingAccountExecutionArgs,
+  executionUnitPriceInReference: Money,
+  realizedGainLossDelta: Money,
+  lotMatches: HoldingExecutionLotMatch[] | undefined,
+) {
+  const { event } = args;
+  args.onAccountExecutionEvent?.({
+    ...(event.portion ? { portion: event.portion } : {}),
+    accountId: args.state.account.id,
+    bookingId: event.bookingId,
+    bookingDescription: event.bookingDescription,
+    transactionDescription: event.transactionDescription,
+    transactionId: event.transactionId ?? null,
+    date: event.date,
+    quantity: event.quantity,
+    pricingSource: event.pricingSource,
+    marketReferenceAmount: event.marketReferenceAmount,
+    residualAllocationAmount: event.residualAllocationAmount,
+    effectiveReferenceAmount: event.effectiveReferenceAmount,
+    executionUnitPriceInReference,
+    realizedGainLossDelta,
+    runningRealizedGainLoss: args.state.realizedGainLoss!,
+    lotMatches: lotMatches ?? [],
+  });
 }

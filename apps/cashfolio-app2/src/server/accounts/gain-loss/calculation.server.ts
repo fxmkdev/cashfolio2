@@ -1,39 +1,31 @@
-import {
-  EMPTY_GAIN_LOSS_SUMMARY,
-  type AccountGainLossDiagnostic,
-  type AccountGainLossResult,
-} from "../../../shared/account-gain-loss";
-import type {
-  GainLossReconciliationOpenLot,
-  GainLossReconciliationRealizedEvent,
-} from "../../../shared/gain-loss-reconciliation";
-import { moneyAdd, toMoney, type Money } from "../../../shared/money";
+import { type AccountGainLossDiagnostic } from "../../../shared/account-gain-loss";
 import {
   applyHoldingTransactionsToGainLossState,
   applyPendingHoldingExecutions,
   finalizeHoldingGainLossState,
-  hasOpenHoldingLots,
   initializeHoldingGainLossState,
 } from "../../holdings/engine";
-import {
-  addRunningUnrealizedGainLoss,
-  parseAcquisitionSortKey,
-  toRoundedOpenLot,
-  toRoundedRealizedEvent,
-} from "../../holdings/explain";
-import {
-  decomposeHoldingTransaction,
-  toHoldingUnitIdentifier,
-} from "../../holdings/transactions";
+import { addRunningUnrealizedGainLoss } from "../../holdings/explain";
 import type {
   ComputeHoldingGainLossArgs as CalculationArgs,
   HoldingAccountState,
-  HoldingRateConvertibleAccount,
-  HoldingSkippedItem,
-  HoldingTransaction,
 } from "../../holdings/types";
-import { checkResourceBudget } from "../../resource-context.server";
+import {
+  createAccountBasisResults,
+  createBasisSkippedCallback,
+  getTransferPeers,
+  indexAffectedHoldingAccounts,
+  markUnavailableHoldings,
+  propagateTransferBasisFailures,
+} from "./basis-diagnostics";
 import { prefetchAccountGainLossConversions } from "./prefetch.server";
+import { createAccountValuationCallbacks } from "./valuation-details";
+import {
+  applyAccountValuationAvailability,
+  cloneAccountGainLossHoldings,
+  createAccountValuationResults,
+  prepareAccountClosingRates,
+} from "./valuation-state";
 
 export type AccountGainLossBasis = {
   holdings: {
@@ -50,71 +42,22 @@ type AccountCalculationArgs = CalculationArgs & {
 
 /** Price and replay all executions and transfers, without looking up closing prices. */
 export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
-  const results = new Map<string, AccountGainLossResult<Money>>(
-    args.holdingAccounts.map((account) => [
-      account.id,
-      {
-        applicable: true,
-        summary: {
-          realizedGainLoss: toMoney(0),
-          unrealizedGainLoss: toMoney(0),
-          totalGainLoss: toMoney(0),
-        },
-        diagnostics: [],
-      },
-    ]),
-  );
+  const results = createAccountBasisResults(args.holdingAccounts);
   const basisFailures = new Set<string>();
-  for (const accountId of args.unavailableHoldings ?? []) {
-    const result = results.get(accountId);
-    if (!result) continue;
-    basisFailures.add(accountId);
-    result.diagnostics.push({
-      date: args.periodEnd.toISOString(),
-      message:
-        "A holding transaction is partially posted at this date; its complete execution basis is unavailable.",
-    });
-  }
+  markUnavailableHoldings(args, results, basisFailures);
   const transferPeers = getTransferPeers(
     args.holdingAccounts,
     args.transactions,
   );
-  const accountsByBookingId = new Map<string, string[]>();
-  for (const transaction of args.transactions) {
-    checkResourceBudget();
-    const { transfers, residualBookings } = decomposeHoldingTransaction(
-      transaction.bookings,
-      new Set(results.keys()),
-    );
-    for (const bookings of [...transfers, residualBookings]) {
-      const affected = bookings
-        .filter((booking) => results.has(booking.accountId))
-        .map((booking) => booking.accountId);
-      for (const booking of bookings) {
-        accountsByBookingId.set(booking.id, [
-          ...new Set([
-            ...(accountsByBookingId.get(booking.id) ?? []),
-            ...affected,
-          ]),
-        ]);
-      }
-    }
-  }
-  const onSkippedItem = (item: HoldingSkippedItem) => {
-    const affected = item.bookingId
-      ? (accountsByBookingId.get(item.bookingId) ?? [item.accountId])
-      : [item.accountId];
-    for (const accountId of affected) {
-      const result = results.get(accountId);
-      if (!result) continue;
-      basisFailures.add(accountId);
-      result.diagnostics.push({
-        date: item.date.toISOString(),
-        message:
-          "Opening basis or execution valuation is unavailable. Accumulated G/L cannot be calculated completely.",
-      });
-    }
-  };
+  const accountsByBookingId = indexAffectedHoldingAccounts(
+    args.transactions,
+    results,
+  );
+  const onSkippedItem = createBasisSkippedCallback(
+    results,
+    basisFailures,
+    accountsByBookingId,
+  );
   const state = await initializeHoldingGainLossState({
     ...args,
     onSkippedItem,
@@ -135,19 +78,12 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
     captureLotMatches: !!args.detailAccountId,
     onSkippedItem,
   });
-  // A missing basis can affect later sales in any account receiving these lots.
-  const pending = [...basisFailures];
-  for (let index = 0; index < pending.length; index += 1) {
-    for (const peer of transferPeers.get(pending[index]!) ?? []) {
-      if (basisFailures.has(peer)) continue;
-      basisFailures.add(peer);
-      pending.push(peer);
-      results.get(peer)!.diagnostics.push({
-        date: args.periodEnd.toISOString(),
-        message: "A transferred holding has an incomplete cost basis.",
-      });
-    }
-  }
+  propagateTransferBasisFailures(
+    results,
+    basisFailures,
+    transferPeers,
+    args.periodEnd,
+  );
   return {
     holdings: [...state.stateByHoldingAccountId].map(([id, accountState]) => ({
       state: accountState,
@@ -157,61 +93,30 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
   } satisfies AccountGainLossBasis;
 }
 
-/** Revalue a private copy; replay state and cached snapshots are never mutated. */
-export async function valueAccountGainLossBasis(args: {
+type AccountBasisValuationArgs = {
   basis: AccountGainLossBasis;
   periodEnd: Date;
   resolveRate: CalculationArgs["resolveRate"];
   detailAccountId?: string;
-}) {
-  const holdings = args.basis.holdings.map((holding) => ({
-    ...holding,
-    state: {
-      ...holding.state,
-      lots: holding.state.lots.map((lot) => ({ ...lot })),
-      executionEvents: [],
-      processedExecutionEvents: [
-        ...(holding.state.processedExecutionEvents ?? []),
-      ],
-    },
-  }));
-  const results = new Map<string, AccountGainLossResult<Money>>(
-    holdings.map(({ state, diagnostics }) => [
-      state.account.id,
-      {
-        applicable: true,
-        summary: {
-          realizedGainLoss: toMoney(0),
-          unrealizedGainLoss: toMoney(0),
-          totalGainLoss: toMoney(0),
-        },
-        diagnostics: [...diagnostics],
-      },
-    ]),
-  );
+};
+
+/** Revalue a private copy; replay state and cached snapshots are never mutated. */
+export async function valueAccountGainLossBasis(
+  args: AccountBasisValuationArgs,
+) {
+  const holdings = cloneAccountGainLossHoldings(args.basis);
+  const results = createAccountValuationResults(holdings);
   const closingFailures = new Set<string>();
-  const realizedEvents: GainLossReconciliationRealizedEvent<Money>[] = [];
-  const unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[] = [];
-  const unvaluedOpenLots: GainLossReconciliationOpenLot<Money, null>[] = [];
+  const detail = createAccountValuationCallbacks(
+    results,
+    closingFailures,
+    args.detailAccountId,
+  );
   // The basis has already been published; only closing dependencies are warmed here.
-  const closingRateByUnit = new Map<
-    string | null,
-    ReturnType<CalculationArgs["resolveRate"]>
-  >();
-  const resolveRate: CalculationArgs["resolveRate"] = (input) => {
-    const key = toHoldingUnitIdentifier(input);
-    const existing = closingRateByUnit.get(key);
-    if (existing) return existing;
-    const promise = args.resolveRate(input);
-    closingRateByUnit.set(key, promise);
-    return promise;
-  };
-  await Promise.all(
-    holdings
-      .filter(({ state }) => !state.skipped && hasOpenHoldingLots(state))
-      .map(({ state }) =>
-        resolveRate({ ...state.account, date: args.periodEnd }),
-      ),
+  const resolveRate = await prepareAccountClosingRates(
+    holdings,
+    args.periodEnd,
+    args.resolveRate,
   );
   await finalizeHoldingGainLossState({
     state: {
@@ -223,59 +128,10 @@ export async function valueAccountGainLossBasis(args: {
     },
     periodEnd: args.periodEnd,
     resolveRate,
-    onAccountGainLoss: (item) => {
-      results.get(item.accountId)!.summary = {
-        realizedGainLoss: item.realizedGainLoss,
-        unrealizedGainLoss: item.unrealizedGainLoss,
-        totalGainLoss: moneyAdd(item.realizedGainLoss, item.unrealizedGainLoss),
-      };
-    },
-    onAccountExecutionEvent: args.detailAccountId
-      ? (event) => {
-          if (event.accountId === args.detailAccountId)
-            realizedEvents.push(toRoundedRealizedEvent(event, false));
-        }
-      : undefined,
-    onAccountUnvaluedOpenLot: args.detailAccountId
-      ? (lot) => {
-          if (lot.accountId === args.detailAccountId)
-            unvaluedOpenLots.push({
-              id: `lot:${lot.acquisitionSortKey}`,
-              ...parseAcquisitionSortKey(lot.acquisitionSortKey),
-              acquisitionSortKey: lot.acquisitionSortKey,
-              quantity: lot.quantity,
-              unitCostInReference: lot.unitCostInReference,
-              periodEndRate: null,
-              unrealizedGainLoss: null,
-              runningUnrealizedGainLoss: null,
-            });
-        }
-      : undefined,
-    onAccountOpenLotValuation: args.detailAccountId
-      ? (lot) => {
-          if (lot.accountId === args.detailAccountId)
-            unrealizedOpenLots.push(toRoundedOpenLot(lot, false));
-        }
-      : undefined,
-    onSkippedItem: (item) => {
-      closingFailures.add(item.accountId);
-      results.get(item.accountId)!.diagnostics.push({
-        date: item.date.toISOString(),
-        message:
-          "Closing valuation is unavailable. Realised G/L remains available.",
-      });
-    },
+    ...detail.callbacks,
   });
-  for (const { state, unavailable } of holdings) {
-    const result = results.get(state.account.id)!;
-    if (unavailable) result.summary = { ...EMPTY_GAIN_LOSS_SUMMARY };
-    else if (closingFailures.has(state.account.id))
-      result.summary = {
-        ...result.summary,
-        unrealizedGainLoss: null,
-        totalGainLoss: null,
-      };
-  }
+  applyAccountValuationAvailability(holdings, results, closingFailures);
+  const { realizedEvents, unrealizedOpenLots, unvaluedOpenLots } = detail;
   return {
     results,
     realizedEvents,
@@ -297,28 +153,4 @@ export async function calculateAccountGainLoss(
   const basis = await replayAccountGainLossBasis(args);
   await args.onBasis?.(basis);
   return valueAccountGainLossBasis({ ...args, basis });
-}
-
-function getTransferPeers(
-  accounts: HoldingRateConvertibleAccount[],
-  transactions: HoldingTransaction[],
-) {
-  const byId = new Map(accounts.map((account) => [account.id, account]));
-  const peers = new Map<string, Set<string>>();
-  for (const transaction of transactions) {
-    const { transfers } = decomposeHoldingTransaction(
-      transaction.bookings,
-      new Set(byId.keys()),
-    );
-    for (const bookings of transfers) {
-      for (const booking of bookings) {
-        const connected = peers.getOrInsertComputed(
-          booking.accountId,
-          () => new Set<string>(),
-        );
-        for (const other of bookings) connected.add(other.accountId);
-      }
-    }
-  }
-  return peers;
 }

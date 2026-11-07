@@ -10,6 +10,11 @@ import {
   toRoundedOpenLot,
   toRoundedRealizedEvent,
 } from "../../holdings/explain";
+import type {
+  HoldingExecutionExplainInput,
+  HoldingOpenLotExplainInput,
+  HoldingSkippedItem,
+} from "../../holdings/types";
 import { toNumericMoney } from "../../money-boundary";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import {
@@ -42,13 +47,16 @@ function findTargetVirtualUnitBucket(args: {
   return null;
 }
 
-export async function buildTransferClearingReconciliation(args: {
+type TransferClearingReconciliationArgs = {
   baseData: PeriodBaseData;
   accountId: string;
   exchangeRateByKey?: Map<string, Promise<Money | null>>;
-}): Promise<GainLossReconciliationDetails | null> {
-  const { selection, referenceCurrency, transferClearingUnitBuckets } =
-    args.baseData;
+};
+
+export async function buildTransferClearingReconciliation(
+  args: TransferClearingReconciliationArgs,
+): Promise<GainLossReconciliationDetails | null> {
+  const { selection, transferClearingUnitBuckets } = args.baseData;
   const targetBucket = findTargetVirtualUnitBucket({
     accountId: args.accountId,
     unitBuckets: transferClearingUnitBuckets,
@@ -63,17 +71,10 @@ export async function buildTransferClearingReconciliation(args: {
 
   if (selection.isBeforeAccountBookStart) {
     return toNumericMoney({
-      target: {
-        accountId: args.accountId,
-        accountName: targetBucket.unitLabel,
-        isVirtual: true,
-        unit: targetBucket.unit,
-        unitLabel: formatUnitLabel(targetBucket),
-        currency: normalizeUppercaseCode(targetBucket.currency),
-        cryptocurrency: normalizeUppercaseCode(targetBucket.cryptocurrency),
-        symbol: normalizeUppercaseCode(targetBucket.symbol),
-        tradeCurrency: normalizeUppercaseCode(targetBucket.tradeCurrency),
-      },
+      target: toTransferClearingReconciliationTarget(
+        args.accountId,
+        targetBucket,
+      ),
       summary: toEmptySummary(),
       skippedCount: 0,
       realizedEvents,
@@ -82,6 +83,80 @@ export async function buildTransferClearingReconciliation(args: {
     });
   }
 
+  const split = await calculateTransferClearingReconciliation(
+    args,
+    targetBucket,
+    diagnostics,
+    realizedEvents,
+    unrealizedOpenLots,
+  );
+
+  return toNumericMoney({
+    target: toTransferClearingReconciliationTarget(
+      args.accountId,
+      targetBucket,
+    ),
+    summary: toSummary({
+      realizedGainLoss: split.realizedGainLoss,
+      unrealizedGainLoss: split.unrealizedGainLoss,
+    }),
+    skippedCount: split.skippedCount,
+    realizedEvents,
+    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
+    diagnostics,
+  });
+}
+
+function toTransferClearingReconciliationTarget(
+  accountId: string,
+  targetBucket: TransferClearingUnitBucket,
+) {
+  return {
+    accountId: accountId,
+    accountName: targetBucket.unitLabel,
+    isVirtual: true,
+    unit: targetBucket.unit,
+    unitLabel: formatUnitLabel(targetBucket),
+    currency: normalizeUppercaseCode(targetBucket.currency),
+    cryptocurrency: normalizeUppercaseCode(targetBucket.cryptocurrency),
+    symbol: normalizeUppercaseCode(targetBucket.symbol),
+    tradeCurrency: normalizeUppercaseCode(targetBucket.tradeCurrency),
+  };
+}
+
+function createTransferClearingExplainCallbacks(
+  diagnostics: GainLossReconciliationDiagnostic[],
+  realizedEvents: GainLossReconciliationRealizedEvent<Money>[],
+  unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[],
+) {
+  return {
+    onUnitExecutionEvent: (event: HoldingExecutionExplainInput) => {
+      realizedEvents.push(toRoundedRealizedEvent(event));
+    },
+    onUnitOpenLotValuation: (lot: HoldingOpenLotExplainInput) => {
+      unrealizedOpenLots.push(toRoundedOpenLot(lot));
+    },
+    onSkippedItem: (item: Omit<HoldingSkippedItem, "accountId">) => {
+      pushDiagnostic(diagnostics, {
+        reason: item.reason,
+        date: item.date,
+        bookingId: item.bookingId,
+        bookingDescription: item.bookingDescription,
+        transactionId: item.transactionId,
+        transactionDescription: item.transactionDescription,
+      });
+    },
+  };
+}
+
+async function calculateTransferClearingReconciliation(
+  args: TransferClearingReconciliationArgs,
+  targetBucket: TransferClearingUnitBucket,
+  diagnostics: GainLossReconciliationDiagnostic[],
+  realizedEvents: GainLossReconciliationRealizedEvent<Money>[],
+  unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[],
+) {
+  const { selection, referenceCurrency } = args.baseData;
   const exchangeRateByKey =
     args.exchangeRateByKey ?? new Map<string, Promise<Money | null>>();
   const split = await computeTransferClearingGainLossSplit({
@@ -102,43 +177,11 @@ export async function buildTransferClearingReconciliation(args: {
         referenceCurrency,
         exchangeRateByKey,
       }),
-    onUnitExecutionEvent: (event) => {
-      realizedEvents.push(toRoundedRealizedEvent(event));
-    },
-    onUnitOpenLotValuation: (lot) => {
-      unrealizedOpenLots.push(toRoundedOpenLot(lot));
-    },
-    onSkippedItem: (item) => {
-      pushDiagnostic(diagnostics, {
-        reason: item.reason,
-        date: item.date,
-        bookingId: item.bookingId,
-        bookingDescription: item.bookingDescription,
-        transactionId: item.transactionId,
-        transactionDescription: item.transactionDescription,
-      });
-    },
+    ...createTransferClearingExplainCallbacks(
+      diagnostics,
+      realizedEvents,
+      unrealizedOpenLots,
+    ),
   });
-
-  return toNumericMoney({
-    target: {
-      accountId: args.accountId,
-      accountName: targetBucket.unitLabel,
-      isVirtual: true,
-      unit: targetBucket.unit,
-      unitLabel: formatUnitLabel(targetBucket),
-      currency: normalizeUppercaseCode(targetBucket.currency),
-      cryptocurrency: normalizeUppercaseCode(targetBucket.cryptocurrency),
-      symbol: normalizeUppercaseCode(targetBucket.symbol),
-      tradeCurrency: normalizeUppercaseCode(targetBucket.tradeCurrency),
-    },
-    summary: toSummary({
-      realizedGainLoss: split.realizedGainLoss,
-      unrealizedGainLoss: split.unrealizedGainLoss,
-    }),
-    skippedCount: split.skippedCount,
-    realizedEvents,
-    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
-    diagnostics,
-  });
+  return split;
 }
