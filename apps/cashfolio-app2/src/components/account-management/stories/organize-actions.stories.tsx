@@ -28,7 +28,7 @@ function nodes(archived = false): OrganizeNode[] {
     parentId: row.parentId ?? null,
     sortOrder: row.sortOrder,
     isActive: row.isActive,
-    isCashAccount: row.id === "group-cash" || row.id === "account-checking",
+    isCashAccount: true,
     unit: row.unit,
   }));
 }
@@ -66,9 +66,14 @@ function rowMoveStory(archived: boolean, assetClass: boolean): Story {
         '"organize":true',
       );
       // Moving an archived target includes archived groups in the destination tree.
-      await userEvent.click(dialog.getByLabelText("Destination"));
+      const destination = dialog.getByLabelText("Destination");
+      await userEvent.click(destination);
+      await userEvent.clear(destination);
+      await userEvent.type(destination, "Cash");
       await expect(body.getByRole("option", { name: /Cash/ })).toBeVisible();
-      await userEvent.keyboard("{Escape}");
+      await userEvent.clear(destination);
+      await userEvent.type(destination, "Top Level");
+      await userEvent.click(body.getByRole("option", { name: "Top Level" }));
       await userEvent.click(dialog.getByRole("button", { name: "Move" }));
       await waitFor(() =>
         expect(body.queryByRole("dialog")).not.toBeInTheDocument(),

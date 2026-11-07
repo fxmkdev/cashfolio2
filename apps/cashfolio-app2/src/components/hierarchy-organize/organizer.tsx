@@ -170,7 +170,7 @@ export function HierarchyOrganizer({
         management={management}
         creation={creation}
         drag={drag}
-        blocked={movementBlocked}
+        blocked={management ? movementBlocked : organizer.blocked}
         onGridReady={onGridReady}
         onSelectionChanged={onSelectionChanged}
         onMoveItems={setDialogItems}

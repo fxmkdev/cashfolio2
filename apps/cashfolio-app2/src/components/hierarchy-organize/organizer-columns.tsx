@@ -106,15 +106,18 @@ export function useOrganizerColumns({
   // Read current callbacks without rebuilding columns for selection or drag hints.
   const current = useRef({
     organizer,
+    creation,
     onMoveItems,
     onLifecycle,
   });
   current.current = {
     organizer,
+    creation,
     onMoveItems,
     onLifecycle,
   };
-  const width = creation
+  const supportsCreation = !!creation;
+  const width = supportsCreation
     ? 176
     : management
       ? organizer.kind === "categories"
@@ -140,7 +143,7 @@ export function useOrganizerColumns({
               availability={organizer.snapshot?.actionAvailability[data.id]}
               blocked={blocked}
               management={management}
-              creation={creation}
+              creation={current.current.creation}
               onMoveItems={(items) => current.current.onMoveItems(items)}
               onLifecycle={(dialog) => current.current.onLifecycle(dialog)}
               onUnarchive={() =>
@@ -157,7 +160,6 @@ export function useOrganizerColumns({
       organizer.kind,
       organizer.snapshot?.actionAvailability,
       management,
-      creation,
       width,
     ],
   );
