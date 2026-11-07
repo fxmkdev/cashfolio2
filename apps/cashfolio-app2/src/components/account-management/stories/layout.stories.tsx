@@ -3,7 +3,7 @@ import { Box } from "@mantine/core";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType } from "@/.prisma-client/enums";
 import { createGroupRow, createAccountRow, activeAssetRows } from "./fixtures";
-import { findVisibleDialog } from "./interaction-helpers";
+import { findVisibleDialog, showAccountColumn } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
@@ -183,9 +183,7 @@ export const ConstrainedWidthWithGainLoss: Story = {
         0,
       );
       expect(canvas.getByText("Household current account")).toBeVisible();
-      expect(
-        canvas.getByRole("columnheader", { name: "Unrealised" }),
-      ).toBeVisible();
+      expect(canvas.getByRole("columnheader", { name: "MWR" })).toBeVisible();
     });
     await userEvent.hover(nameCell);
     await waitFor(() => expect(actionsCell).toHaveStyle({ opacity: "1" }));
@@ -216,8 +214,9 @@ export const ConstrainedWidthWithGainLoss: Story = {
     await waitFor(() =>
       expect(canvas.getByText("Household current account")).toBeVisible(),
     );
+    await showAccountColumn(canvasElement, "totalGainLoss");
     await userEvent.click(
-      canvas.getByRole("button", { name: "Show Gain/Loss Details" }),
+      await canvas.findByRole("button", { name: "Show Gain/Loss Details" }),
     );
     const details = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
