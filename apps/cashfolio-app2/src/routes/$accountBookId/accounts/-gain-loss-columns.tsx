@@ -84,7 +84,7 @@ export function buildAccountGainLossColumns(args: {
               ? [
                   ...new Set(result.diagnostics.map((item) => item.message)),
                 ].join(" ")
-              : "Calculated holding G/L since account-book start; excludes explicit G/L bookings.";
+              : "Calculated holding G/L plus recorded adjustments since account-book start. Realised includes recorded adjustments.";
       },
       cellRenderer: ({
         data,

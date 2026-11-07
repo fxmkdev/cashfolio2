@@ -3,6 +3,7 @@ const mocks = vi.hoisted(() => ({
   authorize: vi.fn(),
   summaries: vi.fn(),
   details: vi.fn(),
+  eligibility: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({
@@ -20,10 +21,12 @@ vi.mock("../account-books/functions.server", () => ({
 vi.mock("./accounts/account-gain-loss.server", () => ({
   queryAccountGainLossSummaries: mocks.summaries,
   queryAccountGainLoss: mocks.details,
+  queryAccountRecordedGainLossEligibility: mocks.eligibility,
 }));
 import {
   getAccountGainLoss,
   getAccountGainLossSummaries,
+  getAccountRecordedGainLossEligibility,
 } from "./account-gain-loss";
 beforeEach(() => {
   vi.clearAllMocks();
@@ -77,4 +80,18 @@ it("rejects invalid list scopes", () => {
       },
     }),
   ).toThrow("Invalid account G/L scope");
+});
+
+it("authorizes recorded G/L eligibility before querying", async () => {
+  const data = { accountBookId: "book", accountId: "a", period: "2026-02" };
+  mocks.eligibility.mockResolvedValue(true);
+  expect(await getAccountRecordedGainLossEligibility({ data })).toBe(true);
+  expect(mocks.authorize).toHaveBeenCalledWith("book");
+  expect(mocks.eligibility).toHaveBeenCalledWith(expect.objectContaining(data));
+  mocks.authorize.mockRejectedValue(new Error("Unauthorized"));
+  mocks.eligibility.mockClear();
+  await expect(getAccountRecordedGainLossEligibility({ data })).rejects.toThrow(
+    "Unauthorized",
+  );
+  expect(mocks.eligibility).not.toHaveBeenCalled();
 });

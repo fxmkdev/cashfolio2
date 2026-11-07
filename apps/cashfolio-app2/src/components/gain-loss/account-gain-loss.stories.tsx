@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Drawer } from "@mantine/core";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AccountGainLossSummaryView } from "./account-gain-loss-summary";
 import { AccountGainLossCalculation } from "./account-gain-loss-calculation";
 import type { AccountGainLossDetails } from "@/shared/account-gain-loss";
@@ -24,6 +24,7 @@ const data: AccountGainLossDetails = {
   },
   summary: { realizedGainLoss: 50, unrealizedGainLoss: 60, totalGainLoss: 110 },
   diagnostics: [],
+  recordedAdjustments: [],
   realizedEvents: [
     {
       id: "sell",
@@ -251,5 +252,89 @@ export const TransferClosesOppositePosition: Story = {
         within(event).getByText("100.00000", { exact: true }),
       ).toBeVisible();
     });
+  },
+};
+
+const recorded = {
+  id: "statement",
+  date: "2026-03-31T00:00:00Z",
+  transactionId: "statement-transaction",
+  description: "Portfolio Statement",
+  amount: 600,
+};
+const openRecordedTransaction = fn();
+export const RecordedOnly: Story = {
+  args: {
+    data: {
+      ...data,
+      accountName: "Managed Portfolio",
+      target: {
+        ...data.target,
+        accountName: "Managed Portfolio",
+        unit: "CURRENCY",
+        currency: "CHF",
+        symbol: null,
+        tradeCurrency: null,
+        unitLabel: "CHF",
+      },
+      summary: {
+        realizedGainLoss: 600,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 600,
+      },
+      recordedAdjustments: [recorded],
+      realizedEvents: [],
+      unrealizedOpenLots: [],
+    },
+  },
+  render: (args) => (
+    <AccountGainLossCalculation
+      data={args.data!}
+      onOpenTransaction={openRecordedTransaction}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    openRecordedTransaction.mockClear();
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: "Recorded Adjustments" }),
+    ).toBeVisible();
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Open Transaction" }),
+    );
+    await expect(openRecordedTransaction).toHaveBeenCalledWith(
+      "statement-transaction",
+    );
+  },
+};
+export const RecordedAndCalculated: Story = {
+  args: {
+    data: {
+      ...data,
+      summary: {
+        realizedGainLoss: 650,
+        unrealizedGainLoss: 60,
+        totalGainLoss: 710,
+      },
+      recordedAdjustments: [recorded],
+    },
+  },
+  render: (args) => (
+    <AccountGainLossCalculation
+      data={args.data!}
+      onOpenTransaction={() => {}}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: "Recorded Adjustments" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("heading", { name: "Realised Events" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("heading", { name: "Unrealised Open Lots" }),
+    ).toBeVisible();
   },
 };

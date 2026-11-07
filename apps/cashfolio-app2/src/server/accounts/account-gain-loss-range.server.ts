@@ -1,5 +1,11 @@
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
+import {
+  applyRecordedAccountGainLoss,
+  calculateRecordedAccountGainLoss,
+  loadRecordedAccountGainLossInputs,
+  type RecordedAccountGainLoss,
+} from "./account-recorded-gain-loss.server";
 import { toMoney } from "../../shared/money";
 import { addUtcDays, startOfUtcDay } from "../../shared/date";
 import {
@@ -89,42 +95,51 @@ async function loadAccountGainLossInputs(
     referenceCurrency,
   );
   const holdingIds = holdingAccounts.map((account) => account.id);
-  const [initialBalances, transactions, pendingBookings] = await Promise.all([
-    db.booking.groupBy({
-      by: ["accountId"],
-      where: {
-        accountBookId: args.accountBookId,
-        accountId: { in: holdingIds },
-        date: { lt: startDate },
-      },
-      _sum: { value: true },
-    }),
-    asOfDate < startDate
-      ? Promise.resolve([])
-      : loadPeriodHoldingTransactionsRaw(
-          {
-            accountBookId: args.accountBookId,
-            holdingAccountIds: holdingIds,
-            openingBalanceAccountIds: openingBalanceAccounts.map(
-              (account) => account.id,
-            ),
-            queryStart: startDate,
-            queryEndExclusive: addUtcDays(asOfDate, 1),
-          },
-          db,
-        ),
-    db.booking.findMany({
-      where: {
-        accountBookId: args.accountBookId,
-        accountId: { in: holdingIds },
-        date: { gte: startDate, lt: addUtcDays(asOfDate, 1) },
-        transaction: {
-          bookings: { some: { date: { gte: addUtcDays(asOfDate, 1) } } },
+  const [initialBalances, transactions, pendingBookings, recordedInputs] =
+    await Promise.all([
+      db.booking.groupBy({
+        by: ["accountId"],
+        where: {
+          accountBookId: args.accountBookId,
+          accountId: { in: holdingIds },
+          date: { lt: startDate },
         },
-      },
-      select: { accountId: true },
-    }),
-  ]);
+        _sum: { value: true },
+      }),
+      asOfDate < startDate
+        ? Promise.resolve([])
+        : loadPeriodHoldingTransactionsRaw(
+            {
+              accountBookId: args.accountBookId,
+              holdingAccountIds: holdingIds,
+              openingBalanceAccountIds: openingBalanceAccounts.map(
+                (account) => account.id,
+              ),
+              queryStart: startDate,
+              queryEndExclusive: addUtcDays(asOfDate, 1),
+            },
+            db,
+          ),
+      db.booking.findMany({
+        where: {
+          accountBookId: args.accountBookId,
+          accountId: { in: holdingIds },
+          date: { gte: startDate, lt: addUtcDays(asOfDate, 1) },
+          transaction: {
+            bookings: { some: { date: { gte: addUtcDays(asOfDate, 1) } } },
+          },
+        },
+        select: { accountId: true },
+      }),
+      loadRecordedAccountGainLossInputs(
+        {
+          accountBookId: args.accountBookId,
+          queryStart: startDate,
+          queryEndExclusive: addUtcDays(asOfDate, 1),
+        },
+        db,
+      ),
+    ]);
   return {
     revision: book.periodCacheRevision,
     accounts,
@@ -136,6 +151,7 @@ async function loadAccountGainLossInputs(
     initialBalances,
     transactions,
     pendingBookings,
+    recordedInputs,
   };
 }
 
@@ -145,6 +161,7 @@ export type AccountGainLossBasisRange = Pick<
 > & {
   watermark: string;
   basis: AccountGainLossBasis;
+  recordedGainLoss: RecordedAccountGainLoss[];
 };
 
 export async function loadAccountGainLossRange(args: {
@@ -168,6 +185,7 @@ export async function loadAccountGainLossRange(args: {
     initialBalances,
     transactions,
     pendingBookings,
+    recordedInputs,
   } = await prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SET TRANSACTION READ ONLY`;
@@ -208,6 +226,27 @@ export async function loadAccountGainLossRange(args: {
     )
       cacheableBasis = false;
   };
+  const convertBookingToReference = async (
+    booking: Omit<
+      Parameters<typeof convertBookingValueToReferenceDetails>[0],
+      "referenceCurrency" | "exchangeRateByKey" | "scheduleLookup"
+    >,
+  ) => {
+    const result = await convertBookingValueToReferenceDetails({
+      ...booking,
+      referenceCurrency,
+      exchangeRateByKey,
+      scheduleLookup,
+    });
+    markSource(result.source, booking.date);
+    return result.value;
+  };
+  const recorded = await calculateRecordedAccountGainLoss({
+    inputs: recordedInputs,
+    accountIds: new Set(accounts.map((account) => account.id)),
+    detailAccountId: args.detailAccountId,
+    convertBookingToReference: (booking) => convertBookingToReference(booking),
+  });
   const calculated = await calculateAccountGainLoss({
     holdingAccounts,
     unavailableHoldings: pendingBookings.map((booking) => booking.accountId),
@@ -236,6 +275,7 @@ export async function loadAccountGainLossRange(args: {
           referenceCurrency,
           watermark,
           basis,
+          recordedGainLoss: recorded.recordedGainLoss,
         },
         cacheableBasis && asOfDate >= startDate,
       );
@@ -251,19 +291,11 @@ export async function loadAccountGainLossRange(args: {
       markSource(result.source, input.date);
       return result.rate;
     },
-    convertBookingToReference: async (booking) => {
-      const result = await convertBookingValueToReferenceDetails({
-        ...booking,
-        referenceCurrency,
-        exchangeRateByKey,
-        scheduleLookup,
-      });
-      markSource(result.source, booking.date);
-      return result.value;
-    },
+    convertBookingToReference: (booking) => convertBookingToReference(booking),
   });
   return finishAccountGainLossRange({
     calculated,
+    ...recorded,
     revision,
     accounts,
     groups,
@@ -276,6 +308,9 @@ export async function loadAccountGainLossRange(args: {
 
 export function finishAccountGainLossRange(
   args: Omit<AccountGainLossBasisRange, "basis" | "watermark"> & {
+    recordedAdjustments?: Awaited<
+      ReturnType<typeof calculateRecordedAccountGainLoss>
+    >["recordedAdjustments"];
     calculated: Awaited<ReturnType<typeof calculateAccountGainLoss>>;
     asOfDate: Date;
     cacheableFromPermanentValuationCache: boolean;
@@ -310,8 +345,10 @@ export function finishAccountGainLossRange(
         : [],
     });
   }
+  applyRecordedAccountGainLoss(calculated.results, args.recordedGainLoss);
   return {
     ...calculated,
+    recordedAdjustments: args.recordedAdjustments ?? [],
     revision,
     cacheableFromPermanentValuationCache,
     accounts,

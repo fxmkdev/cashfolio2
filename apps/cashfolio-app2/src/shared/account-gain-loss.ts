@@ -1,4 +1,5 @@
 import type {
+  AccountGainLossSourceRow,
   GainLossReconciliationTarget,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
@@ -36,6 +37,7 @@ export type AccountGainLossDetails = AccountGainLossResult & {
   asOfDate: string;
   accountName: string;
   target: GainLossReconciliationTarget;
+  recordedAdjustments: AccountGainLossSourceRow[];
   realizedEvents: GainLossReconciliationRealizedEvent[];
   unrealizedOpenLots: GainLossReconciliationOpenLot<number, number | null>[];
 };

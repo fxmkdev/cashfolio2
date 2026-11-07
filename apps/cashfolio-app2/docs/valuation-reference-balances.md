@@ -235,15 +235,30 @@ The unified Accounts list displays Total, Realised, and Unrealised under
 `G/L Since Start (<referenceCurrency>)`. These figures replay holdings from the
 account-book start through today, using the existing opening valuation on the
 day before book start as the basis for opening holdings. They include calculated
-holding price/FX gains and losses, excluding separately booked explicit G/L and
-income such as dividends and interest. Securities traded in the reference
-currency are eligible; reference-currency cash is not.
+holding price/FX gains and losses plus recorded Gain/Loss adjustments attributed
+to the financial account using the Report/History rules. Realised includes
+recorded adjustments for reporting; this does not establish economic
+realisation. Income such as dividends and interest remains excluded. Securities
+traded in the reference currency are eligible; reference-currency balance
+accounts are eligible when they have recorded adjustments in the calculation
+range, including adjustments that net to zero.
 
 The ledger decides whether to show G/L Since Start from the account metadata and
 the book's actual reference currency before rendering or requesting G/L data.
-Only Asset and Liability accounts are eligible, excluding reference-currency
-cash. Ledger data always includes the book's reference currency, independently
-of whether booking values need conversion for reference-currency columns.
+Only balance accounts are eligible. Reference-currency accounts require recorded
+adjustments between book start and the as-of date; the loader checks this
+without running FIFO or looking up valuations. Ledger data always includes the
+book's reference currency, independently of whether booking values need
+conversion for reference-currency columns.
+
+Recorded adjustments use the Gain/Loss equity booking date for inclusion and
+conversion, independently of the counterpart booking date. Tracking Method does
+not restrict inclusion. Missing conversion makes Realised and Total unavailable
+with a diagnostic while retaining the calculated Unrealised result. Legacy
+missing/ambiguous counterparts retain Report/History attribution and are not
+assigned arbitrarily to real accounts. Recorded totals and account eligibility
+are retained in the historical basis cache; adjustment detail rows are loaded
+only for the requested calculation drawer.
 
 The G/L column-group header contains its title and an info button. The button
 opens calculation details with locale-formatted, labelled start and as-of dates
@@ -323,9 +338,10 @@ unavailable if any eligible descendant lacks that component.
 
 An individual holding ledger displays the same three values since book start,
 using the selected month/year end capped at today (today when unfiltered).
-`View Calculation` loads a drawer with realised execution pricing, FIFO matches,
-unrealised open lots, and completeness diagnostics. Summary and drawer use the
-same range calculation. Report and History retain their existing period meaning;
+`View Calculation` loads a drawer with separately listed recorded adjustments,
+transaction links, realised execution pricing, FIFO matches, unrealised open
+lots, and completeness diagnostics. Summary and drawer use the same range
+calculation. Report and History retain their existing period meaning;
 accumulated realised/unrealised values are not sums of period splits. Opening an
 event in the ledger closes the calculation drawer before navigating to the
 transaction and clearing the ledger's period filter.
@@ -340,12 +356,13 @@ existing final-summary cache remains above this layer for Accounts-list hits.
 Calculation drawers retain independent full replay and the same financial
 semantics.
 
-Basis cache v3 includes archived group metadata and ignores earlier cost bases.
-Keys use the book revision and latest effective booking date. Changes to
-bookings/settings or future bookings becoming effective force a rebuild. Only
-complete bases from stable historical valuation sources persist; recent
-non-identity execution prices cannot persist until their valuation dates pass
-the publication cutoff. Cache failures fall back to full calculation. See
+Basis cache v4 includes archived group metadata and recorded G/L totals, and
+ignores earlier cost bases. Keys use the book revision and latest effective
+booking date. Changes to bookings/settings or future bookings becoming effective
+force a rebuild. Only complete bases from stable historical valuation sources
+persist; recent non-identity execution prices cannot persist until their
+valuation dates pass the publication cutoff. Cache failures fall back to full
+calculation. See
 [Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
 for limits, snapshot validation, and cleanup behavior.
 

@@ -12,6 +12,42 @@ import {
 } from "./account-gain-loss-range.server";
 import { loadAccountGainLossSummaryRange } from "./account-gain-loss-basis-cache.server";
 import { getOrLoadAccountGainLossSummaries } from "./account-gain-loss-cache.server";
+import { prisma } from "../../prisma.server";
+import { addUtcDays, startOfUtcDay } from "../../shared/date";
+import { loadRecordedAccountGainLossInputs } from "./account-recorded-gain-loss.server";
+
+/** Cheap eligibility check for reference-currency ledgers; no valuations or FIFO replay. */
+export async function queryAccountRecordedGainLossEligibility(args: {
+  accountBookId: string;
+  accountId: string;
+  period?: string;
+}) {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+      const book = await tx.accountBook.findUniqueOrThrow({
+        where: { id: args.accountBookId },
+        select: { startDate: true },
+      });
+      const inputs = await loadRecordedAccountGainLossInputs(
+        {
+          accountBookId: args.accountBookId,
+          counterpartAccountId: args.accountId,
+          queryStart: startOfUtcDay(book.startDate),
+          queryEndExclusive: addUtcDays(
+            resolveAccountGainLossDate(args.period),
+            1,
+          ),
+        },
+        tx,
+      );
+      return [...inputs.counterparts.values()].some(
+        (account) => account.id === args.accountId,
+      );
+    },
+    { isolationLevel: "RepeatableRead", timeout: 30_000 },
+  );
+}
 
 export { resolveAccountGainLossDate } from "./account-gain-loss-range.server";
 
@@ -112,6 +148,7 @@ export async function queryAccountGainLoss(args: {
     referenceCurrency: range.referenceCurrency,
     startDate: range.startDate,
     asOfDate: range.asOfDate,
+    recordedAdjustments: range.recordedAdjustments,
     realizedEvents: range.realizedEvents,
     unrealizedOpenLots: range.unrealizedOpenLots,
   });

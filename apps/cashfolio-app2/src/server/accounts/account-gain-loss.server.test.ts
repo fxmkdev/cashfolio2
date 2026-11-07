@@ -414,7 +414,9 @@ describe("account G/L queries", () => {
     expect(response.diagnostics[0]!.message).toContain("metadata");
   });
   it("includes posted holding legs whose execution is not yet fully posted", async () => {
-    mocks.pending.mockResolvedValue([{ accountId: "a" }]);
+    mocks.pending.mockImplementation(async ({ select }) =>
+      select.accountId && !select.id ? [{ accountId: "a" }] : [],
+    );
     await queryAccountGainLoss({
       accountBookId: "book",
       accountId: "a",

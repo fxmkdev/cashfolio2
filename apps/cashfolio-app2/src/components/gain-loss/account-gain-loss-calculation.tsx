@@ -16,6 +16,7 @@ import {
 } from "./columns";
 import { RealizedEventExplainDrawer } from "./realized-event-explain-drawer";
 import { GainLossSummaryValues } from "./account-gain-loss-summary";
+import { RecordedGainLoss } from "./recorded-gain-loss";
 export function AccountGainLossCalculation({
   data,
   onOpenTransaction,
@@ -102,6 +103,11 @@ export function AccountGainLossCalculation({
           ))}
         </Alert>
       ) : null}
+      <RecordedGainLoss
+        rows={data.recordedAdjustments}
+        referenceCurrency={data.referenceCurrency}
+        onOpenTransaction={onOpenTransaction}
+      />
       <Title order={5}>Realised Events</Title>
       <Text size="xs" c="dimmed">
         Select an event to inspect its FIFO lot matches and execution pricing.

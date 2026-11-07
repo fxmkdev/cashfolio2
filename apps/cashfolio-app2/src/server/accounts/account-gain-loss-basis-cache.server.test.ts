@@ -101,7 +101,7 @@ let closingRate: number | null;
 let basisSource: ValuationRateSource;
 let closingSource: ValuationRateSource;
 const basisKey =
-  "account:gain-loss-basis:v3:test:book:revision:2026-03-03T00:00:00.000Z";
+  "account:gain-loss-basis:v4:test:book:revision:2026-03-03T00:00:00.000Z";
 const load = (date = "2026-05-12Z") =>
   loadAccountGainLossSummaryRange({
     accountBookId: "book",
@@ -329,7 +329,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(mocks.rate).toHaveBeenCalledTimes(rates);
     expect(
       [...mocks.entries.keys()].filter((key) =>
-        key.startsWith("account:gain-loss:v4:"),
+        key.startsWith("account:gain-loss:v5:"),
       ),
     ).toHaveLength(1);
   });
@@ -375,7 +375,9 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
   );
 
   it("does not cache incomplete or partially posted bases", async () => {
-    mocks.db.booking.findMany.mockResolvedValue([{ accountId: "holding" }]);
+    mocks.db.booking.findMany.mockImplementation(async ({ select }) =>
+      select.accountId && !select.id ? [{ accountId: "holding" }] : [],
+    );
     expect((await ledger()).summary.totalGainLoss).toBeNull();
     expect(mocks.entries.has(basisKey)).toBe(false);
     mocks.db.booking.findMany.mockResolvedValue([]);
@@ -394,7 +396,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     transactions = [];
     await load();
     expect([...mocks.entries.keys()]).toEqual([
-      "account:gain-loss-basis:v3:test:book:revision:empty",
+      "account:gain-loss-basis:v4:test:book:revision:empty",
     ]);
   });
 
@@ -478,7 +480,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     await load();
     const payload = mocks.entries.get(basisKey)!;
     mocks.entries.clear();
-    const oldKey = basisKey.replace(":v3:", ":v2:");
+    const oldKey = basisKey.replace(":v4:", ":v3:");
     mocks.entries.set(oldKey, payload);
     mocks.db.transaction.findMany.mockClear();
     await load();
