@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Prisma } from "../.prisma-client/client";
 import {
-  parseApprovedTarget,
-  parseVerifiedConnection,
+  parseManualSeedInput,
   readSeedConfig,
   verifyServerIdentity,
   type ApprovedSeedTarget,
@@ -14,155 +13,124 @@ const target: ApprovedSeedTarget = {
   branchId: "br-staging",
   endpointId: "ep-seed-example",
   database: "neondb",
-  role: "cashfolio_staging_seed",
+  role: "neondb_owner",
 };
-const url = `postgresql://${target.role}:secret@${target.hostname}/neondb?sslmode=verify-full`;
-const env = {
-  APP_ENVIRONMENT: "staging",
-  STAGING_SEED_ENABLED: "true",
-  STAGING_SEED_TARGET: JSON.stringify(target),
-  STAGING_SEED_USER_EXTERNAL_IDS: "tester-one, tester-two,tester-one",
-  STAGING_SEED_DATABASE_URL: url,
+const url = `postgresql://${target.role}:secret@${target.hostname}/neondb?sslmode=require`;
+const input = {
+  projectId: target.projectId,
+  branchId: target.branchId,
+  testerExternalIds: [" tester-one ", "tester-two", "tester-one"],
 };
+const raw = JSON.stringify(input);
+const env = { APP_ENVIRONMENT: "staging", DATABASE_URL: url };
 
-describe("staging seed configuration", () => {
-  it("requires explicit staging enablement and deduplicates tester IDs", () => {
-    expect(readSeedConfig(env).testerExternalIds).toEqual([
-      "tester-one",
-      "tester-two",
-    ]);
-    expect(
-      readSeedConfig({ ...env, STAGING_SEED_ENABLED: "false" }, false),
-    ).toBeDefined();
-    for (const mode of [undefined, "prod", "production", "preview"]) {
-      expect(() => readSeedConfig({ ...env, APP_ENVIRONMENT: mode })).toThrow(
-        "only in staging",
-      );
-    }
-    for (const enabled of [undefined, "false", "TRUE", "1"]) {
+describe("manual seed configuration", () => {
+  it.each(["staging", "preview"])(
+    "accepts %s and deduplicates tester IDs",
+    (environment) => {
+      const config = readSeedConfig(raw, {
+        ...env,
+        APP_ENVIRONMENT: environment,
+      });
+      expect(config.target).toEqual(target);
+      expect(config.testerExternalIds).toEqual(["tester-one", "tester-two"]);
+    },
+  );
+
+  it.each([undefined, "prod", "production", "e2e", ""])(
+    "rejects environment %j",
+    (environment) => {
       expect(() =>
-        readSeedConfig({ ...env, STAGING_SEED_ENABLED: enabled }),
-      ).toThrow("not been enabled");
-    }
-  });
-
-  it.each([
-    "STAGING_SEED_DATABASE_URL",
-    "STAGING_SEED_TARGET",
-    "STAGING_SEED_USER_EXTERNAL_IDS",
-  ])("requires %s without falling back to generic DATABASE_URL", (key) => {
-    expect(() =>
-      readSeedConfig({ ...env, [key]: undefined, DATABASE_URL: url }),
-    ).toThrow("required");
-  });
-
-  it.each([",", "tester,", "tester\nother"])(
-    "rejects empty or multiline identities %j",
-    (value) => {
-      expect(() =>
-        readSeedConfig({ ...env, STAGING_SEED_USER_EXTERNAL_IDS: value }),
-      ).toThrow("Tester IDs");
+        readSeedConfig(raw, { ...env, APP_ENVIRONMENT: environment }),
+      ).toThrow("only in staging and preview");
     },
   );
 
   it.each([
+    "",
     "{",
     "null",
     "[]",
     '"value"',
-    JSON.stringify({ ...target, role: undefined }),
-    JSON.stringify({ ...target, extra: true }),
-    JSON.stringify({ ...target, role: "neondb_owner" }),
-    JSON.stringify({
-      ...target,
-      hostname: "ep-production.eu-central-1.aws.neon.tech",
-    }),
-    JSON.stringify({ ...target, database: "db/options" }),
-    JSON.stringify({
-      ...target,
-      endpointId: "ep-seed-example-pooler",
-      hostname: "ep-seed-example-pooler.eu-central-1.aws.neon.tech",
-    }),
-    JSON.stringify({ ...target, projectId: "" }),
-    JSON.stringify({ ...target, branchId: "production" }),
-  ])("rejects an invalid approved target", (raw) => {
-    expect(() => parseApprovedTarget(raw)).toThrow();
+    JSON.stringify({ ...input, projectId: undefined }),
+    JSON.stringify({ ...input, projectId: "" }),
+    JSON.stringify({ ...input, projectId: "project/other" }),
+    JSON.stringify({ ...input, branchId: "staging" }),
+    JSON.stringify({ ...input, extra: true }),
+    ...[[], [""], ["tester", " "], ["tester\nother"], [null], "tester"].map(
+      (testerExternalIds) => JSON.stringify({ ...input, testerExternalIds }),
+    ),
+  ])("rejects malformed or incomplete stdin input %j", (value) => {
+    expect(() => parseManualSeedInput(value)).toThrow();
   });
-});
 
-describe("staging connection restrictions", () => {
-  it("rejects environment routing overrides", () => {
+  it("requires DATABASE_URL and rejects PGOPTIONS", () => {
+    expect(() => readSeedConfig(raw, { APP_ENVIRONMENT: "staging" })).toThrow(
+      "DATABASE_URL",
+    );
     expect(() =>
-      readSeedConfig({ ...env, PGOPTIONS: "endpoint=ep-production" }),
+      readSeedConfig(raw, { ...env, PGOPTIONS: "endpoint=ep-production" }),
     ).toThrow("PGOPTIONS");
   });
 
-  it("constructs explicit connection properties with verified TLS and no PGOPTIONS", () => {
+  it("normalizes pooled connections, verifies TLS and blocks pg environment routing", () => {
+    const pooled = url.replace("ep-seed-example", "ep-seed-example-pooler");
     expect(
-      parseVerifiedConnection(`${url}&channel_binding=require`, target),
+      readSeedConfig(raw, {
+        ...env,
+        DATABASE_URL: `${pooled}&channel_binding=require&schema=public`,
+      }),
     ).toEqual({
-      host: target.hostname,
-      port: 5432,
-      user: target.role,
-      password: "secret",
-      database: "neondb",
-      ssl: { rejectUnauthorized: true },
-      options: " ",
-      enableChannelBinding: true,
-      connectionTimeoutMillis: 20_000,
-      max: 1,
+      target,
+      testerExternalIds: ["tester-one", "tester-two"],
+      seedConnection: {
+        host: target.hostname,
+        port: 5432,
+        database: "neondb",
+        user: target.role,
+        password: "secret",
+        ssl: { rejectUnauthorized: true },
+        options: " ",
+        enableChannelBinding: true,
+        connectionTimeoutMillis: 20_000,
+        max: 1,
+      },
     });
     expect(
-      parseVerifiedConnection(
-        url.replace(":secret@", ":p%40ss%3Aword@"),
-        target,
-      ).password,
+      readSeedConfig(raw, {
+        ...env,
+        DATABASE_URL: url
+          .replace("secret", "p%40ss%3Aword")
+          .replace("require", "verify-full"),
+      }).seedConnection.password,
     ).toBe("p@ss:word");
   });
 
   it.each([
     "not-a-url",
     url.replace("postgresql:", "https:"),
-    url.replace("ep-seed-example", "ep-production"),
     url.replace("neon.tech", "neon.tech.evil.example"),
-    url.replace("ep-seed-example", "ep-seed-example-pooler"),
+    url.replace("ep-seed-example", "not-neon"),
     url.replace("/neondb", ":5433/neondb"),
-    url.replace("/neondb", "/otherdb"),
     url.replace("/neondb", "/neondb/other"),
-    url.replace("cashfolio_staging_seed", "neondb_owner"),
     url.replace(":secret", ""),
     url.replace("secret", "%ZZ"),
-    url.replace("verify-full", "require"),
-    url.replace("verify-full", "disable"),
-    url.replace("?sslmode=verify-full", ""),
+    url.replace("neondb_owner", "%ZZ"),
+    url.replace("require", "disable"),
+    url.replace("?sslmode=require", ""),
     `${url}#fragment`,
     `${url}&sslmode=disable`,
     `${url}&channel_binding=disable`,
+    `${url}&schema=other`,
     `${url}&options=endpoint%3Dep-production`,
     `${url}&host=production`,
     `${url}&hostaddr=127.0.0.1`,
     `${url}&dbname=production`,
     `${url}&user=owner`,
     `${url}&sslcert=some-file`,
-  ])("rejects a destination or connection override", (connection) => {
-    expect(() => parseVerifiedConnection(connection, target)).toThrow();
-  });
-
-  it("allows only the same endpoint's migration role and pooled address, still verifies TLS", () => {
-    const migration = url
-      .replace("cashfolio_staging_seed", "neondb_owner")
-      .replace("ep-seed-example", "ep-seed-example-pooler")
-      .replace("verify-full", "require");
-    expect(parseVerifiedConnection(migration, target, true)).toMatchObject({
-      user: "neondb_owner",
-      ssl: { rejectUnauthorized: true },
-    });
+  ])("rejects invalid connections and routing overrides", (connection) => {
     expect(() =>
-      parseVerifiedConnection(
-        migration.replace("ep-seed-example-pooler", "ep-production"),
-        target,
-        true,
-      ),
+      readSeedConfig(raw, { ...env, DATABASE_URL: connection }),
     ).toThrow();
   });
 });

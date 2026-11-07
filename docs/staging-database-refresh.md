@@ -1,23 +1,35 @@
-# Synthetic staging data
+# Synthetic staging and preview data
 
-Every staging application deployment can replace its application data with a
-synthetic personal-finance dataset. Seeding is initially disabled until the
-operator completes the destination and credential checks below. Production and
-preview releases always use the migration-only release command.
+Seeding is manual-only. In GitHub Actions, open **Seed Database**, choose **Run
+workflow**, select the branch, and run it. There are no other inputs:
 
-When enabled, the staging release command first verifies both the dedicated seed
-connection and the application's migration connection read-only, applies Prisma
-migrations, and replaces the application data in one transaction. The reset
-locks all seven application tables against concurrent writes; reads continue and
-waiting edits resume after commit. Any validation, migration, or seed failure
-fails the release before application Machines update. Deployments for the same
-environment are serialized across main builds, manual Deploy runs, and the daily
-refresh workflow.
+- `main` replaces staging application data with the synthetic dataset.
+- A branch with exactly one open, same-repository PR replaces that PR's existing
+  preview data. Tags, forks, and branches without a matching PR are rejected.
+
+The workflow uses the seed bundled in the app's **currently deployed image**. It
+does not build, deploy, or apply migrations. Deploy updated seed code before
+running it; existing previews also need an updated deployment before their first
+manual seed. Older bundles reject `--manual` without changing data. Missing or
+expired previews must be deployed before seeding; the workflow never creates,
+resets, or replaces a Neon branch.
+
+All application deployments run migrations only. There is no scheduled staging
+refresh. Edits persist until the next manual seed. New previews continue to
+branch from staging's current database; existing previews keep their own data.
+
+The job verifies the expected Neon destination read-only and replaces
+application data in one transaction. It locks the application tables against
+concurrent writes; reads continue and waiting edits resume after commit. Failed
+validation or replacement fails the CI job. Seed jobs and deployments share the
+existing per-app concurrency group.
 
 Replacement makes at most three transaction attempts for deadlocks or Prisma
 transaction write conflicts, waiting 100 ms and then 200 ms before retries. Each
 attempt repeats destination verification and lock acquisition. Other errors fail
-immediately; exhausted retries fail the release.
+immediately; exhausted retries fail the job. SSH failures also fail the job;
+inspect its output before retrying if the connection was interrupted after
+commit.
 
 Seed accounts are checked with shared application account validation before the
 replacement transaction begins and before direct seed insertion writes. Invalid
@@ -29,14 +41,8 @@ booking carries BTC metadata while its expense category has none. Application
 create/update requests retain their existing normalization of hidden category
 unit fields before validation.
 
-The corrected fixtures take effect through the normal staging refresh or
-deployment; changing them does not immediately modify deployed data.
-
-The `Refresh staging database` workflow rebuilds and redeploys staging daily at
-03:30 Europe/Zurich, keeping the dataset current even without code changes. It
-also supports manual runs from `main`. It no longer resets staging from
-production. The two UTC schedules retain exactly one run for Zurich's current
-UTC offset.
+Fixture changes take effect after deploying the updated image and manually
+seeding it; changing the source does not immediately modify deployed data.
 
 The history covers the rolling three years through today's Zurich calendar date,
 uses CHF as the reference currency, and includes Swiss household income,
@@ -47,7 +53,7 @@ configured tester `User` rows retain their IDs, roles, and locales; other
 application users and all existing books, links, accounts, groups, transactions,
 and bookings are removed. Logto identities are never created, modified, or
 deleted by the seed. Book IDs are freshly generated each run, preventing stale
-period-cache reads; previous staging deep links become invalid. Shared
+period-cache reads; previous staging/preview deep links become invalid. Shared
 market-rate caches remain available and old period-cache entries expire
 normally.
 
@@ -86,8 +92,8 @@ cash-flow eligibility and valuation configuration. Ordinary new accounts and
 seed accounts without an explicit selection still default to Unclassified;
 classification remains manual, with no inference or backfill. The Empty Demo
 stays empty apart from its system Gain/Loss account. The curated values take
-effect through the normal staging refresh or deployment; editing the fixtures
-does not reset deployed staging immediately.
+effect after deploying the updated image and manually seeding it; editing the
+fixtures does not immediately reset deployed data.
 
 ## Test gain/loss asset-class grouping
 
@@ -181,8 +187,8 @@ contributions, and CHF 3,000 of withdrawals. The portfolio balance is **CHF
 explicit loss. These CHF figures are independent of live market rates. For other
 seed dates, cash-flow counts and the final balance follow the schedule above.
 
-The example becomes available through the normal enabled staging refresh or
-deployment; changing the seed source does not reset staging immediately.
+The example becomes available after deploying the updated image and manually
+seeding it; changing the seed source does not reset deployed data immediately.
 
 ## Test archived groups and accumulated G/L
 
@@ -269,168 +275,53 @@ unrealised G/L depend on market quotes. Report and History retain their
 period-opening valuation semantics, so their period splits can differ from
 accumulated G/L.
 
-The scenario becomes available through the normal enabled staging refresh or
-deployment; adding it to the seed source does not reset staging immediately.
+The scenario becomes available after deploying the updated image and manually
+seeding it; adding it to the seed source does not reset deployed data
+immediately.
 
-## Configure the approved target
+## Workflow configuration and destination checks
 
-Manually configure these secrets on the staging Fly app, following the existing
-staging/production secret-provisioning convention. No copies are required in
-GitHub:
+The workflow uses the existing `staging-cashfolio-app` or
+`preview-cashfolio-app` GitHub environment, including any existing access rules,
+and the existing repository/environment configuration:
 
-- Secret `STAGING_SEED_DATABASE_URL`: a **direct** Neon connection string for
-  the dedicated `cashfolio_staging_seed` role created only on staging. Never use
-  the production owner credential. There is no fallback to `DATABASE_URL`.
-- Secret `STAGING_SEED_TARGET`: JSON containing the reviewed destination below.
-- Secret `STAGING_SEED_USER_EXTERNAL_IDS`: a comma-separated list of tester
-  Logto external IDs. Include an existing staging administrator; replacement
-  fails before removing data if no configured tester already has `ADMIN`. Use at
-  least two tester identities to exercise sharing. Roles are preserved; new app
-  users receive no administrator role automatically.
+- Secrets: `FLY_API_TOKEN`, `NEON_API_KEY`, and `SEED_USER_EXTERNAL_IDS`.
+- Variables: `NEON_STAGING_PROJECT_ID`, `NEON_STAGING_BRANCH_ID`, and staging's
+  `FLY_APP` and `BASE_URL`. Preview names and URL come from the shared PR naming
+  action.
 
-Keep `STAGING_SEED_ENABLED` as a variable in the `staging-cashfolio-app` GitHub
-environment. Leave it `false` or unset until all checks pass, then set exactly
-`true`. Other nonempty values fail the staging release. CI includes this
-non-secret flag in the generated Fly configuration.
+`SEED_USER_EXTERNAL_IDS` is a comma-separated list of Logto external IDs.
+Include an existing administrator in the target database; replacement fails
+before removing data if none of the configured testers already has `ADMIN`. At
+least two testers are useful for exercising sharing. Existing tester IDs, roles,
+and locales are retained; newly inserted testers receive no administrator role.
+`SEED_ADMIN_EXTERNAL_IDS` is not used and does not grant roles.
 
-```json
-{
-  "hostname": "ep-approved-staging.eu-central-1.aws.neon.tech",
-  "projectId": "approved-project-id",
-  "branchId": "br-approved-staging",
-  "endpointId": "ep-approved-staging",
-  "database": "neondb",
-  "role": "cashfolio_staging_seed"
-}
-```
+CI uses read-only Neon API requests to verify staging's configured branch or
+find the exact existing preview branch under staging. It warms the app and uses
+Fly SSH to invoke `dist/staging-seed/seed.mjs --manual`. Expected project and
+branch IDs and tester IDs travel as JSON through stdin. The database connection
+comes from the app's existing Fly `DATABASE_URL`; no database credentials are
+copied into GitHub, command arguments, or job output.
 
-Obtain these identifiers from the reviewed Neon staging branch and its primary
-compute. Compare them against the existing preview `NEON_STAGING_PROJECT_ID` and
-`NEON_STAGING_BRANCH_ID`; those variables must still identify this same staging
-branch. Exact hostname matching is required, including the actual region. The
-seed rejects pooled endpoints, routing overrides, and a mismatched database or
-role. Use port 5432 and `sslmode=verify-full`; the client verifies certificates.
+The CLI accepts only staging and preview app environments, converts pooled Neon
+hosts to direct hosts, and verifies TLS certificates. It rejects `PGOPTIONS`,
+connection routing overrides, and non-public schemas. It checks server-provided
+Neon project, branch and endpoint settings, database name and role before
+replacement and again inside the transaction. The project/branch must match the
+workflow's expected destination. Missing or mismatched values fail closed.
 
-After provisioning the role below, create an empty input file outside the
-repository and restrict it to permissions `0600` before entering secrets. Using
-a trusted editor, include three `NAME=VALUE` lines: the dedicated seed URL, the
-reviewed target JSON on one line, and the comma-separated tester IDs. Replace
-the app name and file path in this example with the reviewed staging app and
-your protected file:
-
-```bash
-umask 077
-touch /secure/path/staging-seed.env
-chmod 600 /secure/path/staging-seed.env
-# Populate the file with the three values using a trusted editor before importing.
-flyctl secrets import --app YOUR_STAGING_FLY_APP --stage < /secure/path/staging-seed.env
-```
-
-Using stdin keeps secret values out of command arguments and shell history.
-Remove the input file after successful import. `--stage` stores the secrets
-without deploying or enabling seeding; the next deployment consumes them.
-Complete the credential and destination checks below before enabling the flag.
-
-CI does not create, update, or copy staging seed secrets. Automatic Fly secret
-provisioning remains limited to dynamic previews' ordinary application secrets;
-previews receive no seed credentials or configuration. The application migration
-connection remains the existing Fly `DATABASE_URL`. The seed URL provides only
-data permissions and is never used to run migrations. Do not set these secrets
-on production or preview Fly apps. An enabled release with missing configuration
-fails its read-only preflight before migrations or replacement.
-
-## Provision isolated seed credentials
-
-Neon roles are branch-scoped and parent roles are copied into newly created
-child branches. The inherited `neondb_owner` role does not establish production
-credential isolation. Create the following role through an interactive SQL
-session connected to **the approved staging branch only**, after its existing
-migrations have been applied:
-
-```sql
-CREATE ROLE cashfolio_staging_seed
-  LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-
--- In psql, set a newly generated, independently stored password without placing
--- its plaintext value in SQL, shell history, or deployment logs:
-\password cashfolio_staging_seed
-
-GRANT CONNECT ON DATABASE neondb TO cashfolio_staging_seed;
-GRANT USAGE ON SCHEMA public TO cashfolio_staging_seed;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
-  "User", "UserAccountBookLink", "AccountBook", "AccountGroup", "Account",
-  "Transaction", "Booking", "ClassificationScheme", "ClassificationNode",
-  "AccountClassification"
-TO cashfolio_staging_seed;
-GRANT EXECUTE ON FUNCTION public.ensure_gain_loss_account_for_new_book(),
-  public.initialize_book_classifications(), public.seed_asset_class_scheme(text)
-TO cashfolio_staging_seed;
-```
-
-Adjust the database name to the reviewed target. Do not create this role through
-shared migrations, the Neon Console/API's privileged role-creation flow, or a
-production SQL session. It needs no schema ownership, migration permissions,
-role membership, `TRUNCATE`, or `neon_superuser` membership. Add explicit grants
-when future seed changes require additional application tables. The
-classification migration extends these grants when the existing
-`cashfolio_staging_seed` role is present; it never creates that role. For a
-custom seed role name, apply the table and function grants above after the
-migration and before running the updated seed.
-
-Before enabling seeding, use an independently authorized read-only production
-connection to confirm that the role is absent:
-
-```sql
-SELECT rolname FROM pg_roles WHERE rolname = 'cashfolio_staging_seed';
-```
-
-Require zero rows. Also attempt authentication against the production endpoint
-using the new seed role and password and require an explicit authentication
-rejection from the reachable production service. A network failure, timeout, or
-DNS error does not establish credential isolation. Do not record the password or
-connection string in the evidence. Keep only the reviewed endpoint identifiers
-and the successful staging/failed production authentication outcome. A uniquely
-named staging-only role provides isolation without changing projects. New
-preview branches inherit that role, but do not receive the staging seed secret
-and cannot pass the approved-target checks.
-
-## Validate and enable
-
-Read the following through each staging connection before any replacement:
-
-```sql
-SELECT
-  current_setting('neon.project_id', true) AS project_id,
-  current_setting('neon.branch_id', true) AS branch_id,
-  current_setting('neon.endpoint_id', true) AS endpoint_id,
-  current_database() AS database_name,
-  current_user AS role_name;
-```
-
-The seed requires exact approved project, branch, endpoint, and database
-matches; its connection must also report the dedicated seed role. These Neon
-settings are supplied by the compute and cannot be changed by the session.
-Missing, empty, or mismatched settings fail closed. The migration connection
-must identify the same approved staging database. Verify that staging has the
-settings and that production authentication with the seed credentials fails
-before setting `STAGING_SEED_ENABLED=true`. The first enabled staging release
-repeats this read-only preflight before migrations, then validates again before
-replacement.
-
-The source of truth for branch-scoped roles is
-[Neon's role documentation](https://neon.com/docs/manage/roles). Server identity
-settings are defined by the
-[Neon extension](https://github.com/neondatabase/neon/blob/main/pgxn/neon/libpagestore.c)
-and populated by its
-[compute configuration](https://github.com/neondatabase/neon/blob/main/compute_tools/src/config.rs).
+The former `STAGING_SEED_ENABLED`, `STAGING_SEED_DATABASE_URL`,
+`STAGING_SEED_TARGET`, and `STAGING_SEED_USER_EXTERNAL_IDS` settings are unused.
+They can be removed from GitHub/Fly after the migration-only deployment has
+completed. No dedicated seed role or seed connection is required. Existing Neon
+branches, databases, and roles are left in place.
 
 ## Preview lifecycle and verification
 
-New Neon preview branches copy the seeded staging database when they are
-created. Existing preview branches are reused and keep their current data; they
-are neither reset nor reseeded on subsequent PR deployments. To exercise the new
-dataset in an existing preview, use an explicitly reviewed recreation of that
-preview branch/app or open a new preview after staging has been seeded. See
+New Neon preview branches copy staging when created. Existing branches are
+reused and retain their data across deployments. To reset an existing preview,
+run **Seed Database** with that PR's branch selected. See
 [Preview environments](preview-environments.md).
 
 Verify login and tester book access, sharing and admin access for appropriately
@@ -438,7 +329,7 @@ configured roles, accounts and nested/archived groups, today and historical
 ledgers, search/filter/sorting, reports and period comparisons, CHF valuation of
 foreign currencies/securities/crypto, transfers and split transactions,
 transaction editing and deletion, and statement imports. Editing remains
-interactive; the next staging deployment restores the synthetic dataset.
+interactive; the next manual seed restores the synthetic dataset.
 
 After the seed bundle has been built, produce the import fixture without a
 connection to any database:

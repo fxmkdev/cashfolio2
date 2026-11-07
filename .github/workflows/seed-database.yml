@@ -1,0 +1,90 @@
+name: Seed Database
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: 26
+  FLYCTL_VERSION: 0.4.115
+
+jobs:
+  target:
+    name: Resolve branch target
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.target.outputs.environment }}
+      fly_app: ${{ steps.names.outputs.fly_app }}
+      preview_url: ${{ steps.names.outputs.preview_url }}
+      neon_branch_name: ${{ steps.names.outputs.neon_branch_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Resolve staging or open PR
+        id: target
+        run:
+          node apps/cashfolio-app2/scripts/manual-seed-workflow.ts
+          resolve-target
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Resolve preview resource names
+        if: steps.target.outputs.environment == 'preview'
+        id: names
+        uses: ./.github/actions/resolve-preview-names
+        with:
+          pr_number: ${{ steps.target.outputs.pr_number }}
+          head_ref: ${{ github.ref_name }}
+
+  seed:
+    name: Seed existing database
+    needs: target
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ format('{0}-cashfolio-app', needs.target.outputs.environment) }}
+    concurrency:
+      group:
+        cashfolio-app2-deploy-${{ needs.target.outputs.environment }}-${{
+        needs.target.outputs.fly_app || 'shared' }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Resolve existing Neon branch
+        id: database
+        run:
+          node apps/cashfolio-app2/scripts/manual-seed-workflow.ts
+          resolve-database
+        env:
+          SEED_ENVIRONMENT: ${{ needs.target.outputs.environment }}
+          NEON_STAGING_PROJECT_ID: ${{ vars.NEON_STAGING_PROJECT_ID }}
+          NEON_STAGING_BRANCH_ID: ${{ vars.NEON_STAGING_BRANCH_ID }}
+          NEON_BRANCH_NAME: ${{ needs.target.outputs.neon_branch_name }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      - name: Wake up deployed app
+        uses: ./.github/actions/warm-up-url
+        with:
+          url: ${{ needs.target.outputs.preview_url || vars.BASE_URL }}
+      - name: Seed using deployed code
+        run: node apps/cashfolio-app2/scripts/manual-seed-workflow.ts seed
+        env:
+          FLY_APP: ${{ needs.target.outputs.fly_app || vars.FLY_APP }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          NEON_STAGING_PROJECT_ID: ${{ vars.NEON_STAGING_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.database.outputs.branch_id }}
+          SEED_USER_EXTERNAL_IDS: ${{ secrets.SEED_USER_EXTERNAL_IDS }}
