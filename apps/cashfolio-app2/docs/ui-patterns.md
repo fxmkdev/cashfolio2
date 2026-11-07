@@ -585,12 +585,16 @@ Financial account ledgers use the account title and a compact chevron as one
 once, preserve heading typography, and let long names wrap. Category and system
 ledgers retain plain headings.
 
-The button opens a Mantine Popover containing an autofocused **Search Accounts**
-field and an immediately visible Mantine `Tree`, rather than a nested dropdown.
-This navigation control is an exception to the form-field TreeSelect pattern. It
-follows the Accounts page's configured hierarchy, sibling ordering, and Archived
-branches within the current account book. Groups expand and collapse but cannot
-be selected, including empty groups.
+The button opens a Mantine `Combobox` containing an autofocused **Search
+Accounts** field and immediately visible hierarchical options. Render rows with
+the public `TreeSelectOption` export so spacing, connector lines, chevrons,
+hover states, and selection markers match form TreeSelect controls. Use public
+`flattenTreeData` metadata to supply the row hierarchy and a small wrapper for
+TreeSelect's line and spacing variables; do not copy row CSS or import private
+Mantine files. This navigation control is an exception to the form-field
+TreeSelect pattern. It follows the Accounts page's configured hierarchy, sibling
+ordering, and Archived branches within the current account book. Groups expand
+and collapse but cannot be selected, including empty groups.
 
 Each opening clears the search and reveals the current account's branch and
 siblings. Search matches full hierarchy paths, preserving ancestor context;
@@ -598,10 +602,12 @@ slashes inside names remain literal. Selecting an account opens its ledger and
 preserves the selected month, year, or All Periods state, subject to existing
 account-book date bounds. Transaction targeting and bulk selection are cleared.
 Normal browser history returns to the previous ledger. Arrow Down from search
-enters the current account or first search result; tree arrow keys navigate and
-Enter activates an account. Selection, Escape, outside click, and the title
-button close the popover. Dismissal restores focus to the title button. Keep the
-popover within the viewport and its tree scrollable on narrow layouts.
+highlights the current account or first search result. Focus stays in search,
+with the highlighted option exposed through `aria-activedescendant`. Up/Down
+browse options; Left/Right navigate branches and Enter activates an account or
+toggles a group. Selection, Escape, outside click, and the title button close
+the popover. Dismissal restores focus to the title button. Keep the popover
+within the viewport and its tree scrollable on narrow layouts.
 
 ## Document Title Pattern
 

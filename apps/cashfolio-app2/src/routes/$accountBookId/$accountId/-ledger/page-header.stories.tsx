@@ -92,7 +92,7 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
     canvas.getAllByText(switcher.textContent!, { exact: true }),
   ).toHaveLength(1);
   await expect(
-    canvas.queryByRole("textbox", { name: "Search Accounts" }),
+    canvas.queryByRole("combobox", { name: "Search Accounts" }),
   ).not.toBeInTheDocument();
   const period = canvas.getByRole("button", {
     name: "Previous Period",
@@ -175,12 +175,12 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
 
   if (container.getBoundingClientRect().width < 768) {
     await userEvent.click(switcher);
-    const dialog = await screen.findByRole("dialog", {
-      name: /^Switch Account:/,
+    const dialog = await screen.findByRole("listbox", {
+      name: "Accounts",
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("textbox", { name: "Search Accounts" }),
+        screen.getByRole("combobox", { name: "Search Accounts" }),
       ).toHaveFocus(),
     );
     await waitFor(() => {

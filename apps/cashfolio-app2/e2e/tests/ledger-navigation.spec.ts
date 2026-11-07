@@ -122,7 +122,7 @@ for (const period of ["2026-01", "2026", undefined]) {
     const source = `/${seeded.accountBookId}/${seeded.cashAccount.id}${search}#activity`;
     await page.goto(source);
     const switcher = page.getByRole("button", { name: /^Switch Account:/ });
-    const searchInput = page.getByRole("textbox", { name: "Search Accounts" });
+    const searchInput = page.getByRole("combobox", { name: "Search Accounts" });
     await expect(switcher).toHaveAccessibleName(
       `Switch Account: ${seeded.cashAccount.name}`,
     );
@@ -145,12 +145,12 @@ for (const period of ["2026-01", "2026", undefined]) {
     ).toBeVisible();
     await switcher.click();
     await expect(
-      page.getByRole("treeitem", { name: "E2E Travel Account", exact: true }),
+      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
     ).toHaveCount(0);
     await expect(searchInput).toBeFocused();
     await searchInput.fill(" other bank / e2e travel ");
     await page
-      .getByRole("treeitem", { name: "E2E Travel Account", exact: true })
+      .getByRole("option", { name: "E2E Travel Account", exact: true })
       .click();
     await expect(page).toHaveURL(
       `/${seeded.accountBookId}/${distantAccountId}${search}`,
@@ -160,11 +160,11 @@ for (const period of ["2026-01", "2026", undefined]) {
     ).toHaveCount(0);
     await switcher.click();
     await expect(
-      page.getByRole("treeitem", { name: "E2E Travel Account", exact: true }),
+      page.getByRole("option", { name: "E2E Travel Account", exact: true }),
     ).toHaveAttribute("aria-selected", "true");
     await searchInput.fill("E2E Archived Financial Account");
     await page
-      .getByRole("treeitem", {
+      .getByRole("option", {
         name: "E2E Archived Financial Account",
         exact: true,
       })
@@ -183,13 +183,13 @@ for (const period of ["2026-01", "2026", undefined]) {
     async function userSwitchToSibling() {
       await switcher.click();
       await expect(
-        page.getByRole("treeitem", {
+        page.getByRole("option", {
           name: seeded.cashAccount.name,
           exact: true,
         }),
       ).toHaveAttribute("aria-selected", "true");
       await page
-        .getByRole("treeitem", {
+        .getByRole("option", {
           name: seeded.savingsAccount.name,
           exact: true,
         })

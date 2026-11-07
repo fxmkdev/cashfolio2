@@ -1,26 +1,22 @@
 import {
+  Combobox,
   filterTreeData,
+  FocusTrap,
   getTreeExpandedState,
-  Popover,
   ScrollArea,
-  Text,
-  TextInput,
   Title,
   Tooltip,
-  Tree,
+  TreeSelectOption,
   UnstyledButton,
-  useTree,
+  useCombobox,
 } from "@mantine/core";
-import {
-  IconCheck,
-  IconChevronDown,
-  IconChevronRight,
-} from "@tabler/icons-react";
-import { useMemo, useRef, useState } from "react";
+import { IconChevronDown } from "@tabler/icons-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   filterLedgerAccountNode,
   type LedgerAccountSwitcherData,
 } from "./account-switcher-data";
+import { getLedgerAccountSwitcherOptions } from "./account-switcher-options";
 import classes from "./account-switcher.module.css";
 
 export type LedgerAccountSwitcherProps = {
@@ -34,27 +30,55 @@ export function LedgerAccountSwitcher({
   tree,
   onSelectAccount,
 }: LedgerAccountSwitcherProps) {
-  const [opened, setOpened] = useState(false);
   const [query, setQuery] = useState("");
   const [expandedState, setExpandedState] = useState<Record<string, boolean>>(
     {},
   );
+  const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
+  const [activeOptionId, setActiveOptionId] = useState<string>();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const treeRef = useRef<HTMLUListElement>(null);
-  const selectedRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const optionsId = useId();
   const data = useMemo(
     () => filterTreeData(tree.data, query, filterLedgerAccountNode),
     [tree.data, query],
   );
-  const controller = useTree({
-    expandedState,
-    onExpandedStateChange: setExpandedState,
-    selectedState: [account.id],
-    multiple: false,
+  const options = useMemo(
+    () => getLedgerAccountSwitcherOptions(data, expandedState),
+    [data, expandedState],
+  );
+  const combobox = useCombobox({
+    onDropdownOpen: () => changeSearch(""),
+    onDropdownClose: () => {
+      setHighlightedValue(null);
+      combobox.resetSelectedOption();
+    },
   });
+  const { selectOption, resetSelectedOption } = combobox;
+
+  // Preserve the highlighted value when expanding a branch changes row indexes.
+  useEffect(() => {
+    const index = options.findIndex(
+      ({ node }) => node.value === highlightedValue,
+    );
+    if (index < 0) {
+      resetSelectedOption();
+      setActiveOptionId(undefined);
+      if (highlightedValue !== null) setHighlightedValue(null);
+      return;
+    }
+    selectOption(index);
+    setActiveOptionId(
+      optionsRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[
+        index
+      ]?.id,
+    );
+  }, [options, highlightedValue, selectOption, resetSelectedOption]);
 
   function changeSearch(nextQuery: string) {
     setQuery(nextQuery);
+    setHighlightedValue(null);
+    combobox.resetSelectedOption();
     setExpandedState(
       getTreeExpandedState(
         filterTreeData(tree.data, nextQuery, filterLedgerAccountNode),
@@ -65,40 +89,37 @@ export function LedgerAccountSwitcher({
     );
   }
 
-  function changeOpened(nextOpened: boolean) {
-    if (nextOpened) changeSearch("");
-    setOpened(nextOpened);
+  function toggleExpanded(value: string) {
+    setExpandedState((previous) => ({
+      ...previous,
+      [value]: !previous[value],
+    }));
   }
 
   function activate(value: string) {
     if (tree.accountIds.has(value)) {
-      setOpened(false);
+      combobox.closeDropdown();
       if (value !== account.id) onSelectAccount(value);
-    } else {
-      controller.toggleExpanded(value);
-    }
-  }
-
-  function activateItem(item: HTMLElement | null) {
-    const value = item?.dataset.value;
-    if (
-      value &&
-      (tree.accountIds.has(value) || item.hasAttribute("aria-expanded"))
+    } else if (
+      options.some(
+        (option) => option.node.value === value && option.hasChildren,
+      )
     ) {
-      activate(value);
+      toggleExpanded(value);
     }
   }
 
   return (
     <Title order={2} aria-label={account.name}>
-      <Popover
-        opened={opened}
-        onChange={changeOpened}
+      <Combobox
+        store={combobox}
+        onOptionSubmit={activate}
         width="24rem"
         position="bottom-start"
         shadow="md"
         withinPortal
-        trapFocus
+        keepMounted={false}
+        transitionProps={{ duration: 150 }}
         returnFocus
         classNames={{ dropdown: classes.dropdown }}
         middlewares={{
@@ -107,15 +128,24 @@ export function LedgerAccountSwitcher({
           size: { padding: 16 },
         }}
         onEnterTransitionEnd={() =>
-          selectedRef.current?.scrollIntoView({ block: "nearest" })
+          optionsRef.current
+            ?.querySelector<HTMLElement>('[aria-selected="true"]')
+            ?.scrollIntoView({ block: "nearest" })
         }
       >
-        <Popover.Target>
+        <Combobox.Target
+          targetType="button"
+          withKeyboardNavigation={false}
+          withAriaAttributes={false}
+        >
           <UnstyledButton
             ref={triggerRef}
             className={classes.trigger}
             aria-label={`Switch Account: ${account.name}`}
-            onClick={() => changeOpened(!opened)}
+            aria-haspopup="listbox"
+            aria-expanded={combobox.dropdownOpened}
+            aria-controls={combobox.dropdownOpened ? optionsId : undefined}
+            onClick={() => combobox.toggleDropdown()}
           >
             <span className={classes.name}>{account.name}</span>
             <IconChevronDown
@@ -124,108 +154,110 @@ export function LedgerAccountSwitcher({
               aria-hidden="true"
             />
           </UnstyledButton>
-        </Popover.Target>
-        <Tooltip target={triggerRef} label="Switch Account" disabled={opened} />
-        <Popover.Dropdown>
-          <TextInput
-            aria-label="Search Accounts"
-            placeholder="Search Accounts"
-            data-autofocus
-            value={query}
-            className={classes.search}
-            onChange={(event) => changeSearch(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "ArrowDown") return;
-              const accounts = Array.from(
-                treeRef.current?.querySelectorAll<HTMLElement>(
-                  '[role="treeitem"]',
-                ) ?? [],
-              ).filter((element) =>
-                tree.accountIds.has(element.dataset.value ?? ""),
-              );
-              const target =
-                (!query.trim() &&
-                  accounts.find(
-                    (element) => element.dataset.value === account.id,
-                  )) ||
-                accounts[0];
-              if (target) {
-                event.preventDefault();
-                target.focus();
-                target.scrollIntoView({ block: "nearest" });
-              }
-            }}
-          />
-          <ScrollArea.Autosize mah="20rem" className={classes.results}>
-            {data.length ? (
-              <Tree
-                ref={treeRef}
-                aria-label="Accounts"
-                data={data}
-                tree={controller}
-                expandOnClick={false}
-                expandOnSpace={false}
-                selectOnClick={false}
-                allowRangeSelection={false}
-                onClick={(event) => {
-                  const item = (
-                    event.target as HTMLElement
-                  ).closest<HTMLElement>('[role="treeitem"]');
-                  event.stopPropagation();
-                  item?.focus();
-                  activateItem(item);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  const item = (
-                    event.target as HTMLElement
-                  ).closest<HTMLElement>('[role="treeitem"]');
-                  if (item) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    activateItem(item);
+        </Combobox.Target>
+        <Tooltip
+          target={triggerRef}
+          label="Switch Account"
+          disabled={combobox.dropdownOpened}
+        />
+        <FocusTrap active={combobox.dropdownOpened}>
+          <Combobox.Dropdown>
+            <Combobox.Search
+              aria-label="Search Accounts"
+              placeholder="Search Accounts"
+              role="combobox"
+              aria-expanded={combobox.dropdownOpened}
+              aria-controls={optionsId}
+              aria-activedescendant={activeOptionId}
+              data-autofocus
+              value={query}
+              withKeyboardNavigation={false}
+              onChange={(event) => changeSearch(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing) return;
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  if (event.key === "ArrowDown" && highlightedValue === null) {
+                    const first = options.find(({ node }) =>
+                      tree.accountIds.has(node.value),
+                    );
+                    const current =
+                      !query.trim() &&
+                      options.find(({ node }) => node.value === account.id);
+                    setHighlightedValue((current || first)?.node.value ?? null);
+                  } else {
+                    if (event.key === "ArrowDown") combobox.selectNextOption();
+                    else combobox.selectPreviousOption();
+                    setHighlightedValue(
+                      options[combobox.getSelectedOptionIndex()]?.node.value ??
+                        null,
+                    );
                   }
-                }}
-                renderNode={({
-                  node,
-                  selected,
-                  hasChildren,
-                  expanded,
-                  elementProps,
-                }) => (
-                  <div
-                    {...elementProps}
-                    ref={selected ? selectedRef : undefined}
-                    className={`${elementProps.className} ${classes.nodeLabel}`}
-                    onClick={undefined}
-                  >
-                    <span
-                      className={classes.nodeChevron}
-                      data-expanded={expanded || undefined}
-                    >
-                      {hasChildren && (
-                        <IconChevronRight size={14} aria-hidden="true" />
-                      )}
-                    </span>
-                    <span className={classes.name}>{node.label}</span>
-                    {selected && (
-                      <IconCheck
-                        size={16}
-                        className={classes.chevron}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
-                )}
-              />
-            ) : (
-              <Text size="sm" c="dimmed" p="xs">
-                No accounts found
-              </Text>
-            )}
-          </ScrollArea.Autosize>
-        </Popover.Dropdown>
-      </Popover>
+                  return;
+                }
+                const current = options.find(
+                  ({ node }) => node.value === highlightedValue,
+                );
+                if (!current) return;
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  activate(current.node.value);
+                } else if (
+                  event.key === "ArrowRight" &&
+                  current.hasChildren &&
+                  !current.expanded
+                ) {
+                  event.preventDefault();
+                  toggleExpanded(current.node.value);
+                } else if (event.key === "ArrowLeft") {
+                  if (current.hasChildren && current.expanded) {
+                    event.preventDefault();
+                    toggleExpanded(current.node.value);
+                  } else if (current.parent) {
+                    event.preventDefault();
+                    setHighlightedValue(current.parent);
+                  }
+                }
+              }}
+            />
+            <Combobox.Options
+              id={optionsId}
+              ref={optionsRef}
+              aria-label="Accounts"
+              className={classes.options}
+            >
+              <ScrollArea.Autosize
+                mah="20rem"
+                className={classes.results}
+                type="scroll"
+                scrollbarSize="var(--combobox-padding)"
+                offsetScrollbars="y"
+              >
+                {options.map((option) => (
+                  <TreeSelectOption
+                    key={option.node.value}
+                    node={option.node}
+                    level={option.level}
+                    hasChildren={option.hasChildren}
+                    expanded={option.expanded}
+                    selected={option.node.value === account.id}
+                    checked={false}
+                    indeterminate={false}
+                    showCheckbox={false}
+                    isLastChild={option.isLastChild}
+                    lineGuides={option.lineGuides}
+                    withLines
+                    onToggleExpand={toggleExpanded}
+                  />
+                ))}
+              </ScrollArea.Autosize>
+              {!options.length && (
+                <Combobox.Empty>No accounts found</Combobox.Empty>
+              )}
+            </Combobox.Options>
+          </Combobox.Dropdown>
+        </FocusTrap>
+      </Combobox>
     </Title>
   );
 }
