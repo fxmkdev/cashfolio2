@@ -35,7 +35,8 @@ export function getStoryModalProps(
       await options.submitCreateAccount?.(values);
       state.setCreateModalOpened(false);
     },
-    handleUpdateAccount: async () => {
+    handleUpdateAccount: async (values) => {
+      await options.submitUpdateAccount?.(values);
       state.setEditModalOpen(false);
     },
     handleCreateGroup: async (values) => {

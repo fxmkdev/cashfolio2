@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   committedLifecycleView,
+  committedBulkLifecycleView,
   organizeLifecycleAvailability,
   bulkLifecycleAvailability,
 } from "./lifecycle";
@@ -273,22 +274,11 @@ export function useOrganizer(
     await operation(targets);
     attempted.current = undefined;
     if (!mounted.current) return;
-    let committed = before;
-    const reveal: string[] = [];
-    const fallback: string[] = [];
-    for (const target of targets) {
-      const node = committed.nodes.find((node) => node.id === target.id)!;
-      const view = committedLifecycleView(committed, action, node);
-      committed = view.snapshot;
-      reveal.push(...view.revealIds);
-      fallback.push(...view.focusFallbackIds);
-    }
-    setSnapshot(committed);
-    setRevealIds([...new Set(reveal)]);
-    setFocusFallbackIds([...new Set(fallback)]);
-    setMessage(
-      `${targets.length} selected items ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
-    );
+    const committed = committedBulkLifecycleView(before, action, targets);
+    setSnapshot(committed.snapshot);
+    setRevealIds(committed.revealIds);
+    setFocusFallbackIds(committed.focusFallbackIds);
+    setMessage(committed.message);
     onSaved();
     onCommitted?.();
     await refresh();

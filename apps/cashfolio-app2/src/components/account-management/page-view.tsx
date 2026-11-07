@@ -8,10 +8,7 @@ import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutati
 import { BulkAccountToolbar } from "./bulk-account-toolbar";
 import { AccountsPageHeader } from "./page-header";
 import { AccountsPageGrid } from "./page-grid";
-import {
-  AccountsPageDialogs,
-  AccountsBulkAssignmentDialogs,
-} from "./page-dialogs";
+import { AccountsBulkAssignmentDialogs } from "./page-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import { CategoriesPageView } from "./categories-page";
 import { useState } from "react";
@@ -144,7 +141,11 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   });
   const { organizer, navigation, isOrganizing } = session;
   const [interactionBlocked, setInteractionBlocked] = useState(false);
-  const editorOpened = props.createModalOpened || props.createGroupModalOpened;
+  const editorOpened =
+    props.createModalOpened ||
+    props.createGroupModalOpened ||
+    props.editModalOpen ||
+    props.editGroupModalOpen;
 
   return (
     <PageShell>
@@ -186,11 +187,10 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         session={session}
         canOrganize={canOrganize}
       />
-      {isOrganizing ? (
-        <AccountOrganizeDialogs props={props} organizer={organizer} />
-      ) : (
-        <AccountsPageDialogs {...props} />
-      )}
+      <AccountOrganizeDialogs
+        props={props}
+        organizer={isOrganizing ? organizer : undefined}
+      />
       <AccountRowMoveDialog props={props} />
     </PageShell>
   );

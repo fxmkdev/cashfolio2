@@ -106,3 +106,26 @@ export function committedLifecycleView(
     message: `${node.name} ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
   };
 }
+
+export function committedBulkLifecycleView(
+  before: OrganizeSnapshot,
+  action: OrganizeLifecycleAction,
+  targets: OrganizeNodeRef[],
+) {
+  let snapshot = before;
+  const revealIds: string[] = [];
+  const focusFallbackIds: string[] = [];
+  for (const target of targets) {
+    const node = snapshot.nodes.find((node) => node.id === target.id)!;
+    const view = committedLifecycleView(snapshot, action, node);
+    snapshot = view.snapshot;
+    revealIds.push(...view.revealIds);
+    focusFallbackIds.push(...view.focusFallbackIds);
+  }
+  return {
+    snapshot,
+    revealIds: [...new Set(revealIds)],
+    focusFallbackIds: [...new Set(focusFallbackIds)],
+    message: `${targets.length} selected items ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
+  };
+}
