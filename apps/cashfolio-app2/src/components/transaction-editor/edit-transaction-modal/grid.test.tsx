@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Unit } from "@/.prisma-client/enums";
-import { useEditTransactionGrid } from "./grid";
+import { stopBookingEditing, useEditTransactionGrid } from "./grid";
 import { createFormFixture } from "./test-support";
 
 function model(args: Parameters<typeof useEditTransactionGrid>[0]) {
@@ -17,6 +17,47 @@ function model(args: Parameters<typeof useEditTransactionGrid>[0]) {
 }
 
 describe("booking grid ownership", () => {
+  it("shares the pending commit and waits for queued cell changes to finish", async () => {
+    const api = {
+      getEditingCells: vi.fn().mockReturnValue([{}]),
+      stopEditing: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const grid = model({
+      form: createFormFixture({ bookings: [] }).form,
+      accounts: [],
+      unitUsage: undefined,
+      accountBookStartDay: new Date("2026-01-04T00:00:00.000Z"),
+      isSubmitting: false,
+    });
+    Object.assign(grid.gridRef, { current: { api } });
+    const firstCommit = grid.stopEditing();
+    expect(grid.stopEditing()).toBe(firstCommit);
+    const completed = vi.fn();
+    const commit = firstCommit.then(completed);
+    expect(api.stopEditing).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    expect(completed).not.toHaveBeenCalled();
+    const [event, onStopped] = api.addEventListener.mock.calls[0];
+    expect(event).toBe("cellEditingStopped");
+    onStopped();
+    await commit;
+    expect(completed).toHaveBeenCalledOnce();
+    expect(api.removeEventListener).toHaveBeenCalledWith(event, onStopped);
+  });
+  it("completes without waiting when no cell is being edited", async () => {
+    const api = {
+      getEditingCells: vi.fn().mockReturnValue([]),
+      stopEditing: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    await stopBookingEditing();
+    await stopBookingEditing(api);
+    expect(api.addEventListener).not.toHaveBeenCalled();
+    expect(api.stopEditing).not.toHaveBeenCalled();
+  });
   it("keeps mutable grid rows separate from form values and the initial snapshot", () => {
     const { form } = createFormFixture({
       bookings: [

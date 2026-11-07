@@ -1323,8 +1323,9 @@ and submission; `grid.ts` owns copied rows, columns, locking, and grid context;
 `grid-events.ts` contains booking edits and row mutations; `view.tsx` renders
 the existing controls. Field rules remain in the adjacent validation helper,
 with the existing values, unit-defaults, and dirty-state helpers reused.
-Submission stops active cell editing before validation reads the latest form
-values.
+Submission stops active cell editing and waits for AG Grid's queued cell-change
+handlers before validation reads the latest form values. Repeated submits share
+the pending edit commit and retain the submission guard.
 
 The editor preserves these behaviors:
 

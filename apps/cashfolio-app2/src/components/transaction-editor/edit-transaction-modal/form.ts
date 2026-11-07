@@ -111,14 +111,15 @@ export function useEditTransactionForm(
   };
 }
 
-export function submitTransactionForm(args: {
+export async function submitTransactionForm(args: {
   form: Pick<TransactionForm, "onSubmit">;
   runSubmit: ReturnType<typeof useDialogSubmitState>["runSubmit"];
   onSubmit: EditTransactionModalProps["onSubmit"];
-  stopEditing: () => void;
+  stopEditing: () => void | Promise<void>;
   event?: FormEvent<HTMLFormElement>;
 }) {
-  args.stopEditing();
+  args.event?.preventDefault();
+  await args.stopEditing();
   return args.form.onSubmit(
     (values) =>
       args.runSubmit(() =>

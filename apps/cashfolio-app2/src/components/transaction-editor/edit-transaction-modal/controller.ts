@@ -41,7 +41,7 @@ export function useEditTransactionModalController(
         form: formState.form,
         runSubmit: formState.submitState.runSubmit,
         onSubmit: props.onSubmit,
-        stopEditing: () => grid.gridRef.current?.api.stopEditing(),
+        stopEditing: grid.stopEditing,
         event,
       }),
   };

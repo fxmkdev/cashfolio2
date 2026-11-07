@@ -92,16 +92,16 @@ describe("transaction form boundaries", () => {
       order.push("validate");
       void onValid(form.getValues(), undefined);
     };
-    submitTransactionForm({
+    await submitTransactionForm({
       form: { onSubmit: validate },
       runSubmit,
       onSubmit,
-      stopEditing: () => {
+      stopEditing: async () => {
         order.push("commit");
+        await Promise.resolve();
         form.values.bookings[0].description = "uncommitted text";
       },
     });
-    await Promise.resolve();
     expect(order).toEqual(["commit", "validate", "guard", "submit"]);
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({

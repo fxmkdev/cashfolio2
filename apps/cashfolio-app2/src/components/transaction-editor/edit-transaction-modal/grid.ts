@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgGridReact } from "ag-grid-react";
 import type {
   CellValueChangedEvent,
+  GridApi,
   RowDragEndEvent,
 } from "ag-grid-enterprise";
 import { createEditTransactionColumnDefs } from "../edit-transaction-modal-columns";
@@ -16,6 +17,28 @@ import {
   deleteBooking,
   reorderBookingRows,
 } from "./grid-events";
+
+export async function stopBookingEditing(
+  api?: Pick<
+    GridApi<BookingValues>,
+    | "getEditingCells"
+    | "stopEditing"
+    | "addEventListener"
+    | "removeEventListener"
+  >,
+) {
+  if (!api || api.getEditingCells().length === 0) return;
+  // AG Grid queues cell-value changes before cellEditingStopped. Wait for those
+  // handlers to update the uncontrolled form before validating its values.
+  await new Promise<void>((resolve) => {
+    const onStopped = () => {
+      api.removeEventListener("cellEditingStopped", onStopped);
+      resolve();
+    };
+    api.addEventListener("cellEditingStopped", onStopped);
+    api.stopEditing();
+  });
+}
 
 export function useEditTransactionGrid(args: {
   form: TransactionForm;
@@ -34,6 +57,7 @@ export function useEditTransactionGrid(args: {
     isSubmitting,
   } = args;
   const gridRef = useRef<AgGridReact<BookingValues>>(null);
+  const pendingCommit = useRef<Promise<void> | null>(null);
   const [isCellEditorDirty, setIsCellEditorDirty] = useState(false);
   // AG Grid mutates committed rows; never share them with the form snapshot.
   const bookingRows = useMemo(
@@ -70,6 +94,15 @@ export function useEditTransactionGrid(args: {
 
   return {
     gridRef,
+    stopEditing: () => {
+      // Repeated submits must wait for the same in-flight edit commit.
+      pendingCommit.current ??= stopBookingEditing(
+        gridRef.current?.api,
+      ).finally(() => {
+        pendingCommit.current = null;
+      });
+      return pendingCommit.current;
+    },
     bookingRows,
     columnDefs,
     isCellEditorDirty,
