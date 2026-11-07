@@ -2,10 +2,7 @@ import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import { type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  toAccountGridTreeRow,
-  type AccountsGridRow,
-} from "./-page-types";
+import { toAccountGridTreeRow, type AccountsGridRow } from "./-page-types";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import {
