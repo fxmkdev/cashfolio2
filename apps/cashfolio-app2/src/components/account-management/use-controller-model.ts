@@ -2,7 +2,7 @@ import { useAccountsPageData } from "./loading/use-page-data";
 import { useAccountsPageModalState } from "./dialogs/state";
 import { useAccountsPresentation } from "./grid/use-presentation";
 import type { AccountsControllerOptions } from "./controller-types";
-import { useAccountReturns } from "./use-account-returns";
+import { useAccountReturns } from "./returns/use-returns";
 
 export function useAccountsControllerModel(options: AccountsControllerOptions) {
   const data = useAccountsPageData(options);

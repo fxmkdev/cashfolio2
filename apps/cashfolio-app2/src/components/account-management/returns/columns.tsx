@@ -10,7 +10,7 @@ import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
-} from "./page-types";
+} from "../grid/rows";
 
 export function buildAccountReturnColumns(args: {
   data?: AccountReturnSummaries;

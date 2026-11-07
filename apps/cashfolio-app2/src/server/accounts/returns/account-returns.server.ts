@@ -14,7 +14,7 @@ import { getPeriodCacheGeneration } from "../../period/cache/period-cache";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
 import { createHistoricalLoader } from "../../valuation/history/loader";
 import { HistoryPending } from "../../valuation/history/types";
-import { resolveAccountGainLossDate } from "../account-gain-loss-range.server";
+import { resolveAccountGainLossDate } from "../gain-loss/range.server";
 import { loadAccountReturnInputs } from "./return-inputs.server";
 import { createReturnEngine, rateInput } from "./return-engine";
 import { getOrLoadAccountReturnSummaries } from "./return-cache.server";
