@@ -111,7 +111,7 @@ test("organizes the selected category type with archived descendants and switche
   await page.reload();
   await expect(organizer).toBeVisible();
   await expect(
-    organizer.getByRole("checkbox", { name: "Show Archived" }),
+    page.getByRole("checkbox", { name: "Show Archived" }),
   ).not.toBeChecked();
   await page.getByRole("tab", { name: "Income", exact: true }).click();
   await expect(organizer).toBeVisible();

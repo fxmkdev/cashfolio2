@@ -43,6 +43,10 @@ test("creates, assigns, reports, reparents and deletes an asset class", async ({
   const organizer = page.getByRole("region", {
     name: "Asset Classes Hierarchy",
   });
+  // The fully expanded taxonomy virtualizes roots below the initial viewport.
+  await organizer.locator(".ag-grid-viewport").evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
   await organizer
     .getByRole("button", { name: "Move Other Assets", exact: true })
     .click();

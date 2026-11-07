@@ -21,7 +21,10 @@ export async function openDialogFromButton(
     attempts?: number;
   },
 ): Promise<Locator> {
-  const button = page.getByRole("button", { name: args.buttonName });
+  const button = page.getByRole("button", {
+    name: args.buttonName,
+    exact: true,
+  });
   const dialog = page.getByRole("dialog", { name: args.dialogName });
   const attempts = args.attempts ?? 3;
   let lastError: unknown;
