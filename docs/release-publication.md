@@ -5,12 +5,12 @@ Publication happens later, within the existing `release` concurrency group. Two
 overlapping runs can initially select the same version, so that early result is
 revalidated inside the lock before publication.
 
-The release job checks out the immutable workflow commit. The TypeScript
-publication helper validates it against the original version job's SHA, fetches
-tags without forcing updates, and runs the pinned releaser's `get-version`
-again. Manual `force_release` passes `--release` on both calculations; otherwise
-the releaser's `!release` commit-body semantics determine release eligibility.
-PR builds retain their existing version and preview behavior and cannot publish.
+The release job checks out the immutable workflow commit. Its inline Bash step
+validates it against the original version job's SHA, fetches tags without
+forcing updates, and runs the pinned releaser's `get-version` again. Manual
+`force_release` passes `--release` on both calculations; otherwise the
+releaser's `!release` commit-body semantics determine release eligibility. PR
+builds retain their existing version and preview behavior and cannot publish.
 
 Publication proceeds only when the refreshed metadata still requests a new
 stable release matching the version already embedded in the deployed image, and
@@ -28,7 +28,11 @@ fail the job. A tag left behind by failed GitHub release creation is not
 automatically repaired. Publishers outside the shared concurrency group remain
 outside the lock's protection.
 
-Run `pnpm test:release`, `pnpm typecheck:release`, and `pnpm lint:workflows`
-with Node 26. The regression tests use temporary Git repositories and the pinned
-releaser CLI for version calculation, intercepting final publication to avoid
-external writes. These checks also run in the workflow-lint CI job.
+Run `pnpm --filter cli exec node --test scripts/publish-release.test.ts`,
+`pnpm --filter cli typecheck`, and `pnpm lint:workflows` with Node 26. The
+TypeScript regression tests extract and execute the workflow's actual Bash step
+using temporary Git repositories and the pinned releaser CLI for version
+calculation. A test-only TypeScript command adapter intercepts final publication
+to avoid external writes. The tests and their typecheck run in the existing CLI
+CI jobs; workflow lint remains in the workflow-lint job. No additional tooling
+dependencies are required.

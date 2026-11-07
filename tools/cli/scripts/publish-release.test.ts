@@ -1,29 +1,67 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import {
-  parseVersionInfo,
-  publishRelease,
-  type RunCommand,
-} from "./publish-release.ts";
+import { fileURLToPath } from "node:url";
 
 const releaser = createRequire(import.meta.url).resolve("@fxmk/releaser");
+const adapter = fileURLToPath(
+  new URL("./fixtures/release-command.ts", import.meta.url),
+);
+const workflow = readFileSync(
+  new URL("../../../.github/workflows/build.yml", import.meta.url),
+  "utf8",
+);
+const release = workflow.slice(workflow.indexOf("\n  release:\n"));
+const step = release.slice(
+  release.indexOf("      - name: Revalidate and publish release\n"),
+);
+const block = step.match(/^        run: \|\n((?: {10}[^\n]*\n|\n)+)/m)?.[1];
+assert.ok(block, "Expected the named release step to contain an inline script");
+const script = block
+  .split("\n")
+  .map((line) => line.slice(10))
+  .join("\n");
+const commands = `
+git() { "$RELEASE_TEST_NODE" "$RELEASE_TEST_ADAPTER" git "$@"; }
+pnpm() { "$RELEASE_TEST_NODE" "$RELEASE_TEST_ADAPTER" pnpm "$@"; }
+`;
+
+interface VersionInfo {
+  version: string;
+  versionWithSha: string;
+  isNewRelease: boolean;
+}
+
+interface Publication {
+  cwd: string;
+  args: string[];
+  commit: string;
+}
 
 function fixture(t: TestContext) {
-  const root = mkdtempSync(join(tmpdir(), "cashfolio-release-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "cashfolio-release-")));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const origin = join(root, "origin.git");
   const first = join(root, "first");
   const second = join(root, "second");
-  const publications: {
-    cwd: string;
-    args: readonly string[];
-    commit: string;
-  }[] = [];
+  const log = join(root, "publications.jsonl");
+  const publications = (): Publication[] =>
+    existsSync(log)
+      ? readFileSync(log, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line) as Publication)
+      : [];
   const notices: string[] = [];
   const exec = (cwd: string, command: string, args: readonly string[]) =>
     execFileSync(command, args, {
@@ -45,44 +83,57 @@ function fixture(t: TestContext) {
   commit("chore: initial release");
   git(first, "tag", "v0.21.0");
   git(first, "push", "origin", "main", "--tags");
-  const run =
-    (cwd: string): RunCommand =>
-    (command, args) => {
-      if (command === "pnpm") {
-        assert.deepEqual(args.slice(0, 2), ["exec", "releaser"]);
-        if (args[2] === "publish") {
-          publications.push({
-            cwd,
-            args,
-            commit: git(cwd, "rev-parse", "HEAD"),
-          });
-          // Only publication is intercepted: reproduce the CLI's tag/push without
-          // contacting GitHub's release API. Version calculation uses its real CLI.
-          git(cwd, "tag", `v${args[3]}`);
-          git(cwd, "push", "origin", `v${args[3]}`);
-          return "";
-        }
-        return exec(cwd, process.execPath, [releaser, ...args.slice(2)]);
-      }
-      return exec(cwd, command, args);
-    };
   const metadata = (cwd: string, forceRelease = false) =>
-    parseVersionInfo(
-      run(cwd)("pnpm", [
-        "exec",
-        "releaser",
+    JSON.parse(
+      exec(cwd, process.execPath, [
+        releaser,
         "get-version",
         ...(forceRelease ? ["--release"] : []),
       ]),
-    );
+    ) as VersionInfo;
   const inputs = (cwd: string, forceRelease = false) => ({
     version: metadata(cwd, forceRelease).version,
     sha: git(cwd, "rev-parse", "--short", "HEAD"),
     commit: git(cwd, "rev-parse", "HEAD"),
     forceRelease,
   });
-  const publish = (cwd: string, original = inputs(cwd)) =>
-    publishRelease(original, run(cwd), (message) => notices.push(message));
+  const publish = (
+    cwd: string,
+    original = inputs(cwd),
+    overrides: NodeJS.ProcessEnv = {},
+  ) => {
+    const result = spawnSync(
+      "bash",
+      ["--noprofile", "--norc", "-c", commands + script],
+      {
+        cwd,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GITHUB_HEAD_REF: "",
+          RELEASE_VERSION: original.version,
+          RELEASE_SHA: original.sha,
+          RELEASE_COMMIT: original.commit,
+          FORCE_RELEASE: String(original.forceRelease),
+          RELEASE_TEST_NODE: process.execPath,
+          RELEASE_TEST_ADAPTER: adapter,
+          RELEASE_TEST_RELEASER: releaser,
+          RELEASE_TEST_LOG: log,
+          ...overrides,
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    if (result.error) throw result.error;
+    assert.equal(result.status, 0, result.stderr);
+    const output = result.stdout;
+    notices.push(
+      ...output.split("\n").filter((line) => line.startsWith("::notice::")),
+    );
+    return output.includes("::notice::Skipping release publication:")
+      ? "skipped"
+      : "published";
+  };
   const cloneSecond = () => {
     git(first, "push", "origin", "main");
     git(root, "clone", origin, second);
@@ -93,12 +144,13 @@ function fixture(t: TestContext) {
     origin,
     git,
     commit,
-    run,
     metadata,
     inputs,
     publish,
     cloneSecond,
-    publications,
+    get publications() {
+      return publications();
+    },
     notices,
   };
 }
@@ -253,19 +305,10 @@ test("mismatched original and refreshed commits fail before publication", (t) =>
     () => f.publish(f.first, { ...original, sha: previous }),
     /built commit/,
   );
-  const run: RunCommand = (command, args) => {
-    const result = f.run(f.first)(command, args);
-    if (args.includes("get-version")) {
-      const metadata = parseVersionInfo(result);
-      return JSON.stringify({
-        ...metadata,
-        sha: previous,
-        versionWithSha: `${metadata.version}-${previous}`,
-      });
-    }
-    return result;
-  };
-  assert.throws(() => publishRelease(original, run), /built commit/);
+  assert.throws(
+    () => f.publish(f.first, original, { RELEASE_TEST_SHA: previous }),
+    /built commit/,
+  );
   assert.equal(f.publications.length, 0);
 });
 
@@ -279,30 +322,20 @@ test("malformed metadata and command failures are not converted into skips", (t)
     "{}",
     JSON.stringify({ ...f.metadata(f.first), isNewRelease: "true" }),
   ]) {
-    const run: RunCommand = (command, args) =>
-      args.includes("get-version") ? json : f.run(f.first)(command, args);
-    assert.throws(() => publishRelease(original, run));
+    assert.throws(() =>
+      f.publish(f.first, original, { RELEASE_TEST_METADATA: json }),
+    );
   }
   for (const failingCommand of ["fetch", "get-version", "publish"]) {
-    const failure = new Error(`${failingCommand} failed`);
-    const run: RunCommand = (command, args) => {
-      if (args.includes(failingCommand)) throw failure;
-      return f.run(f.first)(command, args);
-    };
     assert.throws(
-      () => publishRelease(original, run),
-      (error) => error === failure,
+      () => f.publish(f.first, original, { RELEASE_TEST_FAIL: failingCommand }),
+      new RegExp(`${failingCommand} failed`),
     );
   }
   assert.equal(f.publications.length, 0);
 });
 
 test("workflow retains eligibility, lock, commit pin, and version inputs", () => {
-  const workflow = readFileSync(
-    new URL("../.github/workflows/build.yml", import.meta.url),
-    "utf8",
-  );
-  const release = workflow.slice(workflow.indexOf("\n  release:\n"));
   assert.match(
     release,
     /github.event_name != 'pull_request' &&\s+needs.version.outputs.is_new_release\s+== 'true'/,
@@ -322,7 +355,10 @@ test("workflow retains eligibility, lock, commit pin, and version inputs", () =>
     release,
     /FORCE_RELEASE:\s+\$\{\{ github.event_name == 'workflow_dispatch' && inputs.force_release\s+\}\}/,
   );
-  assert.match(release, /run: pnpm exec node scripts\/publish-release.ts/);
-  assert.match(workflow, /run: pnpm test:release/);
-  assert.match(workflow, /run: pnpm typecheck:release/);
+  assert.match(step, /shell: bash/);
+  assert.match(script, /set -euo pipefail/);
+  const cliPackage = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ) as { scripts: { test: string } };
+  assert.match(cliPackage.scripts.test, /scripts\/publish-release.test.ts/);
 });

@@ -12,16 +12,12 @@
   },
   "devDependencies": {
     "@fxmk/releaser": "0.5.7",
-    "@types/node": "^26.6.5",
-    "@typescript/native": "npm:typescript@^7.0.2",
     "github-actionlint": "1.7.12",
     "prettier": "3.9.9"
   },
   "scripts": {
     "cashfolio": "pnpm --filter cli start",
-    "lint:workflows": "node scripts/actionlint.mjs",
-    "test:release": "node --test scripts/publish-release.test.ts",
-    "typecheck:release": "tsc --project tsconfig.release.json"
+    "lint:workflows": "node scripts/actionlint.mjs"
   },
   "packageManager": "pnpm@12.16.1+sha512.091d1dee7927575661b25dab3c2ae31cafc1c54d6b71ed6a6600cf0c1cb10434a447eae14015f1b23e2e6bedeed79df94a932e2164d2832280dce3fb32f656d1"
 }

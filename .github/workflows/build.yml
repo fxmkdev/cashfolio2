@@ -306,10 +306,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run actionlint
         run: pnpm lint:workflows
-      - name: Typecheck release tooling
-        run: pnpm typecheck:release
-      - name: Test release publication
-        run: pnpm test:release
 
   cli-typecheck:
     name: "cli: Typecheck"
@@ -550,7 +546,72 @@ jobs:
       - name: Install dependencies
         run: pnpm --workspace-root install --frozen-lockfile
       - name: Revalidate and publish release
-        run: pnpm exec node scripts/publish-release.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION_PATTERN='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          if [[ ! "$RELEASE_VERSION" =~ $VERSION_PATTERN ||
+                ! "$RELEASE_SHA" =~ ^[a-f0-9]{7,40}$ ||
+                ! "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo 'Invalid original release metadata' >&2
+            exit 1
+          fi
+          ARGS=(exec releaser get-version)
+          case "$FORCE_RELEASE" in
+            true) ARGS+=(--release) ;;
+            false) ;;
+            *) echo 'FORCE_RELEASE must be true or false' >&2; exit 1 ;;
+          esac
+
+          HEAD_SHA="$(git rev-parse HEAD)"
+          ORIGINAL_SHA="$(git rev-parse --verify "${RELEASE_SHA}^{commit}")"
+          if [[ "$HEAD_SHA" != "$RELEASE_COMMIT" || "$HEAD_SHA" != "$ORIGINAL_SHA" ]]; then
+            echo 'Release checkout does not match the built commit' >&2
+            exit 1
+          fi
+
+          # Refresh tags, never HEAD. Conflicting tags must fail rather than move.
+          git fetch --tags origin
+          RESULT="$(pnpm "${ARGS[@]}")"
+          jq -e --arg version_pattern "$VERSION_PATTERN" '
+            type == "object" and
+            (.version | type == "string") and
+            (.versionWithSha | type == "string") and
+            (.isRelease | type == "boolean") and
+            (.isNewRelease | type == "boolean") and
+            (.releaseVersion | type == "string" and test($version_pattern)) and
+            has("prereleaseTag") and
+            (.prereleaseTag == null or (.prereleaseTag | type == "string" and length > 0)) and
+            (.sha | type == "string" and test("^[a-f0-9]{7,40}$")) and
+            (.version == (.releaseVersion + if .prereleaseTag == null then "" else "-" + .prereleaseTag end)) and
+            (.versionWithSha == (.version + "-" + .sha)) and
+            (.isRelease == (.prereleaseTag == null)) and
+            ((.isNewRelease | not) or .isRelease)
+          ' <<< "$RESULT" > /dev/null
+          REFRESHED_SHA="$(jq -r '.sha' <<< "$RESULT")"
+          if [[ "$HEAD_SHA" != "$REFRESHED_SHA"* ]]; then
+            echo 'Refreshed version metadata does not match the built commit' >&2
+            exit 1
+          fi
+
+          VERSION="$(jq -r '.version' <<< "$RESULT")"
+          IS_NEW_RELEASE="$(jq -r '.isNewRelease and .isRelease' <<< "$RESULT")"
+          EXISTING_TAG="$(git tag --list "v${RELEASE_VERSION}")"
+          REASON=''
+          if [[ -n "$EXISTING_TAG" ]]; then
+            REASON="v${RELEASE_VERSION} already exists"
+          elif [[ "$IS_NEW_RELEASE" != 'true' ]]; then
+            REASON='the refreshed metadata no longer requests a new stable release'
+          elif [[ "$VERSION" != "$RELEASE_VERSION" ]]; then
+            REASON="the refreshed version $VERSION differs from the built version $RELEASE_VERSION"
+          fi
+          if [[ -n "$REASON" ]]; then
+            echo "::notice::Skipping release publication: $REASON. Existing tags are preserved. Start a fresh workflow run if a release is still needed."
+            exit 0
+          fi
+
+          pnpm exec releaser publish "$VERSION"
         env:
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
           RELEASE_SHA: ${{ needs.version.outputs.sha }}
