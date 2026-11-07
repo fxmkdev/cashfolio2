@@ -4,13 +4,18 @@ import {
 } from "@/shared/classification/asset-class";
 import { getGainLossInvestmentGroup } from "@/shared/classification/investment-group";
 import type { TreeRow } from "./rows";
-
-export const assetClassRowId = (id: string) => `__asset_class__:${id}`;
-export const UNCLASSIFIED_ROW_ID = "__asset_class_unclassified__";
-export const unitRowId = (classId: string, key: string) =>
-  `__asset_class_unit__:${encodeURIComponent(classId)}:${encodeURIComponent(key)}`;
-export const archivedClassRowId = (id: string) =>
-  `__asset_class_archived__:${id}`;
+import {
+  assetClassRowId,
+  UNCLASSIFIED_ROW_ID,
+  unitRowId,
+  archivedClassRowId,
+} from "@/shared/account-return-groups";
+export {
+  assetClassRowId,
+  UNCLASSIFIED_ROW_ID,
+  unitRowId,
+  archivedClassRowId,
+} from "@/shared/account-return-groups";
 
 function heading(
   id: string,

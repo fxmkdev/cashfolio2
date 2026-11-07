@@ -5,6 +5,7 @@ import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer
 import type { BulkAccountActions } from "./assignments/use-bulk-actions";
 import { type AccountManagementContext } from "@/shared/accounts/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
+import type { AccountReturnTarget } from "@/shared/account-returns";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import { type AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
@@ -28,6 +29,12 @@ type RowTarget = {
 export type AccountsPageViewProps = {
   movingRow?: RowTarget;
   onCloseMove?: () => void;
+  returns?: { loading: boolean; error?: string; retry: () => void };
+  returnCalculation?: {
+    target?: AccountReturnTarget;
+    onClose: () => void;
+    refreshKey: unknown;
+  };
   editorSubmitState?: ReturnType<typeof useDialogSubmitState>;
   onEditHierarchyNode?: (node: OrganizeNode) => void;
   onAddHierarchyChild?: (

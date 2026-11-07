@@ -50,11 +50,12 @@ describe("account classification columns", () => {
       { field: "balance" },
       { field: "balanceInReferenceCurrency" },
       { groupId: "holding-gain-loss" },
+      { groupId: "account-returns" },
       { colId: "assetClass" },
       { colId: "trackingMethod" },
       { colId: "actions", pinned: "right" },
     ]);
-    expect(columns[4]).toMatchObject({
+    expect(columns[5]).toMatchObject({
       colId: "assetClass",
       headerName: "Asset Class",
       width: 220,
@@ -77,7 +78,8 @@ describe("account classification columns", () => {
   it("replaces Asset Class with Account Group in the same position and keeps neighboring columns", () => {
     const columns = readColumns(false, "assetClass");
     expect(columns[3]).toMatchObject({ groupId: "holding-gain-loss" });
-    expect(columns[4]).toMatchObject({
+    expect(columns[4]).toMatchObject({ groupId: "account-returns" });
+    expect(columns[5]).toMatchObject({
       colId: "path",
       headerName: "Account Group",
       width: 220,
@@ -85,7 +87,7 @@ describe("account classification columns", () => {
       sortable: false,
       filter: "agSetColumnFilter",
     });
-    expect(columns[5]).toMatchObject({ colId: "trackingMethod" });
+    expect(columns[6]).toMatchObject({ colId: "trackingMethod" });
     expect(
       columns.some(
         (column) => "colId" in column && column.colId === "assetClass",
@@ -95,7 +97,7 @@ describe("account classification columns", () => {
   });
 
   it("uses original group paths for Account Group display, filtering and tooltips on active and archived accounts", () => {
-    const column = readColumns(false, "assetClass")[4];
+    const column = readColumns(false, "assetClass")[5];
     if (
       !("valueGetter" in column) ||
       typeof column.valueGetter !== "function" ||
@@ -146,7 +148,7 @@ describe("account classification columns", () => {
   });
 
   it("places Tracking Method after Asset Class with label filtering and tooltips", () => {
-    const column = readColumns(false)[5];
+    const column = readColumns(false)[6];
     expect(column).toMatchObject({
       colId: "trackingMethod",
       headerName: "Tracking Method",

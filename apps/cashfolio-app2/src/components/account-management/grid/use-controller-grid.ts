@@ -14,13 +14,16 @@ export function useAccountsControllerGrid({
   model,
   management,
 }: GridOptions) {
-  const { data, modalState, presentation } = model;
+  const { data, modalState, presentation, returns } = model;
   const grid = useAccountsGrid({
     ...options,
     shouldShowReferenceBalancesLoading: data.shouldShowReferenceBalancesLoading,
   });
   const columnDefs = useAccountTreeColumnDefs({
     filterContext: presentation.filterContext,
+    returnData: returns.data,
+    isReturnLoading: returns.loading,
+    onOpenReturn: returns.onOpen,
     gainLossData: presentation.gainLossData,
     grouping: options.grouping,
     isGainLossLoading: data.gainLoss.loading,

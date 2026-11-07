@@ -44,6 +44,7 @@ type GridFeedbackProps = {
   props: Pick<
     AccountsPageViewProps,
     | "gainLoss"
+    | "returns"
     | "managementContext"
     | "unarchiveRecovery"
     | "onRefreshConstraints"
@@ -84,6 +85,14 @@ function AccountsGridFeedback({
         <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
           {gainLoss.error}
           <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
+            Retry
+          </Button>
+        </Alert>
+      ) : null}
+      {props.returns?.error ? (
+        <Alert color="red" title="Returns Unavailable" mb="sm">
+          {props.returns.error}
+          <Button variant="subtle" size="xs" onClick={props.returns.retry}>
             Retry
           </Button>
         </Alert>

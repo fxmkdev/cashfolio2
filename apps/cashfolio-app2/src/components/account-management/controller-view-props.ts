@@ -22,7 +22,7 @@ export function getAccountsControllerViewProps({
   grid,
   organizerApi,
 }: ViewOptions): AccountsPageViewProps {
-  const { data, modalState, presentation } = model;
+  const { data, modalState, presentation, returns } = model;
   const {
     accountGroups,
     archivedAccountGroups,
@@ -44,6 +44,12 @@ export function getAccountsControllerViewProps({
       : undefined,
     managementContext: options.managementContext ?? "accounts",
     gainLoss: { ...data.gainLoss, data: presentation.gainLossData },
+    returns,
+    returnCalculation: {
+      target: returns.target,
+      onClose: returns.onClose,
+      refreshKey: data.loaderData,
+    },
     grouping: options.grouping,
     onGroupingChange: options.onGroupingChange,
     onRefreshConstraints: data.onRefreshConstraints,
