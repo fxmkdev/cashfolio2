@@ -566,7 +566,7 @@ jobs:
 
           HEAD_SHA="$(git rev-parse HEAD)"
           ORIGINAL_SHA="$(git rev-parse --verify "${RELEASE_SHA}^{commit}")"
-          if [[ "$HEAD_SHA" != "$RELEASE_COMMIT" || "$HEAD_SHA" != "$ORIGINAL_SHA" ]]; then
+          if ! [[ "$HEAD_SHA" == "$RELEASE_COMMIT" && "$HEAD_SHA" == "$ORIGINAL_SHA" ]]; then
             echo 'Release checkout does not match the built commit' >&2
             exit 1
           fi
