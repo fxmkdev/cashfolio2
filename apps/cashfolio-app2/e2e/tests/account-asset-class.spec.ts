@@ -84,7 +84,13 @@ for (const type of ["BALANCE"] as const) {
       ).toHaveAttribute("aria-colindex", "2");
       await expect(
         page.getByRole("columnheader", { name: "Asset Class", exact: true }),
+      ).toHaveAttribute("aria-colindex", "11");
+      await expect(
+        page.getByRole("columnheader", { name: "TWR", exact: true }),
       ).toHaveAttribute("aria-colindex", "9");
+      await expect(
+        page.getByRole("columnheader", { name: "MWR", exact: true }),
+      ).toHaveAttribute("aria-colindex", "10");
       expect(
         (
           await page

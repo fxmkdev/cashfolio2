@@ -12,6 +12,7 @@ import {
   findVisibleDialog,
   assetClassCell,
   selectAssignmentAccount,
+  showAccountColumn,
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -197,6 +198,7 @@ export const BulkTrackingMethodFilteredSelection: Story = {
         "1 account selected",
       ),
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
       "Mixed",
     );

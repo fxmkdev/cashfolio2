@@ -6,6 +6,7 @@ import {
   assignmentCheckbox,
   selectAssignmentAccount,
   expandAssignmentGroup,
+  showAccountColumn,
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -40,6 +41,7 @@ export const BulkGroupCheckboxSelection: Story = {
     await waitFor(() =>
       expect(assignmentCheckbox(canvasElement, "empty")).toBeDisabled(),
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
       "Mixed",
     );
@@ -85,6 +87,7 @@ export const BulkGroupCheckboxSelection: Story = {
         "account-checking,old,other",
       ),
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await waitFor(() =>
       expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
         "Equities",
@@ -200,6 +203,7 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
         "account-checking",
       ),
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(
       canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
     ).toHaveTextContent("Digital Assets");
