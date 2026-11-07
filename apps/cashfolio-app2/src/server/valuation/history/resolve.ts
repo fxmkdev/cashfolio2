@@ -59,12 +59,17 @@ export function resolveHistoricalRate(
     date - MAX_BACKTRACK_DAYS * DAY,
     quote ? quote.timestamp + DAY : -Infinity,
   );
-  const proof = coveredUntil(coverage, from, date);
+  const stableProof = coveredUntil(
+    coverage.filter((c) => !c.temporary),
+    from,
+    date,
+  );
+  const proof = stableProof || coveredUntil(coverage, from, date);
   if (!proof) return;
   if (!quote) return { rate: null, source: "missing", validUntil: proof };
   return {
     rate: toMoney(quote.value),
-    source: "covered",
+    source: stableProof ? "covered" : "fallback",
     validUntil: Math.min(proof, quote.validUntil ?? Infinity),
   };
 }

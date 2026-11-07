@@ -27,6 +27,8 @@ export type HistoryCoverage = {
   publication: number;
   expiresAt: number;
   noData?: boolean;
+  /** A failed single-day probe may be skipped temporarily; it proves no gap. */
+  temporary?: boolean;
 };
 export type HistorySnapshot = {
   points: { timestamp: number; value: number; validUntil?: number }[];
@@ -43,7 +45,11 @@ export type HistoryTask = {
   to: string;
   mode: "range" | "day";
 };
-export type HistoryFailure = { attempts: number; retryAt: number };
+export type HistoryFailure = {
+  attempts: number;
+  retryAt: number;
+  preferDay?: boolean;
+};
 export class HistoryPending extends Error {}
 export class HistoryFeatureUnavailable extends Error {}
 export function seriesFor(

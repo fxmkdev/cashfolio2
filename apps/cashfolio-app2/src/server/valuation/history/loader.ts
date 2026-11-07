@@ -134,7 +134,21 @@ export async function createHistoricalLoader(
         if (raw(series, date)) continue;
         let from: string;
         let to: string;
-        const mode = capability.supported === false ? "day" : "range";
+        const singleDay = Object.entries(failures).some(([key, value]) => {
+          if (!value.preferDay) return false;
+          const [keys, from, to] = JSON.parse(key) as [
+            string[],
+            string,
+            string,
+          ];
+          return (
+            keys.includes(series.key) &&
+            date >= timestamp(from) &&
+            date <= timestamp(to)
+          );
+        });
+        const mode =
+          capability.supported === false || singleDay ? "day" : "range";
         if (mode === "day") {
           // The requested date may already be confirmed empty. Advance the
           // backtracking probe rather than downloading that empty day forever.
@@ -228,26 +242,55 @@ export async function createHistoricalLoader(
               ...(batch.noData ? { noData: true } : {}),
             };
             await Promise.all(
-              task.series.map((s) =>
-                storeHistorySeries(
-                  s,
-                  batch.points[s.key]!.filter(
-                    (p) =>
-                      !snapshots
-                        .get(s.key)!
-                        .points.some(
-                          (old) => old.timestamp === timestamp(p.date),
-                        ),
-                  ),
-                  coverage,
-                ),
-              ),
+              task.series.map(async (s) => {
+                const unavailable = new Set(batch.unavailable?.[s.key] ?? []);
+                const points = batch.points[s.key]!.filter(
+                  (p) =>
+                    !snapshots
+                      .get(s.key)!
+                      .points.some(
+                        (old) => old.timestamp === timestamp(p.date),
+                      ),
+                );
+                await storeHistorySeries(s, points);
+                // Nullable range closes never prove a gap. Check those days
+                // individually, retaining the existing one-hour miss cooldown.
+                let from = task.from;
+                for (const date of [...unavailable].sort()) {
+                  if (date > from)
+                    await storeHistorySeries(s, [], {
+                      ...coverage,
+                      from: timestamp(from),
+                      to: timestamp(add(date, -1)),
+                    });
+                  from = add(date, 1);
+                  if (task.mode === "day")
+                    await storeHistorySeries(s, [], {
+                      ...coverage,
+                      from: timestamp(date),
+                      to: timestamp(date),
+                      expiresAt: Date.now() + 3600_000,
+                      temporary: true,
+                    });
+                }
+                if (from <= task.to)
+                  await storeHistorySeries(s, [], {
+                    ...coverage,
+                    from: timestamp(from),
+                  });
+              }),
             );
             if (task.mode === "range") {
               await capabilities.get(task.series[0]!.provider)!.set(true);
               capabilities.get(task.series[0]!.provider)!.supported = true;
             }
-            delete failures[key];
+            if (
+              task.mode === "range" &&
+              batch.unavailable &&
+              Object.keys(batch.unavailable).length
+            )
+              failures[key] = { attempts: 0, retryAt: 0, preferDay: true };
+            else delete failures[key];
             await Promise.all(
               task.series.map(async (s) => {
                 const u = units.get(s.key)!;

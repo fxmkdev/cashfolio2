@@ -545,3 +545,12 @@ failures cannot establish successful long-lived summary entries. Mutable work
 envelopes, immutable transaction/planning artifacts, and completed membership
 results use separate bounded entries, so resuming does not serialize accumulated
 prices.
+
+Nullable stock closes in otherwise complete range pages are unproven dates.
+Valid quotes and coverage of the other dates remain reusable, while those dates
+switch to grouped single-day probes. A null close from a single-day probe
+follows the existing one-hour miss cooldown/backtracking convention: its marker
+is explicitly `temporary`, never a confirmed gap, and any dependent summary
+expires within the 15-minute work lifetime. Currency mismatches and malformed
+prices remain failures. Range incompleteness cannot establish a successful
+long-lived no-quote cache entry.
