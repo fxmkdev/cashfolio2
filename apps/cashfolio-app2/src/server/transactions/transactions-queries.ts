@@ -1,3 +1,4 @@
+import { readTransactionInput } from "../read-input-validation";
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
 import type { Unit } from "../../.prisma-client/enums";
@@ -5,7 +6,7 @@ import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.
 import { toMoneyNumber } from "../../shared/money";
 
 export const getTransaction = createServerFn({ method: "GET" })
-  .validator((data: { transactionId: string; accountBookId: string }) => data)
+  .validator(readTransactionInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const transaction = await prisma.transaction.findUniqueOrThrow({

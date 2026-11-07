@@ -1,3 +1,8 @@
+import { readAccountInput } from "./read-input-validation";
+import {
+  readLedgerInput,
+  readLedgerPeriodBoundsInput,
+} from "./ledger-input-validation";
 import { startReadBudget } from "./resource-context.server";
 import { assetClassSelection, withAssetClassId } from "./classification-data";
 
@@ -13,18 +18,11 @@ import {
   getOpeningBalancesBookingDate,
   startOfUtcDay,
 } from "../shared/date";
-import {
-  getExplicitPeriodDateRange,
-  parseExplicitPeriodSelectionFromUnknown,
-  type ExplicitPeriodSelection,
-} from "../shared/period";
+import { getExplicitPeriodDateRange } from "../shared/period";
 
 import type { StatementImportCsvFormat } from "../shared/statement-import-csv-format";
 import { createGroupPathSegmentsResolver } from "./accounts/accounts-helpers";
-import {
-  doesLedgerAccountContextMatchAccount,
-  parseLedgerAccountContextFromInput,
-} from "./ledger-account-context";
+import { doesLedgerAccountContextMatchAccount } from "./ledger-account-context";
 import { mapWithConcurrencyLimit } from "./concurrency";
 import { convertBookingValueToReference } from "./period/period-conversion";
 import {
@@ -36,7 +34,7 @@ const LEDGER_REFERENCE_CONVERSION_CONCURRENCY = 12;
 export { deriveLedgerPresentationData } from "./ledger-derivation";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
-  .validator((data: { accountId: string; accountBookId: string }) => data)
+  .validator(readAccountInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUnique({
@@ -88,7 +86,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
 export const getLedgerAccountPersistedBalance = createServerFn({
   method: "GET",
 })
-  .validator((data: { accountId: string; accountBookId: string }) => data)
+  .validator(readAccountInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -106,29 +104,7 @@ export const getLedgerAccountPersistedBalance = createServerFn({
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
-  .validator(
-    (data: {
-      accountId: string;
-      accountBookId: string;
-      period?: unknown;
-      includeReferenceValues?: unknown;
-      includeFirstBookingDate?: unknown;
-      accountType?: unknown;
-      accountEquityAccountSubtype?: unknown;
-      accountUnit?: unknown;
-      accountCurrency?: unknown;
-      accountCryptocurrency?: unknown;
-      accountSymbol?: unknown;
-      accountTradeCurrency?: unknown;
-    }) => ({
-      accountId: data.accountId,
-      accountBookId: data.accountBookId,
-      period: parseExplicitLedgerPeriodSelection(data.period),
-      includeReferenceValues: toBoolean(data.includeReferenceValues),
-      includeFirstBookingDate: toBoolean(data.includeFirstBookingDate),
-      accountContext: parseLedgerAccountContextFromInput(data),
-    }),
-  )
+  .validator(readLedgerInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
@@ -352,10 +328,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
-  .validator((data: { accountBookId: string; accountId?: string }) => ({
-    accountBookId: data.accountBookId,
-    accountId: typeof data.accountId === "string" ? data.accountId : undefined,
-  }))
+  .validator(readLedgerPeriodBoundsInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [accountBook, latestBooking] = await Promise.all([
@@ -391,13 +364,3 @@ export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
       openingBalancesBookingDate: openingBalancesBookingDate.toISOString(),
     };
   });
-
-function parseExplicitLedgerPeriodSelection(
-  value: unknown,
-): ExplicitPeriodSelection | undefined {
-  return parseExplicitPeriodSelectionFromUnknown(value);
-}
-
-function toBoolean(value: unknown): boolean {
-  return value === true || value === "true";
-}
