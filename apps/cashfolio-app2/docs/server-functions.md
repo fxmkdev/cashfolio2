@@ -42,13 +42,16 @@ and calculation batches at most four distinct memberships or ten seconds.
 Continuations bind verified user, book revision, sorted membership/scope,
 target, period, detail option, reporting day, and publication cutoff. An index
 lets reloads and concurrent tabs reuse active/completed work. A 65-second Redis
-lease serializes advancement within the existing 60-second read deadline. A
-bounded local lease/checkpoint fallback works without Redis. Missing, expired,
-or mismatched work requests a restart; repeated invalidations restart at most
+lease serializes advancement within the existing 60-second read deadline. Atomic
+`LPUSH`/`LINDEX` ordering and token-specific `LREM` release use the production
+read/write-only ACL; Lua/transactions are not required. Expired abandoned tokens
+are removed by identity, so an old owner cannot release a newer owner. A bounded
+local lease/checkpoint fallback works without Redis. Missing, expired, or
+mismatched work requests a restart; repeated invalidations restart at most
 twice. Every request authorizes book access again. Account details load relevant
 transactions with their complete peers.
 
-`account:returns-work:v3` stores small mutable envelopes (256 KiB limit), with a
+`account:returns-work:v4` stores small mutable envelopes (256 KiB limit), with a
 15-minute lifetime. Separate immutable artifacts hold a coherent transaction
 basis, canonical membership plans, and individual scope results (8 MiB each).
 Account indexes retain complete transaction peers. Distinct memberships

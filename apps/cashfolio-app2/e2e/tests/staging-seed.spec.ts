@@ -1,4 +1,3 @@
-import { createId } from "@paralleldrive/cuid2";
 import { uploadStatementFile } from "../support/ui";
 import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
@@ -712,10 +711,7 @@ test("Accounts progressively renders staging returns, retains completed rows on 
   await page.setViewportSize({ width: 2200, height: 1200 });
   const household = seededBook("household");
   // Isolate this lifecycle from earlier tests' complete summary cache.
-  await prisma.accountBook.update({
-    where: { id: household.id },
-    data: { periodCacheRevision: createId() },
-  });
+  await prisma.$executeRaw`UPDATE "AccountBook" SET "periodCacheRevision" = gen_random_uuid() WHERE id = ${household.id}`;
   let responses = 0,
     held = false,
     failNext = false;

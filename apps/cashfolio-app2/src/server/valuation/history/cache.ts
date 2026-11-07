@@ -5,7 +5,7 @@ import { rethrowResourceError } from "../../resource-error";
 import type { HistorySeries, HistorySnapshot, HistoryCoverage } from "./types";
 
 export const historyCoverageKey = (key: string) =>
-  `valuation:coverage:v1:${key}`;
+  `valuation:coverage:v2:${key}`;
 export const HISTORY_COVERAGE_MS = 24 * 60 * 60 * 1000;
 const MAX_LOCAL_BYTES = 32 * 1024 * 1024;
 const local = new Map<string, { data: HistorySnapshot; expires: number }>();
@@ -56,7 +56,7 @@ function prune() {
     else
       bytes += entry.data.points.length * 40 + entry.data.coverage.length * 64;
   }
-  while (local.size > 64 || bytes > MAX_LOCAL_BYTES) {
+  while (local.size > 1024 || bytes > MAX_LOCAL_BYTES) {
     const key = local.keys().next().value;
     if (!key) break;
     const entry = local.get(key)!;
@@ -100,11 +100,26 @@ export async function readHistorySeries(
               return [];
             throw error;
           }),
-        redis.get(historyCoverageKey(series.key)),
+        redis.zRangeByScore(
+          historyCoverageKey(series.key),
+          Date.now(),
+          "+inf",
+          { LIMIT: { offset: 0, count: 4096 } },
+        ),
       ]);
       data = {
         points: [...previous, ...points],
-        coverage: coverageFrom(coverage),
+        coverage: coverageFrom(
+          JSON.stringify(
+            coverage.map((value) => {
+              try {
+                return JSON.parse(value) as unknown;
+              } catch {
+                return null;
+              }
+            }),
+          ),
+        ),
       };
     } catch (error) {
       warn(error);
@@ -126,14 +141,6 @@ export async function readHistorySeries(
     ),
   };
 }
-
-const appendCoverageScript = `
-local entries={}
-local old=redis.call('GET',KEYS[1])
-if old then local ok,value=pcall(cjson.decode,old); if ok and type(value)=='table' then for _,v in ipairs(value) do if v.expiresAt>tonumber(ARGV[1]) then table.insert(entries,v) end end end end
-local addition=cjson.decode(ARGV[2]);table.insert(entries,addition)
-if #entries>4096 then return redis.error_reply('History coverage limit exceeded') end
-redis.call('SET',KEYS[1],cjson.encode(entries),'PX',ARGV[3]);return 1`;
 
 /** Cache writes must finish before recording complete coverage. */
 export async function storeHistorySeries(
@@ -187,15 +194,18 @@ export async function storeHistorySeries(
         ),
       );
     }
-    if (coverage)
-      await redis.eval(appendCoverageScript, {
-        keys: [historyCoverageKey(series.key)],
-        arguments: [
-          String(Date.now()),
-          JSON.stringify(coverage),
-          String(Math.max(1, coverage.expiresAt - Date.now())),
-        ],
+    if (coverage) {
+      const key = historyCoverageKey(series.key);
+      await redis.zAdd(key, {
+        score: coverage.expiresAt,
+        value: JSON.stringify(coverage),
       });
+      await Promise.all([
+        redis.zRemRangeByScore(key, "-inf", Date.now()),
+        redis.zRemRangeByRank(key, 0, -4097),
+        redis.expire(key, 86400),
+      ]);
+    }
   } catch (error) {
     warn(error);
   }
