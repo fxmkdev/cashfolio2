@@ -6,20 +6,17 @@ import {
   moneySubtract,
   moneySum,
   toMoney,
-} from "../../../shared/money";
-import {
-  isNearZero,
-  QUANTITY_EPSILON,
-  toLotAcquisitionSortKey,
-} from "./period-overview-holdings-common";
-import type { HoldingTransferDirection } from "./period-overview-holdings-transfer";
+} from "../../shared/money";
+import { toLotAcquisitionSortKey } from "./common";
+import { isNearZero, QUANTITY_EPSILON } from "./quantity-policy";
+import type { HoldingTransferDirection } from "./transfer";
 import type {
   HoldingAccountState,
   HoldingExecutionEvent,
   HoldingGainLossWorkingState,
   HoldingLot,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 type TransferReplay = {
   bookings: HoldingTransactionBooking[];

@@ -1,25 +1,22 @@
 import {
+  moneyAbs,
+  MoneyDecimal,
+  moneyDivide,
+  moneyIsFinite,
+  moneyMultiply,
+  moneySubtract,
   toMoney,
   type Money,
-  MoneyDecimal,
-  moneySubtract,
-  moneyMultiply,
-  moneyDivide,
-  moneyAbs,
-  moneyIsFinite,
-} from "../../../shared/money";
-import {
-  isNearZero,
-  toLotAcquisitionSortKey,
-  QUANTITY_EPSILON,
-} from "./period-overview-holdings-common";
-import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
+} from "../../shared/money";
+import { toLotAcquisitionSortKey } from "./common";
+import { isNearZero, QUANTITY_EPSILON } from "./quantity-policy";
 import type {
   HoldingBookingConverter,
   HoldingGainLossWorkingState,
   HoldingLot,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+} from "./types";
+import { toHoldingUnitIdentifier } from "./unit-identity";
 
 function insertLotByAcquisitionOrder(args: {
   lots: HoldingLot[];

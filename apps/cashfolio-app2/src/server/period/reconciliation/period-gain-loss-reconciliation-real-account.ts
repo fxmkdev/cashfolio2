@@ -1,31 +1,33 @@
+import { moneyAdd, toMoney, type Money } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
-import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 
-import {
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
-} from "../period-conversion";
-import {
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-  initializeHoldingGainLossState,
-} from "../holdings/period-overview-holdings";
-import {
-  addRunningUnrealizedGainLoss,
-  pushDiagnostic,
-  toEmptySummary,
-  toRoundedOpenLot,
-  toRoundedRealizedEvent,
-  toSummary,
-} from "./period-gain-loss-reconciliation-shared";
 import type {
   GainLossReconciliationDetails,
   GainLossReconciliationDiagnostic,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
 } from "../../../shared/gain-loss-reconciliation";
+import {
+  applyHoldingTransactionsToGainLossState,
+  finalizeHoldingGainLossState,
+  initializeHoldingGainLossState,
+} from "../../holdings/engine";
+import {
+  addRunningUnrealizedGainLoss,
+  toRoundedOpenLot,
+  toRoundedRealizedEvent,
+} from "../../holdings/explain";
+import {
+  convertBookingValueToReference,
+  getUnitToReferenceExchangeRate,
+} from "../period-conversion";
 import { formatUnitLabel, normalizeUppercaseCode } from "../period-unit-format";
+import {
+  pushDiagnostic,
+  toEmptySummary,
+  toSummary,
+} from "./period-gain-loss-reconciliation-shared";
 
 export async function buildRealAccountReconciliation(args: {
   baseData: PeriodBaseData;

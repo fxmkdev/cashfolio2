@@ -1,84 +1,14 @@
 import {
+  MoneyDecimal,
+  moneyAbs,
+  moneyAdd,
+  moneyMultiply,
+  moneySubtract,
   toMoney,
   type Money,
-  MoneyDecimal,
-  moneyAdd,
-  moneySubtract,
-  moneyMultiply,
-  moneyDivide,
-  moneyAbs,
-  moneySum,
-} from "../../../shared/money";
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
-
-import type {
-  HoldingExecutionLotMatch,
-  HoldingLot,
-  HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
-
-export const QUANTITY_EPSILON = 1e-9;
-
-export function isExplicitGainLossBooking(
-  booking: HoldingTransactionBooking,
-): boolean {
-  return (
-    booking.accountType === AccountType.EQUITY &&
-    booking.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
-  );
-}
-
-export function isNearZero(value: Money): boolean {
-  return !moneyAbs(value).gt(QUANTITY_EPSILON);
-}
-
-export function isWithinPeriod(args: {
-  date: Date;
-  periodStart: Date;
-  periodEndExclusive: Date;
-}): boolean {
-  return args.date >= args.periodStart && args.date < args.periodEndExclusive;
-}
-
-export function toLotAcquisitionSortKey(args: {
-  date: Date;
-  bookingId: string;
-  portion?: "transfer-fallback" | "execution";
-}): string {
-  return `${args.date.toISOString()}::${args.bookingId}${args.portion ? `::${args.portion === "transfer-fallback" ? "0" : "1"}` : ""}`;
-}
-
-export function buildResidualAllocationWeights(args: {
-  holdingBookings: HoldingTransactionBooking[];
-  holdingMarketValueByBookingId: Map<string, Money>;
-}): Money[] {
-  const valueWeights = args.holdingBookings.map((booking) =>
-    moneyAbs(args.holdingMarketValueByBookingId.get(booking.id) ?? toMoney(0)),
-  );
-  const totalValueWeight = moneySum(valueWeights);
-
-  if (toMoney(totalValueWeight).comparedTo(QUANTITY_EPSILON) > 0) {
-    return valueWeights.map((weight) => moneyDivide(weight, totalValueWeight));
-  }
-
-  const quantityWeights = args.holdingBookings.map((booking) =>
-    moneyAbs(booking.value),
-  );
-  const totalQuantityWeight = moneySum(quantityWeights);
-
-  if (toMoney(totalQuantityWeight).comparedTo(QUANTITY_EPSILON) > 0) {
-    return quantityWeights.map((weight) =>
-      moneyDivide(weight, totalQuantityWeight),
-    );
-  }
-
-  return args.holdingBookings.map(() =>
-    moneyDivide(1, args.holdingBookings.length),
-  );
-}
+} from "../../shared/money";
+import { isNearZero } from "./quantity-policy";
+import type { HoldingExecutionLotMatch, HoldingLot } from "./types";
 
 export function applyExecutionToLots(args: {
   lots: HoldingLot[];

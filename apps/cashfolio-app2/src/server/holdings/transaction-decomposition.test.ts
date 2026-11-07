@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { moneyAdd, moneySum, toMoney } from "../../../shared/money";
-import { decomposeHoldingTransaction } from "./holding-transaction-decomposition";
-import type { HoldingTransactionBooking } from "./period-overview-holdings-types";
+import { moneyAdd, moneySum, toMoney } from "../../shared/money";
+import { decomposeHoldingTransaction } from "./transactions";
+import type { HoldingTransactionBooking } from "./types";
 
 function booking(
   id: string,

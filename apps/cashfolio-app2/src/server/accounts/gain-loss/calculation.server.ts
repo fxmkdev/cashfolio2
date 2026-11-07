@@ -1,39 +1,39 @@
-import { checkResourceBudget } from "../../resource-context.server";
-import { toMoney, moneyAdd, type Money } from "../../../shared/money";
 import {
   EMPTY_GAIN_LOSS_SUMMARY,
-  type AccountGainLossResult,
   type AccountGainLossDiagnostic,
+  type AccountGainLossResult,
 } from "../../../shared/account-gain-loss";
-import {
-  initializeHoldingGainLossState,
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-  type computeHoldingGainLossSplit,
-} from "../../period/holdings/period-overview-holdings";
-import { applyPendingHoldingExecutions } from "../../period/holdings/holding-executions";
-import { hasOpenHoldingLots } from "../../period/holdings/period-holding-account-finalization";
-import { prefetchAccountGainLossConversions } from "./prefetch.server";
-import type {
-  HoldingAccountState,
-  HoldingSkippedItem,
-  HoldingRateConvertibleAccount,
-  HoldingTransaction,
-} from "../../period/holdings/period-overview-holdings-types";
-import { decomposeHoldingTransaction } from "../../period/holdings/holding-transaction-decomposition";
-import { toHoldingUnitIdentifier } from "../../period/holdings/period-overview-holdings-transfer";
-import {
-  parseAcquisitionSortKey,
-  toRoundedOpenLot,
-  toRoundedRealizedEvent,
-  addRunningUnrealizedGainLoss,
-} from "../../period/reconciliation/period-gain-loss-reconciliation-shared";
 import type {
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
 } from "../../../shared/gain-loss-reconciliation";
-
-type CalculationArgs = Parameters<typeof computeHoldingGainLossSplit>[0];
+import { moneyAdd, toMoney, type Money } from "../../../shared/money";
+import {
+  applyHoldingTransactionsToGainLossState,
+  applyPendingHoldingExecutions,
+  finalizeHoldingGainLossState,
+  hasOpenHoldingLots,
+  initializeHoldingGainLossState,
+} from "../../holdings/engine";
+import {
+  addRunningUnrealizedGainLoss,
+  parseAcquisitionSortKey,
+  toRoundedOpenLot,
+  toRoundedRealizedEvent,
+} from "../../holdings/explain";
+import {
+  decomposeHoldingTransaction,
+  toHoldingUnitIdentifier,
+} from "../../holdings/transactions";
+import type {
+  ComputeHoldingGainLossArgs as CalculationArgs,
+  HoldingAccountState,
+  HoldingRateConvertibleAccount,
+  HoldingSkippedItem,
+  HoldingTransaction,
+} from "../../holdings/types";
+import { checkResourceBudget } from "../../resource-context.server";
+import { prefetchAccountGainLossConversions } from "./prefetch.server";
 
 export type AccountGainLossBasis = {
   holdings: {

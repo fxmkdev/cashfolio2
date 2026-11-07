@@ -1,30 +1,32 @@
-import type { PeriodBaseData } from "../base-data/period-base-data-types";
-import { toNumericMoney } from "../../money-boundary";
-import { type Money } from "../../../shared/money";
-import {
-  computeTransferClearingGainLossSplit,
-  type TransferClearingUnitBucket,
-} from "../transfer-clearing/period-transfer-clearing";
-import {
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
-} from "../period-conversion";
-import {
-  addRunningUnrealizedGainLoss,
-  pushDiagnostic,
-  toEmptySummary,
-  toRoundedOpenLot,
-  toRoundedRealizedEvent,
-  toSummary,
-  toVirtualTransferClearingAccountId,
-} from "./period-gain-loss-reconciliation-shared";
 import type {
   GainLossReconciliationDetails,
   GainLossReconciliationDiagnostic,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
 } from "../../../shared/gain-loss-reconciliation";
+import { type Money } from "../../../shared/money";
+import {
+  addRunningUnrealizedGainLoss,
+  toRoundedOpenLot,
+  toRoundedRealizedEvent,
+} from "../../holdings/explain";
+import { toNumericMoney } from "../../money-boundary";
+import type { PeriodBaseData } from "../base-data/period-base-data-types";
+import {
+  convertBookingValueToReference,
+  getUnitToReferenceExchangeRate,
+} from "../period-conversion";
 import { formatUnitLabel, normalizeUppercaseCode } from "../period-unit-format";
+import {
+  computeTransferClearingGainLossSplit,
+  type TransferClearingUnitBucket,
+} from "../transfer-clearing/period-transfer-clearing";
+import {
+  pushDiagnostic,
+  toEmptySummary,
+  toSummary,
+  toVirtualTransferClearingAccountId,
+} from "./period-gain-loss-reconciliation-shared";
 
 function findTargetVirtualUnitBucket(args: {
   accountId: string;

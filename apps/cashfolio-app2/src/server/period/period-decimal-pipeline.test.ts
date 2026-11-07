@@ -1,10 +1,10 @@
-import { defaultAssetClassIds } from "../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
+import { defaultAssetClassIds } from "../../shared/asset-class";
 import { moneyMultiply, toMoney } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
 import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
@@ -34,11 +34,11 @@ vi.mock("../valuation.server", () => ({
   }) => ({ rate: securityRate(date), source: "timeSeries" }),
 }));
 
-import { loadPeriodOverview } from "./overview/period-overview.server";
 import { loadPeriodHistoryPointMetrics } from "./history/period-history-point-metrics.server";
-import { buildRealAccountReconciliation } from "./reconciliation/period-gain-loss-reconciliation-real-account";
-import { loadAccountGainLossSources } from "./reconciliation/period-account-gain-loss-sources";
+import { loadPeriodOverview } from "./overview/period-overview.server";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
+import { loadAccountGainLossSources } from "./reconciliation/period-account-gain-loss-sources";
+import { buildRealAccountReconciliation } from "./reconciliation/period-gain-loss-reconciliation-real-account";
 
 function securityRate(date: Date) {
   return toMoney(
@@ -598,8 +598,7 @@ describe("Decimal monetary pipelines", () => {
 });
 
 it("allocates fractional residuals using Decimal weights", async () => {
-  const { buildResidualAllocationWeights } =
-    await import("./holdings/period-overview-holdings-common");
+  const { buildResidualAllocationWeights } = await import("../holdings/common");
   const { moneySum } = await import("../../shared/money");
   const source = createScenario().holdingTransactions[0]!.bookings[0]!;
   const bookings = [source, { ...source, id: "second" }];

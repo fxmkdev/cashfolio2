@@ -1,46 +1,22 @@
 import {
+  MoneyDecimal,
+  moneyAbs,
+  moneyAdd,
+  moneyMultiply,
+  moneySubtract,
   toMoney,
   type Money,
-  MoneyDecimal,
-  moneyAdd,
-  moneySubtract,
-  moneyMultiply,
-  moneyAbs,
-} from "../../../shared/money";
-import { receiveHoldingTransfer } from "./holding-transfer-receipts";
-import type { Unit } from "../../../.prisma-client/enums";
+} from "../../shared/money";
+import { receiveHoldingTransfer } from "./transfer-receipts";
 
-import {
-  QUANTITY_EPSILON,
-  isNearZero,
-} from "./period-overview-holdings-common";
+import { QUANTITY_EPSILON, isNearZero } from "./quantity-policy";
 import type {
   HoldingAccountState,
   HoldingLot,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 export type HoldingTransferDirection = "LONG" | "SHORT";
-
-export function toHoldingUnitIdentifier(input: {
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-}): string | null {
-  if (input.unit === "CURRENCY") {
-    return input.currency ? `currency:${input.currency.toUpperCase()}` : null;
-  }
-  if (input.unit === "CRYPTOCURRENCY") {
-    return input.cryptocurrency
-      ? `crypto:${input.cryptocurrency.toUpperCase()}`
-      : null;
-  }
-  return input.symbol && input.tradeCurrency
-    ? `security:${input.symbol.toUpperCase()}:${input.tradeCurrency.toUpperCase()}`
-    : null;
-}
 
 function getOpenQuantityByLotSign(args: {
   lots: HoldingLot[];

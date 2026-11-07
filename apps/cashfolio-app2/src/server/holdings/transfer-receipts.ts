@@ -6,17 +6,15 @@ import {
   moneyMultiply,
   moneySubtract,
   toMoney,
-} from "../../../shared/money";
-import {
-  applyExecutionToLots,
-  isNearZero,
-} from "./period-overview-holdings-common";
+} from "../../shared/money";
+import { applyExecutionToLots } from "./lots";
+import { isNearZero } from "./quantity-policy";
 import type {
   HoldingAccountState,
   HoldingExecutionLotMatch,
   HoldingLot,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 /** Receive carried FIFO costs, closing opposite destination lots before opening any remainder. */
 export function receiveHoldingTransfer(args: {

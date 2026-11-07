@@ -4,13 +4,11 @@ import {
   moneySubtract,
   toMoney,
   type Money,
-} from "../../../shared/money";
-import {
-  isExplicitGainLossBooking,
-  isNearZero,
-} from "./period-overview-holdings-common";
-import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
-import type { HoldingTransactionBooking } from "./period-overview-holdings-types";
+} from "../../shared/money";
+import { isExplicitGainLossBooking } from "./common";
+import { isNearZero } from "./quantity-policy";
+import type { HoldingTransactionBooking } from "./types";
+import { toHoldingUnitIdentifier } from "./unit-identity";
 
 type TransferPeer = { bookingId: string; quantity: Money };
 type Edge = { to: number; reverse: number; remaining: Money };

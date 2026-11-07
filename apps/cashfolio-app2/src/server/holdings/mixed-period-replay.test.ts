@@ -3,15 +3,15 @@ import {
   AccountType,
   EquityAccountSubtype,
   Unit,
-} from "../../../.prisma-client/enums";
-import { moneySum, toMoney } from "../../../shared/money";
-import { toNumericMoney } from "../../money-boundary";
-import { computeHoldingGainLossSplit } from "./period-overview-holdings";
+} from "../../.prisma-client/enums";
+import { moneySum, toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
+import { computeHoldingGainLossSplit } from "./engine";
 import type {
   HoldingAccountExecutionEvent,
   HoldingAccountOpenLotValuation,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 const source = {
   id: "source",

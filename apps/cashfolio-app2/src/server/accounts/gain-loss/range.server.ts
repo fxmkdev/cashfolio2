@@ -3,36 +3,36 @@ import {
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
 import { prisma } from "../../../prisma.server";
+import { EMPTY_GAIN_LOSS_SUMMARY } from "../../../shared/account-gain-loss";
+import { addUtcDays, startOfUtcDay } from "../../../shared/date";
+import { toMoney } from "../../../shared/money";
+import {
+  getExplicitPeriodDateRange,
+  parseExplicitPeriodSelection,
+} from "../../../shared/period";
+import { filterConvertibleHoldingAccounts } from "../../holdings/events";
+import { loadPeriodHoldingTransactionsRaw } from "../../period/base-data/period-base-data-holding-transactions.server";
+import type { PeriodReadClient } from "../../period/base-data/period-read-client";
+import {
+  convertBookingValueToReferenceDetails,
+  getUnitToReferenceExchangeRateDetails,
+} from "../../period/period-conversion";
+import { createValuationLookupContext } from "../../valuation/lookup-context";
+import type {
+  DecimalValuationRateLookupResult,
+  ValuationRateSource,
+} from "../../valuation/types";
+import {
+  calculateAccountGainLoss,
+  type AccountGainLossBasis,
+} from "./calculation.server";
+import { createAccountGainLossLookupScheduler } from "./prefetch.server";
 import {
   applyRecordedAccountGainLoss,
   calculateRecordedAccountGainLoss,
   loadRecordedAccountGainLossInputs,
   type RecordedAccountGainLoss,
 } from "./recorded.server";
-import { toMoney } from "../../../shared/money";
-import { addUtcDays, startOfUtcDay } from "../../../shared/date";
-import {
-  getExplicitPeriodDateRange,
-  parseExplicitPeriodSelection,
-} from "../../../shared/period";
-import { EMPTY_GAIN_LOSS_SUMMARY } from "../../../shared/account-gain-loss";
-import { filterConvertibleHoldingAccounts } from "../../period/period-helpers";
-import {
-  convertBookingValueToReferenceDetails,
-  getUnitToReferenceExchangeRateDetails,
-} from "../../period/period-conversion";
-import { loadPeriodHoldingTransactionsRaw } from "../../period/base-data/period-base-data-holding-transactions.server";
-import type { PeriodReadClient } from "../../period/base-data/period-read-client";
-import type {
-  DecimalValuationRateLookupResult,
-  ValuationRateSource,
-} from "../../valuation/types";
-import { createValuationLookupContext } from "../../valuation/lookup-context";
-import { createAccountGainLossLookupScheduler } from "./prefetch.server";
-import {
-  calculateAccountGainLoss,
-  type AccountGainLossBasis,
-} from "./calculation.server";
 
 export function resolveAccountGainLossDate(period?: string, now = new Date()) {
   const today = startOfUtcDay(now);

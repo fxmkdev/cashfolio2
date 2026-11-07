@@ -1,39 +1,26 @@
-import { checkResourceBudget } from "../../resource-context.server";
-import { applyPendingHoldingExecutions } from "./holding-executions";
-import { toMoney, type Money, moneyAdd } from "../../../shared/money";
-import {
-  isNearZero,
-  toLotAcquisitionSortKey,
-} from "./period-overview-holdings-common";
-import { getHoldingTransactionContext } from "./holding-transaction-context";
+import { moneyAdd, toMoney, type Money } from "../../shared/money";
+import { checkResourceBudget } from "../resource-context.server";
+import { finalizeHoldingAccountGainLoss } from "./account-finalization";
+import { toLotAcquisitionSortKey } from "./common";
+import { applyHoldingTransactionExecutionPricing } from "./execution-pricing";
+import { applyPendingHoldingExecutions } from "./executions";
+import { isNearZero } from "./quantity-policy";
+import { getHoldingTransactionContext } from "./transaction-context";
 import type {
+  ApplyHoldingTransactionsArgs,
+  ComputeHoldingGainLossArgs,
+  FinalizeHoldingGainLossArgs,
   HoldingAccountState,
-  HoldingBookingConverter,
-  HoldingGainLossFinalizationCallbacks,
-  HoldingInitialSkippedItem,
-  HoldingTransactionSkippedItem,
+  HoldingGainLossResult,
   HoldingGainLossWorkingState,
   HoldingLot,
-  HoldingRateConvertibleAccount,
-  HoldingRateResolver,
-  HoldingTransaction,
-} from "./period-overview-holdings-types";
+  InitializeHoldingGainLossArgs,
+} from "./types";
 
-import { applyHoldingTransactionExecutionPricing } from "./period-holding-execution-pricing";
-import { finalizeHoldingAccountGainLoss } from "./period-holding-account-finalization";
-
-export type {
-  HoldingGainLossWorkingState,
-  HoldingGainLossSkippedReason,
-} from "./period-overview-holdings-types";
-
-export async function initializeHoldingGainLossState(args: {
-  holdingAccounts: HoldingRateConvertibleAccount[];
-  initialBalanceByAccountId: Map<string, Money>;
-  initialRateDate: Date;
-  resolveRate: HoldingRateResolver;
-  onSkippedItem?: (item: HoldingInitialSkippedItem) => void;
-}): Promise<HoldingGainLossWorkingState> {
+/** Seed opening lots using the caller's rate resolver, retaining account order. */
+export async function initializeHoldingGainLossState(
+  args: InitializeHoldingGainLossArgs,
+): Promise<HoldingGainLossWorkingState> {
   const stateByHoldingAccountId = new Map<string, HoldingAccountState>();
   let skippedCount = 0;
 
@@ -100,14 +87,10 @@ export async function initializeHoldingGainLossState(args: {
   };
 }
 
-export async function applyHoldingTransactionsToGainLossState(args: {
-  state: HoldingGainLossWorkingState;
-  transactions: HoldingTransaction[];
-  periodStart: Date;
-  periodEndExclusive: Date;
-  convertBookingToReference: HoldingBookingConverter;
-  onSkippedItem?: (item: HoldingTransactionSkippedItem) => void;
-}) {
+/** Price transactions and queue replay work without requesting closing rates. */
+export async function applyHoldingTransactionsToGainLossState(
+  args: ApplyHoldingTransactionsArgs,
+) {
   args.state.convertBookingToReference = args.convertBookingToReference;
   for (const transaction of args.transactions) {
     checkResourceBudget();
@@ -133,13 +116,10 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   }
 }
 
+/** Replay pending work, emit explain callbacks, and value the remaining open lots. */
 export async function finalizeHoldingGainLossState(
-  args: {
-    state: HoldingGainLossWorkingState;
-    periodEnd: Date;
-    resolveRate: HoldingRateResolver;
-  } & HoldingGainLossFinalizationCallbacks,
-) {
+  args: FinalizeHoldingGainLossArgs,
+): Promise<HoldingGainLossResult> {
   await applyPendingHoldingExecutions({
     state: args.state,
     captureLotMatches: !!args.onAccountExecutionEvent,
@@ -201,18 +181,8 @@ export async function finalizeHoldingGainLossState(
 }
 
 export async function computeHoldingGainLossSplit(
-  args: {
-    holdingAccounts: HoldingRateConvertibleAccount[];
-    initialBalanceByAccountId: Map<string, Money>;
-    transactions: HoldingTransaction[];
-    periodStart: Date;
-    periodEndExclusive: Date;
-    initialRateDate: Date;
-    periodEnd: Date;
-    resolveRate: HoldingRateResolver;
-    convertBookingToReference: HoldingBookingConverter;
-  } & HoldingGainLossFinalizationCallbacks,
-) {
+  args: ComputeHoldingGainLossArgs,
+): Promise<HoldingGainLossResult> {
   const state = await initializeHoldingGainLossState({
     holdingAccounts: args.holdingAccounts,
     initialBalanceByAccountId: args.initialBalanceByAccountId,
@@ -242,3 +212,6 @@ export async function computeHoldingGainLossSplit(
     onSkippedItem: args.onSkippedItem,
   });
 }
+
+export { hasOpenHoldingLots } from "./account-finalization";
+export { applyPendingHoldingExecutions } from "./executions";

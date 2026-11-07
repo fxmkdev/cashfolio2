@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
-import { toMoney } from "../../../shared/money";
-import { toNumericMoney } from "../../money-boundary";
+import { AccountType, Unit } from "../../.prisma-client/enums";
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import {
   applyHoldingTransactionsToGainLossState,
   computeHoldingGainLossSplit,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
-} from "./period-overview-holdings";
+} from "./engine";
 import type {
   HoldingAccountExecutionEvent,
   HoldingAccountGainLoss,
@@ -15,7 +15,7 @@ import type {
   HoldingRateConvertibleAccount,
   HoldingTransactionBooking,
   HoldingTransactionSkippedItem,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 const day = new Date("2026-02-10T00:00:00.000Z");
 const period = {

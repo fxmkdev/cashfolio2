@@ -1,21 +1,18 @@
 import {
+  moneyAdd,
+  moneyMultiply,
+  moneySubtract,
   toMoney,
   type Money,
-  moneyAdd,
-  moneySubtract,
-  moneyMultiply,
-} from "../../../shared/money";
-import {
-  buildResidualAllocationWeights,
-  isNearZero,
-  QUANTITY_EPSILON,
-} from "./period-overview-holdings-common";
+} from "../../shared/money";
+import { buildResidualAllocationWeights } from "./common";
+import { isNearZero, QUANTITY_EPSILON } from "./quantity-policy";
 import type {
   HoldingBookingConverter,
   HoldingGainLossWorkingState,
   HoldingTransactionBooking,
   HoldingTransactionSkippedItem,
-} from "./period-overview-holdings-types";
+} from "./types";
 
 /** Price one non-transfer transaction and append its holding execution events. */
 export async function applyHoldingTransactionExecutionPricing(args: {

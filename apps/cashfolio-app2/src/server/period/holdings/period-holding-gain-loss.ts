@@ -1,31 +1,31 @@
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 import {
-  toMoney,
-  type Money,
   moneyAdd,
   moneySubtract,
   moneySum,
+  toMoney,
+  type Money,
 } from "../../../shared/money";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
-import {
-  accumulateGainLossContribution,
-  type GainLossContributionAccumulator,
-} from "../breakdown/period-gains-losses-contributions";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
-} from "./period-overview-holdings";
+} from "../../holdings/engine";
+import {
+  accumulateGainLossContribution,
+  type GainLossContributionAccumulator,
+} from "../breakdown/period-gains-losses-contributions";
 
-import { isNearZero } from "./period-overview-holdings-common";
+import { isNearZero } from "../../holdings/quantity-policy";
 import type {
   HoldingRateConvertibleAccount,
   HoldingTransaction,
-} from "./period-overview-holdings-types";
+} from "../../holdings/types";
+import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 import {
   computeExecutionResidualRealization,
   type ExecutionResidualContribution,
 } from "./period-execution-residuals";
-import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 
 import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
 

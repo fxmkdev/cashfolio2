@@ -1,28 +1,23 @@
+import { toMoney } from "../../shared/money";
+import { applyHoldingAccountExecution } from "./account-finalization";
+import { prepareMixedPeriodSameUnitHoldingTransfer } from "./mixed-transfer";
+import { buildHoldingReplayOperations } from "./replay-operations";
 import {
   applyHoldingTransfer,
   resolveHoldingTransferDirection,
-} from "./period-overview-holdings-transfer";
+} from "./transfer";
 import type {
   HoldingAccountState,
   HoldingExecutionEvent,
-} from "./period-overview-holdings-types";
-import { toMoney } from "../../../shared/money";
-import { applyHoldingAccountExecution } from "./period-holding-account-finalization";
-import { prepareMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
-import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
-import { buildHoldingReplayOperations } from "./holding-replay-operations";
-import type {
-  HoldingGainLossWorkingState,
-  HoldingSkippedItem,
   HoldingTransactionBooking,
-} from "./period-overview-holdings-types";
+  ReplayHoldingExecutionsArgs,
+} from "./types";
+import { toHoldingUnitIdentifier } from "./unit-identity";
 
 /** Consume pending executions without valuing open lots, allowing chronological transfers. */
-export async function applyPendingHoldingExecutions(args: {
-  state: HoldingGainLossWorkingState;
-  captureLotMatches?: boolean;
-  onSkippedItem?: (item: HoldingSkippedItem) => void;
-}) {
+export async function applyPendingHoldingExecutions(
+  args: ReplayHoldingExecutionsArgs,
+) {
   const execute = (
     state: HoldingAccountState,
     event: HoldingExecutionEvent,

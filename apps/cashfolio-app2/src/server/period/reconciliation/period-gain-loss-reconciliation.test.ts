@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { toMoney, type MoneyInput } from "../../../shared/money";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { toMoney, type MoneyInput } from "../../../shared/money";
 
+import { addUtcDays } from "../../../shared/date";
+import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import type {
   PeriodBaseData,
   PeriodBaseHoldingTransaction,
 } from "../base-data/period-base-data-types";
-import type { TransferClearingBooking } from "../transfer-clearing/period-transfer-clearing-types";
-import { filterConvertibleHoldingAccounts } from "../period-helpers";
 import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
 } from "../period-selection";
-import { addUtcDays } from "../../../shared/date";
+import type { TransferClearingBooking } from "../transfer-clearing/period-transfer-clearing-types";
 
 let baseData: PeriodBaseData;
 

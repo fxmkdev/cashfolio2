@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { toMoney, moneyMultiply, moneySum } from "../../../shared/money";
-import { toNumericMoney } from "../../money-boundary";
-import { calculateAccountGainLoss } from "./calculation.server";
+import { moneyMultiply, moneySum, toMoney } from "../../../shared/money";
 import type {
   HoldingRateConvertibleAccount,
   HoldingTransaction,
   HoldingTransactionBooking,
-} from "../../period/holdings/period-overview-holdings-types";
+} from "../../holdings/types";
+import { toNumericMoney } from "../../money-boundary";
+import { calculateAccountGainLoss } from "./calculation.server";
 
 const dates = {
   start: new Date("2026-01-01Z"),

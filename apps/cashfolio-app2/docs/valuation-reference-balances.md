@@ -283,7 +283,14 @@ after failure. Failures retain the page's error message and retry action. An
 open details popover updates in place when loading completes, retaining keyboard
 focus.
 
-The shared FIFO/execution-pricing engine supports chronological range replay.
+The shared FIFO/execution-pricing engine in `src/server/holdings/` supports
+chronological range replay. Its engine, transaction-classification, eligibility,
+and explain-mapping entrypoints are shared by Accounts, ledgers, reporting,
+History, and reconciliation. The domain has no dependency on period
+orchestration. Period retains synthetic transfer-clearing construction,
+batching, residual attribution, and report assembly; Accounts retains
+basis/summary caching and diagnostic availability policy. See the
+[holding engine boundary](server-functions.md#holding-gainloss-engine).
 Executions and transfers are ordered by booking date and booking ID. Each
 transaction is decomposed into same-unit transfer quantities and remaining
 executions. Opposite quantities in different Asset/Liability accounts are

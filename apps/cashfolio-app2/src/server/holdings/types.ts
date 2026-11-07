@@ -1,17 +1,17 @@
-import type {
-  HoldingExecutionPricingSource,
-  HoldingGainLossSkippedReason,
-} from "../../../shared/gain-loss-reconciliation";
-export type {
-  HoldingExecutionPricingSource,
-  HoldingGainLossSkippedReason,
-} from "../../../shared/gain-loss-reconciliation";
-import { type Money } from "../../../shared/money";
 import {
   type AccountType,
   type EquityAccountSubtype,
   type Unit,
-} from "../../../.prisma-client/enums";
+} from "../../.prisma-client/enums";
+import type {
+  HoldingExecutionPricingSource,
+  HoldingGainLossSkippedReason,
+} from "../../shared/gain-loss-reconciliation";
+import { type Money } from "../../shared/money";
+export type {
+  HoldingExecutionPricingSource,
+  HoldingGainLossSkippedReason,
+} from "../../shared/gain-loss-reconciliation";
 
 export type HoldingRateConvertibleAccount = {
   id: string;
@@ -172,4 +172,63 @@ export type HoldingGainLossFinalizationCallbacks = {
   ) => void;
   onAccountOpenLotValuation?: (lot: HoldingAccountOpenLotValuation) => void;
   onSkippedItem?: (item: HoldingSkippedItem) => void;
+};
+
+/** Explain mapping also accepts synthetic execution events without an account ID. */
+export type HoldingExecutionExplainInput = Omit<
+  HoldingAccountExecutionEvent,
+  "accountId"
+>;
+
+export type HoldingOpenLotExplainInput = Omit<
+  HoldingAccountOpenLotValuation,
+  "accountId"
+>;
+
+export type InitializeHoldingGainLossArgs = {
+  holdingAccounts: HoldingRateConvertibleAccount[];
+  initialBalanceByAccountId: Map<string, Money>;
+  initialRateDate: Date;
+  resolveRate: HoldingRateResolver;
+  onSkippedItem?: (item: HoldingInitialSkippedItem) => void;
+};
+
+export type ApplyHoldingTransactionsArgs = {
+  state: HoldingGainLossWorkingState;
+  transactions: HoldingTransaction[];
+  periodStart: Date;
+  periodEndExclusive: Date;
+  convertBookingToReference: HoldingBookingConverter;
+  onSkippedItem?: (item: HoldingTransactionSkippedItem) => void;
+};
+
+export type FinalizeHoldingGainLossArgs = {
+  state: HoldingGainLossWorkingState;
+  periodEnd: Date;
+  resolveRate: HoldingRateResolver;
+} & HoldingGainLossFinalizationCallbacks;
+
+export type ComputeHoldingGainLossArgs = {
+  holdingAccounts: HoldingRateConvertibleAccount[];
+  initialBalanceByAccountId: Map<string, Money>;
+  transactions: HoldingTransaction[];
+  periodStart: Date;
+  periodEndExclusive: Date;
+  initialRateDate: Date;
+  periodEnd: Date;
+  resolveRate: HoldingRateResolver;
+  convertBookingToReference: HoldingBookingConverter;
+} & HoldingGainLossFinalizationCallbacks;
+
+export type ReplayHoldingExecutionsArgs = {
+  state: HoldingGainLossWorkingState;
+  captureLotMatches?: boolean;
+  onSkippedItem?: (item: HoldingSkippedItem) => void;
+};
+
+export type HoldingGainLossResult = {
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
+  convertedCount: number;
+  skippedCount: number;
 };

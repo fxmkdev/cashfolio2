@@ -1,13 +1,13 @@
-import type { MoneyInput, Money } from "../../../shared/money";
-import { toMoney } from "../../../shared/money";
-import { toNumericMoney } from "../../money-boundary";
 import { describe, expect, it, vi } from "vitest";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
-} from "../../../.prisma-client/enums";
-import { computeHoldingGainLossSplit } from "./period-overview-holdings";
+} from "../../.prisma-client/enums";
+import type { Money, MoneyInput } from "../../shared/money";
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
+import { computeHoldingGainLossSplit } from "./engine";
 
 const HOLDING_ACCOUNT_ID = "holding-security";
 const SECOND_HOLDING_ACCOUNT_ID = "holding-security-2";
