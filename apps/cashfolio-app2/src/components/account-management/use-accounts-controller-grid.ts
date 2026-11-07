@@ -20,6 +20,7 @@ export function useAccountsControllerGrid({
     shouldShowReferenceBalancesLoading: data.shouldShowReferenceBalancesLoading,
   });
   const columnDefs = useAccountTreeColumnDefs({
+    filterContext: presentation.filterContext,
     gainLossData: presentation.gainLossData,
     grouping: options.grouping,
     isGainLossLoading: data.gainLoss.loading,

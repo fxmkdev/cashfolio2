@@ -140,7 +140,7 @@ export function useTransactionsColumnDefs(args: {
         colId: "unitIdentifier",
         headerName: "Ccy./Symbol",
         width: 140,
-        filter: true,
+        filter: "agSetColumnFilter",
         valueGetter: ({ data }: { data?: TransactionsBookingRow }) => {
           if (!data) return null;
           switch (data.unit) {

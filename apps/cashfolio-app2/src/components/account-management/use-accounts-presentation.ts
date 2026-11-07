@@ -4,6 +4,7 @@ import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { buildAssetClassTree } from "./asset-class-tree";
 import { projectAssetClassGainLoss } from "./asset-class-gain-loss";
+import { buildAccountFilterContext } from "./account-filter-context";
 import { useRowsWithGroupTrackingMethods } from "./page-data-tracking-methods";
 import {
   useRowsByParentKey,
@@ -74,6 +75,10 @@ export function useAccountsPresentation({
   const { rows, balanceInReferenceCurrencyByGroupId } =
     useRowsWithGroupSummaries(projectedRows, !isEquityTab);
   const gridRows = useMemo(() => rows.map(toAccountGridTreeRow), [rows]);
+  const filterContext = useMemo(
+    () => buildAccountFilterContext(sourceRows, rows, classes),
+    [sourceRows, rows, classes],
+  );
   const rowsByParentKey = useRowsByParentKey(gridRows);
   const projectedGainLoss = useMemo(
     () =>
@@ -95,6 +100,7 @@ export function useAccountsPresentation({
           },
         ];
   return {
+    filterContext,
     rows: gridRows,
     rowsByParentKey,
     balanceInReferenceCurrencyByGroupId,

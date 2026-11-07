@@ -3,6 +3,7 @@ import type { ClassificationNode } from "@/shared/asset-class";
 import { Text } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { type AccountsGridRow } from "./page-types";
+import type { AccountSetFilters } from "./use-account-set-filters";
 import {
   getAccountListPathValue,
   getAccountListAssetClassValue,
@@ -11,9 +12,11 @@ import {
 export function buildAccountMetadataColumns({
   grouping,
   assetClasses,
+  filters,
 }: {
   grouping: ReportingGrouping;
   assetClasses: readonly ClassificationNode[];
+  filters: AccountSetFilters;
 }): ColDef<AccountsGridRow>[] {
   return [
     grouping === "assetClass"
@@ -23,7 +26,7 @@ export function buildAccountMetadataColumns({
           width: 220,
           resizable: true,
           sortable: false,
-          filter: "agTextColumnFilter",
+          ...filters.path,
           valueGetter: ({ data }) => getAccountListPathValue(data),
           tooltipValueGetter: ({ data }) => getAccountListPathValue(data),
         } satisfies ColDef<AccountsGridRow>)
@@ -33,7 +36,7 @@ export function buildAccountMetadataColumns({
           width: 220,
           resizable: true,
           sortable: false,
-          filter: "agTextColumnFilter",
+          ...filters.assetClass,
           valueGetter: ({ data }) =>
             getAccountListAssetClassValue(data, assetClasses),
           tooltipValueGetter: ({ data }) =>
@@ -55,7 +58,7 @@ export function buildAccountMetadataColumns({
       initialWidth: 220,
       resizable: true,
       sortable: false,
-      filter: "agTextColumnFilter",
+      ...filters.trackingMethod,
       valueGetter: ({ data }) => getAccountListTrackingMethodValue(data),
       tooltipValueGetter: ({ data }) => getAccountListTrackingMethodValue(data),
     } satisfies ColDef<AccountsGridRow>,

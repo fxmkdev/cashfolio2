@@ -873,30 +873,31 @@ sign; debt amounts are positive magnitudes in those reports.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
   `Balance (<referenceCurrency>)`, G/L, `Asset Class`, `Tracking Method`, and
   row actions in that order.
-- `Ccy./Symbol` starts at 180px and can be resized and filtered. It shows
+- `Ccy./Symbol` starts at 180px and has a searchable set filter. It shows
   foreign currency codes, cryptocurrency tickers, or security symbols; security
   trade currencies are omitted. Group, virtual Archived, and total rows stay
-  blank.
+  blank. The filter uses underlying identifiers, including the reference
+  currency even when its cell display is blank.
 - `Asset Class` follows the G/L Since Start column group, starts at 220px, and
-  can be resized. Its text filter and tooltip use the full display label. Unset
-  accounts show muted `Unclassified`. Real groups and virtual Archived groups
-  summarize all descendant accounts, including archived accounts, regardless of
-  collapse or grid filters: one distinct value shows its label; multiple values
-  show `Mixed`. Unclassified counts as a distinct value, so all-unclassified
-  groups show muted `Unclassified`, and classified plus unclassified shows
-  `Mixed` in normal text. Empty subgroups do not contribute a value; groups
-  without descendant accounts and the total row stay blank. Group summaries are
-  read-only. The column preserves the existing sibling ordering and grid-only
-  horizontal scrolling.
+  can be resized. Its set filter follows the asset-class hierarchy; its tooltip
+  uses the full display label. Unset accounts show muted `Unclassified`. Real
+  groups and virtual Archived groups summarize all descendant accounts,
+  including archived accounts, regardless of collapse or grid filters: one
+  distinct value shows its label; multiple values show `Mixed`. Unclassified
+  counts as a distinct value, so all-unclassified groups show muted
+  `Unclassified`, and classified plus unclassified shows `Mixed` in normal text.
+  Empty subgroups do not contribute a value; groups without descendant accounts
+  and the total row stay blank. Group summaries are read-only. The column
+  preserves the existing sibling ordering and grid-only horizontal scrolling.
 - `Tracking Method` follows Asset Class, starts at 220px, and can be resized.
-  Its text filter and tooltip use the full display label: `Individual Units` or
-  `Total Value`. All balance-account leaves show their method, including
-  archived accounts; securities, cryptocurrencies, and missing metadata show
-  `Individual Units`. Real groups and virtual Archived groups summarize
-  descendant accounts with the same inclusion rules as Asset Class: one distinct
-  method shows its label, differing methods show `Mixed`, and empty groups and
-  the total row stay blank. Group summaries are read-only; category tabs do not
-  show this column.
+  Its set filter and tooltip use the labels `Individual Units`, `Total Value`,
+  and `Mixed` where applicable. All balance-account leaves show their method,
+  including archived accounts; securities, cryptocurrencies, and missing
+  metadata show `Individual Units`. Real groups and virtual Archived groups
+  summarize descendant accounts with the same inclusion rules as Asset Class:
+  one distinct method shows its label, differing methods show `Mixed`, and empty
+  groups and the total row stay blank. Group summaries are read-only; category
+  tabs do not show this column.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy./Symbol` and `Balance` blank to avoid duplicating the value already
@@ -1536,10 +1537,43 @@ data, form references, and callbacks.
 Columns use AG Grid's built-in filter UI (not URL search params):
 
 - `filter: "agTextColumnFilter"` — text contains/starts-with filter
+- `filter: "agSetColumnFilter"` — searchable checkbox filter for categorical
+  values such as currencies/symbols, tracking methods, and valuation providers,
+  outcomes, and request reasons
 - `filter: "agNumberColumnFilter"` — numeric comparison filter
 - `filter: true` — default filter for the column type
 - `filter: false` — explicitly disable filtering on a column (e.g. actions
   column)
+
+Use explicit filter types for categorical columns rather than relying on
+`filter: true`. Keep names, descriptions, and composite report hierarchy/name
+columns as text filters. Preserve deliberately disabled filters.
+
+Asset Class and Account Group use native set-filter trees. Values and paths use
+entity IDs, with names formatted only for display, so duplicate names and names
+matching special labels remain distinct. Branch checkboxes include descendants.
+When a node has children, direct assignments appear beneath it as
+`Directly Assigned`. Choices come from loaded accounts, retaining their
+hierarchy ancestors; unused branches and blank group-summary values are omitted.
+Account Group uses the original persisted hierarchy even in the Asset Class view
+and for archived accounts. Accounts outside groups have a `Top Level` entry.
+
+`Unclassified` is an explicit root entry for unassigned asset classes. `Mixed`
+is a root entry for Asset Class and Tracking Method when the displayed tree
+contains heterogeneous groups. An account matches `Mixed` when any displayed
+ancestor has a mixed summary for that dimension, computed from the complete
+loaded presentation before column filtering. Group and heading rows have no
+selectable categorical values; matching account descendants retain their
+ancestors for context. Selections within a column combine with OR; columns
+combine with AND. For example, `Mixed` plus `USD` shows only USD accounts in
+mixed groups. Name filtering alone retains the normal group-and-descendant
+behavior. Display summaries and pinned totals continue to describe the full
+loaded data.
+
+Keep filter callbacks stable when rows refresh. Refresh supplied options after
+row updates, preserving selected keys that still exist. Shared hierarchy and
+special-key helpers live in `components/grid/set-filter.ts`; account filter
+membership is presentation-only and does not change server data.
 
 ## AG Grid Theme Synchronization
 
