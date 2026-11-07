@@ -89,8 +89,9 @@ export function AccountGainLossDetails({
               )}
             </Text>
             <Text size="sm">
-              Calculated holding G/L since account-book start; excludes explicit
-              G/L bookings.
+              Calculated holding G/L plus recorded adjustments since
+              account-book start. Realised includes recorded adjustments and
+              does not establish economic realisation.
             </Text>
             <Text size="sm">
               Totals include active and archived accounts in this tab, including

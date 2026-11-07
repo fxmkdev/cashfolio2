@@ -8,7 +8,18 @@ import { ensureAuthorizedForAccountBookId } from "../account-books/functions.ser
 import {
   queryAccountGainLoss,
   queryAccountGainLossSummaries,
+  queryAccountRecordedGainLossEligibility,
 } from "./accounts/account-gain-loss.server";
+
+export const getAccountRecordedGainLossEligibility = createServerFn({
+  method: "GET",
+})
+  .validator(readAccountGainLossInput)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    startReadBudget();
+    return queryAccountRecordedGainLossEligibility(data);
+  });
 
 export const getAccountGainLossSummaries = createServerFn({ method: "GET" })
   .validator(readAccountGainLossScopeInput)

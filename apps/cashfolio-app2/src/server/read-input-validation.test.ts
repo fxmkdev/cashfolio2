@@ -54,6 +54,7 @@ import { getTransaction } from "./transactions/transactions-queries";
 import {
   getAccountGainLoss,
   getAccountGainLossSummaries,
+  getAccountRecordedGainLossEligibility,
 } from "./account-gain-loss";
 import {
   readAccountTreeInput,
@@ -84,6 +85,7 @@ describe("read endpoint boundaries", () => {
     getTransaction,
     getAccountGainLoss,
     getAccountGainLossSummaries,
+    getAccountRecordedGainLossEligibility,
   };
   it.each(Object.entries(endpoints))(
     "%s rejects malformed input before authorization or queries",

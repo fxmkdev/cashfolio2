@@ -29,7 +29,7 @@ import { getOrLoadAccountGainLossSummaries } from "./account-gain-loss-cache.ser
 import { queryAccountGainLossSummaries } from "./account-gain-loss.server";
 import { toAccountGainLossCacheData } from "./account-gain-loss-cache-data";
 
-const key = "account:gain-loss:v4:test:book:gen-1:2026-05-11:2026-05-10";
+const key = "account:gain-loss:v5:test:book:gen-1:2026-05-11:2026-05-10";
 function createRange(): Awaited<ReturnType<typeof LoadRange>> {
   const base = {
     name: "Holding",
@@ -69,6 +69,7 @@ function createRange(): Awaited<ReturnType<typeof LoadRange>> {
       ["b", result("0.2")],
       ["c", result("0.3")],
     ]),
+    recordedAdjustments: [],
     realizedEvents: [],
     unrealizedOpenLots: [],
     referenceCurrency: "CHF",
@@ -212,13 +213,13 @@ describe("account G/L summary cache", () => {
     expect(active).not.toHaveProperty("cacheableFromPermanentValuationCache");
   });
 
-  it.each(["v1", "v2", "v3"])(
+  it.each(["v1", "v2", "v3", "v4"])(
     "ignores %s summaries from earlier calculations",
     async (version) => {
       const stale = toAccountGainLossCacheData(createRange());
       stale.accounts[0]!.result.summary.realizedGainLoss = toMoney(999);
       const oldKey = key.replace(
-        "account:gain-loss:v4:",
+        "account:gain-loss:v5:",
         `account:gain-loss:${version}:`,
       );
       mocks.kv.set(oldKey, JSON.stringify(encodeMoneyCache(stale)));
@@ -264,11 +265,11 @@ describe("account G/L summary cache", () => {
     await getOrLoadAccountGainLossSummaries("book");
     expect(mocks.setEx.mock.calls.map(([k]) => k)).toEqual([
       key,
-      "account:gain-loss:v4:test:other:gen-1:2026-05-11:2026-05-10",
-      "account:gain-loss:v4:production:book:gen-1:2026-05-11:2026-05-10",
-      "account:gain-loss:v4:production:book:gen-2:2026-05-11:2026-05-10",
-      "account:gain-loss:v4:production:book:gen-2:2026-05-12:2026-05-10",
-      "account:gain-loss:v4:production:book:gen-2:2026-05-12:2026-05-11",
+      "account:gain-loss:v5:test:other:gen-1:2026-05-11:2026-05-10",
+      "account:gain-loss:v5:production:book:gen-1:2026-05-11:2026-05-10",
+      "account:gain-loss:v5:production:book:gen-2:2026-05-11:2026-05-10",
+      "account:gain-loss:v5:production:book:gen-2:2026-05-12:2026-05-10",
+      "account:gain-loss:v5:production:book:gen-2:2026-05-12:2026-05-11",
     ]);
     expect(mocks.load).toHaveBeenCalledTimes(6);
   });

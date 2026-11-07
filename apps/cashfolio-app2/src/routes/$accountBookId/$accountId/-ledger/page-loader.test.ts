@@ -16,6 +16,7 @@ import {
   getLedgerData,
   getLedgerPeriodBounds,
 } from "@/server/ledger";
+import { getAccountRecordedGainLossEligibility } from "@/server/account-gain-loss";
 import { createLedgerAccountEditModalProps } from "./account-edit-modal-props";
 import {
   isLedgerPeriodFilterAvailable,
@@ -28,6 +29,10 @@ vi.mock("@/server/accounts", () => ({
   getAccounts: vi.fn(),
   getExistingNodes: vi.fn(),
   getLedgerAccountActionData: vi.fn(),
+}));
+
+vi.mock("@/server/account-gain-loss", () => ({
+  getAccountRecordedGainLossEligibility: vi.fn(),
 }));
 
 vi.mock("@/server/ledger", () => ({
@@ -58,6 +63,7 @@ const ledgerAccount: Awaited<ReturnType<typeof getAccountForLedger>> = {
 describe("loadLedgerPageData", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getAccountRecordedGainLossEligibility).mockResolvedValue(false);
     vi.mocked(getAccountNavigationGroups).mockResolvedValue([]);
   });
 
@@ -284,6 +290,31 @@ describe("loadLedgerPageData", () => {
       }
     },
   );
+});
+
+test("shows recorded reference-currency G/L and forwards the historical cutoff", async () => {
+  vi.mocked(getAccountForLedger).mockResolvedValue(ledgerAccount);
+  vi.mocked(getLedgerData).mockResolvedValue({
+    rows: [],
+    referenceCurrency: "CHF",
+    firstBookingDate: null,
+    balanceBeforePeriod: 0,
+    hasBookingsBeforePeriod: false,
+  });
+  vi.mocked(getAccountRecordedGainLossEligibility).mockResolvedValue(true);
+  const result = await loadLedgerPageData({
+    accountBookId: "book-1",
+    accountId: "account-1",
+    period: "2026-02",
+  });
+  expect(result.showGainLoss).toBe(true);
+  expect(getAccountRecordedGainLossEligibility).toHaveBeenCalledWith({
+    data: {
+      accountBookId: "book-1",
+      accountId: "account-1",
+      period: "2026-02",
+    },
+  });
 });
 
 describe("isLedgerPeriodFilterAvailable", () => {

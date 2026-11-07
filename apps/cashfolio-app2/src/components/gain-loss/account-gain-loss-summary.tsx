@@ -120,9 +120,10 @@ export function AccountGainLossSummaryView(args: {
               </Alert>
             ) : null}
             <Text size="xs" c="dimmed">
-              Calculated holding G/L; excludes explicit G/L bookings and income
-              such as dividends and interest. Opening holdings use their
-              valuation at book start.
+              Calculated holding G/L plus recorded adjustments. Realised
+              includes recorded adjustments and does not establish economic
+              realisation. Excludes income such as dividends and interest.
+              Opening holdings use their valuation at book start.
             </Text>
           </>
         ) : null}

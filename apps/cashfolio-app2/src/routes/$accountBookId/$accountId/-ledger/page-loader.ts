@@ -15,6 +15,7 @@ import {
   getLedgerData,
   getLedgerPeriodBounds,
 } from "@/server/ledger";
+import { getAccountRecordedGainLossEligibility } from "@/server/account-gain-loss";
 
 export function isLedgerPeriodFilterAvailable(account: {
   type: AccountType;
@@ -95,6 +96,20 @@ export async function loadLedgerPageData(args: {
       : Promise.resolve([]),
   ]);
 
+  const isReferenceCurrencyBalanceAccount =
+    account.type === AccountType.BALANCE &&
+    account.unit === Unit.CURRENCY &&
+    account.currency?.toUpperCase() ===
+      ledgerData.referenceCurrency.toUpperCase();
+  const hasRecordedGainLoss =
+    isReferenceCurrencyBalanceAccount &&
+    (await getAccountRecordedGainLossEligibility({
+      data: {
+        accountBookId: args.accountBookId,
+        accountId: args.accountId,
+        period: args.period,
+      },
+    }));
   return {
     account,
     accountTreeRow,
@@ -105,11 +120,12 @@ export async function loadLedgerPageData(args: {
     referenceCurrency: ledgerData.referenceCurrency,
     showGainLoss:
       account.type === AccountType.BALANCE &&
-      !(
-        account.unit === Unit.CURRENCY &&
-        account.currency?.toUpperCase() ===
-          ledgerData.referenceCurrency.toUpperCase()
-      ),
+      (hasRecordedGainLoss ||
+        !(
+          account.unit === Unit.CURRENCY &&
+          account.currency?.toUpperCase() ===
+            ledgerData.referenceCurrency.toUpperCase()
+        )),
     firstBookingDate: ledgerData.firstBookingDate,
     balanceBeforePeriod: ledgerData.balanceBeforePeriod,
     hasBookingsBeforePeriod: ledgerData.hasBookingsBeforePeriod,

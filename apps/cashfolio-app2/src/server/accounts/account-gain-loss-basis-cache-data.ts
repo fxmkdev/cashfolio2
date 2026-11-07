@@ -32,6 +32,9 @@ export function isCompleteAccountGainLossBasis(
     range.basis.holdings.map(({ state }) => state.account.id),
   );
   return (
+    range.recordedGainLoss.every(
+      (entry) => entry.amount !== null && entry.diagnostics.length === 0,
+    ) &&
     range.basis.holdings.every(
       (holding) =>
         !holding.unavailable &&
@@ -108,6 +111,15 @@ export function isAccountGainLossBasisCacheData(
         isNullableString(group.parentGroupId) &&
         (isAccountType(group.type) || group.type === "EQUITY"),
     ) ||
+    !Array.isArray(value.recordedGainLoss) ||
+    !value.recordedGainLoss.every(
+      (entry: unknown) =>
+        isRecord(entry) &&
+        typeof entry.accountId === "string" &&
+        isMoney(entry.amount) &&
+        Array.isArray(entry.diagnostics) &&
+        entry.diagnostics.length === 0,
+    ) ||
     !isRecord(value.basis) ||
     !Array.isArray(value.basis.holdings) ||
     !value.basis.holdings.every((holding: unknown) => {
@@ -150,6 +162,9 @@ export function isAccountGainLossBasisCacheData(
   );
   const holdings = range.basis.holdings;
   return (
+    range.recordedGainLoss.every((entry) => byId.has(entry.accountId)) &&
+    new Set(range.recordedGainLoss.map((entry) => entry.accountId)).size ===
+      range.recordedGainLoss.length &&
     byId.size === range.accounts.length &&
     new Set(holdings.map(({ state }) => state.account.id)).size ===
       holdings.length &&

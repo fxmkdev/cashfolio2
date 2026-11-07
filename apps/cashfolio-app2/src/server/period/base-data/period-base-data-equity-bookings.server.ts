@@ -26,6 +26,7 @@ type LoadPeriodEquityBookingsRawArgs = {
   queryEndExclusive: Date;
   equityAccountById: Map<string, EquityAccountMetadata>;
   equityAccountIds: string[];
+  equityAccountSubtype?: EquityAccountSubtype;
 };
 
 export async function loadPeriodEquityBookingsRaw(
@@ -120,11 +121,13 @@ function getEquityBookingsWhere(
           account: {
             type: AccountType.EQUITY,
             equityAccountSubtype: {
-              in: [
-                EquityAccountSubtype.INCOME,
-                EquityAccountSubtype.EXPENSE,
-                EquityAccountSubtype.GAIN_LOSS,
-              ],
+              in: args.equityAccountSubtype
+                ? [args.equityAccountSubtype]
+                : [
+                    EquityAccountSubtype.INCOME,
+                    EquityAccountSubtype.EXPENSE,
+                    EquityAccountSubtype.GAIN_LOSS,
+                  ],
             },
           },
         }),

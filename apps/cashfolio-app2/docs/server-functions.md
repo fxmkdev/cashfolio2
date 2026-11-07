@@ -928,7 +928,7 @@ final-summary cache but share the historical basis cache below. Calculation
 drawers bypass both caches.
 
 - Key:
-  `account:gain-loss:v4:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
+  `account:gain-loss:v5:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
   Dates are UTC `YYYY-MM-DD`; both days are captured before loading. The latest
   fetchable day uses the shared valuation publication-window rules.
 - TTL is 24 hours; maximum encoded size is 512 KiB. The shared Decimal codec
@@ -956,6 +956,23 @@ drawers bypass both caches.
 A warm hit skips historical DB inputs, valuation, and FIFO replay. Misses use
 historical basis caching before falling back to a complete replay.
 
+### Recorded G/L in Since-Start Summaries
+
+Account-list and ledger G/L Since Start includes recorded Gain/Loss adjustments
+in Realised and Total, using the same counterpart attribution, signs, and
+booking-date conversion as Report/History. Calculated Unrealised is unchanged.
+The summary labels remain Realised; help text explains the recorded component.
+The calculation response includes `recordedAdjustments` source rows separately
+from FIFO events, with links to complete transactions.
+
+Reference-currency balance accounts become eligible when recorded adjustments
+exist in the book-start/as-of range, even if they net to zero.
+`getAccountRecordedGainLossEligibility` authorizes the book and checks that
+range and attribution without conversions or FIFO replay. Tracking Method does
+not restrict eligibility. Historical basis cache v4 stores exact recorded
+totals/eligibility; summary cache v5 includes the combined results. Missing
+recorded conversions withhold Realised and Total and prevent basis persistence.
+
 ### Accumulated G/L historical basis cache
 
 `src/server/accounts/account-gain-loss-basis-cache.server.ts` supplies the
@@ -969,7 +986,7 @@ use the shared matching rules with their own period-opening bases and do not use
 this historical basis cache.
 
 - Key:
-  `account:gain-loss-basis:v3:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
+  `account:gain-loss-basis:v4:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
   The watermark is the latest booking timestamp strictly before the day after
   the requested UTC as-of day, or `empty`. All book bookings participate
   conservatively. Revision and watermark are read together in a read-only
