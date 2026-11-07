@@ -6,6 +6,7 @@ export function useGainLossRequest<T>(args: {
   scopeKey: string;
   refreshKey: unknown;
   load: () => Promise<T>;
+  errorMessage?: string;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{
@@ -16,7 +17,7 @@ export function useGainLossRequest<T>(args: {
     error?: string;
     loading: boolean;
   }>();
-  const { enabled, scopeKey, refreshKey, load } = args;
+  const { enabled, scopeKey, refreshKey, load, errorMessage } = args;
   useEffect(() => {
     if (!enabled) return;
     let active = true;
@@ -32,14 +33,16 @@ export function useGainLossRequest<T>(args: {
             scopeKey,
             refreshKey,
             attempt,
-            error: "Gain/loss could not be loaded. Please try again.",
+            error:
+              errorMessage ??
+              "Gain/loss could not be loaded. Please try again.",
             loading: false,
           });
       });
     return () => {
       active = false;
     };
-  }, [enabled, scopeKey, refreshKey, attempt, load]);
+  }, [enabled, scopeKey, refreshKey, attempt, load, errorMessage]);
   const current =
     state?.scopeKey === scopeKey &&
     state.refreshKey === refreshKey &&
