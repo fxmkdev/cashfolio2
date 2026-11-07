@@ -257,3 +257,54 @@ it("requires proof for every backtracked day and preserves the older-cache fallb
       ?.rate,
   ).toBeNull();
 });
+it("keeps valid sparse-range prices, checks nullable closes individually and only caches temporary backtracking", async () => {
+  const input = request(`SPARSE${suffix}`);
+  const key = `valuation:marketstack:${input.symbol}:USD`;
+  const failures: Record<string, HistoryFailure> = {};
+  mocks.fetch.mockImplementation(async (task: HistoryTask) => ({
+    complete: true,
+    points: {
+      [key]: task.mode === "range" ? [{ date: "2026-10-30", value: 15 }] : [],
+    },
+    unavailable: { [key]: ["2026-11-01"] },
+  }));
+  const loader = await createHistoricalLoader(
+    [input],
+    "USD",
+    "2026-11-06",
+    failures,
+  );
+  await loader.pump();
+  await expect(loader.lookup(input)).rejects.toBeInstanceOf(HistoryPending);
+  expect(
+    redis.zAdd.mock.calls.map(([, v]) => JSON.parse(v.value)),
+  ).not.toContainEqual(
+    expect.objectContaining({
+      from: time("2026-11-01"),
+      to: time("2026-11-01"),
+    }),
+  );
+  await loader.pump();
+  expect(mocks.fetch.mock.calls[1]![0].mode).toBe("day");
+  const carried = await loader.lookup(input);
+  expect(carried.rate?.toNumber()).toBe(15);
+  expect(carried.source).toBe("fallback");
+  expect(carried.validUntil).toBeLessThanOrEqual(Date.now() + 3600_000);
+  expect(
+    redis.zAdd.mock.calls.map(([, v]) => JSON.parse(v.value)),
+  ).toContainEqual(
+    expect.objectContaining({
+      temporary: true,
+      from: time("2026-11-01"),
+      to: time("2026-11-01"),
+    }),
+  );
+  vi.setSystemTime(Date.now() + 3600_001);
+  const expired = await createHistoricalLoader(
+    [input],
+    "USD",
+    "2026-11-06",
+    failures,
+  );
+  await expect(expired.lookup(input)).rejects.toBeInstanceOf(HistoryPending);
+});

@@ -769,7 +769,15 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     const footer = agGridCellByColId(agGridPinnedBottomRow(page), "return-twr");
     await expect(footer).toContainText("%");
     const total = await footer.innerText();
-    await selectReportGrouping(page, "Asset Class");
+    const grouping = page.getByRole("combobox", {
+      name: "Group By",
+      exact: true,
+    });
+    await grouping.click({ timeout: 10_000 });
+    await page
+      .getByRole("option", { name: "Asset Class", exact: true })
+      .click();
+    await expect(grouping).toHaveValue("Asset Class");
     await expect(
       page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
     ).toHaveCount(0, { timeout: 60_000 });
@@ -795,6 +803,6 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     ).toHaveText(total);
   } finally {
     release();
-    await page.unroute("**/_serverFn/**");
+    await page.unroute("**/_serverFn/**").catch(() => {});
   }
 });

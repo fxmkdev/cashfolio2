@@ -101,3 +101,35 @@ it("validates currency timeframe metadata, base and every rate", async () => {
     await expect(fetchHistory(task)).rejects.toThrow();
   }
 });
+it("retains valid quotes while identifying nullable range closes as unproven dates", async () => {
+  mocks.fetch.mockResolvedValueOnce(
+    Response.json({
+      pagination: { offset: 0, total: 2, count: 2 },
+      data: [
+        { date: "2026-01-02", symbol: "ABC", close: 100 },
+        { date: "2026-01-03", symbol: "ABC", close: null },
+      ],
+    }),
+  );
+  expect(await fetchHistory(stock)).toEqual({
+    complete: true,
+    points: { stock: [{ date: "2026-01-02", value: 100 }] },
+    unavailable: { stock: ["2026-01-03"] },
+  });
+});
+it("rejects the v2 quote-currency field when it disagrees with the requested currency", async () => {
+  mocks.fetch.mockResolvedValueOnce(
+    Response.json({
+      pagination: { offset: 0, total: 1, count: 1 },
+      data: [
+        {
+          date: "2026-01-02",
+          symbol: "ABC",
+          price_currency: "CHF",
+          close: 100,
+        },
+      ],
+    }),
+  );
+  await expect(fetchHistory(stock)).rejects.toThrow("currency");
+});

@@ -22,7 +22,7 @@ const warn = (error: unknown) => {
 const record = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 function coverageFrom(raw: string | null): HistoryCoverage[] {
-  if (!raw || raw.length > 256 * 1024) return [];
+  if (!raw || raw.length > 1024 * 1024) return [];
   const value: unknown = JSON.parse(raw);
   return Array.isArray(value)
     ? value.filter(
@@ -39,6 +39,7 @@ function coverageFrom(raw: string | null): HistoryCoverage[] {
           v.from <= v.to &&
           v.to <= v.publication &&
           (v.noData === undefined || typeof v.noData === "boolean") &&
+          (v.temporary === undefined || typeof v.temporary === "boolean") &&
           v.expiresAt > Date.now(),
       )
     : [];

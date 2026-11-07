@@ -25,6 +25,7 @@ export type HistoryBatch = {
   points: Record<string, { date: string; value: number }[]>;
   complete: boolean;
   noData?: boolean;
+  unavailable?: Record<string, string[]>;
 };
 const restricted = (error: unknown) =>
   object(error) &&
@@ -45,6 +46,7 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
   const points = Object.fromEntries(
     task.series.map((s) => [s.key, [] as { date: string; value: number }[]]),
   );
+  const unavailable: Record<string, string[]> = {};
   let offset = 0;
   let expectedTotal: number | undefined;
   for (let page = 0; page < 100; page++) {
@@ -193,6 +195,15 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
           if (seen.has(key) || points[target.key]!.some((p) => p.date === date))
             throw new Error("Duplicate stock history point.");
           seen.add(key);
+          if (
+            typeof item.price_currency === "string" &&
+            item.price_currency.trim().toUpperCase() !== target.currency
+          )
+            throw new Error("Stock history currency is invalid.");
+          if (item.close === null) {
+            (unavailable[target.key] ??= []).push(date);
+            continue;
+          }
           const value = parseMarketstackEodResponse({
             response: { data: [item] },
             symbol: target.code,
@@ -267,7 +278,11 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
         throw new Error("Incomplete historical date coverage.");
       await record({ outcome: "RETRIEVED", httpStatus: response.status });
     }
-    return { points, complete: true };
+    return {
+      points,
+      complete: true,
+      ...(Object.keys(unavailable).length ? { unavailable } : {}),
+    };
   }
   throw new Error("Historical price pagination exceeded the supported limit.");
 }
