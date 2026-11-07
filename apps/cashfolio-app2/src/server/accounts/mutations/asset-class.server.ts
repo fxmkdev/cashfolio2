@@ -1,4 +1,4 @@
-import { writeAssetClass } from "../../classification-data";
+import { writeAssetClass } from "../../classification-data.server";
 import { AccountType } from "../../../.prisma-client/enums";
 import type { Prisma } from "../../../.prisma-client/client";
 import type { validateSetAccountsAssetClassInput } from "./input";

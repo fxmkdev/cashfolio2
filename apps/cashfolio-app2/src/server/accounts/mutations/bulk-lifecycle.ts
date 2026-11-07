@@ -12,7 +12,10 @@ import {
   unarchiveAccountOperation,
   unarchiveAccountGroupOperation,
 } from "./status.server";
-import { deleteAccountOperation, deleteAccountGroupOperation } from "./delete.server";
+import {
+  deleteAccountOperation,
+  deleteAccountGroupOperation,
+} from "./delete.server";
 import type { OrganizeLifecycleAction } from "../../../shared/accounts/organize/types";
 
 const operations = {

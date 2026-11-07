@@ -9,7 +9,7 @@ import { normalizePeriodValue } from "../../../shared/reporting/period";
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../classification-data";
+} from "../../classification-data.server";
 import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import {
   getPeriodEndExclusive,

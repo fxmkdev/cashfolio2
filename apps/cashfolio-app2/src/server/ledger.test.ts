@@ -1,4 +1,4 @@
-import { assetClassSelection } from "./classification-data";
+import { assetClassSelection } from "./classification-data.server";
 import { defaultAssetClassIds } from "../shared/classification/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";

@@ -1,7 +1,7 @@
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../classification-data";
+} from "../../classification-data.server";
 import { defaultAssetClassIds } from "../../../shared/classification/asset-class";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";

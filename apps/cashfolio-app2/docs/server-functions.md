@@ -164,14 +164,17 @@ must continue to respect the supported browser baseline.
 
 The public `accounts.ts`, `account-books.ts`, and `account-gain-loss.ts` facades
 retain their exports. Inside `src/server/accounts/`, `accounts-queries.ts`,
-`accounts-mutations.ts`, and `accounts-mutation-operations.ts` retain their
-existing boundaries. Import internal modules directly from their owners:
+`accounts-mutations.ts`, and `accounts-mutation-operations.server.ts` retain
+their existing boundaries. Import internal modules directly from their owners:
 
 - `queries/`: selector metadata, unit usage, tree assembly, ledger actions,
   reference balances, and page composition, each in a focused module. Database
   tree data, valuation helpers, and the page snapshot remain separate owners.
-  `types.ts` owns shared query inputs/state; the read-only RepeatableRead page
-  snapshot supplies metadata and tree data to `page.ts` in one transaction.
+  `types.ts` owns server-private query inputs/state; the read-only
+  RepeatableRead page snapshot supplies metadata and tree data to
+  `page.server.ts` in one transaction. Query implementations that access Prisma
+  or valuation use `.server.ts`; input readers, contracts, and injected pure
+  balance calculations keep `.ts`.
 - `mutations/`: account/group operations, atomic bulk lifecycle handlers,
   assignments, input validation, cash rules, and system-managed equity guards.
 - `hierarchy/`: group paths/ancestry/cycle helpers and group action-availability
@@ -243,17 +246,18 @@ valuation and FIFO calculations independently of classification.
 operation exports stable. Implementations live in
 `src/server/accounts/mutations/`:
 
-- `account-edit.ts`: account creation/update, immutable unit identity, and CSV
-  configuration persistence
-- `group-edit.ts`: group creation/update, cycle checks, and cash-flag
+- `account-edit.server.ts`: account creation/update, immutable unit identity,
+  and CSV configuration persistence
+- `group-edit.server.ts`: group creation/update, cycle checks, and cash-flag
   propagation
-- `opening-balances.ts`: system account lookup and opening-balance transaction
-  creation, reconciliation, and removal
-- `status.ts`: account/group archive and unarchive eligibility and writes
-- `delete.ts`: account/group deletion checks and writes
-- `asset-class.ts` and `tracking-method.ts`: bulk assignment operations
-- `input.ts`, `cash-rules.ts`, and `system-managed-equity-guards.ts`: validation
-  and mutation-specific rules
+- `opening-balances.server.ts`: system account lookup and opening-balance
+  transaction creation, reconciliation, and removal
+- `status.server.ts`: account/group archive and unarchive eligibility and writes
+- `delete.server.ts`: account/group deletion checks and writes
+- `asset-class.server.ts` and `tracking-method.server.ts`: bulk assignment
+  operations
+- `input.ts`, `cash-rules.server.ts`, and `system-managed-equity-guards.ts`:
+  validation and mutation-specific rules
 - `types.ts`: shared operation inputs and mutation results
 
 Every operation still receives the owning mutation boundary's transaction

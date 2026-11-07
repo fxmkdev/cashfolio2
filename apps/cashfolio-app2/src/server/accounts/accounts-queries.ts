@@ -13,7 +13,10 @@ import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
 import { createGroupPathSegmentsResolver } from "./hierarchy/groups.server";
-import { queryAccountGroups, queryExistingNodes } from "./queries/selectors.server";
+import {
+  queryAccountGroups,
+  queryExistingNodes,
+} from "./queries/selectors.server";
 import { queryActiveAccountBookUnitUsage } from "./queries/unit-usage.server";
 import { queryAccountTreeData } from "./queries/tree.server";
 import { queryLedgerAccountActionData } from "./queries/ledger-actions.server";

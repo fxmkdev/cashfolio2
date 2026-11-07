@@ -78,9 +78,13 @@ providers, secrets, Node APIs, or request context, including implementation
 modules that transitively require them. Pure helpers and type-only modules keep
 `.ts`. Modules defining `createServerFn` or `createServerOnlyFn`, and public
 facades re-exporting those modules, remain client-importable `.ts` files.
-Exported request-context helpers in those modules must use `createServerOnlyFn`.
-Standalone seed/maintenance CLI owners have explicit server-only entry points;
-they are not browser-importable application facades.
+Database operations also use `.server.ts` when they receive an injected Prisma
+transaction rather than importing the global client. The account-query and
+mutation concern folders follow these same rules; pure input readers and
+type-only contracts retain `.ts`. Exported request-context helpers in those
+modules must use `createServerOnlyFn`. Standalone seed/maintenance CLI owners
+have explicit server-only entry points; they are not browser-importable
+application facades.
 
 ## Automated Protection
 

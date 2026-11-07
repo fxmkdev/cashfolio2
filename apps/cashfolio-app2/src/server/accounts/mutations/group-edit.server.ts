@@ -9,7 +9,10 @@ import {
 import { assertNoSystemManagedGroupSubtype } from "./system-managed-equity-guards";
 import { validateAccountGroupInput } from "../../../shared/accounts/account-validation";
 import { type AccountGroupUpdateInput } from "./types";
-import { getGroupHierarchy, ensureNoGroupCycle } from "../hierarchy/groups.server";
+import {
+  getGroupHierarchy,
+  ensureNoGroupCycle,
+} from "../hierarchy/groups.server";
 
 export async function createAccountGroupOperation(
   data: AccountGroupInput,

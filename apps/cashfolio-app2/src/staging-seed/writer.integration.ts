@@ -1,7 +1,7 @@
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../server/classification-data";
+} from "../server/classification-data.server";
 import Decimal from "decimal.js";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";

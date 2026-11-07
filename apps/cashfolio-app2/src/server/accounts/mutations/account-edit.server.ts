@@ -3,7 +3,7 @@ import {
   withAssetClassId,
   writeAssetClass,
   assertAssetClassExists,
-} from "../../classification-data";
+} from "../../classification-data.server";
 import { type AccountInput } from "../accounts-types";
 import { Prisma } from "../../../.prisma-client/client";
 import { AccountType } from "../../../.prisma-client/enums";

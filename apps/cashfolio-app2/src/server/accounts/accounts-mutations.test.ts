@@ -87,7 +87,9 @@ vi.mock("../../security/same-origin.server", () => ({
 }));
 
 vi.mock("../../shared/accounts/account-validation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../shared/accounts/account-validation")>()),
+  ...(await importOriginal<
+    typeof import("../../shared/accounts/account-validation")
+  >()),
   validateAccountInput,
   validateAccountGroupInput,
 }));

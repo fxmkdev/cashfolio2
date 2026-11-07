@@ -18,5 +18,5 @@ export {
   unarchiveAccountGroupOperation,
 } from "./mutations/status.server";
 
-export { setAccountsAssetClassOperation } from "./mutations/asset-class";
-export { setAccountsTrackingMethodOperation } from "./mutations/tracking-method";
+export { setAccountsAssetClassOperation } from "./mutations/asset-class.server";
+export { setAccountsTrackingMethodOperation } from "./mutations/tracking-method.server";

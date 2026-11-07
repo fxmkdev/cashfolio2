@@ -1,4 +1,4 @@
-import { readManagedAssetClasses } from "./classification-data";
+import { readManagedAssetClasses } from "./classification-data.server";
 import { createHash } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import type { Prisma } from "../.prisma-client/client";

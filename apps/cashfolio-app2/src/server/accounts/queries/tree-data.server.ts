@@ -2,7 +2,7 @@ import type { AccountReadClient } from "./read-client";
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../classification-data";
+} from "../../classification-data.server";
 import { toMoney } from "../../../shared/money";
 import { prisma } from "../../../prisma.server";
 import {

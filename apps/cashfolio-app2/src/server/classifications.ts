@@ -17,7 +17,7 @@ import { invalidatePeriodBaseDataCacheForAccountBook } from "./period/cache/peri
 import {
   readManagedAssetClasses,
   writeAssetClass,
-} from "./classification-data";
+} from "./classification-data.server";
 
 function bookInput(value: unknown) {
   assertRecord(value);

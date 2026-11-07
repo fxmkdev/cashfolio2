@@ -3,7 +3,7 @@ import type { Unit } from "../../../.prisma-client/enums";
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../classification-data";
+} from "../../classification-data.server";
 import { toNumericMoney } from "../../money-boundary";
 import { toMoney, moneyIsZero } from "../../../shared/money";
 import { isBalanceAccount } from "../../../shared/accounts/account-presentation";

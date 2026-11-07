@@ -36,7 +36,9 @@ vi.mock("../../database-conflict-retry.server", () => ({
 vi.mock("../../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
-vi.mock("../organize/data.server", () => ({ readOrganizeSnapshot: mocks.read }));
+vi.mock("../organize/data.server", () => ({
+  readOrganizeSnapshot: mocks.read,
+}));
 vi.mock("./status.server", () => ({
   archiveAccountOperation: mocks.archiveAccount,
   archiveAccountGroupOperation: mocks.archiveGroup,
