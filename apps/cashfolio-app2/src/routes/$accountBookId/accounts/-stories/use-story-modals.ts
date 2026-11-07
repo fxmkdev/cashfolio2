@@ -1,3 +1,4 @@
+import { toAccountGridTreeRow, isPersistedTreeRow } from "../-page-types";
 import { useEffect } from "react";
 import { useAccountsPageModalState } from "../-page-modal-state";
 import { getAccountsModalViewProps } from "../-page-modal-props";
@@ -15,10 +16,12 @@ export function useStoryModals({
     if (startWithCreateModal) openCreateAccount();
   }, [startWithCreateModal, openCreateAccount]);
   useEffect(() => {
-    if (startWithEditModal)
-      handleEditRow(
+    if (startWithEditModal) {
+      const row = toAccountGridTreeRow(
         activeAssetRows.find((row) => row.id === "account-checking")!,
       );
+      if (isPersistedTreeRow(row)) handleEditRow(row);
+    }
   }, [startWithEditModal, handleEditRow]);
   return state;
 }

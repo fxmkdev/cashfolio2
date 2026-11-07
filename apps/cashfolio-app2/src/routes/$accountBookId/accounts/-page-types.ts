@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  EquityAccountSubtype,
-  type AccountTrackingMethod,
-} from "@/.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 
-import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
 import type { AccountManagementContext } from "@/shared/account-presentation";
 import {
@@ -71,47 +66,29 @@ export function getTabDefinition(tabValue: TabValue) {
   return tabs.find((tab) => tab.value === tabValue) ?? tabs[0];
 }
 
-export type GroupAssetClassSummary = string | null | "Mixed";
-
-export type TreeRow = Awaited<
-  ReturnType<typeof getAccountTreeData>
->["rows"][number] & {
-  /** Synthetic headings never represent persisted account groups. */
-  presentationKind?: "assetClass" | "unclassified" | "unit" | "archived";
-  accountGroupPath?: string[];
-  /** Presentation only; undefined means the group has no account descendants. */
-  groupAssetClass?: GroupAssetClassSummary;
-  /** Presentation only; undefined means the group has no account descendants. */
-  groupTrackingMethod?: AccountTrackingMethod | "Mixed";
-};
-
-export const REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID =
-  "__reference_currency_total_footer__";
-
-export type ReferenceCurrencyTotalFooterRow = {
-  id: typeof REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID;
-  rowType: "referenceCurrencyTotalFooter";
-  name: "Total";
-  balanceInReferenceCurrency: number | null;
-};
-
-export type AccountsGridRow = TreeRow | ReferenceCurrencyTotalFooterRow;
-
+export {
+  REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+  isReferenceCurrencyTotalFooterRow,
+  toRowTarget,
+  toAccountGridTreeRow,
+  isPersistedTreeRow,
+  isPersistedAccountRow,
+  isPersistedGroupRow,
+} from "./-account-grid-rows";
+export type {
+  GroupAssetClassSummary,
+  TreeRow,
+  AccountsGridRow,
+  AccountGridTreeRow,
+  PersistedTreeRow,
+  PersistedAccountRow,
+  PersistedGroupRow,
+  DisplayHeadingRow,
+  ReferenceCurrencyTotalFooterRow,
+  RowTarget,
+} from "./-account-grid-rows";
+import type { RowTarget } from "./-account-grid-rows";
 export const ROOT_PARENT_KEY = "__root__";
-
-export type RowTarget = {
-  id: string;
-  nodeType: "account" | "accountGroup";
-  name: string;
-};
-
-export function toRowTarget(data: TreeRow): RowTarget {
-  return {
-    id: data.id,
-    nodeType: data.nodeType,
-    name: data.name,
-  };
-}
 
 export function getEntityLabel(
   nodeType: RowTarget["nodeType"],
@@ -120,14 +97,6 @@ export function getEntityLabel(
   if (context === "categories")
     return nodeType === "account" ? "Category" : "Category Group";
   return nodeType === "account" ? "Account" : "Group";
-}
-
-export function isReferenceCurrencyTotalFooterRow(
-  row: AccountsGridRow | undefined,
-): row is ReferenceCurrencyTotalFooterRow {
-  return (
-    !!row && "rowType" in row && row.rowType === "referenceCurrencyTotalFooter"
-  );
 }
 
 function isTabValue(value: unknown): value is TabValue {

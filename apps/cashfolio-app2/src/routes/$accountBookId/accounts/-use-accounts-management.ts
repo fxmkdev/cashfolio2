@@ -10,7 +10,11 @@ import {
   getAccountConstraintMessage,
   type AccountManagementContext,
 } from "@/shared/account-presentation";
-import type { TreeRow } from "./-page-types";
+import {
+  isPersistedTreeRow,
+  isPersistedGroupRow,
+  type PersistedGroupRow,
+} from "./-page-types";
 import { createAccountsMutationActions } from "./-account-mutations";
 export function useAccountsManagement(args: {
   accountBookId: string;
@@ -61,6 +65,7 @@ export function useAccountsManagement(args: {
     isEligible: (target) =>
       rows.some(
         (row) =>
+          isPersistedTreeRow(row) &&
           row.id === target.id &&
           row.nodeType === target.nodeType &&
           row.unarchivable,
@@ -82,12 +87,13 @@ export function useAccountsManagement(args: {
     onRefreshConstraints,
   });
 
-  const onAddChild = (row: TreeRow, kind: "account" | "accountGroup") => {
+  const onAddChild = (
+    row: PersistedGroupRow,
+    kind: "account" | "accountGroup",
+  ) => {
     if (
-      row.nodeType !== "accountGroup" ||
+      !isPersistedGroupRow(row) ||
       !row.isActive ||
-      row.isVirtualArchivedGroup ||
-      row.presentationKind ||
       !args.accountGroups.some((group) => group.value === row.id)
     )
       return;

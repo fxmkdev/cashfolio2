@@ -2,7 +2,10 @@ import { defaultAssetClassIds } from "../../../shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import { type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { AccountsGridRow, TreeRow } from "./-page-types";
+import {
+  toAccountGridTreeRow,
+  type AccountsGridRow,
+} from "./-page-types";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import {
@@ -118,13 +121,13 @@ describe("account classification columns", () => {
       ...(["assetClass", "unclassified", "unit", "archived"] as const).map(
         (presentationKind) =>
           [
-            {
+            toAccountGridTreeRow({
               ...createGroupRow(),
               presentationKind,
               accountGroupPath: ["Ignored"],
-            },
+            }),
             undefined,
-          ] as [TreeRow, undefined],
+          ] as [AccountsGridRow, undefined],
       ),
       [footerRow, undefined],
       [undefined, undefined],
