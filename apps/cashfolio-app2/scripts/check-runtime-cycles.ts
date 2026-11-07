@@ -26,7 +26,7 @@ const sourceRoot = resolve("src");
 const files = parsed.fileNames.filter((file) =>
   file.startsWith(sourceRoot + "/"),
 );
-const graph = buildRuntimeGraph(files, parsed.options);
+const graph = buildRuntimeGraph(files, parsed.options, sourceRoot);
 const cycles = findRuntimeCycles(graph);
 if (cycles.length) {
   console.error("Runtime dependency cycles:");

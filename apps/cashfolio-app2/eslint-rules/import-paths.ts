@@ -17,11 +17,11 @@ export function localImportTarget(
 }
 
 /** Support is identified by deliberate directory/file naming, never by importers. */
-export function isTestSupport(filename: string): boolean {
-  const path = filename.split(sep).join("/");
+export function isTestSupport(filename: string, sourceRoot: string): boolean {
+  const path = relative(sourceRoot, filename).split(sep).join("/");
   const name = basename(filename);
   return (
-    /\/(?:testing|stories|fixtures|__tests__|__mocks__|__fixtures__|(?:test|story|storybook)-(?:support|fixtures|helpers|utils))(?:\/|$)/.test(
+    /(?:^|\/)(?:testing|stories|fixtures|__tests__|__mocks__|__fixtures__|(?:test|story|storybook)-(?:support|fixtures|helpers|utils))(?:\/|$)/.test(
       path,
     ) ||
     /(?:^|[.-])(?:test|integration|stories)(?:[.-]|$)/.test(name) ||

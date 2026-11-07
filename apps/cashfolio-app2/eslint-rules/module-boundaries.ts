@@ -44,7 +44,7 @@ const moduleBoundaries: TSESLint.RuleModule<MessageIds, Options> = {
   create(context) {
     const { sourceRoot, serverFacades } = context.options[0];
     const filename = resolve(context.filename);
-    if (isTestSupport(filename)) return {};
+    if (isTestSupport(filename, sourceRoot)) return {};
     const server = resolve(sourceRoot, "server");
     // API routes and explicit server entry points are server-only consumers.
     const serverConsumer =
@@ -56,7 +56,7 @@ const moduleBoundaries: TSESLint.RuleModule<MessageIds, Options> = {
     return dependencyVisitors((specifier, node) => {
       const target = localImportTarget(sourceRoot, filename, specifier);
       if (!target) return;
-      if (isTestSupport(target))
+      if (isTestSupport(target, sourceRoot))
         context.report({ node, messageId: "testSupport" });
       const owner = routePrivateOwner(sourceRoot, target);
       if (owner && !isWithin(filename, owner))

@@ -35,7 +35,7 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
   create(context) {
     const { sourceRoot } = context.options[0];
     const filename = resolve(context.filename);
-    if (isTestSupport(filename)) return {};
+    if (isTestSupport(filename, sourceRoot)) return {};
     const isShared = isWithin(filename, resolve(sourceRoot, "shared"));
     return dependencyVisitors((specifier, node) => {
       const target = localImportTarget(sourceRoot, filename, specifier);

@@ -107,7 +107,9 @@ typecheck; Node 26 loads tool sources using native type stripping.
   `stories/`, `fixtures/`, `__tests__/`, `__mocks__/`, `__fixtures__/`, and
   named test/story support directories and filenames identifying test/story
   fixtures, helpers, harnesses, or setup. Production modules cannot import those
-  files, even only for types. Keep support names explicit.
+  files, even only for types. Keep support names explicit. Directory
+  classification is relative to the app source root, so checkout ancestors do
+  not grant exemptions.
 - Build-gated E2E runtime seams under `src/e2e/` are application runtime
   modules, not blanket test-support exemptions. Their `.server` consumers and
   existing `__E2E_BUILD__` gates remain in place.

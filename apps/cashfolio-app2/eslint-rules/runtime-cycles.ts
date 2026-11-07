@@ -1,15 +1,19 @@
-import { resolve } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import ts from "typescript";
 import { isTestSupport } from "./import-paths.ts";
 
 export type RuntimeGraph = ReadonlyMap<string, readonly string[]>;
 
-export function isProductionSource(filename: string): boolean {
+export function isProductionSource(
+  filename: string,
+  sourceRoot: string,
+): boolean {
+  const path = relative(sourceRoot, filename).split(sep).join("/");
   return (
-    !isTestSupport(filename) &&
+    !isTestSupport(filename, sourceRoot) &&
     !filename.endsWith(".d.ts") &&
-    !filename.endsWith("/routeTree.gen.ts") &&
-    !filename.includes("/.prisma-client/")
+    path !== "routeTree.gen.ts" &&
+    !path.split("/").includes(".prisma-client")
   );
 }
 
@@ -64,10 +68,13 @@ export function runtimeSpecifiers(source: ts.SourceFile): string[] {
 export function buildRuntimeGraph(
   filenames: readonly string[],
   options: ts.CompilerOptions,
+  sourceRoot: string,
   host: ts.ModuleResolutionHost = ts.sys,
 ): RuntimeGraph {
   const files = new Set(
-    filenames.map((f) => resolve(f)).filter(isProductionSource),
+    filenames
+      .map((f) => resolve(f))
+      .filter((file) => isProductionSource(file, sourceRoot)),
   );
   const graph = new Map<string, string[]>();
   const cache = ts.createModuleResolutionCache(

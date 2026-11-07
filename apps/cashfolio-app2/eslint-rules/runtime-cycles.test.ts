@@ -3,10 +3,10 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { buildRuntimeGraph, findRuntimeCycles } from "./runtime-cycles";
 
-function graph(sources: Record<string, string>) {
+function graph(sources: Record<string, string>, sourceRoot = "/app/src") {
   const files = new Map(
     Object.entries(sources).map(([file, text]) => [
-      resolve("/app/src", file),
+      resolve(sourceRoot, file),
       text,
     ]),
   );
@@ -14,8 +14,9 @@ function graph(sources: Record<string, string>) {
     [...files.keys()],
     {
       moduleResolution: ts.ModuleResolutionKind.Bundler,
-      paths: { "@/*": ["/app/src/*"] },
+      paths: { "@/*": [`${sourceRoot}/*`] },
     },
+    sourceRoot,
     {
       getCurrentDirectory: () => "/app",
       fileExists: (file) => files.has(file),
@@ -119,4 +120,19 @@ describe("runtime cycle detection", () => {
       ),
     ).toEqual([]);
   });
+  it.each(["stories", ".prisma-client"])(
+    "checks production cycles under a %s checkout ancestor",
+    (ancestor) => {
+      const runtime = graph(
+        {
+          "a.ts": 'import "@/b";',
+          "b.ts": 'import "./a";',
+          "stories/fixture.ts": 'import "../a";',
+        },
+        `/work/${ancestor}/cashfolio/src`,
+      );
+      expect(runtime.size).toBe(2);
+      expect(findRuntimeCycles(runtime)).toHaveLength(1);
+    },
+  );
 });
