@@ -1,5 +1,5 @@
 import type { AccountsPageViewProps } from "./view-types";
-import type { AccountManagementContext } from "@/shared/account-presentation";
+import type { AccountManagementContext } from "@/shared/accounts/account-presentation";
 import type { loadAccountsPageData } from "./loading/loader";
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 export type AccountsPageControllerOptions = {

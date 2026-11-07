@@ -1,6 +1,6 @@
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
-import { getBookingUnitFields } from "@/shared/booking-unit-fields";
+import { getBookingUnitFields } from "@/shared/transactions/booking-unit-fields";
 import {
   buildSimpleTransactionValues,
   normalizeSimpleDraft,

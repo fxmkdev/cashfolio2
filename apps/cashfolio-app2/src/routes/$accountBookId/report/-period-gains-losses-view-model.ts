@@ -1,4 +1,4 @@
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import {
   useCallback,
   useMemo,
@@ -6,7 +6,7 @@ import {
   type MouseEventHandler,
   type MouseEvent,
 } from "react";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import { useGainsLossesWaterfallChartOptions } from "./-gains-losses/-gains-losses-chart-options";
 import { getGainsLossesDrillState } from "./-gains-losses/-gains-losses-drill";

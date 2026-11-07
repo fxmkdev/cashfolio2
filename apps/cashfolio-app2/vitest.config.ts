@@ -29,7 +29,7 @@ export default defineConfig({
             provide: { temporalMode: mode },
             include: [
               "src/shared/date.test.ts",
-              "src/shared/period.test.ts",
+              "src/shared/reporting/period.test.ts",
               "src/shared/temporal.browser.test.tsx",
             ],
             browser: {

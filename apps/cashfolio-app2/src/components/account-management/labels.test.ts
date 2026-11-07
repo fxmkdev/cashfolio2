@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getManagementTabs } from "@/shared/account-tabs";
+import { getManagementTabs } from "@/shared/accounts/account-tabs";
 import { getAccountsPageTitle, getEntityLabel } from "./labels";
 
 describe("getAccountsPageTitle", () => {

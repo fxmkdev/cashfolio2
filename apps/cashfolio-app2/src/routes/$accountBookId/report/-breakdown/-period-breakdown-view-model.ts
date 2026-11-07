@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import {
   getBreakdownDrillState,

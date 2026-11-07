@@ -30,8 +30,8 @@ import {
   type ValuationCacheUnitsResponse,
   type ValuationCacheUnitRow,
 } from "@/server/valuation-cache";
-import { createRateNumberFormatter } from "@/shared/unit-format";
-import { VALUATION_BASE_CURRENCY } from "@/shared/valuation-base-currency";
+import { createRateNumberFormatter } from "@/shared/units/unit-format";
+import { VALUATION_BASE_CURRENCY } from "@/shared/units/valuation-base-currency";
 import { useUserLocale } from "@/user-locale-context";
 import {
   getRowsForValuationUnitTab,

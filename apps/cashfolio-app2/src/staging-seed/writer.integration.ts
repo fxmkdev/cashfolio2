@@ -21,7 +21,7 @@ import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
 import type { ApprovedSeedTarget } from "./target";
 import { generateStagingDataset } from "./dataset";
 import { replaceStagingData } from "./writer";
-import { defaultAssetClassNodes } from "../shared/asset-class";
+import { defaultAssetClassNodes } from "../shared/classification/asset-class";
 
 const run = promisify(execFile);
 const applicationTables = [

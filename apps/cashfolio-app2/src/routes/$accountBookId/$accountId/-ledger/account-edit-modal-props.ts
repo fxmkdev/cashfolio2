@@ -3,8 +3,8 @@ import type {
   EditAccountModalProps,
   TransformedFormValues,
 } from "@/components/account-editor/edit-account-modal";
-import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
-import type { TabValue } from "@/shared/account-tabs";
+import type { AccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
+import type { TabValue } from "@/shared/accounts/account-tabs";
 import type { loadLedgerPageData } from "./page-loader";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;

@@ -7,7 +7,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../../.prisma-client/enums";
-import type { PeriodBaseData } from "../cache/period-base-data-cache";
+import type { PeriodBaseData } from "../cache/period-base-data-cache.server";
 
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 const processPeriodEquityBookingsFromBaseData = vi.hoisted(() => vi.fn());
@@ -15,7 +15,7 @@ const computePeriodHoldingGainLoss = vi.hoisted(() => vi.fn());
 const convertBookingValueToReferenceDetails = vi.hoisted(() => vi.fn());
 const getUnitToReferenceExchangeRateDetails = vi.hoisted(() => vi.fn());
 
-vi.mock("../cache/period-base-data-cache", () => ({
+vi.mock("../cache/period-base-data-cache.server", () => ({
   getOrLoadPeriodBaseData,
 }));
 
@@ -23,11 +23,11 @@ vi.mock("../overview/period-equity-bookings", () => ({
   processPeriodEquityBookingsFromBaseData,
 }));
 
-vi.mock("../holdings/period-holding-gain-loss", () => ({
+vi.mock("../holdings/period-holding-gain-loss.server", () => ({
   computePeriodHoldingGainLoss,
 }));
 
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReferenceDetails,
   getUnitToReferenceExchangeRateDetails,
 }));

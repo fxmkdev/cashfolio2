@@ -16,7 +16,7 @@ import {
 import {
   getBookingPeriodValue,
   getLatestBookingDate,
-} from "@/shared/transaction-period";
+} from "@/shared/transactions/transaction-period";
 import type {
   RebookingState,
   SimpleTransactionValues,

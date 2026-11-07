@@ -1,7 +1,7 @@
 import {
   RESOURCE_LIMITS,
   assertTransactionLimits,
-} from "@/shared/resource-limits";
+} from "@/shared/resources/resource-limits";
 import { useRef, useState } from "react";
 import {
   getStatementImportExistingBookings,

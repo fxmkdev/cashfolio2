@@ -10,7 +10,7 @@ import {
   type AccountGroupOption,
   type ExistingNode,
 } from "./account-cash-form-rules";
-import { type AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
+import { type AccountBookUnitUsage } from "../../shared/accounts/account-book-unit-usage";
 
 export type AccountTypeDescriptor =
   "BALANCE" | `EQUITY-${EquityAccountSubtype}`;

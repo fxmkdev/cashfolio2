@@ -1,7 +1,7 @@
 import { TreeSelect, type TreeSelectProps } from "@mantine/core";
 import { useUncontrolled } from "@mantine/hooks";
 import { forwardRef, useRef } from "react";
-import type { ClassificationNode } from "../../shared/asset-class";
+import type { ClassificationNode } from "../../shared/classification/asset-class";
 import {
   buildAssetClassTreeData,
   filterAssetClassTreeNode,

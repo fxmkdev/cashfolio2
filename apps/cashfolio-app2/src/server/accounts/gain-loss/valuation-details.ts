@@ -1,8 +1,8 @@
-import type { AccountGainLossResult } from "../../../shared/account-gain-loss";
+import type { AccountGainLossResult } from "../../../shared/accounts/account-gain-loss";
 import type {
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
-} from "../../../shared/gain-loss-reconciliation";
+} from "../../../shared/reporting/gain-loss-reconciliation";
 import { moneyAdd, type Money } from "../../../shared/money";
 import {
   parseAcquisitionSortKey,

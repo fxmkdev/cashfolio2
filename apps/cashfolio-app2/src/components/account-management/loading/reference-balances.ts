@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AccountsMode, TabValue } from "@/shared/account-tabs";
+import type { AccountsMode, TabValue } from "@/shared/accounts/account-tabs";
 import type { TreeRow } from "../grid/rows";
 import {
   getImmediateReferenceRows,

@@ -3,7 +3,7 @@ import {
   formatMonthPeriodValue,
   normalizeExplicitPeriodValue,
   parseExplicitPeriodSelection,
-} from "@/shared/period";
+} from "@/shared/reporting/period";
 import type { UserLocale } from "@/user-locale";
 
 type TransactionsServerModule = typeof import("@/server/transactions-data");

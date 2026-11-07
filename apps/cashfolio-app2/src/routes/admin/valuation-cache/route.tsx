@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { loadValuationCachePageData } from "./-page-loader";
 import { getValuationUnitTab, parseValuationCacheSearch } from "./-page-types";
 

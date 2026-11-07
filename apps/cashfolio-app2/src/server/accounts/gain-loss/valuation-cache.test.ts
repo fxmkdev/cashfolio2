@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getAccountGainLossCacheEntryKey } from "../../../shared/book-cache-keys";
+import { getAccountGainLossCacheEntryKey } from "../../../shared/accounts/book-cache-keys";
 import { getSecurityRedisSeriesKey } from "../../valuation/keys";
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +51,7 @@ vi.mock("../../../prisma.server", () => ({
   prisma: { ...mocks.db, $transaction: mocks.snapshot },
 }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: async () => redis }));
-vi.mock("../../valuation/providers", () => ({
+vi.mock("../../valuation/providers.server", () => ({
   fetchSecurityPriceFromMarketstack: mocks.securityProvider,
   fetchUsdToCurrencyRateFromCurrencyLayer: mocks.currencyProvider,
   fetchUsdPerCryptocurrencyRateFromCoinLayer: mocks.cryptoProvider,

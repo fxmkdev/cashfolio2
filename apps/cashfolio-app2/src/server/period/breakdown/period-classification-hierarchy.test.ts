@@ -1,11 +1,11 @@
 import { buildGainLossAccountAttribution } from "./period-gain-loss-attribution";
 import type { PeriodBaseAssetLiabilityAccount } from "../base-data/period-base-data-types";
 import { toNumericMoney } from "../../money-boundary";
-import { normalizeGainLossScope } from "../../../shared/history-scope";
+import { normalizeGainLossScope } from "../../../shared/reporting/history-scope";
 import { describe, expect, it } from "vitest";
 import { Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
-import type { ClassificationNode } from "../../../shared/asset-class";
+import type { ClassificationNode } from "../../../shared/classification/asset-class";
 import {
   buildGainsLossesBreakdown,
   type PeriodGainsLossesContribution,

@@ -2,13 +2,13 @@ import { Button, Stack, Text, Title } from "@mantine/core";
 import type { ColDef } from "ag-grid-enterprise";
 import { useMemo } from "react";
 import { DataGrid } from "@/components/grid/data-grid";
-import type { AccountGainLossSourceRow } from "@/shared/gain-loss-reconciliation";
+import type { AccountGainLossSourceRow } from "@/shared/reporting/gain-loss-reconciliation";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 
 export function RecordedGainLoss({
   rows,

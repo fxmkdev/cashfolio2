@@ -11,7 +11,7 @@ import {
   PERIOD_PRESET_VALUES,
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
-} from "../shared/period";
+} from "../shared/reporting/period";
 import {
   buildBreakdownHierarchy as buildBreakdownHierarchyDecimal,
   buildBreakdownItems as buildBreakdownItemsDecimal,

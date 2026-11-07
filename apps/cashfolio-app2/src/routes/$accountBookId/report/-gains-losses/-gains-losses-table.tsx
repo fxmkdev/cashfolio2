@@ -1,5 +1,5 @@
 import type { ColDef } from "ag-grid-enterprise";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import { useMemo } from "react";
 import {
   getReportRowLabel,

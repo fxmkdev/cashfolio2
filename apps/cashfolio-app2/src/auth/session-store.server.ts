@@ -8,7 +8,7 @@ import {
   newSessionToken,
   nextIdleDeadline,
   sessionDeadlines,
-} from "./session-policy";
+} from "./session-policy.server";
 
 export type SessionTransaction = Prisma.TransactionClient;
 export type StoredSession = Prisma.AuthSessionGetPayload<{

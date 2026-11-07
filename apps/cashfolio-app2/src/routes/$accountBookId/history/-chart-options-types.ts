@@ -3,7 +3,7 @@ import type {
   AgSeriesVisibilityChange,
   AgZoomEvent,
 } from "ag-charts-community";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import type { HistoryMetric, HistoryPeriodMode } from "./-page-types";
 import type { HistoryChartDatum } from "./-chart-data";
 

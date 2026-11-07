@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { moneyIsFinite, type Money } from "../../../shared/money";
-import type { AccountGainLossResult } from "../../../shared/account-gain-loss";
+import type { AccountGainLossResult } from "../../../shared/accounts/account-gain-loss";
 import type { loadAccountGainLossRange } from "./range.server";
 
 type Range = Awaited<ReturnType<typeof loadAccountGainLossRange>>;

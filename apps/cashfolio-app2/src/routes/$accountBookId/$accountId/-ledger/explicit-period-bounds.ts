@@ -1,9 +1,9 @@
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   fromMonthIndex,
   toMonthIndex,
   getYearBounds,
-} from "@/shared/period-selector-model";
+} from "@/shared/reporting/period-selector-model";
 import type { parseLedgerExplicitPeriod } from "./page-types";
 
 export function clampLedgerExplicitPeriodToBounds(args: {

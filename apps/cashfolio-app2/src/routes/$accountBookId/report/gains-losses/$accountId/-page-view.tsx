@@ -7,15 +7,15 @@ import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
 import { PageShell } from "@/components/layout/page-shell";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PeriodFilterAction } from "@/components/period-filter/period-filter-action";
-import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/period";
+import type { PeriodGainLossReconciliation } from "@/shared/reporting/gain-loss-reconciliation";
+import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,
   getPeriodModeChangeValue,
   getPeriodStepValue,
   getYearPickerValue,
-} from "@/shared/period-selector-model";
+} from "@/shared/reporting/period-selector-model";
 import {
   buildRealizedColumns,
   buildRealizedLotMatchColumns,
@@ -30,7 +30,7 @@ import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
   getUnitDisplayDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { getGainLossReconciliationPageTitle } from "./-page-title";
 import { useUserLocale } from "@/user-locale-context";
 

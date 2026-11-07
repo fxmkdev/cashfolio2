@@ -2,9 +2,9 @@ import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "../period-b
 import {
   convertBookingValueToReferenceDetails,
   getUnitToReferenceExchangeRateDetails,
-} from "../period-conversion";
-import type { PeriodBaseData } from "../cache/period-base-data-cache";
-import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
+} from "../period-conversion.server";
+import type { PeriodBaseData } from "../cache/period-base-data-cache.server";
+import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss.server";
 import { processPeriodEquityBookingsFromBaseData } from "../overview/period-equity-bookings";
 import { createPeriodOverviewEquityAggregation } from "../overview/period-overview-aggregation";
 import { preparePeriodCalculationContext } from "../period-calculation-context";

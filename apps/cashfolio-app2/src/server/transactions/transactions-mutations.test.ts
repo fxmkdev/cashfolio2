@@ -5,8 +5,8 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
-import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../../shared/gain-loss-transaction-invariant";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
+import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../../shared/transactions/gain-loss-transaction-invariant";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -71,7 +71,7 @@ vi.mock("../../security/same-origin.server", () => ({
 vi.mock("../../prisma.server", () => ({
   prisma,
 }));
-vi.mock("../period/cache/period-base-data-cache", () => ({
+vi.mock("../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook,
 }));
 

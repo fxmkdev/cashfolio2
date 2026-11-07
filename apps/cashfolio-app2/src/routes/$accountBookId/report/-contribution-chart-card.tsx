@@ -5,7 +5,7 @@ import type {
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import classes from "./-page-view.module.css";
 
 type WaterfallDatum = {

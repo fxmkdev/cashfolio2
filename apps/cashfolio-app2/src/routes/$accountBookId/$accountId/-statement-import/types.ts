@@ -1,4 +1,4 @@
-import type { BookingUnitFieldsSource } from "@/shared/booking-unit-fields";
+import type { BookingUnitFieldsSource } from "@/shared/transactions/booking-unit-fields";
 import type { StatementImportCsvHeader } from "@/shared/statement-import-csv-format";
 import type { TransactionMutationValues } from "../-ledger/page-view";
 

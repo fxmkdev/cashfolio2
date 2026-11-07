@@ -3,7 +3,7 @@ import { Drawer } from "@mantine/core";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AccountGainLossSummaryView } from "./account-gain-loss-summary";
 import { AccountGainLossCalculation } from "./account-gain-loss-calculation";
-import type { AccountGainLossDetails } from "@/shared/account-gain-loss";
+import type { AccountGainLossDetails } from "@/shared/accounts/account-gain-loss";
 
 const data: AccountGainLossDetails = {
   applicable: true,

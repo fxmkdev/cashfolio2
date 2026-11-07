@@ -6,7 +6,7 @@ import {
   bulkLifecycleAvailability,
 } from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { getAccountConstraintMessage } from "@/shared/accounts/account-presentation";
 import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
 import type {
   OrganizeMove,

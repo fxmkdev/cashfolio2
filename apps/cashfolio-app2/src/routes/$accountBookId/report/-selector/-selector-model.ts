@@ -1,1 +1,1 @@
-export * from "@/shared/period-selector-model";
+export * from "@/shared/reporting/period-selector-model";

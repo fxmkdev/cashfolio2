@@ -1,7 +1,7 @@
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import { type AccountsPageViewProps } from "../view-types";
 import { type TreeRow } from "../grid/rows";
-import { type AccountsMode, type TabValue } from "@/shared/account-tabs";
+import { type AccountsMode, type TabValue } from "@/shared/accounts/account-tabs";
 export function createGroupRow(args: {
   id: string;
   name: string;

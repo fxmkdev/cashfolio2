@@ -70,7 +70,7 @@ vi.mock("../../../prisma.server", () => ({
   prisma: mocks.prisma,
 }));
 
-vi.mock("../../period/cache/period-base-data-cache", () => ({
+vi.mock("../../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook:
     mocks.invalidatePeriodBaseDataCacheForAccountBook,
 }));

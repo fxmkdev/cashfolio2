@@ -1,7 +1,7 @@
 import {
   defaultAssetClassIds,
   defaultAssetClassNodes,
-} from "../shared/asset-class";
+} from "../shared/classification/asset-class";
 import Decimal from "decimal.js";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -10,7 +10,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { addUtcDays, getOpeningBalancesBookingDate } from "../shared/date";
-import { validateGainLossSimpleTransactionInvariant } from "../shared/gain-loss-transaction-invariant";
+import { validateGainLossSimpleTransactionInvariant } from "../shared/transactions/gain-loss-transaction-invariant";
 import { readStatementImportCsvFormat } from "../shared/statement-import-csv-format";
 import {
   GAIN_LOSS_ACCOUNT_KEY,

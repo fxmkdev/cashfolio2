@@ -17,11 +17,11 @@ import { PeriodFilterAction } from "@/components/period-filter/period-filter-act
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import type { getPeriodOverview } from "@/server/period";
-import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { getDashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { useUserLocale } from "@/user-locale-context";
 import { PeriodAllocationBreakdownCard } from "./-breakdown/-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
@@ -43,7 +43,7 @@ import { useSyncedReportDrillPaths } from "./-report-page-drill-path-sync";
 import {
   isReportingGrouping,
   reportingGroupingOptions,
-} from "@/shared/reporting-grouping";
+} from "@/shared/reporting/reporting-grouping";
 
 ensureChartModulesRegistered();
 

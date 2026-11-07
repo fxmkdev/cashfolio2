@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import type { GridApi } from "ag-grid-enterprise";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
+import { buildUnifiedAccountTreeRows } from "@/shared/accounts/archived-account-tree-rows";
 import { isVirtualArchivedGroup } from "../grid/archived-rows";
 import { useAccountsPresentation } from "../grid/use-presentation";
 import { useBulkAccountActions } from "../assignments/use-bulk-actions";

@@ -1,4 +1,4 @@
-import { getManagementTabs } from "@/shared/account-tabs";
+import { getManagementTabs } from "@/shared/accounts/account-tabs";
 import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import { getAccountsModalViewProps } from "./dialogs/props";
 import { createHierarchyEditorActions } from "./management/hierarchy-editor-actions";

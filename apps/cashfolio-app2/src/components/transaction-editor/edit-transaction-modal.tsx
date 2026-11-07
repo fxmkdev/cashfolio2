@@ -1,4 +1,4 @@
-import { RESOURCE_LIMITS } from "../../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../../shared/resources/resource-limits";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import type { RowDragEndEvent } from "ag-grid-enterprise";
 import type { AgGridReact } from "ag-grid-react";
@@ -10,8 +10,11 @@ import { createId } from "@paralleldrive/cuid2";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Unit } from "../../.prisma-client/enums";
 import { useDialogSubmitState } from "../../hooks/use-dialog-submit-state";
-import type { AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
-import { isExpenseAccount, isIncomeAccount } from "../../shared/account-utils";
+import type { AccountBookUnitUsage } from "../../shared/accounts/account-book-unit-usage";
+import {
+  isExpenseAccount,
+  isIncomeAccount,
+} from "../../shared/accounts/account-utils";
 import {
   formatUtcDateForLocale,
   getDateInputValueFormat,
@@ -27,7 +30,7 @@ import {
 } from "./edit-transaction-modal-columns";
 import { createBookingUnitDefaults } from "./edit-transaction-modal-unit-defaults";
 import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type { BookingValues } from "./edit-transaction-modal-types";
 import {
   createTransactionFormInitialValues,

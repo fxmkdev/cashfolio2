@@ -16,7 +16,7 @@ import {
   getAccountEntityLabel,
   getAccountManagementContext,
   isCategoryAccount,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import type { LedgerPageViewProps } from "./page-view.types";
 import classes from "./page-header.module.css";
 

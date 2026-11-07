@@ -2,7 +2,7 @@ import { prisma } from "../../../prisma.server";
 import {
   fetchAccountTreeMetadata,
   fetchAccountTreeQueryData,
-} from "./tree-data";
+} from "./tree-data.server";
 import type { AccountsPageDataInput } from "./types";
 
 export async function loadAccountsPageSnapshot(data: AccountsPageDataInput) {

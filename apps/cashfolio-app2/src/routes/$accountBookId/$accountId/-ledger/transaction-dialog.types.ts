@@ -5,8 +5,8 @@ import type {
   SimpleTransactionDraftValues,
   SimpleTransactionInitialValues,
 } from "@/components/transactions/simple-transaction-modal";
-import type { AccountOption } from "@/shared/account-options";
-import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
+import type { AccountOption } from "@/shared/accounts/account-options";
+import type { AccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
 import type { SimpleTransactionEditInitialValues } from "./page-data";
 import type { loadLedgerPageData } from "./page-loader";
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;

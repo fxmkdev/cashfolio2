@@ -1,5 +1,5 @@
-import type { AccountsMode } from "@/shared/account-tabs";
-import type { AccountManagementContext } from "@/shared/account-presentation";
+import type { AccountsMode } from "@/shared/accounts/account-tabs";
+import type { AccountManagementContext } from "@/shared/accounts/account-presentation";
 import type { RowTarget } from "./grid/rows";
 
 export function getAccountsPageTitle(

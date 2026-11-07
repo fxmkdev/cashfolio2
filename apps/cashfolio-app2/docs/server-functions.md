@@ -8,6 +8,7 @@ paths are relative to that app directory.
 
 Related docs:
 
+- [Module ownership and import boundaries](module-boundaries.md)
 - [Routing](routing.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)
 
@@ -96,9 +97,10 @@ Reconciliation calculation inputs and callbacks stay in server modules.
 - They are created with `createServerFn` from `@tanstack/react-start`
 - Canonical pattern: `createServerFn({ method })` -> `.validator()` ->
   `.handler()`
-- Server-only modules may use `.server.ts` suffix where helpful (for example,
-  auth/session integration files), especially for Prisma/Redis/provider or
-  request-context implementation modules.
+- Server-only runtime leaves use `.server.ts`, including Prisma/Redis/provider,
+  Node API, and request-context implementations and their server-only consumers.
+  Pure helpers and type-only modules keep `.ts`. RPC modules and facades remain
+  client-importable; see [module ownership](module-boundaries.md).
 - Exported request-context helpers in client-importable server-function facades
   must use `createServerOnlyFn`, so import protection can remove their
   server-only dependencies from the client bundle.
@@ -145,16 +147,18 @@ must continue to respect the supported browser baseline.
 - Key public facades: `accounts.ts`, `account-books.ts`, `transactions.ts`,
   `period.ts`, `period-history.ts`, `period-gain-loss-reconciliation.ts`,
   `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
-  `valuation.server.ts`, `valuation-cache.ts`
+  `valuation-cache.ts`. Server-only valuation consumers use
+  `valuation.server.ts`.
 - Domain modules:
   - account/account-book logic: `src/server/accounts/`
   - period overview, history, reconciliation, and cache internals:
     `src/server/period/`
   - transaction and rebooking logic: `src/server/transactions/`
   - valuation providers/cache helpers: `src/server/valuation/`
-- Valuation internals live in `src/server/valuation/`: `rate-lookups.ts`,
-  `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
-  `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
+- Valuation internals live in `src/server/valuation/`: `rate-lookups.server.ts`,
+  `source-rates.server.ts`, `lookup-context.ts`, `providers.server.ts`,
+  `cache.server.ts`, `backtracking.server.ts`, `keys.ts`, `types.ts`,
+  `date-utils.ts`, `constants.ts`.
 
 ### Account Module Organization
 
@@ -172,7 +176,7 @@ existing boundaries. Import internal modules directly from their owners:
   assignments, input validation, cash rules, and system-managed equity guards.
 - `hierarchy/`: group paths/ancestry/cycle helpers and group action-availability
   sets shared by reads and writes. Cross-layer eligibility rules live in
-  `src/shared/account-tree-rules.ts` for server/browser reuse.
+  `src/shared/accounts/account-tree-rules.ts` for server/browser reuse.
 - `organize/`: versioned snapshots, move validation, availability, and handlers.
 - `settings/`: account-book settings and deletion handlers.
 - `gain-loss/`: queries, range loading, calculations, recorded adjustments,
@@ -235,7 +239,7 @@ Classification drives the
 in Period overview and History; Unit and instrument identity continue to control
 valuation and FIFO calculations independently of classification.
 
-`src/server/accounts/accounts-mutation-operations.ts` keeps the existing
+`src/server/accounts/accounts-mutation-operations.server.ts` keeps the existing
 operation exports stable. Implementations live in
 `src/server/accounts/mutations/`:
 
@@ -258,12 +262,13 @@ invalidation in the existing mutation handlers.
 
 ### Valuation Provider Adapters
 
-`src/server/valuation/providers.ts` remains the provider facade. Individual HTTP
-adapters live in `providers/currencylayer.ts`, `providers/coinlayer.ts`, and
-`providers/marketstack.ts`. `providers/request.ts` owns shared fetch timeout,
-request-error logging, and attempt-outcome recording. Adapters own their API
-key, URL, response interpretation, usage metadata, and HTTP/provider errors;
-Marketstack also owns its provider-specific rate-limit retry.
+`src/server/valuation/providers.server.ts` remains the provider facade.
+Individual HTTP adapters live in `providers/currencylayer.ts`,
+`providers/coinlayer.ts`, and `providers/marketstack.ts`. `providers/request.ts`
+owns shared fetch timeout, request-error logging, and attempt-outcome recording.
+Adapters own their API key, URL, response interpretation, usage metadata, and
+HTTP/provider errors; Marketstack also owns its provider-specific rate-limit
+retry.
 
 ### Period Module Organization
 
@@ -366,8 +371,8 @@ loaders, and report assembly stay in Period. Account gain/loss owns its
 basis/summary caches, availability propagation, diagnostic presentation, and
 private-copy revaluation.
 
-Within Accounts, `gain-loss/basis-diagnostics.ts` owns affected-account indexing
-and propagation of unavailable basis. `valuation-state.ts` owns private copies,
+Within Accounts, `gain-loss/basis-diagnostics.server.ts` owns affected-account
+indexing and propagation of unavailable basis. `valuation-state.server.ts` owns private copies,
 closing-rate warmup, and availability assembly; `valuation-details.ts` collects
 unrounded detail callbacks. The calculation entrypoint retains basis publication
 and phase sequencing. Period holding orchestration similarly delegates opening
@@ -434,7 +439,7 @@ lock order; this does not introduce optimistic edit-version conflict detection.
 ## Period Caches
 
 Cache key prefixes, current versions, and key builders are owned by
-`src/shared/book-cache-keys.ts`. Family constants, version-independent cleanup
+`src/shared/accounts/book-cache-keys.ts`. Family constants, version-independent cleanup
 patterns, and book-ownership checks belong to the dependency-free workspace
 package
 [`@cashfolio/book-cache-contracts`](../../../libs/book-cache-contracts/README.md),
@@ -445,8 +450,8 @@ cleanup list changes. User deletion cleans only the requested books across
 environment namespaces and preserves global valuation caches.
 
 - Period overview and history use a shared Redis-backed **non-valuation**
-  base-data cache (`src/server/period/cache/period-base-data-cache.ts`) backed
-  by an uncached loader module
+  base-data cache (`src/server/period/cache/period-base-data-cache.server.ts`)
+  backed by an uncached loader module
   (`src/server/period/base-data/period-base-data-loader.server.ts`).
 - Cached payload scope: DB-derived period inputs only (metadata, scoped raw
   bookings/transactions, raw balances, transfer-clearing buckets, and complete
@@ -454,16 +459,16 @@ environment namespaces and preserves global valuation caches.
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
 - History additionally uses a Redis-backed derived metrics cache
-  (`src/server/period/cache/period-history-metrics-cache.ts`) for finalized
-  scalar History point metrics. This cache sits above the base-data cache, so
-  warm hits skip period snapshot loading, valuation conversion, and gain/loss
-  recomputation for that point.
+  (`src/server/period/cache/period-history-metrics-cache.server.ts`) for
+  finalized scalar History point metrics. This cache sits above the base-data
+  cache, so warm hits skip period snapshot loading, valuation conversion, and
+  gain/loss recomputation for that point.
 - The base-data cache is intentionally kept even with derived History metrics:
   Period overview still consumes the base-data payload directly, and History
   misses still benefit from cached DB-derived inputs.
 - Both period cache families share the same environment namespace helper in
-  `src/server/period/cache/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set
-  when Redis caching is enabled; Fly deployments populate it from the Fly
+  `src/server/period/cache/period-cache.server.ts`. `PERIOD_BASE_CACHE_ENV` must
+  be set when Redis caching is enabled; Fly deployments populate it from the Fly
   app/deployment environment so preview and staging apps can safely share one
   Redis instance.
 - Redis key namespace includes deployment scope and the database-backed
@@ -650,7 +655,7 @@ single tracked-account flow:
   - non-reference real holding accounts
   - non-reference virtual transfer-clearing holding accounts
 - Both real transactions and synthetic transfer-clearing transactions flow
-  through the same lot/FIFO pipeline in `src/server/holdings/engine.ts`
+  through the same lot/FIFO pipeline in `src/server/holdings/engine.server.ts`
 - Each transaction is decomposed by holding identity into maximum cross-account
   transfer quantities and residual executions, regardless of additional fee or
   other bookings. Transfers carry FIFO cost and acquisition order; residual
@@ -696,8 +701,8 @@ are split into dedicated modules under `src/server/period/`:
 - `src/server/period/overview/period-equity-bookings.ts` handles paged equity
   booking conversion from preloaded period base data, equity aggregation, and
   explicit counterpart attribution
-- `src/server/period/holdings/period-holding-gain-loss.ts` handles tracked
-  holding lot/FIFO orchestration (real + transfer-clearing synthetic
+- `src/server/period/holdings/period-holding-gain-loss.server.ts` handles
+  tracked holding lot/FIFO orchestration (real + transfer-clearing synthetic
   transactions) and residual realization integration
 
 ## Asset-Class Gain/Loss Reporting

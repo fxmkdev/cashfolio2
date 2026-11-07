@@ -1,7 +1,7 @@
 import { startReadBudget } from "../../resource-context.server";
 import { toNumericMoney } from "../../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
-import { normalizePeriodValue } from "../../../shared/period";
+import { normalizePeriodValue } from "../../../shared/reporting/period";
 import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-worth.types";
 
 export const getOpeningBalanceNetWorthForPeriod = createServerFn({

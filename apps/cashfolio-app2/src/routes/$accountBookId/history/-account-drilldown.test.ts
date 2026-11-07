@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { HistoryScopeOption } from "@/shared/history-scope";
+import type { HistoryScopeOption } from "@/shared/reporting/history-scope";
 import {
   buildHistoryAccountDrillNavigation,
   resolveHistoryAccountDrillTarget,

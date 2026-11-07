@@ -1,7 +1,7 @@
 import type { Prisma } from "../../.prisma-client/client";
-import { isOpeningBalancesAccount } from "../../shared/account-utils";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
-import { validateGainLossSimpleTransactionInvariant } from "../../shared/gain-loss-transaction-invariant";
+import { isOpeningBalancesAccount } from "../../shared/accounts/account-utils";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
+import { validateGainLossSimpleTransactionInvariant } from "../../shared/transactions/gain-loss-transaction-invariant";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import type {
   DeleteTransactionsInput,

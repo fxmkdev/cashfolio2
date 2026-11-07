@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { useOrganizer, type OrganizerApi } from "./use-organizer";
 import { organizeStoryNodes } from "./story-fixtures";
-import { harness, renderHook } from "./organizer-hook-harness";
+import { harness, renderHook } from "./organizer-test-hook-harness";
 
 export function render(
   api: OrganizerApi,

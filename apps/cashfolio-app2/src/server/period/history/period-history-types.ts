@@ -1,7 +1,7 @@
 import type {
   HistoryScopeOption,
   HistoryScopeSelection,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import type { HistoryOpeningBalancePoint } from "./period-history-opening-balance.server";
 
 export type PeriodHistoryGranularity = "month" | "year";

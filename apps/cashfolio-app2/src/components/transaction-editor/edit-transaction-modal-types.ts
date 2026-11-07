@@ -1,6 +1,6 @@
 import type { Unit } from "../../.prisma-client/enums";
 
-export type { AccountOption } from "../../shared/account-options";
+export type { AccountOption } from "../../shared/accounts/account-options";
 
 export type BookingValues = {
   key: string;

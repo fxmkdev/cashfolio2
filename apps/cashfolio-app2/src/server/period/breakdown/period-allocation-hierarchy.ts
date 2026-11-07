@@ -2,9 +2,9 @@ import {
   classificationOptions,
   defaultAssetClassNodes,
   type ClassificationNode,
-} from "../../../shared/asset-class";
+} from "../../../shared/classification/asset-class";
 import type { Money } from "../../../shared/money";
-import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import type { ReportingGrouping } from "../../../shared/reporting/reporting-grouping";
 import { buildAssetClassGroups } from "./period-reporting-groups";
 import {
   type PeriodGroupNode,
@@ -13,7 +13,7 @@ import {
 import {
   UNKNOWN_GAIN_LOSS_UNIT,
   type GainLossInvestmentGroup,
-} from "../../../shared/investment-group";
+} from "../../../shared/classification/investment-group";
 import { buildBreakdownHierarchyWithMeta } from "./period-breakdown-hierarchy";
 
 export type AllocationHierarchyItem = {

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AgGridReactProps } from "ag-grid-react";
-import type { LedgerReturnTarget } from "@/shared/ledger-navigation";
+import type { LedgerReturnTarget } from "@/shared/navigation/ledger-navigation";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import type {
@@ -8,7 +8,7 @@ import type {
   TransformedFormValues,
 } from "@/components/account-editor/edit-account-modal";
 import type { RebookTargetOption } from "@/components/transactions/rebook-booking-modal";
-import type { TabValue } from "@/shared/account-tabs";
+import type { TabValue } from "@/shared/accounts/account-tabs";
 import type { loadLedgerPageData } from "./page-loader";
 import type { LedgerRow } from "./page-types";
 import type { LedgerAccountSwitcherProps } from "./account-switcher";

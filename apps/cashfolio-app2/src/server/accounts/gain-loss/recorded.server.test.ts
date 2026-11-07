@@ -31,7 +31,7 @@ vi.mock("../../../prisma.server", () => ({
   prisma: { ...mocks.db, $transaction: mocks.snapshot },
 }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("../../period/period-conversion", () => ({
+vi.mock("../../period/period-conversion.server", () => ({
   getUnitToReferenceExchangeRateDetails: mocks.rate,
   convertBookingValueToReferenceDetails: mocks.conversion,
 }));

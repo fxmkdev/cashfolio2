@@ -1,5 +1,5 @@
 import { AccountType } from "@/.prisma-client/enums";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type {
   SimpleTransactionDraftValues,
   SimpleTransactionDirection,
@@ -7,7 +7,7 @@ import type {
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
-} from "@/shared/booking-unit-fields";
+} from "@/shared/transactions/booking-unit-fields";
 import {
   normalizeDateInputValueToUtcDay,
   parseUtcDayDate,

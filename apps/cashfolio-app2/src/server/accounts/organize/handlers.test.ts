@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   OrganizeNode,
   OrganizeMove,
-} from "../../../shared/account-organize/types";
+} from "../../../shared/accounts/organize/types";
 
 const mocks = vi.hoisted(() => ({
   nodes: [] as OrganizeNode[],
@@ -40,10 +40,10 @@ vi.mock("../../../account-books/functions.server", () => ({
 vi.mock("../../mutation-guard.server", () => ({
   ensureAuthorizedAccountBookMutation: mocks.authorizeWrite,
 }));
-vi.mock("../../period/cache/period-base-data-cache", () => ({
+vi.mock("../../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
-vi.mock("../../database-conflict-retry", () => ({
+vi.mock("../../database-conflict-retry.server", () => ({
   withDatabaseConflictRetry: (operation: () => unknown) => operation(),
 }));
 vi.mock("../../../prisma.server", () => ({
@@ -55,7 +55,7 @@ vi.mock("../../account-book-mutation.server", () => ({
 }));
 
 import { getAccountOrganizeData, moveAccountTreeItems } from "./handlers";
-import { organizeVersion } from "./data";
+import { organizeVersion } from "./data.server";
 import { validateOrganizeBook, validateOrganizeMove } from "./input";
 
 const accountBookId = "book";

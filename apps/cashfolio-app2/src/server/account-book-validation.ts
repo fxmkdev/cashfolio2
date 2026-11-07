@@ -1,4 +1,7 @@
-import { RESOURCE_LIMITS, assertLength } from "../shared/resource-limits";
+import {
+  RESOURCE_LIMITS,
+  assertLength,
+} from "../shared/resources/resource-limits";
 import { currencies } from "../currencies";
 import { normalizeDateInputValue, startOfUtcDay } from "../shared/date";
 import { assertRecord, requireStringField } from "./input-validation";

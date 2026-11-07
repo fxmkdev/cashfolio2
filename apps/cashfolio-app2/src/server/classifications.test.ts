@@ -1,4 +1,4 @@
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   guard: vi.fn(),
@@ -42,10 +42,10 @@ vi.mock("./mutation-guard.server", () => ({
 vi.mock("./account-book-mutation.server", () => ({
   withAccountBookMutation: mocks.lock,
 }));
-vi.mock("./database-conflict-retry", () => ({
+vi.mock("./database-conflict-retry.server", () => ({
   withDatabaseConflictRetry: (fn: () => unknown) => fn(),
 }));
-vi.mock("./period/cache/period-base-data-cache", () => ({
+vi.mock("./period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
 import {

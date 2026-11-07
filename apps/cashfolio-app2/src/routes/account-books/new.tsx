@@ -2,8 +2,8 @@ import { notifications } from "@mantine/notifications";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { IconCheck } from "@tabler/icons-react";
 import { useMemo } from "react";
-import { invalidateCachedUserAccountBooks } from "@/account-books/options";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { invalidateCachedUserAccountBooks } from "@/components/account-book-navigation/options";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { UserLocaleProvider, useUserLocale } from "@/user-locale-context";
 import {
   NewAccountBookPageActions,

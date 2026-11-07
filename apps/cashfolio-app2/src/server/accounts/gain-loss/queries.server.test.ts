@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountGainLossResult } from "../../../shared/account-gain-loss";
+import type { AccountGainLossResult } from "../../../shared/accounts/account-gain-loss";
 import { toMoney, type Money } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 const mocks = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ vi.mock("./basis-cache.server", async () => {
   const { loadAccountGainLossRange } = await import("./range.server");
   return { loadAccountGainLossSummaryRange: loadAccountGainLossRange };
 });
-vi.mock("../../period/period-conversion", () => ({
+vi.mock("../../period/period-conversion.server", () => ({
   convertBookingValueToReferenceDetails: mocks.conversion,
   getUnitToReferenceExchangeRateDetails: mocks.rate,
 }));

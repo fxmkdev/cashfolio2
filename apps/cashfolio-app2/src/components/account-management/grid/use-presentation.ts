@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAssetClasses } from "@/classification-context";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import { buildAssetClassTree } from "./asset-class-tree";
 import { projectAssetClassGainLoss } from "../gain-loss/asset-class-projection";
 import { buildAccountFilterContext } from "./filter-context";

@@ -5,7 +5,7 @@ import type { useDialogSubmitState } from "../../hooks/use-dialog-submit-state";
 import {
   ACCOUNT_BOOK_BUSY_MESSAGE,
   getMutationError,
-} from "../../shared/mutation-errors";
+} from "../../shared/resources/mutation-errors";
 import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 
 function render(

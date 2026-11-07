@@ -4,8 +4,8 @@ import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import type {
   AccountGainLossSummaries,
   AccountGainLossSummary,
-} from "@/shared/account-gain-loss";
-import { getCurrencyDecimals } from "@/shared/unit-format";
+} from "@/shared/accounts/account-gain-loss";
+import { getCurrencyDecimals } from "@/shared/units/unit-format";
 import type { AccountsGridRow } from "../grid/rows";
 import { isReferenceCurrencyTotalFooterRow } from "../grid/rows";
 import { AccountGainLossHeader } from "./header";

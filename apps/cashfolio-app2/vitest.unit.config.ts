@@ -13,7 +13,11 @@ export default defineConfig({
     clearMocks: false,
     name: "unit",
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    include: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "eslint-rules/**/*.test.ts",
+    ],
     exclude: ["e2e/**", "dist/**", "src/**/*.browser.test.tsx"],
     env: {
       DATABASE_URL:

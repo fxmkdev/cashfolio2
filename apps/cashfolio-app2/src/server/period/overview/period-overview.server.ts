@@ -5,13 +5,13 @@ import { startOfUtcDay } from "../../../shared/date";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
-} from "../period-conversion";
+} from "../period-conversion.server";
 import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "../period-balance-stats";
 import {
   getOrLoadPeriodBaseData,
   type PeriodBaseData,
-} from "../cache/period-base-data-cache";
-import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
+} from "../cache/period-base-data-cache.server";
+import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss.server";
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
 import { type GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";

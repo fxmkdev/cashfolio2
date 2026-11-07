@@ -4,7 +4,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "@/.prisma-client/enums";
-import { createAccountOptions } from "@/shared/account-options";
+import { createAccountOptions } from "@/shared/accounts/account-options";
 import {
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,

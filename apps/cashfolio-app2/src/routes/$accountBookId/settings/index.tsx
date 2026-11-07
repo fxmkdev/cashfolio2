@@ -2,8 +2,8 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { loadSettingsPageData } from "./-page-loader";
 import { Suspense, lazy } from "react";
-import { createDocumentTitleHead } from "@/shared/document-title";
-import { invalidateCachedUserAccountBooks } from "@/account-books/options";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
+import { invalidateCachedUserAccountBooks } from "@/components/account-book-navigation/options";
 
 const SettingsPageView = lazy(async () => {
   const module = await import("./-page-view");

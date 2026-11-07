@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useMemo } from "react";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { UserLocaleProvider } from "@/user-locale-context";
 import {
   parseUserSettingsSearch,

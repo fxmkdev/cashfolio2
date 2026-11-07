@@ -1,6 +1,6 @@
 import { Select, type SelectProps } from "@mantine/core";
 import { forwardRef, useMemo } from "react";
-import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
+import type { AccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
 import {
   buildCryptocurrencySelectData,
   buildCurrencySelectData,

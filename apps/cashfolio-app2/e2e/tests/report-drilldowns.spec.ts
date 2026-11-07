@@ -2,7 +2,7 @@ import {
   assetClassSelection,
   withAssetClassId,
 } from "../../src/server/classification-data";
-import { defaultAssetClassIds } from "../../src/shared/asset-class";
+import { defaultAssetClassIds } from "../../src/shared/classification/asset-class";
 
 import { defaultStringifySearch } from "@tanstack/react-router";
 import { prisma } from "../support/db-client";

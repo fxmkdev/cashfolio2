@@ -1,7 +1,7 @@
 import { TreeSelect } from "@mantine/core";
 import { useMemo, useState } from "react";
 import type { PeriodHistoryResponse } from "@/server/period-history";
-import { isHistoryScopedMetric } from "@/shared/history-scope";
+import { isHistoryScopedMetric } from "@/shared/reporting/history-scope";
 import {
   HISTORY_METRIC_OPTIONS,
   type HistoryMetric,

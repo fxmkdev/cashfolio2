@@ -3,7 +3,7 @@ import {
   SET_FILTER_SPECIAL as special,
   setFilterEntityKey as key,
 } from "@/components/grid/set-filter";
-import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { buildUnifiedAccountTreeRows } from "@/shared/accounts/archived-account-tree-rows";
 import { buildAccountFilterContext } from "./filter-context";
 import { addGroupAssetClassSummaries } from "./group-summaries";
 import { addGroupTrackingMethodSummaries } from "./tracking-method-summaries";

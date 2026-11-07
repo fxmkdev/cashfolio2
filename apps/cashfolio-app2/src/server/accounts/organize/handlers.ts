@@ -1,26 +1,26 @@
-import type { AccountOrganizeScope } from "../../../shared/account-organize/scope";
+import type { AccountOrganizeScope } from "../../../shared/accounts/organize/scope";
 import { createServerFn } from "@tanstack/react-start";
 import type { Prisma } from "../../../.prisma-client/client";
 import { prisma } from "../../../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../../../account-books/functions.server";
 import { ensureAuthorizedAccountBookMutation } from "../../mutation-guard.server";
 import { withAccountBookMutation } from "../../account-book-mutation.server";
-import { withDatabaseConflictRetry } from "../../database-conflict-retry";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "../../period/cache/period-base-data-cache";
+import { withDatabaseConflictRetry } from "../../database-conflict-retry.server";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "../../period/cache/period-base-data-cache.server";
 import {
   organizeChanges,
   planAccountMove,
-} from "../../../shared/account-organize/move";
+} from "../../../shared/accounts/organize/move";
 import type {
   OrganizeMoveResult,
   OrganizeSnapshot,
-} from "../../../shared/account-organize/types";
-import { assertOrganizeVersion, readOrganizeSnapshot } from "./data";
+} from "../../../shared/accounts/organize/types";
+import { assertOrganizeVersion, readOrganizeSnapshot } from "./data.server";
 import { validateOrganizeBook, validateOrganizeMove } from "./input";
 import {
   validateAccountName,
   validateAccountGroupName,
-} from "../../../shared/account-validation";
+} from "../../../shared/accounts/account-validation";
 
 export const getAccountOrganizeData = createServerFn({ method: "GET" })
   .validator(validateOrganizeBook)

@@ -1,5 +1,5 @@
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import type { GroupBalanceAggregation } from "./reference-balance-aggregation";
 import type { AccountFilterContext } from "./filter-context";
 import {

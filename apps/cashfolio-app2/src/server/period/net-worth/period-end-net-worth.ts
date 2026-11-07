@@ -1,7 +1,7 @@
 import { startReadBudget } from "../../resource-context.server";
 import { toNumericMoney } from "../../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
-import { normalizePeriodValue } from "../../../shared/period";
+import { normalizePeriodValue } from "../../../shared/reporting/period";
 import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
 
 export const getPeriodEndNetWorth = createServerFn({

@@ -2,8 +2,8 @@ import {
   createHistoryScopeOptionsWithTotal,
   sortGainLossScopeOptions,
   clampHistoryScopeSelection,
-} from "../../../shared/history-scope-options";
-import type { HistoryScopedMetric } from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope-options";
+import type { HistoryScopedMetric } from "../../../shared/reporting/history-scope";
 import { toNumericMoney } from "../../money-boundary";
 import type { HistoryInput } from "./period-history-input";
 import type { PeriodHistoryPointContext } from "./period-history-point.server";

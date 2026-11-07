@@ -7,7 +7,7 @@ import {
   startOfUtcDay,
   startOfUtcMonth,
 } from "@/shared/date";
-import { RESOURCE_LIMITS } from "@/shared/resource-limits";
+import { RESOURCE_LIMITS } from "@/shared/resources/resource-limits";
 
 export type NewAccountBookFormValues = {
   name: string;

@@ -7,7 +7,7 @@ import type {
   ValuationProviderName,
   ValuationProviderRequestOutcome,
   ValuationProviderRequestReason,
-} from "./valuation/provider-usage";
+} from "./valuation/provider-usage.server";
 import { toUtcDay } from "./valuation/date-utils";
 
 export type ValuationProviderUsageWindowKey =

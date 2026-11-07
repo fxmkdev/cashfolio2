@@ -9,7 +9,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { getAccountBookSettings } from "@/server/account-books";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { SettingsActions } from "./-settings-actions";
-import { invalidateCachedUserAccountBooks } from "@/account-books/options";
+import { invalidateCachedUserAccountBooks } from "@/components/account-book-navigation/options";
 
 export const Route = createFileRoute("/$accountBookId/settings")({
   loader: ({ params: { accountBookId } }) =>

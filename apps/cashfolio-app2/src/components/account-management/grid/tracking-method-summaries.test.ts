@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { buildUnifiedAccountTreeRows } from "@/shared/accounts/archived-account-tree-rows";
 import { addGroupTrackingMethodSummaries } from "./tracking-method-summaries";
 import type { TreeRow } from "./rows";
 

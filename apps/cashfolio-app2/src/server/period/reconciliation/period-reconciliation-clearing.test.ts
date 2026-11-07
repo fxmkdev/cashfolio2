@@ -44,8 +44,8 @@ describe("getPeriodGainLossReconciliation", () => {
     ]);
 
     const actualSources = await vi.importActual<
-      typeof import("./period-account-gain-loss-sources")
-    >("./period-account-gain-loss-sources");
+      typeof import("./period-account-gain-loss-sources.server")
+    >("./period-account-gain-loss-sources.server");
     loadAccountGainLossSources.mockImplementationOnce(
       actualSources.loadAccountGainLossSources,
     );

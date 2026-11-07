@@ -62,7 +62,7 @@ vi.mock("../../../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
 }));

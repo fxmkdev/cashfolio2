@@ -1,4 +1,4 @@
-import { isSystemManagedAccount } from "../../../shared/account-presentation";
+import { isSystemManagedAccount } from "../../../shared/accounts/account-presentation";
 import {
   type AccountType,
   type EquityAccountSubtype,
@@ -7,7 +7,7 @@ import {
   getSystemManagedAccountSubtypeMessage,
   getSystemManagedGroupSubtypeMessage,
   isSystemManagedEquitySubtype,
-} from "../../../shared/system-managed-equity-subtypes";
+} from "../../../shared/accounts/system-managed-equity-subtypes";
 
 type EquityNode = {
   type: AccountType;

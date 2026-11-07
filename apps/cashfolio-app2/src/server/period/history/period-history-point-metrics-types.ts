@@ -1,7 +1,7 @@
 import type { Money } from "../../../shared/money";
-import type { HistoryScopeOption } from "../../../shared/history-scope";
+import type { HistoryScopeOption } from "../../../shared/reporting/history-scope";
 import type { DecimalValuationRateLookupResult as ValuationRateLookupResult } from "../../valuation/types";
-import type { PeriodBaseData } from "../cache/period-base-data-cache";
+import type { PeriodBaseData } from "../cache/period-base-data-cache.server";
 import type { HistoryMetricScopeFilter } from "./period-history-scopes.server";
 
 export type PeriodHistoryPointMetrics = {

@@ -1,11 +1,11 @@
-import { mapWithConcurrencyLimit } from "../../concurrency";
+import { mapWithConcurrencyLimit } from "../../concurrency.server";
 import { ACCOUNT_GAIN_LOSS_LOOKUP_CONCURRENCY } from "./prefetch.server";
 import { EquityAccountSubtype } from "../../../.prisma-client/enums";
 import type {
   AccountGainLossDiagnostic,
   AccountGainLossResult,
-} from "../../../shared/account-gain-loss";
-import type { AccountGainLossSourceRow } from "../../../shared/gain-loss-reconciliation";
+} from "../../../shared/accounts/account-gain-loss";
+import type { AccountGainLossSourceRow } from "../../../shared/reporting/gain-loss-reconciliation";
 import { moneyAdd, toMoney, type Money } from "../../../shared/money";
 import type { PeriodReadClient } from "../../period/base-data/period-read-client";
 import { loadPeriodEquityBookingsRaw } from "../../period/base-data/period-base-data-equity-bookings.server";

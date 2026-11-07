@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
-import { defaultAssetClassNodes } from "../shared/asset-class";
+import { defaultAssetClassNodes } from "../shared/classification/asset-class";
 const run = promisify(execFile);
 // Historical enum values and flat defaults must not follow today's taxonomy.
 const legacyAssetClassNodes = Object.entries({

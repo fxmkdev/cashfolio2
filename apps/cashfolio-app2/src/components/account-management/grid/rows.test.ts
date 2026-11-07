@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { account } from "./asset-class-test-fixtures";
-import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { buildUnifiedAccountTreeRows } from "@/shared/accounts/archived-account-tree-rows";
 import {
   isPersistedTreeRow,
   isPersistedAccountRow,

@@ -1,4 +1,4 @@
-import { VALUATION_BASE_CURRENCY } from "../../shared/valuation-base-currency";
+import { VALUATION_BASE_CURRENCY } from "../../shared/units/valuation-base-currency";
 
 export const BASE_CURRENCY = VALUATION_BASE_CURRENCY;
 export const MAX_BACKTRACK_DAYS = 30;

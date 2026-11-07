@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { readExpandedGroupPreference } from "../shared/expanded-group-preference";
+import { readExpandedGroupPreference } from "../shared/navigation/expanded-group-preference";
 import type {
   IsGroupOpenByDefaultParams,
   RowGroupOpenedEvent,

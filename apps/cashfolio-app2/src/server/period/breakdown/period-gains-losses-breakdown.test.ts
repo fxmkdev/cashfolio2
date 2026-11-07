@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultAssetClassIds } from "../../../shared/asset-class";
+import { defaultAssetClassIds } from "../../../shared/classification/asset-class";
 import { Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
@@ -16,7 +16,7 @@ import {
 import {
   normalizeGainLossScope,
   parseHistoryScopeSelection,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 
 const account = (
   id: string,

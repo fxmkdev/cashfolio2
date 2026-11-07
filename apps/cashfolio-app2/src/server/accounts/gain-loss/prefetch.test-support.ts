@@ -130,8 +130,8 @@ const {
 const {
   convertBookingValueToReferenceDetails,
   getUnitToReferenceExchangeRateDetails,
-} = await import("../../period/period-conversion");
+} = await import("../../period/period-conversion.server");
 const { initializeHoldingGainLossState } =
-  await import("../../holdings/engine");
+  await import("../../holdings/engine.server");
 const { calculateAccountGainLoss, valueAccountGainLossBasis } =
   await import("./calculation.server");

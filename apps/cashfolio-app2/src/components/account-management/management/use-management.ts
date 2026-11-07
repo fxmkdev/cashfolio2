@@ -9,7 +9,7 @@ import type { AccountsPageViewProps } from "../view-types";
 import {
   getAccountConstraintMessage,
   type AccountManagementContext,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import {
   isPersistedTreeRow,
   isPersistedGroupRow,

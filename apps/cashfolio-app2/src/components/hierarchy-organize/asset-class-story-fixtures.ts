@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { validateClassificationChange } from "@/shared/classification-rules";
+import { validateClassificationChange } from "@/shared/classification/classification-rules";
 import { planAssetClassMove } from "@/shared/hierarchy-organize/move";
 import type {
   AssetClassOrganizeNode,

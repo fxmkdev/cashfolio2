@@ -4,7 +4,7 @@ import {
   getTabDefinition,
   type AccountsMode,
   type TabValue,
-} from "@/shared/account-tabs";
+} from "@/shared/accounts/account-tabs";
 type RequestScope = {
   accountBookId: string;
   tab: TabValue;

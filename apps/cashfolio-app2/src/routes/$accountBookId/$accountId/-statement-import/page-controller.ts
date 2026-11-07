@@ -1,7 +1,7 @@
 import {
   getBookingPeriodValue,
   getLatestBookingDate,
-} from "@/shared/transaction-period";
+} from "@/shared/transactions/transaction-period";
 import type { LedgerSearch } from "../-ledger/page-types";
 import type { TransactionMutationValues } from "../-ledger/page-view";
 import type { StatementImportDraft, StatementImportDraftStatus } from "./index";

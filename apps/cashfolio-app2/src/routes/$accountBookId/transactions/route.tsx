@@ -7,7 +7,7 @@ import { useExplicitPeriodFilter } from "@/components/period-filter/use-explicit
 import { clampTransactionsExplicitPeriodToBounds } from "./-explicit-period-bounds";
 import { useTransactionsPageController } from "./-page-controller";
 import { loadTransactionsPageData } from "./-page-loader";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { useUserLocale } from "@/user-locale-context";
 import {
   getDefaultTransactionsPeriodValue,

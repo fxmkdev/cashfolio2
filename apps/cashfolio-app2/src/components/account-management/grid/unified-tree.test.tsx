@@ -2,7 +2,7 @@ import { toAccountGridTreeRow } from "./rows";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
-import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { buildUnifiedAccountTreeRows } from "@/shared/accounts/archived-account-tree-rows";
 import type { TreeRow } from "./rows";
 import { calculateBalanceInReferenceCurrencyByGroupId } from "./reference-balance-aggregation";
 import {

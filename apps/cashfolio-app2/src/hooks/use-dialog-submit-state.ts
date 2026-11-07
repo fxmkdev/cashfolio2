@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMutationError } from "../shared/mutation-errors";
+import { getMutationError } from "../shared/resources/mutation-errors";
 
 export function useDialogSubmitState({
   onSubmittingChange,

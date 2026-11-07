@@ -1,13 +1,13 @@
-import type { OrganizeNode as AccountNode } from "../account-organize/types";
+import type { OrganizeNode as AccountNode } from "../accounts/organize/types";
 export type {
   OrganizeActionAvailability,
   OrganizeLifecycleAction,
   OrganizePlacement,
-} from "../account-organize/types";
+} from "../accounts/organize/types";
 import type {
   OrganizeActionAvailability,
   OrganizePlacement,
-} from "../account-organize/types";
+} from "../accounts/organize/types";
 
 export type HierarchyNode = {
   id: string;

@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useId, useRef, useState } from "react";
-import { accountTrackingMethodOptions } from "../../shared/account-tracking-method";
+import { accountTrackingMethodOptions } from "../../shared/accounts/account-tracking-method";
 
 export function TrackingMethodField(props: SelectProps) {
   const inputId = useId();

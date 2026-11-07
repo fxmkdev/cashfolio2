@@ -6,7 +6,7 @@ import {
   moneySum,
 } from "../../../shared/money";
 import { type AccountType } from "../../../.prisma-client/enums";
-import { createGroupPathResolver } from "../../accounts/hierarchy/groups";
+import { createGroupPathResolver } from "../../accounts/hierarchy/groups.server";
 import {
   round2,
   type BreakdownHierarchyAccumulatorItem,
@@ -18,11 +18,11 @@ import {
   type HistoryScopeOption,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import type { PeriodGainsLossesBreakdownNode } from "../breakdown/period-gains-losses-breakdown";
 
-import { isBalanceAccount } from "../../../shared/account-presentation";
-import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import { isBalanceAccount } from "../../../shared/accounts/account-presentation";
+import type { ReportingGrouping } from "../../../shared/reporting/reporting-grouping";
 
 export type HistoryMetricScopeFilter = {
   metric: HistoryScopedMetric;

@@ -2,7 +2,7 @@ import type {
   GainLossReconciliationDiagnostic,
   GainLossReconciliationDiagnosticReason,
   GainLossReconciliationSummary,
-} from "../../../shared/gain-loss-reconciliation";
+} from "../../../shared/reporting/gain-loss-reconciliation";
 import { moneyAdd, toMoney, type Money } from "../../../shared/money";
 import { round2 } from "../period-helpers";
 

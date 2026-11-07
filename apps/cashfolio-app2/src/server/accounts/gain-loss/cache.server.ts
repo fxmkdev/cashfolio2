@@ -8,14 +8,14 @@ import {
 } from "../../resource-context.server";
 import { getRedisClient } from "../../../redis.server";
 import { startOfUtcDay } from "../../../shared/date";
-import { getAccountGainLossCacheEntryKey } from "../../../shared/book-cache-keys";
+import { getAccountGainLossCacheEntryKey } from "../../../shared/accounts/book-cache-keys";
 import { encodeMoneyCache } from "../../money-cache-codec";
 import {
   PERIOD_CACHE_TTL_SECONDS,
   formatUtcDateKey,
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
-} from "../../period/cache/period-cache";
+} from "../../period/cache/period-cache.server";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
 import { loadAccountGainLossSummaryRange } from "./basis-cache.server";
 import {

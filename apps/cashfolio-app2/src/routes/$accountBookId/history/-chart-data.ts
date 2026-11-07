@@ -3,7 +3,7 @@ import { addUtcDays } from "@/shared/date";
 import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelection,
-} from "@/shared/period";
+} from "@/shared/reporting/period";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import type { HistoryMetric, HistoryPeriodMode } from "./-page-types";
 

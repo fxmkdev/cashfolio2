@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import {
   createLedgerReturnTarget,
   type LedgerReturnTarget,
-} from "@/shared/ledger-navigation";
+} from "@/shared/navigation/ledger-navigation";
 
 declare module "@tanstack/react-router" {
   interface HistoryState {

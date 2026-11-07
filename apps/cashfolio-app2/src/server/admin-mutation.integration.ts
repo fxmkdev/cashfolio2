@@ -56,7 +56,7 @@ vi.mock("../security/same-origin.server", () => ({
   ensureSameOriginRequest: vi.fn(),
   ensureSameOriginRequestFromServerContext: vi.fn(),
 }));
-vi.mock("./user-deletion-redis", () => ({
+vi.mock("./user-deletion-redis.server", () => ({
   deleteBookScopedRedisDataForAccountBooks,
 }));
 

@@ -5,7 +5,7 @@ import type {
   AgWaterfallSeriesTooltipRendererParams,
 } from "ag-charts-community";
 import { useMemo } from "react";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import { useUserLocale } from "@/user-locale-context";
 import { buildCommonChartThemeParams } from "../-breakdown/-breakdown-chart-options";
 import type {

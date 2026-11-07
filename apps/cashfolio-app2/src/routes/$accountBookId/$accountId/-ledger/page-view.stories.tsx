@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { defaultAssetClassIds } from "@/shared/asset-class";
+import { defaultAssetClassIds } from "@/shared/classification/asset-class";
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";

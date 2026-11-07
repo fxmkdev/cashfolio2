@@ -14,7 +14,7 @@ body reading to ten seconds (`408` on timeout/disconnect). The statement
 importer checks file size before reading a CSV. Browser validation is advisory;
 server contracts independently enforce the limits.
 
-Browser-safe defaults live in `src/shared/resource-limits.ts`:
+Browser-safe defaults live in `src/shared/resources/resource-limits.ts`:
 
 | Input                            | Maximum                     |
 | -------------------------------- | --------------------------- |
@@ -140,10 +140,11 @@ process. The earlier unmerged workload migration and schema additions have been
 removed. Preview-only workload tables created by an earlier revision may remain
 unused; deployment does not delete them or business data.
 
-Defaults live in `src/shared/resource-limits.ts`, with History batch defaults in
-`src/shared/history-window-policy.ts`. Adjust them through reviewed changes with
-boundary tests. Observe request errors and existing provider-usage reporting
-before raising budgets, and check provider subscription capacity.
+Defaults live in `src/shared/resources/resource-limits.ts`, with History batch
+defaults in `src/shared/reporting/history-window-policy.ts`. Adjust them through
+reviewed changes with boundary tests. Observe request errors and existing
+provider-usage reporting before raising budgets, and check provider subscription
+capacity.
 
 The deadline is cooperative: it cannot forcibly cancel an already-running
 database query or preempt synchronous CPU work. Budgets apply per incoming

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import { projectAssetClassGainLoss } from "./asset-class-projection";
 import {
   buildAssetClassTree,

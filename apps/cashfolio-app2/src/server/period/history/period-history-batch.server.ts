@@ -6,7 +6,7 @@ import { loadHistoryOpeningBalancePoint } from "./period-history-opening-balance
 import type { HistoryInput } from "./period-history-input";
 import type { HistoryMetricScopeFilter } from "./period-history-scopes.server";
 import type { HistoryValuationContext } from "./period-history-point-metrics.server";
-import { mapWithConcurrencyLimit } from "../../concurrency";
+import { mapWithConcurrencyLimit } from "../../concurrency.server";
 
 const HISTORY_POINT_LOAD_CONCURRENCY = 4;
 

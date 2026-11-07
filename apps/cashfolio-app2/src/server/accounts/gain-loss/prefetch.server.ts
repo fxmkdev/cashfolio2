@@ -3,7 +3,7 @@ import type {
   ApplyHoldingTransactionsArgs,
   HoldingBookingConverter,
 } from "../../holdings/types";
-import type { ValuationLookupScheduler } from "../../period/period-conversion";
+import type { ValuationLookupScheduler } from "../../period/period-conversion.server";
 
 export const ACCOUNT_GAIN_LOSS_LOOKUP_CONCURRENCY = 4;
 

@@ -1,10 +1,10 @@
-import { type AccountGainLossDiagnostic } from "../../../shared/account-gain-loss";
+import { type AccountGainLossDiagnostic } from "../../../shared/accounts/account-gain-loss";
 import {
   applyHoldingTransactionsToGainLossState,
   applyPendingHoldingExecutions,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
-} from "../../holdings/engine";
+} from "../../holdings/engine.server";
 import { addRunningUnrealizedGainLoss } from "../../holdings/explain";
 import type {
   ComputeHoldingGainLossArgs as CalculationArgs,
@@ -17,7 +17,7 @@ import {
   indexAffectedHoldingAccounts,
   markUnavailableHoldings,
   propagateTransferBasisFailures,
-} from "./basis-diagnostics";
+} from "./basis-diagnostics.server";
 import { prefetchAccountGainLossConversions } from "./prefetch.server";
 import { createAccountValuationCallbacks } from "./valuation-details";
 import {
@@ -25,7 +25,7 @@ import {
   cloneAccountGainLossHoldings,
   createAccountValuationResults,
   prepareAccountClosingRates,
-} from "./valuation-state";
+} from "./valuation-state.server";
 
 export type AccountGainLossBasis = {
   holdings: {

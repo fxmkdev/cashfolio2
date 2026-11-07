@@ -15,7 +15,7 @@ import {
   planUserDeletionFromLinks,
   type UserDeletionPreview,
 } from "./user-deletion-plan";
-import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis";
+import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis.server";
 
 function getAuthenticatedExternalId(context: LogtoContext): string {
   if (!context.claims?.sub) {

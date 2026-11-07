@@ -2,7 +2,7 @@ import {
   assetClassSelection,
   withAssetClassId,
 } from "../../classification-data";
-import { defaultAssetClassIds } from "../../../shared/asset-class";
+import { defaultAssetClassIds } from "../../../shared/classification/asset-class";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cp, mkdtemp, rm } from "node:fs/promises";

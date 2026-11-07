@@ -1,5 +1,5 @@
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import type { ClassificationNode } from "@/shared/asset-class";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
+import type { ClassificationNode } from "@/shared/classification/asset-class";
 import { Text } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { type AccountsGridRow } from "./rows";

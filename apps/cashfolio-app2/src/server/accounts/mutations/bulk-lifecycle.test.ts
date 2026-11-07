@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import type { OrganizeSnapshot } from "../../../shared/account-organize/types";
+import type { OrganizeSnapshot } from "../../../shared/accounts/organize/types";
 
 const mocks = vi.hoisted(() => ({
   authorize: vi.fn(),
@@ -30,20 +30,20 @@ vi.mock("../../mutation-guard.server", () => ({
 vi.mock("../../account-book-mutation.server", () => ({
   withAccountBookMutation: mocks.transaction,
 }));
-vi.mock("../../database-conflict-retry", () => ({
+vi.mock("../../database-conflict-retry.server", () => ({
   withDatabaseConflictRetry: (operation: () => unknown) => operation(),
 }));
-vi.mock("../../period/cache/period-base-data-cache", () => ({
+vi.mock("../../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
-vi.mock("../organize/data", () => ({ readOrganizeSnapshot: mocks.read }));
-vi.mock("./status", () => ({
+vi.mock("../organize/data.server", () => ({ readOrganizeSnapshot: mocks.read }));
+vi.mock("./status.server", () => ({
   archiveAccountOperation: mocks.archiveAccount,
   archiveAccountGroupOperation: mocks.archiveGroup,
   unarchiveAccountOperation: mocks.unarchiveAccount,
   unarchiveAccountGroupOperation: mocks.unarchiveGroup,
 }));
-vi.mock("./delete", () => ({
+vi.mock("./delete.server", () => ({
   deleteAccountOperation: mocks.deleteAccount,
   deleteAccountGroupOperation: mocks.deleteGroup,
 }));

@@ -1,4 +1,4 @@
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 
 /** Bound bytes before Start/Seroval parses them, including chunked requests. */
 export async function readBoundedRequest(

@@ -1,8 +1,8 @@
 import type { AccountType } from "@/.prisma-client/enums";
 import type { StatementImportExistingBooking } from "@/server/statement-import";
-import { getUnitIdentifier } from "@/shared/account-utils";
-import type { BookingUnitFieldsSource } from "@/shared/booking-unit-fields";
-import { getBookingUnitFields } from "@/shared/booking-unit-fields";
+import { getUnitIdentifier } from "@/shared/accounts/account-utils";
+import type { BookingUnitFieldsSource } from "@/shared/transactions/booking-unit-fields";
+import { getBookingUnitFields } from "@/shared/transactions/booking-unit-fields";
 import { formatUtcDate } from "@/shared/date";
 import { moneyAdd, moneyIsZero, toMoney, toMoneyNumber } from "@/shared/money";
 import type { MoneyInput } from "@/shared/money";

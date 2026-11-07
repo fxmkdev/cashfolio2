@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planBulkLifecycle } from "./lifecycle";
-import type { OrganizeNode, OrganizeSnapshot } from "../account-organize/types";
+import type { OrganizeNode, OrganizeSnapshot } from "../accounts/organize/types";
 import type { OrganizeNodeRef } from "./types";
 
 const node = (

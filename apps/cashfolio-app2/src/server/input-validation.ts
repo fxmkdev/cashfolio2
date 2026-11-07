@@ -1,4 +1,7 @@
-import { RESOURCE_LIMITS, assertLength } from "../shared/resource-limits";
+import {
+  RESOURCE_LIMITS,
+  assertLength,
+} from "../shared/resources/resource-limits";
 
 export function assertRecord(
   value: unknown,

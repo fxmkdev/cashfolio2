@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import {
   getBookingUnitIdentifier,
   isBookingUnitCompatibleWithAccount,
   isBookingValueCompatibleWithAccountType,
   isOpeningBalancesAccount,
-} from "@/shared/account-utils";
-import { createAccountOptions } from "@/shared/account-options";
+} from "@/shared/accounts/account-utils";
+import { createAccountOptions } from "@/shared/accounts/account-options";
 import type { RebookingState } from "./-page-view";
 import type { TransactionsAccountOptionSource } from "./-page-types";
 

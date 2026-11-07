@@ -1,4 +1,4 @@
-import type { ClassificationNode } from "../../../shared/asset-class";
+import type { ClassificationNode } from "../../../shared/classification/asset-class";
 import type { GainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toNumericMoney } from "../../money-boundary";
 import {
@@ -14,7 +14,7 @@ import { type AccountType } from "../../../.prisma-client/enums";
 import {
   formatMonthPeriodLabel,
   formatMonthPeriodValue,
-} from "../../../shared/period";
+} from "../../../shared/reporting/period";
 import {
   buildAvailableYears,
   buildBreakdownHierarchyWithMeta,
@@ -33,7 +33,7 @@ import {
 } from "../breakdown/period-gains-losses-breakdown";
 import type { NormalizedPeriodSelection } from "../period-selection";
 import type { UserLocale } from "../../../user-locale";
-import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import type { ReportingGrouping } from "../../../shared/reporting/reporting-grouping";
 
 type PeriodOverviewAssetLiabilityAccount = {
   id: string;

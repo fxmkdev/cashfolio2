@@ -13,7 +13,7 @@ import {
 import { Notifications } from "@mantine/notifications";
 import { NavigationLoadingBar } from "../components/navigation/navigation-loading-bar";
 import { GlobalLoadingProvider } from "../components/navigation/global-loading";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import "../mantine";
 import { theme } from "../theme";
 import { useEffect } from "react";

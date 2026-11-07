@@ -8,7 +8,7 @@ import {
 } from "../../resource-context.server";
 import { prisma } from "../../../prisma.server";
 import { ResourceLimitError } from "../../resource-error";
-import { normalizeGainLossScope } from "../../../shared/history-scope";
+import { normalizeGainLossScope } from "../../../shared/reporting/history-scope";
 import { buildHistoryBatchResponse } from "./period-history-batch-response";
 import type {
   PeriodHistoryBatchResponse,

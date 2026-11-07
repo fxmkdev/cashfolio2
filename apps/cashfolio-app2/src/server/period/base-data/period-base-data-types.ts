@@ -1,4 +1,4 @@
-import type { ClassificationNode } from "../../../shared/asset-class";
+import type { ClassificationNode } from "../../../shared/classification/asset-class";
 import { type Money } from "../../../shared/money";
 import type {
   AccountTrackingMethod,
@@ -7,7 +7,7 @@ import type {
   Unit,
 } from "../../../.prisma-client/enums";
 import type { PeriodSpecifier } from "../period-selection";
-import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
+import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing.server";
 
 type PeriodBaseSelectionData = {
   periodValue: string;

@@ -134,14 +134,14 @@ vi.mock("../../../account-books/functions.server", () => ({
 vi.mock("../../../prisma.server", () => ({
   prisma,
 }));
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
 }));
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 const loadAccountGainLossSources = vi.hoisted(() => vi.fn());
-vi.mock("../cache/period-base-data-cache", () => ({ getOrLoadPeriodBaseData }));
-vi.mock("./period-account-gain-loss-sources", () => ({
+vi.mock("../cache/period-base-data-cache.server", () => ({ getOrLoadPeriodBaseData }));
+vi.mock("./period-account-gain-loss-sources.server", () => ({
   loadAccountGainLossSources,
 }));
 

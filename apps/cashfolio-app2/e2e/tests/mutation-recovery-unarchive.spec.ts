@@ -3,7 +3,7 @@ import { expect, test } from "../support/fixtures";
 import { seedDatabase, type SeededData } from "../support/db";
 import { prisma } from "../support/db-client";
 import { withBookLock } from "../support/book-lock";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/resources/mutation-errors";
 
 let seeded: SeededData;
 

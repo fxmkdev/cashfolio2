@@ -1,13 +1,13 @@
 import {
   readHistoryPageSize,
   type HistoryGranularity,
-} from "../../../shared/history-window-policy";
+} from "../../../shared/reporting/history-window-policy";
 import {
   isHistoryScopedMetric,
   parseHistoryScopeSelection,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import {
   normalizeUserLocaleInput,
   type UserLocale,

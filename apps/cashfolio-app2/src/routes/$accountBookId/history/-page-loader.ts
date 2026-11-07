@@ -1,5 +1,5 @@
 import { getPeriodHistory } from "@/server/period-history";
-import { fetchWithResourceErrors } from "@/shared/resource-fetch";
+import { fetchWithResourceErrors } from "@/shared/resources/resource-fetch";
 import type { HistoryBatchRequest } from "./-history-loading";
 
 export async function loadHistoryBatch(args: HistoryBatchRequest) {

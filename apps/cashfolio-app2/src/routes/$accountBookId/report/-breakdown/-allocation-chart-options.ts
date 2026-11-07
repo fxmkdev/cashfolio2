@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { AgPolarChartOptions } from "ag-charts-community";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import {
   buildBreakdownTooltipData,
   buildCommonChartThemeParams,

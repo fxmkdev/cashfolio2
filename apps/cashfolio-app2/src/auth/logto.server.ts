@@ -25,7 +25,7 @@ import {
   isSessionCurrent,
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
-} from "./session-policy";
+} from "./session-policy.server";
 import { provisionCallbackUser } from "./subject-revocation.server";
 
 export type SessionAccessOptions = { allowDeletionPending?: boolean };

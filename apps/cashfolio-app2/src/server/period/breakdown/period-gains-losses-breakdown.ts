@@ -1,4 +1,4 @@
-import { getLegacyHoldingGainLossScope } from "../../../shared/history-scope";
+import { getLegacyHoldingGainLossScope } from "../../../shared/reporting/history-scope";
 import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
 import type { Unit } from "../../../.prisma-client/enums";
 
@@ -6,9 +6,9 @@ import { round2 } from "../period-helpers";
 import {
   defaultAssetClassNodes,
   type ClassificationNode,
-} from "../../../shared/asset-class";
+} from "../../../shared/classification/asset-class";
 import type { GainLossAccountAttribution } from "./period-gain-loss-attribution";
-import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import type { ReportingGrouping } from "../../../shared/reporting/reporting-grouping";
 import {
   resolveGroupPathToRoot,
   type PeriodGroupNode,
@@ -18,7 +18,7 @@ import {
   getGainLossInvestmentGroup,
   UNKNOWN_GAIN_LOSS_UNIT,
   type GainLossInvestmentGroup,
-} from "../../../shared/investment-group";
+} from "../../../shared/classification/investment-group";
 
 export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";

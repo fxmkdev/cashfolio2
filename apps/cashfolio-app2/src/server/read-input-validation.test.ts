@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 
 const mocks = vi.hoisted(() => ({ authorize: vi.fn(), query: vi.fn() }));
 vi.mock("../account-books/functions.server", () => ({

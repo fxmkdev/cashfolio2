@@ -1,5 +1,5 @@
 import type { Prisma } from "../.prisma-client/client";
-import { ASSET_CLASS_SCHEME_ID } from "../shared/asset-class";
+import { ASSET_CLASS_SCHEME_ID } from "../shared/classification/asset-class";
 
 /** Settings and Organize use the same class metadata and assignment counts. */
 export async function readManagedAssetClasses(

@@ -1,9 +1,9 @@
-import { isAccountGroupCompatible } from "@/shared/account-presentation";
+import { isAccountGroupCompatible } from "@/shared/accounts/account-presentation";
 import {
   getAccountEntityLabel,
   isBalanceAccount,
   isCategoryAccount,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import { type EditAccountModalProps } from "./types";
 import {
   Unit,

@@ -1,12 +1,15 @@
-import { isIncomeAccount, isExpenseAccount } from "@/shared/account-utils";
+import {
+  isIncomeAccount,
+  isExpenseAccount,
+} from "@/shared/accounts/account-utils";
 import {
   parseLedgerReturnTarget,
   getLedgerReturnDelta,
-} from "@/shared/ledger-navigation";
+} from "@/shared/navigation/ledger-navigation";
 import {
   isBalanceAccount,
   getAccountManagementDestination,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import { AccountGainLossSection } from "@/components/gain-loss/account-gain-loss-section";
 import {
   createFileRoute,
@@ -20,7 +23,7 @@ import {
   isLedgerPeriodFilterAvailable,
   loadLedgerPageData,
 } from "./-ledger/page-loader";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { useUserLocale } from "@/user-locale-context";
 import { useLedgerPageController } from "./-ledger/page-controller";
 import { PeriodFilterAction } from "@/components/period-filter/period-filter-action";

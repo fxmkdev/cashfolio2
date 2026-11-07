@@ -5,7 +5,7 @@ const prisma = vi.hoisted(() => ({ $transaction: vi.fn() }));
 vi.mock("../prisma.server", () => ({ prisma }));
 
 import { Prisma } from "../.prisma-client/client";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/resources/mutation-errors";
 import { withAccountBookMutation } from "./account-book-mutation.server";
 
 describe("withAccountBookMutation", () => {

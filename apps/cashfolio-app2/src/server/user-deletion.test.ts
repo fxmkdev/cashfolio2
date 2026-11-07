@@ -45,7 +45,7 @@ vi.mock("@/prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./user-deletion-redis", () => ({
+vi.mock("./user-deletion-redis.server", () => ({
   deleteBookScopedRedisDataForAccountBooks,
 }));
 

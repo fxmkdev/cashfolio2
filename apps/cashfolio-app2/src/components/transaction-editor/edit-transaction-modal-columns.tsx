@@ -3,13 +3,13 @@ import type { CustomCellRendererProps } from "ag-grid-react";
 import { ActionIcon, Box, Group, ThemeIcon, Tooltip } from "@mantine/core";
 import { IconTrash, IconX } from "@tabler/icons-react";
 import { Unit } from "../../.prisma-client/enums";
-import type { AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
+import type { AccountBookUnitUsage } from "../../shared/accounts/account-book-unit-usage";
 import {
   getUnitIdentifier,
   isExpenseAccount,
   isIncomeAccount,
   isOpeningBalancesAccount,
-} from "../../shared/account-utils";
+} from "../../shared/accounts/account-utils";
 import { isSameLocalDay } from "../../shared/date";
 import {
   DATE_COLUMN,
@@ -18,7 +18,7 @@ import {
   SELECT_COLUMN,
   TEXT_COLUMN,
 } from "../grid/column-types";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type { BookingValues } from "./edit-transaction-modal-types";
 import {
   buildCryptocurrencySelectData,

@@ -14,7 +14,7 @@ import { CategoriesPageView } from "./categories-page";
 import { useState } from "react";
 import { AccountOrganizeDialogs } from "./dialogs/organize";
 import { AccountRowMoveDialog } from "./dialogs/row-move";
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { getAccountConstraintMessage } from "@/shared/accounts/account-presentation";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { useOrganizeNavigationGuard } from "@/components/hierarchy-organize/use-organize-navigation-guard";
 

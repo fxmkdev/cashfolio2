@@ -1,7 +1,7 @@
-import { defaultAssetClassIds } from "../../../shared/asset-class";
+import { defaultAssetClassIds } from "../../../shared/classification/asset-class";
 import { describe, expect, it } from "vitest";
 import { AccountTrackingMethod } from "../../../.prisma-client/enums";
-import { RESOURCE_LIMITS } from "../../../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../../../shared/resources/resource-limits";
 
 import {
   validateAccountBookNodeIdInput,

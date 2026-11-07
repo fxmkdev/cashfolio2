@@ -2,7 +2,7 @@ import {
   formatExplicitPeriodSelectionLabel,
   normalizeExplicitPeriodValue,
   parseExplicitPeriodSelection,
-} from "@/shared/period";
+} from "@/shared/reporting/period";
 import type { UserLocale } from "@/user-locale";
 
 export type LedgerSearch = { transactionId?: string; period?: string };

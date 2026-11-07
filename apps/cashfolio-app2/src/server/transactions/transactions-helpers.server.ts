@@ -1,0 +1,296 @@
+import type { Prisma } from "../../.prisma-client/client";
+import { prisma } from "../../prisma.server";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../../.prisma-client/enums";
+import { isBeforeDate } from "../../shared/date";
+import {
+  getAccountUnitIdentifier,
+  getUnitIdentifier,
+  isBookingUnitCompatibleWithAccount,
+} from "../../shared/accounts/account-utils";
+import { validateGainLossSimpleTransactionInvariant } from "../../shared/transactions/gain-loss-transaction-invariant";
+import {
+  formatUtcDate,
+  parseUtcDayDate,
+  startOfUtcDay,
+} from "../../shared/date";
+import {
+  getBookingUnitFields,
+  type BookingUnitFields,
+  type BookingUnitFieldsSource,
+} from "../../shared/transactions/booking-unit-fields";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
+import {
+  moneyIsZero,
+  moneySum,
+  toMoney,
+  type Money,
+  type MoneyInput,
+} from "../../shared/money";
+import type { CreateTransactionInput } from "./transactions-types";
+
+export function validateCreateTransaction(
+  input: CreateTransactionInput,
+): CreateTransactionInput<Money> {
+  const errors: string[] = [];
+  const normalizedValues: Money[] = [];
+
+  if (input.bookings.length < 2) {
+    errors.push("At least two bookings are required.");
+  }
+
+  for (let i = 0; i < input.bookings.length; i++) {
+    const b = input.bookings[i];
+    const date = parseUtcDayDate(b.date);
+    if (!date) {
+      errors.push(`Booking ${i}: date must be a valid UTC day.`);
+    }
+
+    if (!b.accountId) {
+      errors.push(`Booking ${i}: account is required.`);
+    }
+
+    if (!b.unit) {
+      errors.push(`Booking ${i}: unit is required.`);
+    } else if (b.unit === Unit.CURRENCY && !b.currency) {
+      errors.push(`Booking ${i}: currency is required.`);
+    } else if (b.unit === Unit.CRYPTOCURRENCY && !b.cryptocurrency) {
+      errors.push(`Booking ${i}: cryptocurrency is required.`);
+    } else if (b.unit === Unit.SECURITY && (!b.symbol || !b.tradeCurrency)) {
+      errors.push(
+        `Booking ${i}: symbol and trade currency are required for security bookings.`,
+      );
+    }
+
+    if (typeof b.value !== "number" || !Number.isFinite(b.value)) {
+      errors.push(`Booking ${i}: value must be finite.`);
+    } else {
+      const value = toMoney(b.value);
+      normalizedValues.push(value);
+      if (moneyIsZero(value)) {
+        errors.push(`Booking ${i}: value must be non-zero.`);
+      }
+    }
+  }
+
+  if (errors.length === 0 && input.bookings.length >= 2) {
+    const unitIdentifiers = new Set(
+      input.bookings.map((b) => getUnitIdentifier(b)),
+    );
+    if (unitIdentifiers.size === 1) {
+      const sum = moneySum(normalizedValues);
+      if (!moneyIsZero(sum)) {
+        errors.push("The sum of all bookings must be zero.");
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join(" "));
+  }
+  return {
+    ...input,
+    bookings: input.bookings.map((booking, index) => ({
+      ...booking,
+      value: normalizedValues[index]!,
+    })),
+  };
+}
+
+type AccountBookingInput = BookingUnitFields & {
+  accountId: string;
+  value: MoneyInput;
+  date: string | Date;
+};
+
+export async function validateAccountTypeBookings(
+  bookings: AccountBookingInput[],
+  accountBookId: string,
+  db: Pick<Prisma.TransactionClient, "account" | "accountBook"> = prisma,
+) {
+  const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
+  if (accountIds.length === 0) return;
+
+  const [accounts, accountBook] = await Promise.all([
+    db.account.findMany({
+      where: { id: { in: accountIds }, accountBookId },
+      select: {
+        id: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    }),
+    db.accountBook.findUniqueOrThrow({
+      where: { id: accountBookId },
+      select: { startDate: true },
+    }),
+  ]);
+  const accountMap = new Map(
+    accounts.map((account) => [account.id, accountTypeMeta(account)]),
+  );
+  validateAccountTypeBookingsWithAccounts(bookings, accountMap, {
+    accountBookStartDate: accountBook.startDate,
+  });
+}
+
+export type AccountTypeMeta = BookingUnitFieldsSource & {
+  id: string;
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+};
+
+export function accountTypeMeta(account: AccountTypeMeta): AccountTypeMeta {
+  return {
+    id: account.id,
+    type: account.type,
+    equityAccountSubtype: account.equityAccountSubtype,
+    unit: account.unit,
+    currency: account.currency,
+    cryptocurrency: account.cryptocurrency,
+    symbol: account.symbol,
+    tradeCurrency: account.tradeCurrency,
+  };
+}
+
+export function validateAccountTypeBookingsWithAccounts(
+  bookings: AccountBookingInput[],
+  accountMap: Map<string, AccountTypeMeta>,
+  options?: {
+    accountBookStartDate?: Date;
+  },
+) {
+  const accountBookStartDate =
+    options?.accountBookStartDate != null
+      ? startOfUtcDay(options.accountBookStartDate)
+      : null;
+  const accountBookStartDateLabel =
+    accountBookStartDate != null ? formatUtcDate(accountBookStartDate) : null;
+
+  const errors: string[] = [];
+  const bookingAccounts = bookings
+    .map((booking) => accountMap.get(booking.accountId))
+    .filter((account): account is AccountTypeMeta => Boolean(account));
+  if (bookingAccounts.length === bookings.length) {
+    const gainLossInvariantError =
+      validateGainLossSimpleTransactionInvariant(bookingAccounts);
+    if (gainLossInvariantError) {
+      errors.push(gainLossInvariantError);
+    }
+  }
+
+  for (let i = 0; i < bookings.length; i++) {
+    const b = bookings[i];
+    const account = accountMap.get(b.accountId);
+    if (!account) continue;
+
+    if (
+      account.type === AccountType.BALANCE &&
+      (!getAccountUnitIdentifier(account) ||
+        !isBookingUnitCompatibleWithAccount(b, account))
+    ) {
+      errors.push(
+        `Booking ${i}: Account must use the same unit as the booking.`,
+      );
+    }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.INCOME &&
+      toMoney(b.value).gt(0)
+    ) {
+      errors.push(`Booking ${i}: Income categories cannot have debit entries.`);
+    }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
+      toMoney(b.value).lt(0)
+    ) {
+      errors.push(
+        `Booking ${i}: Expense categories cannot have credit entries.`,
+      );
+    }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+    ) {
+      errors.push(`Booking ${i}: ${OPENING_BALANCES_MANAGEMENT_MESSAGE}`);
+      continue;
+    }
+
+    if (!accountBookStartDate || !accountBookStartDateLabel) {
+      continue;
+    }
+
+    const bookingDate = parseUtcDayDate(b.date);
+    if (!bookingDate) {
+      errors.push(`Booking ${i}: date must be a valid UTC day.`);
+      continue;
+    }
+
+    const bookingDay = startOfUtcDay(bookingDate);
+    if (isBeforeDate(bookingDay, accountBookStartDate)) {
+      errors.push(
+        `Booking ${i}: Date cannot be before account book start date (${accountBookStartDateLabel}).`,
+      );
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join(" "));
+  }
+}
+
+export function buildTransactionCreateData(
+  input: CreateTransactionInput<MoneyInput>,
+) {
+  return {
+    description: input.description,
+    accountBookId: input.accountBookId,
+    bookings: {
+      create: input.bookings.map((booking, sortOrder) => ({
+        date: requireUtcDayDate(booking.date),
+        description: booking.description,
+        account: {
+          connect: {
+            id_accountBookId: {
+              id: booking.accountId,
+              accountBookId: input.accountBookId,
+            },
+          },
+        },
+        unit: booking.unit,
+        currency: booking.currency,
+        cryptocurrency: booking.cryptocurrency,
+        symbol: booking.symbol,
+        tradeCurrency: booking.tradeCurrency,
+        value: toMoney(booking.value).toString(),
+        sortOrder,
+        accountBook: {
+          connect: { id: input.accountBookId },
+        },
+      })),
+    },
+  };
+}
+
+export function requireUtcDayDate(value: string | Date): Date {
+  const date = parseUtcDayDate(value);
+  if (!date) {
+    throw new Error("Date must be a valid UTC day.");
+  }
+  return date;
+}
+
+export type SimpleUnitFields = BookingUnitFieldsSource;
+
+export { getBookingUnitFields };

@@ -12,13 +12,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
-import { createGroupPathSegmentsResolver } from "./hierarchy/groups";
-import { queryAccountGroups, queryExistingNodes } from "./queries/selectors";
-import { queryActiveAccountBookUnitUsage } from "./queries/unit-usage";
-import { queryAccountTreeData } from "./queries/tree";
-import { queryLedgerAccountActionData } from "./queries/ledger-actions";
-import { queryAccountReferenceBalances } from "./queries/reference-balances";
-import { queryAccountsPageData } from "./queries/page";
+import { createGroupPathSegmentsResolver } from "./hierarchy/groups.server";
+import { queryAccountGroups, queryExistingNodes } from "./queries/selectors.server";
+import { queryActiveAccountBookUnitUsage } from "./queries/unit-usage.server";
+import { queryAccountTreeData } from "./queries/tree.server";
+import { queryLedgerAccountActionData } from "./queries/ledger-actions.server";
+import { queryAccountReferenceBalances } from "./queries/reference-balances.server";
+import { queryAccountsPageData } from "./queries/page.server";
 
 export const getAccounts = createServerFn({ method: "GET" })
   .validator(readAccountBookInput)

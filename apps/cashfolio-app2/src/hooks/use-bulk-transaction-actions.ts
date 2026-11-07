@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AgGridReactProps } from "ag-grid-react";
 import { notifications } from "@mantine/notifications";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import {
   getBulkRebookTargetOptions,
   getBulkTransactionIds,
   isBulkActionRowSelectable,
   type BulkActionRow,
   type BulkRebookBooking,
-} from "@/shared/bulk-transaction-actions";
-import type { AccountOption } from "@/shared/account-options";
+} from "@/shared/transactions/bulk-transaction-actions";
+import type { AccountOption } from "@/shared/accounts/account-options";
 
 export type BulkActionDialog =
   | { action: "delete"; transactionIds: string[] }

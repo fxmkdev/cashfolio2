@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PeriodHistoryBatchResponse } from "@/server/period-history";
-import { ResourceLimitError } from "@/shared/resource-error";
+import { ResourceLimitError } from "@/shared/resources/resource-error";
 import {
   loadCompleteHistory,
   type HistoryBatchRequest,

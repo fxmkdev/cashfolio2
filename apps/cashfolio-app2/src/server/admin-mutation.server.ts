@@ -1,7 +1,7 @@
 import { Prisma } from "../.prisma-client/client";
 import { UserRole } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
-import { withDatabaseConflictRetry } from "./database-conflict-retry";
+import { withDatabaseConflictRetry } from "./database-conflict-retry.server";
 
 export const FINAL_ADMIN_MESSAGE = "At least one Admin user is required.";
 export const DELETION_PENDING_MESSAGE =

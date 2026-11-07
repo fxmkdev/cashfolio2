@@ -7,7 +7,7 @@ import {
   computeHoldingGainLossSplit,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
-} from "./engine";
+} from "./engine.server";
 import type {
   HoldingAccountExecutionEvent,
   HoldingAccountGainLoss,

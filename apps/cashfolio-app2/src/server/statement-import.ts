@@ -2,7 +2,7 @@ import { startReadBudget } from "./resource-context.server";
 import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedForAccountBookId } from "@/account-books/functions.server";
 import { prisma } from "@/prisma.server";
-import { getBookingUnitFields } from "@/shared/booking-unit-fields";
+import { getBookingUnitFields } from "@/shared/transactions/booking-unit-fields";
 import { formatUtcDate } from "@/shared/date";
 import { toMoney } from "@/shared/money";
 import { assertRecord, requireStringField } from "./input-validation";

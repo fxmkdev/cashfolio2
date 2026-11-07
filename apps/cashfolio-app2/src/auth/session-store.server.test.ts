@@ -3,7 +3,7 @@ import {
   hashSessionToken,
   newSessionToken,
   sessionDeadlines,
-} from "./session-policy";
+} from "./session-policy.server";
 
 const mocks = vi.hoisted(() => {
   const tx = {

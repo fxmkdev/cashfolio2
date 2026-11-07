@@ -5,14 +5,14 @@ import type {
 import type {
   HistoryScopeSelection,
   HistoryScopedMetric,
-} from "@/shared/history-scope";
+} from "@/shared/reporting/history-scope";
 import {
   clampHistoryScopeSelection,
   createHistoryScopeOptionsWithTotal,
   sortGainLossScopeOptions,
-} from "@/shared/history-scope-options";
-import { readHistoryPageSize } from "@/shared/history-window-policy";
-import { ResourceLimitError } from "@/shared/resource-error";
+} from "@/shared/reporting/history-scope-options";
+import { readHistoryPageSize } from "@/shared/reporting/history-window-policy";
+import { ResourceLimitError } from "@/shared/resources/resource-error";
 import type { UserLocale } from "@/user-locale";
 import type { HistoryPeriodMode } from "./-page-types";
 

@@ -1,5 +1,5 @@
 import type { AccountTrackingMethod } from "@/.prisma-client/enums";
-import type { AccountTreeRow } from "@/shared/account-tree";
+import type { AccountTreeRow } from "@/shared/accounts/account-tree";
 
 export type GroupAssetClassSummary = string | null | "Mixed";
 /** Source/projection data, including the unchanged server wire representation. */

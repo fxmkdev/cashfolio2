@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { AccountTrackingMethod } from "@/.prisma-client/enums";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/resources/mutation-errors";
 
 export function useStoryAssignments(assignmentFailsOnce = false) {
   const [scope, setScope] = useState("first");

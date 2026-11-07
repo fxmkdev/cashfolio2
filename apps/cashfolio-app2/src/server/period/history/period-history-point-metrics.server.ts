@@ -1,9 +1,9 @@
-import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache";
+import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache.server";
 import { loadHistoryPointValuations } from "./period-history-point-metrics-valuation.server";
 import {
   assembleHistoryPointMetrics,
   createEmptyHistoryPointMetrics,
-} from "./period-history-point-metrics-assembly";
+} from "./period-history-point-metrics-assembly.server";
 import type {
   HistoryPointMetricsInput,
   PeriodHistoryPointMetrics,

@@ -3,8 +3,8 @@ import { Box, Text } from "@mantine/core";
 import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
-import { formatMonthPeriodValue } from "@/shared/period";
-import { DEFAULT_PERIOD_VALUE } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
+import { DEFAULT_PERIOD_VALUE } from "@/shared/reporting/period";
 import { ReportPageView } from "./-page-view";
 
 import {

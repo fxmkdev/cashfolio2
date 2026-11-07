@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   isReportingGrouping,
   type ReportingGrouping,
-} from "@/shared/reporting-grouping";
+} from "@/shared/reporting/reporting-grouping";
 import type {
   AllocationBreakdownType,
   AllocationChartType,

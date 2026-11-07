@@ -10,7 +10,7 @@
     "build": "pnpm build:contracts && vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-runtime-cycles.ts",
     "typecheck": "pnpm build:contracts && tsc --noEmit",
     "format": "prettier --check .",
     "test:mutations": "pnpm build:contracts && pnpm prisma:generate && vitest run --config vitest.mutations.config.ts",

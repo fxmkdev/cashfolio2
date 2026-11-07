@@ -24,7 +24,7 @@ for:
 
 Primary consumers:
 
-- `src/server/accounts/queries/reference-balance-valuation.ts`
+- `src/server/accounts/queries/reference-balance-valuation.server.ts`
   - account tree reference balances
   - backs the `getAccountReferenceBalances` lazy hydration endpoint exposed by
     `src/server/accounts/accounts-queries.ts`
@@ -71,7 +71,7 @@ flowchart LR
 
 This deduplicates identical lookups during a single server-function execution.
 
-- `src/server/accounts/queries/reference-balance-valuation.ts`
+- `src/server/accounts/queries/reference-balance-valuation.server.ts`
   - Uses per-request maps for currencies, cryptocurrencies, and securities.
   - For account reference balances, all lookups use `today`, so memoization keys
     do not need an explicit date.
@@ -117,7 +117,7 @@ instead of probing future-unavailable days.
 
 ## Redis TimeSeries Cache (Primary Historical Cache)
 
-Implementation: `src/server/valuation/cache.ts` (`getCachedRate`,
+Implementation: `src/server/valuation/cache.server.ts` (`getCachedRate`,
 `storeCachedRate`)
 
 - Daily bucket timestamp: `Date.UTC(year, month, day)` from
@@ -142,7 +142,7 @@ Defined in `src/server/valuation/keys.ts`.
 
 ## Redis Fallback Cache (Backtracking Shortcut)
 
-Implementation: `src/server/valuation/cache.ts`
+Implementation: `src/server/valuation/cache.server.ts`
 (`getBacktrackedFallbackFromCache`, `storeBacktrackedFallbackInCache`,
 `clearBacktrackedFallbackFromCache`)
 
@@ -171,7 +171,7 @@ Backward compatibility is preserved for older entries missing `kind` (treated as
 
 ## Redis Miss-Attempt Cooldown Cache
 
-Implementation: `src/server/valuation/cache.ts`
+Implementation: `src/server/valuation/cache.server.ts`
 (`hasRecentMissedAttemptForSeriesTimestamp`,
 `storeMissedAttemptForSeriesTimestamp`, `clearMissedAttemptForSeriesTimestamp`)
 
@@ -215,7 +215,7 @@ persisted.
 
 ## Core Lookup Algorithm
 
-Implementation: `src/server/valuation/backtracking.ts`
+Implementation: `src/server/valuation/backtracking.server.ts`
 (`getRateWithBacktracking`)
 
 Behavior for a request date:
@@ -284,7 +284,7 @@ flowchart TD
 
 ## In-Flight Provider Dedup
 
-Implementation: `src/server/valuation/backtracking.ts` and
+Implementation: `src/server/valuation/backtracking.server.ts` and
 `src/server/shared-resource-work.server.ts` (`createUserScopedSharedWork`)
 
 Within one server process, provider calls are deduplicated by:
@@ -304,10 +304,10 @@ the owning request/job. Shared job limits stay fixed when another caller joins.
 
 Implementation:
 
-- `src/server/valuation/providers.ts`
+- `src/server/valuation/providers.server.ts`
 - `src/server/valuation/provider-response-parsers.ts`
 - `src/server/valuation/provider-logging.ts`
-- `src/server/valuation/provider-usage.ts`
+- `src/server/valuation/provider-usage.server.ts`
 
 Provider behavior:
 
@@ -330,7 +330,7 @@ Provider calls are logged with sanitized context so API keys are never logged.
 
 Implementation:
 
-- `src/server/valuation/provider-usage.ts`
+- `src/server/valuation/provider-usage.server.ts`
 - `src/server/valuation-provider-usage.ts`
 - `src/routes/admin/valuation-provider-usage/route.tsx`
 
@@ -459,7 +459,7 @@ Implementation: `src/redis.server.ts`
 
 ### Cache read/write failures
 
-Implementation: `src/server/valuation/cache.ts`
+Implementation: `src/server/valuation/cache.server.ts`
 
 - Cache read failures degrade to provider lookups.
 - Fallback cache read/write/delete failures are logged and ignored.
@@ -497,4 +497,4 @@ cannot enable mock keys or provider interception in normal builds.
 - If tuning backtrack or TTL constants, update:
   - `src/server/valuation/constants.ts`
   - this document
-  - tests in `src/server/valuation/backtracking.test.ts` as needed
+  - tests in `src/server/valuation/backtracking.server.test.ts` as needed

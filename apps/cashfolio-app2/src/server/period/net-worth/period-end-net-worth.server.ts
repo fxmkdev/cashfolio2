@@ -1,5 +1,5 @@
 import { type Money } from "../../../shared/money";
-import { convertBookingValueToReference } from "../period-conversion";
+import { convertBookingValueToReference } from "../period-conversion.server";
 import {
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceAccount,
@@ -8,8 +8,8 @@ import {
 import {
   getOrLoadPeriodBaseData,
   type PeriodBaseData,
-} from "../cache/period-base-data-cache";
-import { buildTransferClearingVirtualHierarchy } from "../transfer-clearing/period-transfer-clearing";
+} from "../cache/period-base-data-cache.server";
+import { buildTransferClearingVirtualHierarchy } from "../transfer-clearing/period-transfer-clearing.server";
 
 export async function loadPeriodEndNetWorth(args: {
   accountBookId: string;

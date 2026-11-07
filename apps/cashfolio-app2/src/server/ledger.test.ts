@@ -1,5 +1,5 @@
 import { assetClassSelection } from "./classification-data";
-import { defaultAssetClassIds } from "../shared/asset-class";
+import { defaultAssetClassIds } from "../shared/classification/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
 import { toMoney } from "../shared/money";
@@ -37,7 +37,7 @@ vi.mock("../prisma.server", () => ({ prisma: mocks.prisma }));
 vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId: mocks.ensureAuthorizedForAccountBookId,
 }));
-vi.mock("./period/period-conversion", () => ({
+vi.mock("./period/period-conversion.server", () => ({
   convertBookingValueToReference: mocks.convertBookingValueToReference,
 }));
 

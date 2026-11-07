@@ -1,7 +1,7 @@
-import type { ClassificationNode } from "@/shared/asset-class";
+import type { ClassificationNode } from "@/shared/classification/asset-class";
 import { Unit } from "@/.prisma-client/enums";
-import { getAssetClassLabel } from "@/shared/asset-class";
-import { getAccountTrackingMethodLabel } from "@/shared/account-tracking-method";
+import { getAssetClassLabel } from "@/shared/classification/asset-class";
+import { getAccountTrackingMethodLabel } from "@/shared/accounts/account-tracking-method";
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,

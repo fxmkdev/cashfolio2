@@ -1,10 +1,10 @@
 import { formatUnitLabel } from "../../period/period-unit-format";
-import { projectArchivedAccountHierarchy } from "../../../shared/archived-account-hierarchy";
+import { projectArchivedAccountHierarchy } from "../../../shared/accounts/archived-account-hierarchy";
 import type { Money } from "../../../shared/money";
 import {
   aggregateAccountGainLoss,
   type AccountGainLossResult,
-} from "../../../shared/account-gain-loss";
+} from "../../../shared/accounts/account-gain-loss";
 import { toNumericMoney } from "../../money-boundary";
 import {
   loadAccountGainLossRange,

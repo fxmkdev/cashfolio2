@@ -39,7 +39,7 @@ vi.mock("react", () => ({
     }
   },
 }));
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/resources/mutation-errors";
 import { useDialogSubmitState } from "./use-dialog-submit-state";
 import { useRefreshedMutationData } from "./use-refreshed-mutation-data";
 import { useUnarchiveMutation } from "./use-unarchive-mutation";

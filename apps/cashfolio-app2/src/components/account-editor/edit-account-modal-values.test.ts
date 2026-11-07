@@ -1,4 +1,4 @@
-import { defaultAssetClassIds } from "../../shared/asset-class";
+import { defaultAssetClassIds } from "../../shared/classification/asset-class";
 import { describe, expect, test } from "vitest";
 import {
   AccountType,

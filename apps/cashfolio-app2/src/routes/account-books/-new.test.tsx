@@ -55,7 +55,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 vi.mock("@/server/account-books", () => ({ createAccountBook: createBook }));
-vi.mock("@/account-books/options", () => ({
+vi.mock("@/components/account-book-navigation/options", () => ({
   invalidateCachedUserAccountBooks: invalidate,
 }));
 vi.mock("@mantine/notifications", () => ({ notifications: { show: notify } }));

@@ -1,8 +1,8 @@
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   getYearBounds,
   getMonthBoundsForYear,
-} from "@/shared/period-selector-model";
+} from "@/shared/reporting/period-selector-model";
 import type { parseTransactionsExplicitPeriod } from "./-page-types";
 
 export function clampTransactionsExplicitPeriodToBounds(args: {

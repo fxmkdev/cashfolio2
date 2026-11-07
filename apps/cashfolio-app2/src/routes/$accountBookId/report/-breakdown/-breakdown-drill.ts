@@ -1,4 +1,4 @@
-import type { BreakdownHierarchyNode } from "@/shared/breakdown-hierarchy";
+import type { BreakdownHierarchyNode } from "@/shared/reporting/breakdown-hierarchy";
 
 export type { BreakdownHierarchyNode };
 
