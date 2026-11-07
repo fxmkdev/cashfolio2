@@ -1,5 +1,6 @@
+import { useTransactionWorkflow } from "./use-transaction-workflow";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Text } from "@mantine/core";
+import { Button, Text } from "@mantine/core";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
 import { LedgerTransactionCreateDialogs } from "./transaction-create-dialogs";
@@ -236,5 +237,95 @@ export const EditDraftClearsAfterExit: Story = {
       2,
       "exit:transaction-2",
     );
+  },
+};
+
+function WorkflowHarness() {
+  const account = createLedgerStoryAccount({});
+  const data = getLedgerStoryViewData(account, {});
+  const workflow = useTransactionWorkflow("storybook", account.id);
+  return (
+    <>
+      <Button onClick={() => workflow.openCreate(true)}>
+        Open Transaction
+      </Button>
+      <LedgerTransactionCreateDialogs
+        {...data}
+        {...workflow.viewProps}
+        onSwitchCreateToSplit={(draft) =>
+          workflow.switchCreateToSplit(draft, {
+            allAccountOptions: data.accountOptions,
+            currentAccount: {
+              id: account.id,
+              unit: account.unit,
+              currency: account.currency,
+              cryptocurrency: account.cryptocurrency,
+              symbol: account.symbol,
+              tradeCurrency: account.tradeCurrency,
+            },
+          })
+        }
+        onSubmitCreateSimpleTransaction={async () => {
+          throw new Error("Submission rejected");
+        }}
+        onSubmitCreateTransaction={async () => {
+          workflow.close();
+        }}
+      />
+    </>
+  );
+}
+
+export const ReducerPreservesDraftAfterFailureAndSwitch: Story = {
+  render: () => <WorkflowHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Open Transaction" }),
+    );
+    const simple = await screen.findByRole("dialog", {
+      name: "Add Transaction",
+    });
+    await enterDraft(simple);
+    await userEvent.click(
+      within(simple).getByRole("button", { name: "Create" }),
+    );
+    await expect(
+      await within(simple).findByText("Submission rejected"),
+    ).toBeVisible();
+    await expect(
+      within(simple).getByRole("textbox", { name: "Description" }),
+    ).toHaveValue("Preserved draft");
+    await userEvent.click(
+      within(simple).getByRole("button", { name: "Switch to Split Editor" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Switch to Split Editor" }),
+      ).not.toBeInTheDocument(),
+    );
+    const split = await screen.findByRole("dialog", {
+      name: "Add Transaction",
+    });
+    await expect(
+      within(split).getByRole("textbox", { name: /^Description$/ }),
+    ).toHaveValue("Preserved draft");
+    await userEvent.click(
+      within(split).getByRole("button", { name: "Cancel" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Add Transaction" }),
+      ).not.toBeInTheDocument(),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Open Transaction" }),
+    );
+    const reopened = await screen.findByRole("dialog", {
+      name: "Add Transaction",
+    });
+    await expect(
+      within(reopened).getByRole("textbox", { name: "Description" }),
+    ).toHaveValue("");
   },
 };

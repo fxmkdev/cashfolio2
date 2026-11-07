@@ -2,7 +2,7 @@ import { Modal } from "@mantine/core";
 import { SimpleTransactionModal } from "@/components/transactions/simple-transaction-modal";
 import { EditTransactionModal } from "@/components/transaction-editor/edit-transaction-modal";
 import { getAccountEntityLabel } from "@/shared/account-presentation";
-import type { LedgerPageViewProps } from "./page-view.types";
+import type { LedgerTransactionEditDialogProps } from "./transaction-dialog.types";
 export function LedgerTransactionEditDialog({
   account,
   currentAccountLabel,
@@ -22,27 +22,7 @@ export function LedgerTransactionEditDialog({
   editAccountOptions,
   unitUsage,
   onSubmitUpdateTransaction,
-}: Pick<
-  LedgerPageViewProps,
-  | "account"
-  | "currentAccountLabel"
-  | "accountBookStartDate"
-  | "onRefreshConstraints"
-  | "editModalOpened"
-  | "isEditSubmitting"
-  | "onCloseEditModal"
-  | "editMode"
-  | "onEditModalExitTransitionEnd"
-  | "editingTransactionData"
-  | "editingSimpleInitialValues"
-  | "editSimpleCounterAccountOptions"
-  | "onSwitchToSplit"
-  | "onEditSubmittingChange"
-  | "onSubmitUpdateSimpleTransaction"
-  | "editAccountOptions"
-  | "unitUsage"
-  | "onSubmitUpdateTransaction"
->) {
+}: LedgerTransactionEditDialogProps) {
   const entityLabel = getAccountEntityLabel(account);
   return (
     <Modal

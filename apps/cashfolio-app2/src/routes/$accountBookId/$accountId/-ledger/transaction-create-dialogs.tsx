@@ -3,35 +3,8 @@ import { SimpleTransactionModal } from "@/components/transactions/simple-transac
 import { EditTransactionModal } from "@/components/transaction-editor/edit-transaction-modal";
 import { getTransactionCreateDialogText } from "@/components/transactions/transaction-create-dialog-text";
 import { getAccountEntityLabel } from "@/shared/account-presentation";
-import type { LedgerPageViewProps } from "./page-view.types";
-export type LedgerTransactionCreateDialogsProps = Pick<
-  LedgerPageViewProps,
-  | "account"
-  | "currentAccountLabel"
-  | "accountBookStartDate"
-  | "onRefreshConstraints"
-  | "simpleModalOpened"
-  | "isSimpleSubmitting"
-  | "onCloseSimpleModal"
-  | "onSimpleModalExitTransitionEnd"
-  | "createSimpleInitialValues"
-  | "editSimpleCounterAccountOptions"
-  | "simpleCounterAccountOptions"
-  | "onSwitchCreateToSplit"
-  | "onSimpleSubmittingChange"
-  | "onSubmitCreateSimpleTransaction"
-  | "splitModalOpened"
-  | "isCreateSplitSubmitting"
-  | "onCloseSplitModal"
-  | "createSplitInitialValues"
-  | "createSplitIsCopy"
-  | "createSplitDateAutoFocus"
-  | "editAccountOptions"
-  | "accountOptions"
-  | "unitUsage"
-  | "onCreateSplitSubmittingChange"
-  | "onSubmitCreateTransaction"
->;
+import type { LedgerTransactionCreateDialogsProps } from "./transaction-dialog.types";
+export type { LedgerTransactionCreateDialogsProps } from "./transaction-dialog.types";
 function SimpleCreateDialog({
   account,
   currentAccountLabel,
@@ -48,7 +21,7 @@ function SimpleCreateDialog({
   onSimpleSubmittingChange,
   onSubmitCreateSimpleTransaction,
 }: Pick<
-  LedgerPageViewProps,
+  LedgerTransactionCreateDialogsProps,
   | "account"
   | "currentAccountLabel"
   | "accountBookStartDate"
@@ -116,6 +89,7 @@ function SplitCreateDialog({
   splitModalOpened,
   isCreateSplitSubmitting,
   onCloseSplitModal,
+  onCreateSplitModalExitTransitionEnd,
   createSplitInitialValues,
   createSplitIsCopy,
   createSplitDateAutoFocus,
@@ -125,13 +99,14 @@ function SplitCreateDialog({
   onCreateSplitSubmittingChange,
   onSubmitCreateTransaction,
 }: Pick<
-  LedgerPageViewProps,
+  LedgerTransactionCreateDialogsProps,
   | "account"
   | "accountBookStartDate"
   | "onRefreshConstraints"
   | "splitModalOpened"
   | "isCreateSplitSubmitting"
   | "onCloseSplitModal"
+  | "onCreateSplitModalExitTransitionEnd"
   | "createSplitInitialValues"
   | "createSplitIsCopy"
   | "createSplitDateAutoFocus"
@@ -146,6 +121,7 @@ function SplitCreateDialog({
   return (
     <Modal
       opened={splitModalOpened}
+      onExitTransitionEnd={onCreateSplitModalExitTransitionEnd}
       onClose={() => {
         if (isCreateSplitSubmitting) return;
         onCloseSplitModal();

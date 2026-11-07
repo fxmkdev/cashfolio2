@@ -76,11 +76,9 @@ describe("createLedgerMutationActions", () => {
       getEditingTransactionId: () => undefined,
       getDeletingTransaction: () => deletingTransaction,
       getRebooking: () => undefined,
-      setModalOpened: vi.fn(),
-      setSimpleModalOpened: vi.fn(),
-      setEditModalOpened: vi.fn(),
-      setCreateSplitInitialValues: vi.fn(),
-      setCreateSimpleInitialValues: vi.fn(),
+      closeSplitCreate: vi.fn(),
+      closeSimpleCreate: vi.fn(),
+      closeEdit: vi.fn(),
       setDeletingTransaction: vi.fn((value) => {
         deletingTransaction = value;
       }),
@@ -161,8 +159,7 @@ describe("createLedgerMutationActions", () => {
         ],
       },
     });
-    expect(state.setModalOpened).toHaveBeenCalledWith(false);
-    expect(state.setCreateSplitInitialValues).toHaveBeenCalledWith(undefined);
+    expect(state.closeSplitCreate).toHaveBeenCalledOnce();
     expect(pendingScrollRef.current).toBe("tx-new");
     expect(invalidate).toHaveBeenCalledOnce();
   });
@@ -177,11 +174,9 @@ describe("createLedgerMutationActions", () => {
       getEditingTransactionId: () => undefined,
       getDeletingTransaction: () => undefined,
       getRebooking: () => undefined,
-      setModalOpened: vi.fn(),
-      setSimpleModalOpened: vi.fn(),
-      setEditModalOpened: vi.fn(),
-      setCreateSplitInitialValues: vi.fn(),
-      setCreateSimpleInitialValues: vi.fn(),
+      closeSplitCreate: vi.fn(),
+      closeSimpleCreate: vi.fn(),
+      closeEdit: vi.fn(),
       setDeletingTransaction: vi.fn(),
       setRebookModalOpened: vi.fn(),
     };
@@ -241,11 +236,9 @@ describe("createLedgerMutationActions", () => {
       getEditingTransactionId: () => editingTransactionId,
       getDeletingTransaction: () => undefined,
       getRebooking: () => undefined,
-      setModalOpened: vi.fn(),
-      setSimpleModalOpened: vi.fn(),
-      setEditModalOpened: vi.fn(),
-      setCreateSplitInitialValues: vi.fn(),
-      setCreateSimpleInitialValues: vi.fn(),
+      closeSplitCreate: vi.fn(),
+      closeSimpleCreate: vi.fn(),
+      closeEdit: vi.fn(),
       setDeletingTransaction: vi.fn(),
       setRebookModalOpened: vi.fn(),
     };
@@ -313,7 +306,7 @@ describe("createLedgerMutationActions", () => {
         ],
       },
     });
-    expect(state.setEditModalOpened).toHaveBeenCalledWith(false);
+    expect(state.closeEdit).toHaveBeenCalledOnce();
     expect(pendingScrollRef.current).toBe("tx-edit");
     expect(invalidate).toHaveBeenCalledOnce();
   });
@@ -328,11 +321,9 @@ describe("createLedgerMutationActions", () => {
       getEditingTransactionId: () => undefined,
       getDeletingTransaction: () => undefined,
       getRebooking: () => undefined,
-      setModalOpened: vi.fn(),
-      setSimpleModalOpened: vi.fn(),
-      setEditModalOpened: vi.fn(),
-      setCreateSplitInitialValues: vi.fn(),
-      setCreateSimpleInitialValues: vi.fn(),
+      closeSplitCreate: vi.fn(),
+      closeSimpleCreate: vi.fn(),
+      closeEdit: vi.fn(),
       setDeletingTransaction: vi.fn(),
       setRebookModalOpened: vi.fn(),
     };
@@ -372,7 +363,7 @@ describe("createLedgerMutationActions", () => {
         direction: "CREDIT",
       },
     });
-    expect(state.setSimpleModalOpened).toHaveBeenCalledWith(false);
+    expect(state.closeSimpleCreate).toHaveBeenCalledOnce();
     expect(pendingScrollRef.current).toBe("tx-simple");
     expect(invalidate).toHaveBeenCalledOnce();
   });
@@ -417,11 +408,9 @@ describe("createLedgerMutationActions", () => {
       getEditingTransactionId: () => undefined,
       getDeletingTransaction: () => deletingTransaction,
       getRebooking: () => rebooking,
-      setModalOpened: vi.fn(),
-      setSimpleModalOpened: vi.fn(),
-      setEditModalOpened: vi.fn(),
-      setCreateSplitInitialValues: vi.fn(),
-      setCreateSimpleInitialValues: vi.fn(),
+      closeSplitCreate: vi.fn(),
+      closeSimpleCreate: vi.fn(),
+      closeEdit: vi.fn(),
       setDeletingTransaction: vi.fn((value) => {
         deletingTransaction = value;
       }),
