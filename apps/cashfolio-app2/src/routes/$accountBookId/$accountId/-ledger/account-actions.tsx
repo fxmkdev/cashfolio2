@@ -15,6 +15,7 @@ import {
   getAccountConstraintMessage,
   getAccountEntityLabel,
   getAccountManagementContext,
+  isCategoryAccount,
 } from "@/shared/account-presentation";
 import type { LedgerPageViewProps } from "./page-view.types";
 import classes from "./page-header.module.css";
@@ -41,10 +42,11 @@ export type LedgerAccountActionsProps = Pick<
 
 function getSecondaryActions(
   props: LedgerAccountActionsProps,
+  isImportPrimary: boolean,
 ): SplitButtonMenuItem[] {
   const context = getAccountManagementContext(props.account);
   const actions: SplitButtonMenuItem[] = [];
-  if (!props.statementImportDisabledReason) {
+  if (isImportPrimary) {
     actions.push({
       key: "edit",
       label: "Edit",
@@ -65,7 +67,10 @@ function getSecondaryActions(
       onClick: props.onManageCategory,
     });
   }
-  if (props.statementImportDisabledReason) {
+  if (
+    !isCategoryAccount(props.account) &&
+    props.statementImportDisabledReason
+  ) {
     actions.push({
       key: "import-statement",
       label: "Import Statement",
@@ -127,7 +132,9 @@ function getDangerActions(
 export function LedgerAccountActions(props: LedgerAccountActionsProps) {
   const entityLabel = getAccountEntityLabel(props.account);
   const context = getAccountManagementContext(props.account);
-  const isImportPrimary = !props.statementImportDisabledReason;
+  const isImportPrimary =
+    !isCategoryAccount(props.account) && !props.statementImportDisabledReason;
+  const secondaryActions = getSecondaryActions(props, isImportPrimary);
   return (
     <Tooltip
       label={
@@ -153,8 +160,10 @@ export function LedgerAccountActions(props: LedgerAccountActionsProps) {
             !isImportPrimary && !!props.accountEditDisabledReason
           }
           menuItems={[
-            ...getSecondaryActions(props),
-            { type: "divider", key: "danger-actions-divider" },
+            ...secondaryActions,
+            ...(secondaryActions.length > 0
+              ? [{ type: "divider" as const, key: "danger-actions-divider" }]
+              : []),
             ...getDangerActions(props),
           ]}
         >
