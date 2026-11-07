@@ -163,6 +163,9 @@ async function advance(
           current.failures,
         )
       : undefined;
+    const recovered = [...results.keys()].some(
+      (key) => !current.done.includes(key),
+    );
     let calculated = 0;
     const started = Date.now();
     const calculateReady = async () => {
@@ -231,13 +234,19 @@ async function advance(
     };
     await calculateReady();
     // Publish cheap scopes before waiting for providers. Their values are usable immediately.
-    if (results.size < plan.scopes.length && !calculated && loader) {
+    if (
+      results.size < plan.scopes.length &&
+      !calculated &&
+      !recovered &&
+      loader
+    ) {
       await loader.pump(Math.min(4, args.batchSize ?? 128));
       await calculateReady();
     }
     if (
       results.size < plan.scopes.length &&
       !calculated &&
+      !recovered &&
       loader?.pending() === 0
     )
       throw new Error(
@@ -247,7 +256,7 @@ async function advance(
     current.phase =
       results.size === plan.scopes.length
         ? "complete"
-        : calculated
+        : calculated || recovered
           ? "calculation"
           : "history";
     current.validUntil = Math.min(
@@ -286,7 +295,7 @@ async function advance(
         status: "pending",
         continuation: id,
         progress,
-        retryAfterMs: calculated ? 0 : 200,
+        retryAfterMs: calculated || recovered ? 0 : 200,
       };
     if (args.target) {
       const target = plan.targets[0]!;

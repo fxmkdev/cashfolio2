@@ -239,3 +239,40 @@ it("takes a warm summary-cache hit without reading history or transaction data",
   expect(mocks.inputs).not.toHaveBeenCalled();
   expect(mocks.history).not.toHaveBeenCalled();
 });
+it("publishes recovered completed rows before waiting on a failed provider again", async () => {
+  mocks.lookup.mockImplementation(async (input) => {
+    if (input.currency !== "CHF") throw new HistoryPending();
+    return {
+      rate: stagingReturnRate(input),
+      source: "timeSeries",
+      validUntil: Infinity,
+    };
+  });
+  mocks.pump.mockRejectedValue(new Error("Provider unavailable"));
+  let continuation: string | undefined;
+  let failed = false;
+  for (let i = 0; i < 20; i++) {
+    try {
+      const next = await queryAccountReturnWork(
+        { ...scope, continuation },
+        "user",
+      );
+      if (next.status !== "pending") throw new Error("Expected pending");
+      continuation = next.continuation;
+    } catch (error) {
+      expect(error).toMatchObject({ message: "Provider unavailable" });
+      failed = true;
+      break;
+    }
+  }
+  expect(failed).toBe(true);
+  mocks.pump.mockClear();
+  const recovered = await queryAccountReturnWork(scope, "user");
+  expect(recovered.status).toBe("pending");
+  if (recovered.status !== "pending")
+    throw new Error("Expected recovered progress");
+  expect(
+    recovered.progress?.rows.find((row) => row.id === "managed-portfolio")?.twr,
+  ).not.toBeNull();
+  expect(mocks.pump).not.toHaveBeenCalled();
+}, 30_000);
