@@ -32,6 +32,7 @@ export async function queryAccountRecordedGainLossEligibility(args: {
       const inputs = await loadRecordedAccountGainLossInputs(
         {
           accountBookId: args.accountBookId,
+          counterpartAccountId: args.accountId,
           queryStart: startOfUtcDay(book.startDate),
           queryEndExclusive: addUtcDays(
             resolveAccountGainLossDate(args.period),

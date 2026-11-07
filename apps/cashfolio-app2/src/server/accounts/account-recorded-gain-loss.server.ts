@@ -20,7 +20,12 @@ export type RecordedAccountGainLoss = {
 
 /** Attribution follows the equity booking date, even when its counterpart has another date. */
 export async function loadRecordedAccountGainLossInputs(
-  args: { accountBookId: string; queryStart: Date; queryEndExclusive: Date },
+  args: {
+    accountBookId: string;
+    queryStart: Date;
+    queryEndExclusive: Date;
+    counterpartAccountId?: string;
+  },
   db: Pick<PeriodReadClient, "booking">,
 ) {
   const bookings =

@@ -1,4 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  book,
+  portfolio,
+  adjustment,
+  selectCounterpartBookings,
+  selectEquityBookings,
+  selectHoldingTransactions,
+  selectLatestBooking,
+} from "./account-recorded-gain-loss.test-support";
 import { toMoney } from "../../shared/money";
 import { decodeMoneyCache } from "../money-cache-codec";
 import { isAccountGainLossBasisCacheData } from "./account-gain-loss-basis-cache-data";
@@ -32,60 +41,6 @@ import {
   queryAccountRecordedGainLossEligibility,
 } from "./account-gain-loss.server";
 
-const portfolio = {
-  id: "portfolio",
-  name: "Portfolio",
-  type: "BALANCE" as const,
-  isActive: true,
-  groupId: "group",
-  unit: "CURRENCY" as const,
-  currency: "CHF",
-  cryptocurrency: null,
-  symbol: null,
-  tradeCurrency: null,
-};
-function adjustment(
-  id: string,
-  date: string,
-  amount: string,
-  accountId = "portfolio",
-  counterpartDate = date,
-) {
-  return {
-    id,
-    description: `Statement ${id}`,
-    bookings: [
-      {
-        ...portfolio,
-        id: `${id}:balance`,
-        accountId,
-        date: new Date(counterpartDate),
-        value: amount,
-        description: null,
-        account: {
-          type: "BALANCE",
-          equityAccountSubtype: null,
-          name: accountId,
-        },
-      },
-      {
-        ...portfolio,
-        id: `${id}:equity`,
-        accountId: "gain-loss",
-        date: new Date(date),
-        value: toMoney(amount).neg().toString(),
-        description: `Adjustment ${id}`,
-        account: {
-          id: "gain-loss",
-          type: "EQUITY",
-          equityAccountSubtype: "GAIN_LOSS",
-          name: "Gain/Loss",
-          groupId: null,
-        },
-      },
-    ],
-  };
-}
 let transactions: ReturnType<typeof adjustment>[];
 let currency: string;
 let conversionMissing: boolean;
@@ -121,11 +76,7 @@ beforeEach(() => {
       mocks.entries.set(key, value);
     },
   });
-  mocks.db.accountBook.findUniqueOrThrow.mockResolvedValue({
-    referenceCurrency: "CHF",
-    startDate: new Date("2026-01-01Z"),
-    periodCacheRevision: "revision",
-  });
+  mocks.db.accountBook.findUniqueOrThrow.mockResolvedValue(book);
   mocks.db.account.findMany.mockImplementation(async ({ where }) =>
     where.type === "EQUITY"
       ? []
@@ -142,61 +93,28 @@ beforeEach(() => {
       ? []
       : [{ accountId: "portfolio", _sum: { value: "1000" } }],
   );
-  mocks.db.booking.findFirst.mockImplementation(async ({ where }) => {
-    const dates = transactions
-      .flatMap((tx) => tx.bookings.map((booking) => booking.date))
-      .filter((date) => date < where.date.lt);
-    return dates.length
-      ? { date: new Date(Math.max(...dates.map((date) => date.getTime()))) }
-      : null;
-  });
+  mocks.db.booking.findFirst.mockImplementation(async ({ where }) =>
+    selectLatestBooking(transactions, where.date.lt),
+  );
   mocks.db.booking.findMany.mockImplementation(async ({ where }) => {
     if (where.transactionId)
-      return transactions
-        .filter((tx) => where.transactionId.in.includes(tx.id))
-        .flatMap((tx) =>
-          tx.bookings
-            .filter((b) => b.account.type === "BALANCE")
-            .map((b) => ({
-              transactionId: tx.id,
-              accountId: b.accountId,
-              account: { name: b.account.name },
-            })),
-        );
+      return selectCounterpartBookings(transactions, where.transactionId.in);
     if (where.account)
-      return transactions.flatMap((tx) =>
-        tx.bookings
-          .filter(
-            (b) =>
-              b.account.type === "EQUITY" &&
-              b.account.equityAccountSubtype === "GAIN_LOSS" &&
-              b.date >= where.date.gte &&
-              b.date < where.date.lt,
-          )
-          .map((b) => ({
-            ...b,
-            currency,
-            transactionId: tx.id,
-            transaction: { description: tx.description },
-          })),
+      return selectEquityBookings(
+        transactions,
+        currency,
+        where.date,
+        where.transaction?.bookings.some.accountId,
       );
     return [];
   });
-  mocks.db.transaction.findMany.mockImplementation(async ({ where }) => {
-    const range = where.AND[0].bookings.some.date;
-    return transactions
-      .filter(
-        (tx) =>
-          tx.bookings.every((b) => b.date < range.lt) &&
-          tx.bookings.some(
-            (b) => b.account.type === "BALANCE" && b.date >= range.gte,
-          ),
-      )
-      .map((tx) => ({
-        ...tx,
-        bookings: tx.bookings.map((b) => ({ ...b, currency })),
-      }));
-  });
+  mocks.db.transaction.findMany.mockImplementation(async ({ where }) =>
+    selectHoldingTransactions(
+      transactions,
+      currency,
+      where.AND[0].bookings.some.date,
+    ),
+  );
   mocks.rate.mockImplementation(async ({ date }) => ({
     rate: toMoney(date.getTime() === Date.parse("2025-12-31Z") ? 1 : 1.2),
     source: "timeSeries",
@@ -371,6 +289,45 @@ describe("recorded G/L through since-start summaries and real FIFO replay", () =
     expect(mocks.entries.size).toBe(0);
     conversionMissing = false;
     expect((await ledger(false)).summary.totalGainLoss).toBe(100);
+  });
+
+  it("limits ledger eligibility inputs to the target account while checking all its counterparts", async () => {
+    transactions.push(
+      adjustment("unrelated", "2026-03-02Z", "900", "ordinary"),
+    );
+    expect(
+      await queryAccountRecordedGainLossEligibility({
+        accountBookId: "book",
+        accountId: "portfolio",
+      }),
+    ).toBe(true);
+    expect(mocks.db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          transaction: { bookings: { some: { accountId: "portfolio" } } },
+        }),
+      }),
+    );
+    expect(mocks.db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ transactionId: { in: ["gain"] } }),
+      }),
+    );
+    expect(mocks.conversion).not.toHaveBeenCalled();
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.db.transaction.findMany).not.toHaveBeenCalled();
+    // Narrowing candidates must not hide a second financial counterpart.
+    transactions[0]!.bookings.push({
+      ...transactions[0]!.bookings[0]!,
+      id: "second",
+      accountId: "ordinary",
+    });
+    expect(
+      await queryAccountRecordedGainLossEligibility({
+        accountBookId: "book",
+        accountId: "portfolio",
+      }),
+    ).toBe(false);
   });
 
   it("keeps unattributed and ambiguous legacy bookings out of real account totals", async () => {

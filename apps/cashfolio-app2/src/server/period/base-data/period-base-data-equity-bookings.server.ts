@@ -27,6 +27,7 @@ type LoadPeriodEquityBookingsRawArgs = {
   equityAccountById: Map<string, EquityAccountMetadata>;
   equityAccountIds: string[];
   equityAccountSubtype?: EquityAccountSubtype;
+  counterpartAccountId?: string;
 };
 
 export async function loadPeriodEquityBookingsRaw(
@@ -111,6 +112,13 @@ function getEquityBookingsWhere(
       gte: args.queryStart,
       lt: args.queryEndExclusive,
     },
+    ...(args.counterpartAccountId
+      ? {
+          transaction: {
+            bookings: { some: { accountId: args.counterpartAccountId } },
+          },
+        }
+      : {}),
     ...(args.usesPreloadedEquityAccountFilter
       ? {
           accountId: {

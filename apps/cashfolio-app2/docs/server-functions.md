@@ -968,10 +968,13 @@ from FIFO events, with links to complete transactions.
 Reference-currency balance accounts become eligible when recorded adjustments
 exist in the book-start/as-of range, even if they net to zero.
 `getAccountRecordedGainLossEligibility` authorizes the book and checks that
-range and attribution without conversions or FIFO replay. Tracking Method does
-not restrict eligibility. Historical basis cache v4 stores exact recorded
-totals/eligibility; summary cache v5 includes the combined results. Missing
-recorded conversions withhold Realised and Total and prevent basis persistence.
+range and attribution without conversions or FIFO replay. Its input query is
+limited to transactions involving the target account; counterpart resolution
+still checks all financial legs so ambiguous legacy entries remain excluded.
+Tracking Method does not restrict eligibility. Historical basis cache v4 stores
+exact recorded totals/eligibility; summary cache v5 includes the combined
+results. Missing recorded conversions withhold Realised and Total and prevent
+basis persistence.
 
 ### Accumulated G/L historical basis cache
 
