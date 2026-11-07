@@ -33,7 +33,7 @@ const scope = {
   accountState: "all" as const,
 };
 const key =
-  "account:returns:v1:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
+  "account:returns:v2:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
 function data(): AccountReturnSummaries {
   return {
     referenceCurrency: "CHF",

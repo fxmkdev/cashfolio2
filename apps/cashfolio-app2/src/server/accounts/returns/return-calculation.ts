@@ -31,6 +31,8 @@ export async function calculateAccountReturns(args: {
   asOfDate: string;
   referenceCurrency: string;
   resolveRate: HoldingRateResolver;
+  /** Discover valuation dependencies without solving metrics or publishing values. */
+  valuationOnly?: boolean;
 }): Promise<AccountReturnDetails> {
   const { prepared, startDate, asOfDate } = args;
   const result: AccountReturnDetails = {
@@ -187,6 +189,7 @@ export async function calculateAccountReturns(args: {
   }
   result.effectiveStartDate = effectiveStart;
   result.effectiveEndDate = closing?.gt(0) ? asOfDate : effectiveEnd;
+  if (args.valuationOnly) return result;
   if (negative) {
     result.diagnostics = [
       {

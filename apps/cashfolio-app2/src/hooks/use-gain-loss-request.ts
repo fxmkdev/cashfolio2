@@ -5,7 +5,7 @@ export function useGainLossRequest<T>(args: {
   enabled: boolean;
   scopeKey: string;
   refreshKey: unknown;
-  load: () => Promise<T>;
+  load: (signal: AbortSignal) => Promise<T>;
   errorMessage?: string;
 }) {
   const [attempt, setAttempt] = useState(0);
@@ -21,8 +21,9 @@ export function useGainLossRequest<T>(args: {
   useEffect(() => {
     if (!enabled) return;
     let active = true;
+    const controller = new AbortController();
     setState({ scopeKey, refreshKey, attempt, loading: true });
-    void load()
+    void load(controller.signal)
       .then((data) => {
         if (active)
           setState({ scopeKey, refreshKey, attempt, data, loading: false });
@@ -41,6 +42,7 @@ export function useGainLossRequest<T>(args: {
       });
     return () => {
       active = false;
+      controller.abort();
     };
   }, [enabled, scopeKey, refreshKey, attempt, load, errorMessage]);
   const current =

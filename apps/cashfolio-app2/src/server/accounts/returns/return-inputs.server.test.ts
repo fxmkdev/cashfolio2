@@ -122,3 +122,13 @@ it("retains complete peers and paginates without truncating a busy book", async 
     skip: 1,
   });
 });
+
+it("restricts ledger transactions to the selected account while retaining complete peers", async () => {
+  await loadAccountReturnInputs("book", new Date("2026-01-03Z"), "a");
+  expect(mocks.transactions.mock.calls[0]![0].where.bookings).toEqual({
+    some: { accountId: "a" },
+  });
+  expect(
+    mocks.transactions.mock.calls[0]![0].select.bookings.where,
+  ).toBeUndefined();
+});

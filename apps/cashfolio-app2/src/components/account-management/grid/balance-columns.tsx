@@ -1,4 +1,4 @@
-import { Loader } from "@mantine/core";
+import { GridCellLoading } from "@/components/grid/grid-cell-loading";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { getCurrencyDecimals } from "@/shared/units/unit-format";
@@ -67,19 +67,7 @@ function renderReferenceBalance(
         options.balanceInReferenceCurrencyByGroupIdRef.current,
     })
   ) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-        }}
-      >
-        <Loader type="dots" size="xs" />
-      </div>
-    );
+    return <GridCellLoading label="Loading reference balance" />;
   }
   if (value == null) return null;
   return formatValue?.(value) ?? value.toString();

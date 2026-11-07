@@ -91,3 +91,8 @@ export function accountReturnExplanation(
       : "Money-weighted return: performance reflecting the timing and size of capital movements.")
   );
 }
+
+export type AccountReturnWorkResponse<T> =
+  | { status: "pending"; continuation: string }
+  | { status: "restart" }
+  | { status: "complete"; data: T };

@@ -945,9 +945,15 @@ sign; debt amounts are positive magnitudes in those reports.
   blank `Balance (<referenceCurrency>)` value.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances retain their stored sign, including group and footer sums.
-- For right-aligned numeric columns, loading and placeholder content inside
-  cells must also be right-aligned (for example dotted loaders in
-  `Balance (<referenceCurrency>)` cells).
+- Use `GridCellLoading` from `src/components/grid/grid-cell-loading.tsx` for
+  asynchronous numeric-cell loading, including reference balances, G/L, TWR, and
+  MWR. It renders the existing Mantine `dots` loader at `xs`, right-aligned and
+  vertically centered within the full cell. Do not use the default spinner or
+  duplicate loader markup in cell renderers.
+- Supply a sentence-case accessible loading label. Keep the cell dimensions,
+  existing delay/eligibility rules, and numeric placeholder alignment stable.
+  Loading continues across automatic batches and retries; show actionable errors
+  separately. Page-level loading still uses the global progress bar.
 
 ## Action Availability Pattern
 

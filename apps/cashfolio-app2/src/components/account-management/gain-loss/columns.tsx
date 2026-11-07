@@ -1,4 +1,4 @@
-import { Loader } from "@mantine/core";
+import { GridCellLoading } from "@/components/grid/grid-cell-loading";
 import type { ColGroupDef, ICellRendererParams } from "ag-grid-enterprise";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import type {
@@ -68,16 +68,7 @@ function renderGainLoss(
   valueFormatted: string | null | undefined,
 ) {
   return loading ? (
-    <div
-      style={{
-        display: "flex",
-        height: "100%",
-        justifyContent: "flex-end",
-        alignItems: "center",
-      }}
-    >
-      <Loader size="xs" type="dots" />
-    </div>
+    <GridCellLoading label="Loading gain/loss" />
   ) : result?.summary[field] == null ? (
     "—"
   ) : (

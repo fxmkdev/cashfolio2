@@ -1,4 +1,5 @@
-import { Button, Loader, Tooltip } from "@mantine/core";
+import { Button, Tooltip } from "@mantine/core";
+import { GridCellLoading } from "@/components/grid/grid-cell-loading";
 import type { ColGroupDef, ICellRendererParams } from "ag-grid-enterprise";
 import type {
   AccountReturnSummaries,
@@ -49,9 +50,7 @@ export function buildAccountReturnColumns(args: {
         valueFormatted,
       }: ICellRendererParams<AccountsGridRow>) => {
         if (args.loading)
-          return (
-            <Loader size="xs" aria-label={`Loading ${metric.toUpperCase()}`} />
-          );
+          return <GridCellLoading label={`Loading ${metric.toUpperCase()}`} />;
         const result = resultFor(data);
         if (!data || !result?.applicable) return "—";
         const value = result[metric];

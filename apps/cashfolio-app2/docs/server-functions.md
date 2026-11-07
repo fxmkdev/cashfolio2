@@ -24,12 +24,38 @@ cash.
 group with an `id`, or `{ kind: "total" }`. Individual targets optionally accept
 the ledger's `period`. `includeDetails` defaults to false; true includes dated
 valuation/TWR-factor and capital-movement tables with transaction references.
-Both functions authorize book access before starting their bounded read.
+Both functions authorize book access on every request before starting their
+bounded read. Responses are `{ status: "pending", continuation }`,
+`{ status: "restart" }`, or `{ status: "complete", data }`. Callers resume with
+`continuation` until complete; only complete data is published. Optional
+`batchSize` is an integer from 1 to 128 (default 128). The browser loader halves
+it after workload-limit errors, retains the continuation, and stops on abort.
+Repeated invalidations restart at most twice before presenting a retry action.
+
+Continuations are opaque server-generated IDs, bound to the verified user, book,
+revision, scope/target, selected period, table-detail option, reporting day, and
+publication cutoff. Missing, expired, or mismatched checkpoints request a
+restart. Book access is checked again even when resuming cached work. Account
+details load only transactions involving that account, retaining complete peers.
+
+Capital conversions and scope valuation dependencies are planned/deduplicated
+before fetching, with four concurrent lookups. Requests stop between lookup
+chunks after ten seconds, 128 lookups, or a provider-budget reserve; calculation
+requests stop between scopes after ten seconds or four scopes. Request-wide
+60-second/250-attempt limits remain enforced. Completed dependencies survive a
+failed sibling lookup. Calculation never performs unplanned provider requests.
+
+Temporary `account:returns-work:v1` checkpoints have a 15-minute TTL and an 8
+MiB size limit. A process-local fallback retains at most 16 checkpoints and 64
+MiB, including when Redis is unavailable. Expired/evicted checkpoints restart
+safely; temporary provider/fallback results never enter the stable summary
+cache. Checkpoints participate in book/user deletion and restore cleanup. Final
+completion rechecks revision, reporting day, and publication cutoff.
 
 Implementations live under `src/server/accounts/returns/`. A repeatable-read
 snapshot loads balances, complete transaction peers, and grouping metadata.
 Returns use the existing conversion scheduler and execution-pricing helpers,
-independently of the G/L FIFO caches. Return summaries use `account:returns:v1`
+independently of the G/L FIFO caches. Return summaries use `account:returns:v2`
 with revision, date, publication-cutoff, grouping, and account-state keys.
 Persistence requires stable valuation sources and matching snapshot/committed
 revisions. Cache failures fall back to calculation; resource failures propagate.

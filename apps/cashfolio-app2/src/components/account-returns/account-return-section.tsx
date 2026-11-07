@@ -1,3 +1,5 @@
+import { fetchWithResourceErrors } from "@/shared/resource-fetch";
+import { loadCompleteReturnWork } from "@/shared/load-return-work";
 import { useCallback, useMemo, useState } from "react";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import { getAccountReturnDetails } from "@/server/account-returns";
@@ -18,16 +20,24 @@ export function AccountReturnSection(args: {
     [accountId],
   );
   const load = useCallback(
-    () =>
-      getAccountReturnDetails({
-        data: {
-          accountBookId,
-          target,
-          period,
-          grouping: "accountStructure",
-          accountState: "all",
-        },
-      }),
+    (signal: AbortSignal) =>
+      loadCompleteReturnWork(
+        (continuation, batchSize) =>
+          getAccountReturnDetails({
+            signal,
+            fetch: fetchWithResourceErrors,
+            data: {
+              accountBookId,
+              continuation,
+              batchSize,
+              target,
+              period,
+              grouping: "accountStructure",
+              accountState: "all",
+            },
+          }),
+        signal,
+      ),
     [accountBookId, target, period],
   );
   const request = useGainLossRequest({

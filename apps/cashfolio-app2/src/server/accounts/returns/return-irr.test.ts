@@ -108,3 +108,34 @@ describe("dated money-weighted returns", () => {
     ).toThrow("duration");
   });
 });
+
+it("rejects three crossing roots and a crossing root alongside a tangent root", () => {
+  for (const amounts of [
+    ["-100", "360", "-431", "171.6"],
+    ["-100", "340", "-385", "145.2"],
+  ])
+    expect(() =>
+      irr(
+        amounts.map((amount, i) => [i * 365, amount]),
+        1095,
+      ),
+    ).toThrow("Multiple");
+});
+it("solves large alternating flows with a known daily rate, including negative rates", () => {
+  for (const daily of ["1.0001", "0.9999", "1"]) {
+    const growth = toMoney(daily);
+    let capital = toMoney(10000);
+    const flows = [{ days: 0, amount: capital.neg() }];
+    for (let days = 1; days < 1096; days++) {
+      capital = capital.mul(growth);
+      const deposit = toMoney(days % 3 === 0 ? -2 : 10);
+      capital = capital.plus(deposit);
+      flows.push({ days, amount: deposit.neg() });
+    }
+    flows.push({ days: 1096, amount: capital.mul(growth) });
+    expect(calculateMoneyWeightedReturn(flows, 1096).toNumber()).toBeCloseTo(
+      growth.pow(1096).minus(1).toNumber(),
+      12,
+    );
+  }
+});
