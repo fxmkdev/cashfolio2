@@ -32,6 +32,7 @@ import {
 } from "./-ledger/page-types";
 import { clampLedgerExplicitPeriodToBounds } from "./-ledger/explicit-period-bounds";
 import { resolvePeriodFilterMinBookingDate } from "./-ledger/period-filter-min-booking-date";
+import { buildLedgerAccountSwitcherData } from "./-ledger/account-switcher-data";
 
 const LedgerPageView = lazy(async () => {
   const module = await import("./-ledger/page-view");
@@ -174,6 +175,17 @@ export function LedgerPageContent() {
       }),
   });
 
+  const accountSwitcherTree = useMemo(
+    () =>
+      isBalanceAccount(loaderData.account)
+        ? buildLedgerAccountSwitcherData({
+            accounts: loaderData.accounts,
+            groups: loaderData.navigationGroups,
+          })
+        : undefined,
+    [loaderData],
+  );
+
   return (
     <Suspense fallback={null}>
       <LedgerPageView
@@ -199,6 +211,22 @@ export function LedgerPageContent() {
         }
 
         {...viewProps}
+        accountSwitcher={
+          accountSwitcherTree
+            ? {
+                tree: accountSwitcherTree,
+                onSelectAccount: (nextAccountId) => {
+                  pendingScrollRef.current = undefined;
+                  void navigate({
+                    to: "/$accountBookId/$accountId",
+                    params: { accountBookId, accountId: nextAccountId },
+                    search: { period: selectedPeriod?.value },
+                    state: { ledgerReturnTarget: undefined },
+                  });
+                },
+              }
+            : undefined
+        }
         returnNavigation={returnNavigation}
         onManageCategory={
           isIncomeAccount(loaderData.account) ||

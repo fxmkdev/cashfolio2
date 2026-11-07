@@ -6,6 +6,7 @@ import {
 } from "@/.prisma-client/enums";
 import {
   getAccountGroups,
+  getAccountNavigationGroups,
   getAccounts,
   getExistingNodes,
   getLedgerAccountActionData,
@@ -23,6 +24,7 @@ import {
 
 vi.mock("@/server/accounts", () => ({
   getAccountGroups: vi.fn(),
+  getAccountNavigationGroups: vi.fn().mockResolvedValue([]),
   getAccounts: vi.fn(),
   getExistingNodes: vi.fn(),
   getLedgerAccountActionData: vi.fn(),
@@ -56,6 +58,7 @@ const ledgerAccount: Awaited<ReturnType<typeof getAccountForLedger>> = {
 describe("loadLedgerPageData", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getAccountNavigationGroups).mockResolvedValue([]);
   });
 
   test.each([
@@ -135,6 +138,9 @@ describe("loadLedgerPageData", () => {
       });
       expect(getExistingNodes).toHaveBeenCalledExactlyOnceWith({
         data: { accountBookId: "book-1", accountState },
+      });
+      expect(getAccountNavigationGroups).toHaveBeenCalledExactlyOnceWith({
+        data: { accountBookId: "book-1" },
       });
       const props = createLedgerAccountEditModalProps({
         opened: true,
@@ -261,6 +267,14 @@ describe("loadLedgerPageData", () => {
 
       expect(data.showGainLoss).toBe(showGainLoss);
       expect(data.referenceCurrency).toBe("CHF");
+      if (data.account.type === AccountType.BALANCE) {
+        expect(getAccountNavigationGroups).toHaveBeenCalledExactlyOnceWith({
+          data: { accountBookId: "book-1" },
+        });
+      } else {
+        expect(getAccountNavigationGroups).not.toHaveBeenCalled();
+        expect(data.navigationGroups).toEqual([]);
+      }
       if (data.account.type !== AccountType.EQUITY) {
         expect(getLedgerData).toHaveBeenCalledWith(
           expect.objectContaining({

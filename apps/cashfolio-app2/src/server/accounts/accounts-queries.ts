@@ -52,6 +52,22 @@ export const getAccounts = createServerFn({ method: "GET" })
       );
   });
 
+export const getAccountNavigationGroups = createServerFn({ method: "GET" })
+  .validator((data: { accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    return prisma.accountGroup.findMany({
+      where: { accountBookId: data.accountBookId, type: AccountType.BALANCE },
+      select: {
+        id: true,
+        name: true,
+        parentGroupId: true,
+        isActive: true,
+        sortOrder: true,
+      },
+    });
+  });
+
 export const getAccountGroups = createServerFn({ method: "GET" })
   .validator(
     (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>

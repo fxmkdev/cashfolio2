@@ -578,6 +578,42 @@ callers to override it when needed.
 - Breadcrumb parent items are links and the current page item is plain text. Do
   not duplicate breadcrumb navigation with a top-right back button.
 
+### Ledger Account Switcher
+
+Financial account ledgers use the account title and a compact chevron as one
+**Switch Account** button inside the page heading. Display the account name
+once, preserve heading typography, and let long names wrap. Category and system
+ledgers retain plain headings.
+
+The button opens a Mantine `Combobox` containing an autofocused **Search
+Accounts** field and immediately visible hierarchical options. Render rows with
+the public `TreeSelectOption` export so spacing, connector lines, chevrons,
+hover states, and selection markers match form TreeSelect controls. Use public
+`flattenTreeData` metadata to supply the row hierarchy and a small wrapper for
+TreeSelect's line and spacing variables; do not copy row CSS or import private
+Mantine files. This navigation control is an exception to the form-field
+TreeSelect pattern. It follows the Accounts page's configured hierarchy and
+sibling ordering within the current account book. Only active financial accounts
+are destinations; omit archived accounts and groups without active account
+descendants. Retain the real ancestor groups of active destinations. Groups
+expand and collapse but cannot be selected. There is no archived-account option.
+
+Each opening clears the search and reveals the current active account's branch
+and siblings. When viewing an archived ledger directly, preserve its title,
+offer active destinations without a selected option, and reveal the first active
+account's branch. If none exist, show “No accounts found”. Search matches full
+hierarchy paths, preserving ancestor context; slashes inside names remain
+literal. Selecting an account opens its ledger and preserves the selected month,
+year, or All Periods state, subject to existing account-book date bounds.
+Transaction targeting and bulk selection are cleared. Normal browser history
+returns to the previous ledger. Arrow Down from search highlights the current
+account or first search result. Focus stays in search, with the highlighted
+option exposed through `aria-activedescendant`. Up/Down browse options;
+Left/Right navigate branches and Enter activates an account or toggles a group.
+Selection, Escape, outside click, and the title button close the popover.
+Dismissal restores focus to the title button. Keep the popover within the
+viewport and its tree scrollable on narrow layouts.
+
 ## Document Title Pattern
 
 - Use `createDocumentTitleHead` (`src/shared/document-title.ts`) from route

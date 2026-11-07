@@ -87,6 +87,13 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
   const heading = canvas.getByRole("heading", { level: 2 });
   const metadata = canvas.getByTestId("ledger-header-metadata");
   const toolbar = canvas.getByRole("group", { name: "Ledger Controls" });
+  const switcher = canvas.getByRole("button", { name: /^Switch Account:/ });
+  await expect(
+    canvas.getAllByText(switcher.textContent!, { exact: true }),
+  ).toHaveLength(1);
+  await expect(
+    canvas.queryByRole("combobox", { name: "Search Accounts" }),
+  ).not.toBeInTheDocument();
   const period = canvas.getByRole("button", {
     name: "Previous Period",
   }).parentElement!;
@@ -99,7 +106,15 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
     const header = heading
       .closest(".cf-page-shell")!
       .firstElementChild!.getBoundingClientRect();
-    for (const element of [heading, metadata, toolbar, period, split, add]) {
+    for (const element of [
+      heading,
+      switcher,
+      metadata,
+      toolbar,
+      period,
+      split,
+      add,
+    ]) {
       const rect = element.getBoundingClientRect();
       expect(rect.left).toBeGreaterThanOrEqual(bounds.left - 1);
       expect(rect.right).toBeLessThanOrEqual(bounds.right + 1);
@@ -157,6 +172,26 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
       );
     }
   });
+
+  if (container.getBoundingClientRect().width < 768) {
+    await userEvent.click(switcher);
+    const dialog = await screen.findByRole("listbox", {
+      name: "Accounts",
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", { name: "Search Accounts" }),
+      ).toHaveFocus(),
+    );
+    await waitFor(() => {
+      const bounds = dialog.getBoundingClientRect();
+      expect(bounds.left).toBeGreaterThanOrEqual(15);
+      expect(bounds.right).toBeLessThanOrEqual(window.innerWidth - 15);
+      expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
+    });
+    await userEvent.keyboard("{Escape}");
+    await expect(switcher).toHaveFocus();
+  }
 }
 
 export const ResponsiveHeaderWide: Story = {

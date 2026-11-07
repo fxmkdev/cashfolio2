@@ -1,0 +1,41 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  max-width: 100%;
+  font: inherit;
+  text-align: inherit;
+}
+
+.name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chevron {
+  flex-shrink: 0;
+}
+
+.dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  max-width: calc(100vw - 2rem);
+}
+
+.results {
+  min-height: 0;
+  flex-shrink: 1;
+}
+
+.options {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Wrapper variables normally supplied by TreeSelect; rows use Mantine CSS. */
+  --ts-level-offset: calc(1.25rem * var(--mantine-scale));
+  --ts-line-width: calc(0.0625rem * var(--mantine-scale));
+  --ts-line-color: var(--mantine-color-default-border);
+  --ts-option-padding-y: calc(0.25rem * var(--mantine-scale));
+  --ts-option-padding-x: calc(0.5rem * var(--mantine-scale));
+}

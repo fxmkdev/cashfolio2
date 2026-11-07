@@ -11,11 +11,13 @@ import {
 import { getLedgerAccountKindBadgeProps } from "./page-data";
 import type { LedgerPageViewProps } from "./page-view.types";
 import classes from "./page-header.module.css";
+import { LedgerAccountSwitcher } from "./account-switcher";
 
 export type LedgerPageHeaderProps = LedgerAccountActionsProps &
   Pick<
     LedgerPageViewProps,
     | "unitLabel"
+    | "accountSwitcher"
     | "periodFilterControls"
     | "simpleTransactionDisabledReason"
     | "onAddTransactionClick"
@@ -104,7 +106,17 @@ export function LedgerPageHeader(props: LedgerPageHeaderProps) {
   return (
     <TopPageHeader
       layout="responsive"
-      heading={<Title order={2}>{props.account.name}</Title>}
+      heading={
+        props.account.type === AccountType.BALANCE && props.accountSwitcher ? (
+          <LedgerAccountSwitcher
+            key={props.account.id}
+            account={props.account}
+            {...props.accountSwitcher}
+          />
+        ) : (
+          <Title order={2}>{props.account.name}</Title>
+        )
+      }
       description={
         props.account.type === AccountType.BALANCE ? (
           <LedgerMetadata account={props.account} />

@@ -16,6 +16,7 @@ import {
   useLedgerStoryTransactionActions,
 } from "./page-view.story-dialogs";
 import { useLedgerStoryPeriod } from "./page-view.story-period";
+import { createSwitcherStoryTree } from "./account-switcher.story-fixtures";
 
 export function LedgerPageStoryHarness(options: LedgerPageStoryOptions) {
   const navigate = useNavigate({ from: "/$accountBookId/$accountId" });
@@ -49,6 +50,14 @@ export function LedgerPageStoryHarness(options: LedgerPageStoryOptions) {
         {...editDialog.props}
         {...actions.props}
         columnDefs={columnDefs}
+        accountSwitcher={
+          account.type === AccountType.BALANCE
+            ? {
+                tree: createSwitcherStoryTree(account),
+                onSelectAccount: () => {},
+              }
+            : undefined
+        }
         returnNavigation={
           options.returnLabel
             ? {
