@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { notFound, rootRouteId } from "@tanstack/react-router";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -66,6 +67,36 @@ describe("loadLedgerPageData", () => {
     vi.mocked(getAccountRecordedGainLossEligibility).mockResolvedValue(false);
     vi.mocked(getAccountNavigationGroups).mockResolvedValue([]);
   });
+
+  test.each(["account", "account list"])(
+    "handles both missing-book rejections when the %s lookup fails first",
+    async (firstLookup) => {
+      const firstError = notFound({ routeId: rootRouteId });
+      const laterError = notFound({ routeId: rootRouteId });
+      let rejectLater!: (reason: unknown) => void;
+      const later = new Promise<never>((_resolve, reject) => {
+        rejectLater = reject;
+      });
+      if (firstLookup === "account") {
+        vi.mocked(getAccountForLedger).mockRejectedValue(firstError);
+        vi.mocked(getAccounts).mockReturnValue(later);
+      } else {
+        vi.mocked(getAccountForLedger).mockReturnValue(later);
+        vi.mocked(getAccounts).mockRejectedValue(firstError);
+      }
+
+      const result = loadLedgerPageData({
+        accountBookId: "missing-book",
+        accountId: "missing-account",
+      });
+      const rejected = expect(result).rejects.toBe(firstError);
+      rejectLater(laterError);
+      await rejected;
+      // Allow orphaned rejections to surface, as they do in the SSR process.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(getLedgerData).not.toHaveBeenCalled();
+    },
+  );
 
   test.each([
     { isActive: true, accountState: "active" },
