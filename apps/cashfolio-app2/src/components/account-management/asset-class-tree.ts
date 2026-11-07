@@ -81,17 +81,33 @@ function appendUnitGroups(result: TreeRow[], units: Map<string, UnitGroup>) {
       a.key.localeCompare(b.key, "en") ||
       a.id.localeCompare(b.id),
   );
+  const archivedClassParents = new Set<string>();
   for (const unit of orderedUnits) {
-    result.push(heading(unit.id, unit.label, unit.parentId, "unit"));
+    const hasActiveAccounts = unit.accounts.some((account) => account.isActive);
+    const parentId = hasActiveAccounts
+      ? unit.parentId
+      : archivedClassRowId(unit.parentId);
+    if (!hasActiveAccounts && !archivedClassParents.has(parentId)) {
+      result.push(heading(parentId, "Archived", unit.parentId, "archived"));
+      archivedClassParents.add(parentId);
+    }
+    result.push(heading(unit.id, unit.label, parentId, "unit"));
     unit.accounts.sort(
       (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
     );
-    result.push(...unit.accounts.filter((account) => account.isActive));
+    result.push(
+      ...unit.accounts
+        .filter((account) => account.isActive || !hasActiveAccounts)
+        .map((account) => ({ ...account, parentId: unit.id })),
+    );
     const archived = unit.accounts.filter((account) => !account.isActive);
-    if (archived.length)
+    if (hasActiveAccounts && archived.length)
       result.push(
         heading(archivedClassRowId(unit.id), "Archived", unit.id, "archived"),
-        ...archived,
+        ...archived.map((account) => ({
+          ...account,
+          parentId: archivedClassRowId(unit.id),
+        })),
       );
   }
 }
@@ -153,7 +169,6 @@ export function buildAssetClassTree(
     };
     unit.accounts.push({
       ...account,
-      parentId: account.isActive ? id : archivedClassRowId(id),
       accountGroupPath: getOriginalAccountGroupPath(account, groups),
     });
     units.set(id, unit);

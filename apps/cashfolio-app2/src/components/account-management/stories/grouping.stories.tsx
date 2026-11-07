@@ -310,6 +310,9 @@ export const AssetClassTrackingMethodRegrouping: Story = {
     await waitFor(() =>
       expect(balance(managedId)).toHaveTextContent(checkingBefore!),
     );
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".ag-row.ag-opacity-zero")).toBeNull(),
+    );
     await expect(
       canvasElement.querySelector(
         `[row-id="${managedId}"] [col-id="ag-Grid-AutoColumn"]`,
@@ -324,10 +327,19 @@ export const AssetClassTrackingMethodRegrouping: Story = {
       ),
     ).toHaveTextContent("Portfolio");
     await expect(
+      canvasElement.querySelector(`[row-id="${archivedClassRowId(classId)}"]`),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelector(
+        `[row-id="${unitRowId(classId, "CURRENCY:CHF")}"]`,
+      ),
+    ).not.toBeNull();
+    await expect(
       canvasElement.querySelector(
         `[row-id="${archivedClassRowId(unitRowId(classId, "CURRENCY:CHF"))}"]`,
       ),
-    ).not.toBeNull();
+    ).toBeNull();
+    await expect(canvasElement.querySelector('[row-id="old"]')).not.toBeNull();
     await expect(
       canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
     ).not.toBeInTheDocument();

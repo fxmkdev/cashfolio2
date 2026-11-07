@@ -92,7 +92,7 @@ describe("asset class account projection", () => {
     );
     const old = projected.find((row) => row.id === "old")!;
     expect(old).toMatchObject({
-      parentId: archivedClassRowId(chfUnitId("swiss")),
+      parentId: chfUnitId("swiss"),
       accountGroupPath: ["Bank", "Broker"],
       groupId: "broker",
       persistedParentId: "broker",
@@ -108,10 +108,7 @@ describe("asset class account projection", () => {
         .filter((row) => row.presentationKind === "archived")
         .map((row) => row.parentId),
     ).toEqual(
-      expect.arrayContaining([
-        chfUnitId("swiss"),
-        unitRowId(UNCLASSIFIED_ROW_ID, "CURRENCY:CHF"),
-      ]),
+      expect.arrayContaining([assetClassRowId("swiss"), UNCLASSIFIED_ROW_ID]),
     );
     expect(
       projected
@@ -176,7 +173,7 @@ describe("asset class account projection", () => {
       "BTC",
       "Total Value Accounts",
       "Unknown Unit",
-      "USD",
+      "Archived",
     ]);
     expect(rows.find((row) => row.id === "aapl-usd")?.parentId).toBe(
       rows.find((row) => row.id === "aapl-eur")?.parentId,
@@ -192,13 +189,16 @@ describe("asset class account projection", () => {
       "CURRENCY:USD",
     );
     expect(rows.find((row) => row.id === "archived-only")?.parentId).toBe(
-      archivedClassRowId(archivedOnlyUnit),
+      archivedOnlyUnit,
+    );
+    expect(rows.find((row) => row.id === archivedOnlyUnit)?.parentId).toBe(
+      archivedClassRowId(assetClassRowId("swiss")),
     );
     expect(
       rows
         .filter((row) => row.parentId === archivedOnlyUnit)
         .map((row) => row.presentationKind),
-    ).toEqual(["archived"]);
+    ).toEqual([undefined]);
     expect(
       rows
         .filter((row) => row.parentId === assetClassRowId("equities"))

@@ -105,12 +105,15 @@ its own text filter and full-path tooltip. Names remain single-line at the
 standard row height, with name-only filtering and tooltips. Account Structure
 retains the Asset Class column. Empty classes are omitted.
 
-In Asset Class, archived accounts appear in a collapsed **Archived** branch
-within their assigned unit group, regardless of their original group hierarchy.
-Class and unit totals include all descendant accounts exactly once, including
-archived and collapsed items; the overall totals match Account Structure. Each
-view aggregates reference balances and gain/loss in decimal precision through
-all ancestors, converting to numbers only for final display values. Each view
+In Asset Class, units containing only archived accounts appear beneath one
+collapsed **Archived** branch within their directly assigned class (or
+**Unclassified**), with accounts directly beneath each unit. Units containing
+active accounts retain a collapsed **Archived** branch for their archived
+accounts. These branches disregard the original account-group hierarchy. Class
+and unit totals include all descendant accounts exactly once, including archived
+and collapsed items; the overall totals match Account Structure. Each view
+aggregates reference balances and gain/loss in decimal precision through all
+ancestors, converting to numbers only for final display values. Each view
 remembers expansion independently for the session. New unit groups start
 collapsed. Switching grouping clears account selection. Class and unit headings
 support descendant account selection for bulk assignments but have no
