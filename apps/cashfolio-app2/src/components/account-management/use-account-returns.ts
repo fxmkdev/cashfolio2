@@ -1,4 +1,5 @@
 import { fetchWithResourceErrors } from "@/shared/resource-fetch";
+import { mergeAccountReturnProgress } from "@/shared/account-return-progress";
 import { loadCompleteReturnWork } from "@/shared/load-return-work";
 import { useCallback, useEffect, useState } from "react";
 import { getAccountReturnSummaries } from "@/server/account-returns";
@@ -42,9 +43,19 @@ export function useAccountReturns(args: {
         signal,
         (progress) => {
           if (signal.aborted) return;
-          setPartial(
+          setPartial((previous) =>
             progress
-              ? { scopeKey, refreshKey: args.refreshKey, progress }
+              ? {
+                  scopeKey,
+                  refreshKey: args.refreshKey,
+                  progress: mergeAccountReturnProgress(
+                    previous?.scopeKey === scopeKey &&
+                      previous.refreshKey === args.refreshKey
+                      ? previous.progress
+                      : undefined,
+                    progress,
+                  ),
+                }
               : undefined,
           );
         },
@@ -93,7 +104,7 @@ export function useAccountReturns(args: {
     ...request,
     data: request.data ?? partialData,
     completedIds,
-    cellVersion: `${scopeKey}:${progress?.workId ?? ""}:${progress?.sequence ?? 0}:${request.loading}`,
+    cellVersion: `${scopeKey}:${progress?.workId ?? ""}:${progress?.sequence ?? 0}:${[...(completedIds ?? [])].sort().join(",")}:${request.loading}`,
 
     onOpen,
     target:
