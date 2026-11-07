@@ -1312,8 +1312,21 @@ function handlers).
 
 ## Transaction Editing (EditTransactionModal)
 
-`src/components/transaction-editor/edit-transaction-modal.tsx` handles
-create/edit of transactions with split bookings:
+`src/components/transaction-editor/edit-transaction-modal.tsx` is the public
+entry point for creating/editing transactions with split bookings.
+
+The public module keeps its component, props, and type exports stable. Its
+implementation is grouped under `edit-transaction-modal/`: `controller.ts`
+composes the form and grid owners and reports combined dirty state; `form.ts`
+owns uncontrolled form initialization, date propagation, provisional date input,
+and submission; `grid.ts` owns copied rows, columns, locking, and grid context;
+`grid-events.ts` contains booking edits and row mutations; `view.tsx` renders
+the existing controls. Field rules remain in the adjacent validation helper,
+with the existing values, unit-defaults, and dirty-state helpers reused.
+Submission stops active cell editing before validation reads the latest form
+values.
+
+The editor preserves these behaviors:
 
 - **Debit/credit mutual exclusivity**: setting one clears the other
 - **Current account booking**: locked (read-only) and non-deletable

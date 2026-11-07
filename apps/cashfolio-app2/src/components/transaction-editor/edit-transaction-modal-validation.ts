@@ -11,7 +11,21 @@ import { validateGainLossSimpleTransactionInvariant } from "../../shared/transac
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
 import { numericFormatter } from "react-number-format";
 import type { AccountOption } from "@/shared/accounts/account-options";
-import type { BookingValues } from "./edit-transaction-modal-types";
+import type {
+  BookingValues,
+  TransactionFormValues,
+} from "./edit-transaction-modal-types";
+import {
+  formRootRule,
+  isNotEmpty,
+  type FormValidateInput,
+} from "@mantine/form";
+import {
+  formatUtcDateForLocale,
+  normalizeDateInputValueToUtcDay,
+  startOfUtcDay,
+} from "@/shared/date";
+import { getNumberFormatSymbols } from "../controls/formatted-number-input";
 
 export function validateEditTransactionBookingsRoot(args: {
   bookings: BookingValues[];
@@ -84,4 +98,54 @@ export function validateEditTransactionBookingsRoot(args: {
         },
       )}.`
     : null;
+}
+
+export function validateEditTransactionDate(args: {
+  value: Date | string | null | undefined;
+  accountBookStartDay: Date;
+  locale: string;
+}): string | null {
+  const date = normalizeDateInputValueToUtcDay(args.value, args.locale);
+  if (!date) return args.value ? "Date is invalid" : "Date is required";
+  return startOfUtcDay(date) < args.accountBookStartDay
+    ? `Date cannot be before account book start date (${formatUtcDateForLocale(args.accountBookStartDay, args.locale)}).`
+    : null;
+}
+
+export function createEditTransactionValidation(args: {
+  accounts: AccountOption[];
+  accountBookStartDay: Date;
+  locale: string;
+}): FormValidateInput<TransactionFormValues> {
+  const { thousandSeparator, decimalSeparator } = getNumberFormatSymbols(
+    args.locale,
+  );
+  const validateDate = (value: Date | string | null | undefined) =>
+    validateEditTransactionDate({ ...args, value });
+  return {
+    description: (value) =>
+      value && value.length > RESOURCE_LIMITS.description
+        ? "Description cannot exceed 4’000 characters."
+        : null,
+    date: validateDate,
+    bookings: {
+      [formRootRule]: (bookings) =>
+        validateEditTransactionBookingsRoot({
+          bookings,
+          accounts: args.accounts,
+          thousandSeparator,
+          decimalSeparator,
+        }),
+      date: validateDate,
+      account: (value) =>
+        !value
+          ? "Account or category is required"
+          : args.accounts.some((account) => account.value === value)
+            ? null
+            : "The selected account or category is no longer available. Choose another account or category.",
+      unit: isNotEmpty("Unit is required"),
+      debit: (value) => (value === 0 ? "Must be non-zero" : null),
+      credit: (value) => (value === 0 ? "Must be non-zero" : null),
+    },
+  };
 }

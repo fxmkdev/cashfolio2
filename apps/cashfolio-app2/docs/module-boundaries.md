@@ -29,6 +29,11 @@ Shared modules are grouped by domain rather than split into global `types/` and
 `utils/` buckets. Colocate tests with their owners; use direct module imports
 rather than adding forwarding files after moves.
 
+Contracts consumed by multiple apps belong in a workspace package, such as
+`@cashfolio/book-cache-contracts`. App-specific cache payload versions and key
+builders remain in `shared/accounts/book-cache-keys.ts`; shared cleanup families
+are imported from the package's public export.
+
 | Shared group                   | Contents                                                                                                      |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | `accounts/`                    | Account/book contracts, validation, tree projections, organization, cache keys, and account-management models |
