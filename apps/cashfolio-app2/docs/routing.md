@@ -84,6 +84,12 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   seed only the system-managed Gain/Loss account. This route is outside the
   account-book shell and shows either a user sign-out menu or a back link to the
   source account book when opened from the account-book switcher.
+  `NewAccountBookPageView` renders the controlled form and header actions. Its
+  route-local form controller owns defaults, validation, normalization, pending
+  state, and errors; the container owns loader/search hooks, locale context,
+  return-target resolution, creation, notification, cache invalidation, and
+  navigation. Successful creation invalidates book options before notifying and
+  opening the created book's Accounts page.
 - `admin/route.tsx` - Admin-only Cashfolio Admin shell route using Mantine
   `AppShell` with a left navbar. It is outside the account-book context, has no
   account-book switcher, and loads the current user profile plus locale for the
@@ -114,6 +120,10 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   submits deletion and redirects to `/user/delete?deleted=1` after success. See
   [terminology](ui-patterns.md#identity-and-financial-account-terminology) and
   [deletion behavior](server-functions.md#auth-and-authorization).
+  `UserDeletePageView` renders the affected-book preview, empty lists, and
+  deleted success state from typed props. The route retains search parsing,
+  preview loading, and POST handling. The success query skips authenticated
+  preview loading; deletion remains a native POST form.
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`

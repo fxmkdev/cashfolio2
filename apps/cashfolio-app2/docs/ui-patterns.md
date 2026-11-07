@@ -371,6 +371,13 @@ render trees in extracted `*PageView` components.
 - Extracted view components keep:
   - route-visible JSX trees (headers, grids, modals, actions)
   - typed prop contracts for data and UI callbacks
+- Controlled form views may receive a typed Mantine form, submission callback,
+  pending/error state, locale, and header actions. Keep form state, validation,
+  normalization, and submission guards in the route or its route-local
+  controller; stories can reuse that controller with a submission fixture.
+  Server calls, notifications, cache invalidation, and navigation remain wired
+  by the route. Native POST forms retain their action and method in the view;
+  request handlers stay in the route.
 - Storybook:
   - create stories for each `*PageView` (happy path, empty/partial/modal states)
   - keep one lightweight route smoke story to validate router path/search/link

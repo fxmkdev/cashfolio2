@@ -1,41 +1,16 @@
-import { RESOURCE_LIMITS } from "@/shared/resource-limits";
-import {
-  Button,
-  Container,
-  Group,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { DateInput } from "@mantine/dates";
-import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { IconCheck, IconPlus } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
-import { currencies } from "@/currencies";
-import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import {
-  getDateInputValueFormat,
-  normalizeDateInputValue,
-  startOfUtcDay,
-  startOfUtcMonth,
-} from "@/shared/date";
+import { IconCheck } from "@tabler/icons-react";
+import { useMemo } from "react";
+import { invalidateCachedUserAccountBooks } from "@/account-books/options";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { UserLocaleProvider, useUserLocale } from "@/user-locale-context";
-import { invalidateCachedUserAccountBooks } from "@/account-books/options";
 import {
   NewAccountBookPageActions,
   resolveNewAccountBookReturnTarget,
 } from "./-new-account-book-page-actions";
-
-type NewAccountBookFormValues = {
-  name: string;
-  referenceCurrency: string | null;
-  startDate: Date | string | null;
-};
+import { NewAccountBookPageView } from "./-new-account-book-page-view";
+import { useNewAccountBookForm } from "./-use-new-account-book-form";
 
 export const Route = createFileRoute("/account-books/new")({
   validateSearch: parseNewAccountBookSearch,
@@ -72,29 +47,6 @@ export function parseNewAccountBookSearch(
     : {};
 }
 
-function getCurrencyOptions() {
-  return Object.entries(currencies)
-    .map(([code, name]) => ({
-      value: code,
-      label: `${code} – ${name}`,
-    }))
-    .sort((left, right) => left.value.localeCompare(right.value));
-}
-
-function validateStartDate(value: Date | string | null) {
-  const startDate = normalizeDateInputValue(value);
-  if (!startDate) {
-    return value ? "Start date is invalid" : "Start date is required";
-  }
-
-  const startDay = startOfUtcDay(startDate);
-  if (startDay > startOfUtcDay(new Date())) {
-    return "Start date cannot be in the future";
-  }
-
-  return null;
-}
-
 function showAccountBookCreatedNotification() {
   notifications.show({
     color: "green",
@@ -127,132 +79,33 @@ function NewAccountBookPageContent({
   const { returnTo } = Route.useSearch();
   const userLocale = useUserLocale();
   const navigate = useNavigate({ from: "/account-books/new" });
-  const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const currencyOptions = useMemo(() => getCurrencyOptions(), []);
   const returnTarget = useMemo(
     () => resolveNewAccountBookReturnTarget({ accountBooks, returnTo }),
     [accountBooks, returnTo],
   );
+  const formController = useNewAccountBookForm(async (values) => {
+    const { createAccountBook } = await import("@/server/account-books");
+    const created = await createAccountBook({ data: values });
 
-  const form = useForm<NewAccountBookFormValues>({
-    mode: "controlled",
-    initialValues: {
-      name: "",
-      referenceCurrency: "CHF",
-      startDate: startOfUtcMonth(new Date()),
-    },
-    validate: {
-      name: (value) =>
-        value.trim().length === 0
-          ? "Account book name is required"
-          : value.trim().length > RESOURCE_LIMITS.name
-            ? "Name cannot exceed 255 characters."
-            : null,
-      referenceCurrency: (value) =>
-        value ? null : "Reference currency is required",
-      startDate: validateStartDate,
-    },
+    invalidateCachedUserAccountBooks();
+    showAccountBookCreatedNotification();
+    await navigate({
+      to: "/$accountBookId/accounts",
+      params: { accountBookId: created.id },
+      search: { tab: "BALANCE", mode: "active" },
+    });
   });
 
   return (
-    <Container size="xs" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between" align="center">
-          <Title order={2}>Create Account Book</Title>
-          <NewAccountBookPageActions
-            returnTarget={returnTarget}
-            userProfile={userProfile}
-          />
-        </Group>
-
-        <form
-          onSubmit={form.onSubmit(async (values) => {
-            const normalizedStartDate = normalizeDateInputValue(
-              values.startDate,
-            );
-            const referenceCurrency = values.referenceCurrency;
-            if (!normalizedStartDate || !referenceCurrency) {
-              return;
-            }
-
-            setSubmitError(null);
-            await runSubmit(async () => {
-              try {
-                const { createAccountBook } =
-                  await import("@/server/account-books");
-                const created = await createAccountBook({
-                  data: {
-                    name: values.name.trim(),
-                    referenceCurrency,
-                    startDate: startOfUtcDay(normalizedStartDate).toISOString(),
-                  },
-                });
-
-                invalidateCachedUserAccountBooks();
-                showAccountBookCreatedNotification();
-                await navigate({
-                  to: "/$accountBookId/accounts",
-                  params: { accountBookId: created.id },
-                  search: { tab: "BALANCE", mode: "active" },
-                });
-              } catch (error) {
-                setSubmitError(
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to create account book.",
-                );
-              }
-            });
-          })}
-        >
-          <Stack gap="md">
-            <TextInput
-              label="Account Book Name"
-              withAsterisk
-              disabled={isSubmitting}
-              {...form.getInputProps("name")}
-            />
-
-            <Select
-              label="Reference Currency"
-              withAsterisk
-              searchable
-              allowDeselect={false}
-              disabled={isSubmitting}
-              data={currencyOptions}
-              {...form.getInputProps("referenceCurrency")}
-            />
-
-            <DateInput
-              valueFormat={getDateInputValueFormat(userLocale)}
-              dateParser={(value) => normalizeDateInputValue(value, userLocale)}
-              label="Start Date"
-              withAsterisk
-              maxDate={startOfUtcDay(new Date())}
-              disabled={isSubmitting}
-              {...form.getInputProps("startDate")}
-            />
-
-            {submitError && (
-              <Text size="sm" c="red">
-                {submitError}
-              </Text>
-            )}
-
-            <Group justify="end">
-              <Button
-                type="submit"
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                leftSection={<IconPlus size={16} />}
-              >
-                Create
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Stack>
-    </Container>
+    <NewAccountBookPageView
+      {...formController}
+      userLocale={userLocale}
+      actions={
+        <NewAccountBookPageActions
+          returnTarget={returnTarget}
+          userProfile={userProfile}
+        />
+      }
+    />
   );
 }

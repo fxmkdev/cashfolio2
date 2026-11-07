@@ -63,6 +63,9 @@ describe("user deletion route", () => {
   });
 
   it("accepts the router's numeric parsing of the success redirect query", () => {
+    expect(route("/user/delete").validateSearch({ deleted: "1" })).toEqual({
+      deleted: "1",
+    });
     expect(route("/user/delete").validateSearch({ deleted: 1 })).toEqual({
       deleted: "1",
     });
@@ -102,12 +105,19 @@ describe("user deletion route", () => {
     expect(markup).toContain("Delete Your Cashfolio Account");
     expect(markup).toContain("Delete My Cashfolio Account");
     expect(markup).toContain('action="/user/delete"');
+    expect(markup).toContain('method="post"');
     expect(markup).toContain("Ada");
     expect(markup).toContain("Private Book");
     expect(markup).toContain("Shared Book");
     expect(markup).toContain("sign-in access");
     expect(markup).toContain("books will remain available to other users");
     expect(markup).not.toContain("Logto");
+  });
+
+  it("renders nothing when there is no preview", () => {
+    pageData.value = { deleted: false, preview: null };
+    expect(renderPage()).not.toContain("Delete Your Cashfolio Account");
+    expect(renderPage()).not.toContain('action="/user/delete"');
   });
 });
 

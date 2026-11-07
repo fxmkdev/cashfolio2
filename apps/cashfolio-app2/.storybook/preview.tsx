@@ -234,6 +234,17 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     component: () => <Story />,
   });
 
+  const newAccountBookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/account-books/new",
+    component: () => <Story />,
+  });
+  const userDeleteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/delete",
+    component: () => <Story />,
+  });
+
   const accountBookRouteTree = accountBookRoute.addChildren([
     accountBookIndexRoute,
     accountBookAccountsRoute,
@@ -255,6 +266,8 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
       rootStoryRoute,
       adminRouteTree,
       userSettingsRoute,
+      newAccountBookRoute,
+      userDeleteRoute,
       accountBookRouteTree,
     ]),
     history: createMemoryHistory({
