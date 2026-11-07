@@ -202,6 +202,7 @@ describe("period base-data cache", () => {
               name: "Cash",
               classifications: [{ nodeId: defaultAssetClassIds.EQUITIES }],
               trackingMethod: "INDIVIDUAL_UNITS",
+              isCashAccount: false,
 
               groupId: null,
               type: AccountType.BALANCE,
@@ -226,6 +227,68 @@ describe("period base-data cache", () => {
     vi.useRealTimers();
     delete process.env.PERIOD_BASE_CACHE_ENV;
   });
+
+  it.each([
+    [
+      "missing collections",
+      (value: Record<string, any>) => {
+        delete value.equityBookings;
+      },
+    ],
+    [
+      "invalid nested money",
+      (value: Record<string, any>) => {
+        value.endOfPeriodRawBalances = [
+          { accountId: "asset-1", rawBalance: 12 },
+        ];
+      },
+    ],
+    [
+      "invalid nested date",
+      (value: Record<string, any>) => {
+        value.selection.from = "2026-02-01";
+      },
+    ],
+    [
+      "invalid account flag",
+      (value: Record<string, any>) => {
+        value.baseAssetLiabilityAccounts[0].isCashAccount = "false";
+      },
+    ],
+    [
+      "invalid unit",
+      (value: Record<string, any>) => {
+        value.baseAssetLiabilityAccounts[0].unit = "UNKNOWN";
+      },
+    ],
+    [
+      "wrong book",
+      (value: Record<string, any>) => {
+        value.accountBookId = "another-book";
+      },
+    ],
+    [
+      "wrong period",
+      (value: Record<string, any>) => {
+        value.periodValue = "2026-01";
+      },
+    ],
+  ])(
+    "reloads %s cache payloads instead of returning invalid data",
+    async (_label, corrupt) => {
+      const input = { accountBookId: "book-1", period: "2026-02" };
+      const cold = await periodBaseCache.getOrLoadPeriodBaseData(input);
+      const [key, , encoded] = redisClient.setEx.mock.calls[0]!;
+      const payload = JSON.parse(encoded);
+      corrupt(payload);
+      redisState.kv.set(key, JSON.stringify(payload));
+      prisma.accountGroup.findMany.mockClear();
+      expect(await periodBaseCache.getOrLoadPeriodBaseData(input)).toEqual(
+        cold,
+      );
+      expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("loads on miss, stores with env-scoped key, and reuses cached hit", async () => {
     const first = await periodBaseCache.getOrLoadPeriodBaseData({

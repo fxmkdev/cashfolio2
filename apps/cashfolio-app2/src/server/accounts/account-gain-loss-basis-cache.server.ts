@@ -1,4 +1,8 @@
 import {
+  createCacheFailureReporter,
+  readValidatedMoneyCache,
+} from "../money-cache-read";
+import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../resource-context.server";
@@ -7,7 +11,7 @@ import { prisma } from "../../prisma.server";
 import { getRedisClient } from "../../redis.server";
 import { addUtcDays } from "../../shared/date";
 import { getAccountGainLossBasisCacheEntryKey } from "../../shared/book-cache-keys";
-import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
+import { encodeMoneyCache } from "../money-cache-codec";
 import {
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
@@ -32,8 +36,12 @@ const TTL_SECONDS = 7 * 24 * 60 * 60;
 const MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 type Range = Awaited<ReturnType<typeof loadAccountGainLossRange>>;
 const runSharedLoad = createUserScopedSharedWork<Range>();
-let hasWarnedReadFailure = false;
-let hasWarnedWriteFailure = false;
+const reportReadFailure = createCacheFailureReporter(
+  "Failed to read account G/L basis cache; continuing uncached.",
+);
+const reportWriteFailure = createCacheFailureReporter(
+  "Failed to write account G/L basis cache; continuing uncached.",
+);
 
 /** A revision alone cannot detect a future booking becoming effective as time passes. */
 async function readScope(args: { accountBookId: string; asOfDate: Date }) {
@@ -89,32 +97,16 @@ export async function loadAccountGainLossSummaryRange(args: {
   // Share closing work only for the same requested date and publication window.
   const inflightKey = `${cacheKey}:${args.asOfDate.toISOString()}:${latestFetchableDate.toISOString()}`;
   return runSharedLoad(inflightKey, async () => {
-    let cachedBasis: AccountGainLossBasisRange | undefined;
-    try {
-      const encoded = await redis.get(cacheKey);
-      if (
-        encoded &&
-        Buffer.byteLength(encoded, "utf8") <= MAX_SERIALIZED_BYTES
-      ) {
-        const parsed = decodeMoneyCache<unknown>(JSON.parse(encoded));
-        if (
-          isAccountGainLossBasisCacheData(parsed) &&
-          parsed.revision === scope.revision &&
-          parsed.watermark === scope.watermark &&
-          parsed.startDate.getTime() === scope.startDate.getTime()
-        )
-          cachedBasis = parsed;
-      }
-    } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedReadFailure) {
-        console.warn(
-          "Failed to read account G/L basis cache; continuing uncached.",
-          error,
-        );
-        hasWarnedReadFailure = true;
-      }
-    }
+    const cachedBasis = await readValidatedMoneyCache({
+      read: () => redis.get(cacheKey),
+      maxBytes: MAX_SERIALIZED_BYTES,
+      validate: (value: unknown): value is AccountGainLossBasisRange =>
+        isAccountGainLossBasisCacheData(value) &&
+        value.revision === scope.revision &&
+        value.watermark === scope.watermark &&
+        value.startDate.getTime() === scope.startDate.getTime(),
+      reportFailure: reportReadFailure,
+    });
     if (cachedBasis) {
       const scheduleLookup = createAccountGainLossLookupScheduler();
       const exchangeRateByKey = new Map<
@@ -170,13 +162,7 @@ export async function loadAccountGainLossSummaryRange(args: {
           }
         } catch (error) {
           rethrowResourceError(error);
-          if (!hasWarnedWriteFailure) {
-            console.warn(
-              "Failed to write account G/L basis cache; continuing uncached.",
-              error,
-            );
-            hasWarnedWriteFailure = true;
-          }
+          reportWriteFailure(error);
         }
       },
     });

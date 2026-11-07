@@ -1,3 +1,8 @@
+import { isPeriodBaseDataCacheEntry } from "./period-base-data-cache-validation";
+import {
+  createCacheFailureReporter,
+  readValidatedMoneyCache,
+} from "../../money-cache-read";
 import {
   checkResourceBudget,
   createUserScopedSharedWork,
@@ -8,7 +13,7 @@ import {
   getPeriodBaseCacheEntryKey,
   getPeriodBaseCacheIndexKey,
 } from "../../../shared/book-cache-keys";
-import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
+import { encodeMoneyCache } from "../../money-cache-codec";
 import { getRedisClient } from "../../../redis.server";
 import { normalizePeriodValue } from "../../../shared/period";
 import {
@@ -27,9 +32,15 @@ import {
 
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
-let hasWarnedPeriodBaseCacheReadFailure = false;
-let hasWarnedPeriodBaseCacheWriteFailure = false;
-let hasWarnedPeriodBaseCacheInvalidationFailure = false;
+const reportPeriodBaseCacheReadFailure = createCacheFailureReporter(
+  "Failed to read period base-data cache entry; continuing uncached.",
+);
+const reportPeriodBaseCacheWriteFailure = createCacheFailureReporter(
+  "Failed to write period base-data cache entry; continuing uncached.",
+);
+const reportPeriodBaseCacheInvalidationFailure = createCacheFailureReporter(
+  "Failed to clean up obsolete period cache entries; database revision still enforces invalidation.",
+);
 
 const runSharedLoad = createUserScopedSharedWork<PeriodBaseData>();
 
@@ -72,22 +83,16 @@ export async function getOrLoadPeriodBaseData(args: {
       periodCacheKey,
     });
 
-    try {
-      const cached = await redis.get(entryKey);
-      if (cached) {
-        const parsed = JSON.parse(cached) as unknown;
-        return decodeMoneyCache<PeriodBaseData>(parsed);
-      }
-    } catch (error) {
-      rethrowResourceError(error);
-      if (!hasWarnedPeriodBaseCacheReadFailure) {
-        console.warn(
-          "Failed to read period base-data cache entry; continuing uncached.",
-          error,
-        );
-        hasWarnedPeriodBaseCacheReadFailure = true;
-      }
-    }
+    const cached = await readValidatedMoneyCache({
+      read: () => redis.get(entryKey),
+      maxBytes: PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES,
+      validate: (value: unknown): value is PeriodBaseData =>
+        isPeriodBaseDataCacheEntry(value) &&
+        value.accountBookId === args.accountBookId &&
+        value.periodValue === periodValue,
+      reportFailure: reportPeriodBaseCacheReadFailure,
+    });
+    if (cached !== undefined) return cached;
 
     const snapshot = await loadPeriodBaseDataSnapshot({
       accountBookId: args.accountBookId,
@@ -131,13 +136,7 @@ export async function getOrLoadPeriodBaseData(args: {
       }
     } catch (error) {
       rethrowResourceError(error);
-      if (!hasWarnedPeriodBaseCacheWriteFailure) {
-        console.warn(
-          "Failed to write period base-data cache entry; continuing uncached.",
-          error,
-        );
-        hasWarnedPeriodBaseCacheWriteFailure = true;
-      }
+      reportPeriodBaseCacheWriteFailure(error);
     }
 
     return loaded;
@@ -181,12 +180,6 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     }
   } catch (error) {
     rethrowResourceError(error);
-    if (!hasWarnedPeriodBaseCacheInvalidationFailure) {
-      console.warn(
-        "Failed to clean up obsolete period cache entries; database revision still enforces invalidation.",
-        error,
-      );
-      hasWarnedPeriodBaseCacheInvalidationFailure = true;
-    }
+    reportPeriodBaseCacheInvalidationFailure(error);
   }
 }
