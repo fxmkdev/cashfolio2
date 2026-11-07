@@ -10,7 +10,7 @@ import type {
   AccountReturnSummaries,
   AccountReturnTarget,
 } from "@/shared/account-returns";
-import { buildAccountReturnColumns } from "@/components/account-management/return-columns";
+import { buildAccountReturnColumns } from "@/components/account-management/returns/columns";
 import { AccountReturnSummaryView } from "./return-summary";
 import { ReturnCalculation } from "./return-calculation";
 

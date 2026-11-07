@@ -1,6 +1,6 @@
 import { useAssetClasses } from "@/classification-context";
 import { buildAccountGainLossColumns } from "../gain-loss/columns";
-import { buildAccountReturnColumns } from "../return-columns";
+import { buildAccountReturnColumns } from "../returns/columns";
 import { useUserLocale } from "@/user-locale-context";
 import { useMemo, useRef } from "react";
 import { type ColDef, type ColGroupDef } from "ag-grid-enterprise";
