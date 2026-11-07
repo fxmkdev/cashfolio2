@@ -269,12 +269,10 @@ function categoryActionsMenuPlay(
     await userEvent.click(
       canvas.getByRole("button", { name: "Category Actions" }),
     );
-    await expect(
-      await screen.findByRole("menuitem", { name: "Archive" }),
-    ).toBeVisible();
-    await expect(
-      screen.getByRole("menuitem", { name: "Delete" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    });
     if (equitySubtype !== EquityAccountSubtype.GAIN_LOSS) {
       await expect(
         screen.getByRole("menuitem", { name: "Manage Category" }),
