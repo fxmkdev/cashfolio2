@@ -39,6 +39,16 @@ export function LedgerAccountSwitcher({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
   const optionsId = useId();
+  const openingAccountId = useMemo(
+    () =>
+      tree.accountIds.has(account.id)
+        ? account.id
+        : getLedgerAccountSwitcherOptions(
+            tree.data,
+            getTreeExpandedState(tree.data, "*"),
+          ).find(({ node }) => tree.accountIds.has(node.value))?.node.value,
+    [account.id, tree],
+  );
   const data = useMemo(
     () => filterTreeData(tree.data, query, filterLedgerAccountNode),
     [tree.data, query],
@@ -84,7 +94,7 @@ export function LedgerAccountSwitcher({
         filterTreeData(tree.data, nextQuery, filterLedgerAccountNode),
         nextQuery.trim()
           ? "*"
-          : (tree.ancestorsByAccountId.get(account.id) ?? []),
+          : (tree.ancestorsByAccountId.get(openingAccountId ?? "") ?? []),
       ),
     );
   }
@@ -127,11 +137,16 @@ export function LedgerAccountSwitcher({
           shift: { padding: 16 },
           size: { padding: 16 },
         }}
-        onEnterTransitionEnd={() =>
-          optionsRef.current
-            ?.querySelector<HTMLElement>('[aria-selected="true"]')
-            ?.scrollIntoView({ block: "nearest" })
-        }
+        onEnterTransitionEnd={() => {
+          const index = options.findIndex(
+            ({ node }) => node.value === openingAccountId,
+          );
+          const rows =
+            optionsRef.current?.querySelectorAll<HTMLElement>(
+              '[role="option"]',
+            );
+          rows?.[index]?.scrollIntoView({ block: "nearest" });
+        }}
       >
         <Combobox.Target
           targetType="button"

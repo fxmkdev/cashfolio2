@@ -163,22 +163,18 @@ for (const period of ["2026-01", "2026", undefined]) {
       page.getByRole("option", { name: "E2E Travel Account", exact: true }),
     ).toHaveAttribute("aria-selected", "true");
     await searchInput.fill("E2E Archived Financial Account");
-    await page
-      .getByRole("option", {
+    await expect(
+      page.getByText("No accounts found", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("option", {
         name: "E2E Archived Financial Account",
         exact: true,
-      })
-      .click();
-    await expect(page).toHaveURL(
-      `/${seeded.accountBookId}/${archivedFinancialAccountId}${search}`,
-    );
-    await expect(
-      page.getByRole("main").getByText("Archived", { exact: true }),
-    ).toBeVisible();
+      }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
     await page.goBack();
-    await expect(page).toHaveURL(
-      `/${seeded.accountBookId}/${distantAccountId}${search}`,
-    );
+    await expect(page).toHaveURL(source);
 
     async function userSwitchToSibling() {
       await switcher.click();
@@ -197,6 +193,39 @@ for (const period of ["2026-01", "2026", undefined]) {
     }
   });
 }
+
+test("an archived ledger offers only active destinations and preserves its period", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${seeded.accountBookId}/${archivedFinancialAccountId}?period=2026-01`,
+  );
+  const switcher = page.getByRole("button", {
+    name: "Switch Account: E2E Archived Financial Account",
+    exact: true,
+  });
+  await expect(
+    page.getByRole("heading", {
+      name: "E2E Archived Financial Account",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await switcher.click();
+  const options = page.getByRole("listbox", { name: "Accounts" });
+  await expect(options.locator('[aria-selected="true"]')).toHaveCount(0);
+  const search = page.getByRole("combobox", { name: "Search Accounts" });
+  await search.fill("E2E Archived Financial Account");
+  await expect(
+    page.getByText("No accounts found", { exact: true }),
+  ).toBeVisible();
+  await search.fill(seeded.savingsAccount.name);
+  await page
+    .getByRole("option", { name: seeded.savingsAccount.name, exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    `/${seeded.accountBookId}/${seeded.savingsAccount.id}?period=2026-01`,
+  );
+});
 
 test("counterparty navigation preserves the immediate source across filters, reload and history", async ({
   page,

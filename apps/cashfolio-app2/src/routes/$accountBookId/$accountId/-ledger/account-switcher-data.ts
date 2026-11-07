@@ -1,10 +1,6 @@
 import type { TreeNodeData } from "@mantine/core";
 import { AccountType } from "@/.prisma-client/enums";
 import { sortAccountHierarchyNodes } from "@/shared/account-hierarchy-order";
-import {
-  projectArchivedAccountHierarchy,
-  type ArchiveHierarchyNode,
-} from "@/shared/archived-account-hierarchy";
 
 type NavigationAccount = {
   id: string;
@@ -23,10 +19,12 @@ export type NavigationGroup = {
   sortOrder: number | null;
 };
 
-type NavigationNode = ArchiveHierarchyNode & {
+type NavigationNode = {
+  id: string;
+  nodeType: "account" | "accountGroup";
+  parentId: string | undefined;
   name: string;
   sortOrder: number | null;
-  isVirtualArchivedGroup?: boolean;
 };
 
 export type LedgerAccountSwitcherData = {
@@ -43,49 +41,41 @@ export function buildLedgerAccountSwitcherData({
   groups: NavigationGroup[];
 }): LedgerAccountSwitcherData {
   const financialAccounts = accounts.filter(
-    (account) => account.type === AccountType.BALANCE,
+    (account) => account.type === AccountType.BALANCE && account.isActive,
   );
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
+  const neededGroupIds = new Set<string>();
+  for (const account of financialAccounts) {
+    let groupId = account.groupId;
+    while (groupId && groupsById.has(groupId) && !neededGroupIds.has(groupId)) {
+      neededGroupIds.add(groupId);
+      groupId = groupsById.get(groupId)!.parentGroupId;
+    }
+  }
   const groupValue = (id: string | null) => (id ? `group:${id}` : undefined);
-  const nodes: NavigationNode[] = [
-    ...groups.map((group): NavigationNode => ({
-      ...group,
-      id: groupValue(group.id)!,
-      parentId: groupValue(group.parentGroupId),
-      nodeType: "accountGroup",
-    })),
+  const nodes = sortAccountHierarchyNodes<NavigationNode>([
+    ...groups
+      .filter((group) => neededGroupIds.has(group.id))
+      .map((group): NavigationNode => ({
+        ...group,
+        id: groupValue(group.id)!,
+        parentId: groupValue(group.parentGroupId),
+        nodeType: "accountGroup",
+      })),
     ...financialAccounts.map((account): NavigationNode => ({
       ...account,
       parentId: groupValue(account.groupId),
       nodeType: "account",
     })),
-  ];
-  const { parentIdById, archivedGroups } =
-    projectArchivedAccountHierarchy(nodes);
-  const projectedNodes = sortAccountHierarchyNodes<NavigationNode>([
-    ...nodes.map((node) => ({
-      ...node,
-      parentId: parentIdById.get(node.id),
-    })),
-    ...archivedGroups.map(({ id, parentId }): NavigationNode => ({
-      id,
-      parentId,
-      name: "Archived",
-      nodeType: "accountGroup",
-      isActive: false,
-      sortOrder: null,
-      isVirtualArchivedGroup: true,
-    })),
   ]);
+  const parentIdById = new Map(nodes.map((node) => [node.id, node.parentId]));
   const treeNodeById = new Map<string, TreeNodeData>(
-    projectedNodes.map((node) => [
-      node.id,
-      { value: node.id, label: node.name },
-    ]),
+    nodes.map((node) => [node.id, { value: node.id, label: node.name }]),
   );
   const data: TreeNodeData[] = [];
   const ancestorsByAccountId = new Map<string, string[]>();
 
-  for (const node of projectedNodes) {
+  for (const node of nodes) {
     const treeNode = treeNodeById.get(node.id)!;
     const ancestors: string[] = [];
     let parentId = node.parentId;
@@ -107,13 +97,6 @@ export function buildLedgerAccountSwitcherData({
       parent.children.push(treeNode);
     } else {
       data.push(treeNode);
-    }
-  }
-
-  for (const node of projectedNodes) {
-    const treeNode = treeNodeById.get(node.id)!;
-    if (node.nodeType === "accountGroup" && !treeNode.children?.length) {
-      treeNode.nodeProps!.disabled = true;
     }
   }
 

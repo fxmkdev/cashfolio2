@@ -63,12 +63,15 @@ export const BrowseAndSearch: Story = {
     await expect(
       screen.queryByRole("option", { name: "Travel EUR" }),
     ).not.toBeInTheDocument();
-    await userEvent.click(screen.getByText("Empty Group", { exact: true }));
-    await userEvent.keyboard("{Enter}");
-    await expect(args.onSelectAccount).not.toHaveBeenCalled();
     await expect(
-      screen.getByRole("listbox", { name: "Accounts" }),
-    ).toBeVisible();
+      screen.queryByText("Empty Group", { exact: true }),
+    ).not.toBeInTheDocument();
+    await userEvent.type(search, "Retired Account");
+    await expect(screen.getByText("No accounts found")).toBeVisible();
+    await expect(
+      screen.queryByRole("option", { name: "Retired Account" }),
+    ).not.toBeInTheDocument();
+    await userEvent.clear(search);
     await userEvent.click(screen.getByText("Other Bank", { exact: true }));
     await expect(
       screen.getByRole("option", { name: "Travel EUR" }),
@@ -255,7 +258,7 @@ export const SelectAndReopen: Story = {
             setAccount({
               ...account,
               id,
-              name: id === "retired" ? "Retired Account" : "Travel EUR",
+              name: id === "savings" ? "Savings" : "Travel EUR",
             })
           }
         />
@@ -275,16 +278,14 @@ export const SelectAndReopen: Story = {
       await expectOpen();
       return search;
     };
-    await userEvent.type(await open(), "Retired Account");
-    await userEvent.click(
-      screen.getByRole("option", { name: "Retired Account" }),
-    );
+    await userEvent.type(await open(), "Savings");
+    await userEvent.click(screen.getByRole("option", { name: "Savings" }));
     await expect(canvas.getByTestId("selected-account")).toHaveTextContent(
-      "retired",
+      "savings",
     );
     await open();
     await expect(
-      screen.getByRole("option", { name: "Retired Account" }),
+      screen.getByRole("option", { name: "Savings" }),
     ).toHaveAttribute("aria-selected", "true");
     await expect(
       screen.queryByRole("option", { name: "Travel EUR" }),
@@ -389,4 +390,82 @@ export const NativeDesignLight: Story = {
 export const NativeDesignDark: Story = {
   ...NativeDesignLight,
   parameters: { colorScheme: "dark" },
+};
+
+export const ArchivedLedger: Story = {
+  args: { account: { id: "retired", name: "Retired Account" } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: "Retired Account", level: 2 }),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Switch Account: Retired Account" }),
+    );
+    await expectOpen();
+    const list = screen.getByRole("listbox", { name: "Accounts" });
+    await expect(
+      within(list).queryAllByRole("option", { selected: true }),
+    ).toHaveLength(0);
+    await expect(
+      screen.queryByRole("option", { name: "Retired Account" }),
+    ).not.toBeInTheDocument();
+    const search = screen.getByRole("combobox", { name: "Search Accounts" });
+    await expect(search).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() =>
+      expect(search).toHaveAttribute(
+        "aria-activedescendant",
+        screen.getByRole("option", { name: "Checking" }).id,
+      ),
+    );
+    await userEvent.keyboard("{Enter}");
+    await expect(args.onSelectAccount).toHaveBeenCalledWith("checking");
+    await expect(args.onSelectAccount).toHaveBeenCalledTimes(1);
+    await expectClosed();
+  },
+};
+
+export const NoActiveAccounts: Story = {
+  args: {
+    account: { id: "retired", name: "Retired Account" },
+    tree: buildLedgerAccountSwitcherData({
+      groups: [
+        {
+          id: "bank",
+          name: "Bank",
+          parentGroupId: null,
+          isActive: true,
+          sortOrder: 0,
+        },
+      ],
+      accounts: [
+        {
+          id: "retired",
+          name: "Retired Account",
+          groupId: "bank",
+          type: AccountType.BALANCE,
+          isActive: false,
+          sortOrder: 0,
+        },
+      ],
+    }),
+  },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", {
+        name: "Switch Account: Retired Account",
+      }),
+    );
+    await expectOpen();
+    await expect(screen.getByText("No accounts found")).toBeVisible();
+    await expect(screen.queryAllByRole("option")).toHaveLength(0);
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await expect(args.onSelectAccount).not.toHaveBeenCalled();
+    await expect(
+      screen.getByRole("combobox", { name: "Search Accounts" }),
+    ).not.toHaveAttribute("aria-activedescendant");
+    await userEvent.keyboard("{Escape}");
+    await expectClosed();
+  },
 };

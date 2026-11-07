@@ -81,6 +81,7 @@ describe("ledger account switcher data", () => {
         group("empty", { name: "Z Empty" }),
       ],
       accounts: [
+        account("child", { groupId: "group" }),
         account("z", { name: "Zebra", sortOrder: 1 }),
         account("a", { name: "Alpha", sortOrder: 1 }),
         account("null", { name: "Unordered" }),
@@ -91,44 +92,61 @@ describe("ledger account switcher data", () => {
       "a",
       "z",
       "null",
-      "group:empty",
     ]);
-    expect(tree.data[0]!.nodeProps?.disabled).toBe(true);
-    expect(tree.accountIds).toEqual(new Set(["z", "a", "null"]));
+    expect(tree.data[0]!.children?.map((node) => node.value)).toEqual([
+      "child",
+    ]);
+    expect(tree.accountIds).toEqual(new Set(["child", "z", "a", "null"]));
   });
 
-  it("projects archived branches last and expands the complete current path", () => {
+  it("excludes archived accounts and prunes branches without active destinations", () => {
     const tree = buildLedgerAccountSwitcherData({
       groups: [
         group("bank"),
+        group("current", { parentGroupId: "bank" }),
         group("old", { parentGroupId: "bank", isActive: false }),
         group("nested", { parentGroupId: "old", isActive: false }),
+        group("empty"),
+        group("active-archived-only", { parentGroupId: "bank" }),
       ],
       accounts: [
-        account("active", { groupId: "bank" }),
+        account("active", { groupId: "current" }),
         account("archived", { groupId: "bank", isActive: false }),
         account("nested-archived", { groupId: "nested", isActive: false }),
         account("root-archived", { isActive: false }),
+        account("archived-only-child", {
+          groupId: "active-archived-only",
+          isActive: false,
+        }),
       ],
     });
-    const bank = tree.data.find((node) => node.value === "group:bank")!;
-    const archive = bank.children!.at(-1)!;
-    expect(archive.label).toBe("Archived");
-    expect(archive.children!.map((node) => node.value)).toEqual([
-      "archived",
-      "group:old",
-    ]);
-    expect(tree.data.at(-1)!.label).toBe("Archived");
-    expect(tree.ancestorsByAccountId.get("nested-archived")).toEqual([
+    expect(flatten(tree.data).map((node) => node.value)).toEqual([
       "group:bank",
-      archive.value,
-      "group:old",
-      "group:nested",
+      "group:current",
+      "active",
     ]);
-    expect(tree.ancestorsByAccountId.get("active")).toEqual(["group:bank"]);
-    expect(tree.ancestorsByAccountId.get("root-archived")).toEqual([
-      tree.data.at(-1)!.value,
+    expect(tree.accountIds).toEqual(new Set(["active"]));
+    expect(tree.ancestorsByAccountId.get("active")).toEqual([
+      "group:bank",
+      "group:current",
     ]);
+    expect(tree.ancestorsByAccountId.has("archived")).toBe(false);
+    expect(
+      filterLedgerAccountNode(
+        "bank / current / active",
+        flatten(tree.data).at(-1)!,
+      ),
+    ).toBe(true);
+  });
+
+  it("returns no options or selected account when every financial account is archived", () => {
+    const tree = buildLedgerAccountSwitcherData({
+      groups: [group("bank"), group("empty")],
+      accounts: [account("archived", { groupId: "bank", isActive: false })],
+    });
+    expect(tree.data).toEqual([]);
+    expect(tree.accountIds.size).toBe(0);
+    expect(tree.ancestorsByAccountId.size).toBe(0);
   });
 
   it("excludes category/system accounts and supports empty and ungrouped account trees", () => {

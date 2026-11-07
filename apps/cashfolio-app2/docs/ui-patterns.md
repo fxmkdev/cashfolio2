@@ -593,21 +593,26 @@ hover states, and selection markers match form TreeSelect controls. Use public
 TreeSelect's line and spacing variables; do not copy row CSS or import private
 Mantine files. This navigation control is an exception to the form-field
 TreeSelect pattern. It follows the Accounts page's configured hierarchy, sibling
-ordering, and Archived branches within the current account book. Groups expand
-and collapse but cannot be selected, including empty groups.
+ordering within the current account book. Only active financial accounts are
+destinations; omit archived accounts and groups without active account
+descendants. Retain the real ancestor groups of active destinations. Groups
+expand and collapse but cannot be selected. There is no archived-account option.
 
-Each opening clears the search and reveals the current account's branch and
-siblings. Search matches full hierarchy paths, preserving ancestor context;
-slashes inside names remain literal. Selecting an account opens its ledger and
-preserves the selected month, year, or All Periods state, subject to existing
-account-book date bounds. Transaction targeting and bulk selection are cleared.
-Normal browser history returns to the previous ledger. Arrow Down from search
-highlights the current account or first search result. Focus stays in search,
-with the highlighted option exposed through `aria-activedescendant`. Up/Down
-browse options; Left/Right navigate branches and Enter activates an account or
-toggles a group. Selection, Escape, outside click, and the title button close
-the popover. Dismissal restores focus to the title button. Keep the popover
-within the viewport and its tree scrollable on narrow layouts.
+Each opening clears the search and reveals the current active account's branch
+and siblings. When viewing an archived ledger directly, preserve its title,
+offer active destinations without a selected option, and reveal the first active
+account's branch. If none exist, show “No accounts found”. Search matches full
+hierarchy paths, preserving ancestor context; slashes inside names remain
+literal. Selecting an account opens its ledger and preserves the selected month,
+year, or All Periods state, subject to existing account-book date bounds.
+Transaction targeting and bulk selection are cleared. Normal browser history
+returns to the previous ledger. Arrow Down from search highlights the current
+account or first search result. Focus stays in search, with the highlighted
+option exposed through `aria-activedescendant`. Up/Down browse options;
+Left/Right navigate branches and Enter activates an account or toggles a group.
+Selection, Escape, outside click, and the title button close the popover.
+Dismissal restores focus to the title button. Keep the popover within the
+viewport and its tree scrollable on narrow layouts.
 
 ## Document Title Pattern
 

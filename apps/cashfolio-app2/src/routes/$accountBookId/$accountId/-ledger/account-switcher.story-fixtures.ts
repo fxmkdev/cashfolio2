@@ -11,7 +11,9 @@ export const switcherStoryAccount = {
 };
 
 export function createSwitcherStoryTree(
-  current: typeof switcherStoryAccount = switcherStoryAccount,
+  current: typeof switcherStoryAccount & {
+    isActive?: boolean;
+  } = switcherStoryAccount,
 ) {
   const groups: NavigationGroup[] = current.groupPathSegments.map(
     (name, index) => ({
@@ -58,7 +60,12 @@ export function createSwitcherStoryTree(
   return buildLedgerAccountSwitcherData({
     groups,
     accounts: [
-      account(current.id, current.name, currentGroupId),
+      account(
+        current.id,
+        current.name,
+        currentGroupId,
+        current.isActive ?? true,
+      ),
       account("savings", "Savings", currentGroupId, true, 1),
       account("travel", "Travel EUR", "other-bank"),
       account("other-checking", "Checking", "other-bank", true, 1),
