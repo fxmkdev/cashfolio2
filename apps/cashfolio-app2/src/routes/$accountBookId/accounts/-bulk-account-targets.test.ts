@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
-import type { TreeRow } from "./-page-types";
+import {
+  toAccountGridTreeRow,
+  isPersistedTreeRow,
+  type PersistedTreeRow,
+  type PersistedAccountRow,
+  type PersistedGroupRow,
+  type TreeRow,
+} from "./-page-types";
 import {
   createAccountBulkActionTarget,
   isBulkAccountRow,
@@ -12,11 +19,29 @@ import {
 
 function row(
   id: string,
+  nodeType: "account",
+  parentId?: string,
+  isActive?: boolean,
+): PersistedAccountRow;
+function row(
+  id: string,
+  nodeType: "accountGroup",
+  parentId?: string,
+  isActive?: boolean,
+): PersistedGroupRow;
+function row(
+  id: string,
+  nodeType: TreeRow["nodeType"],
+  parentId?: string,
+  isActive?: boolean,
+): PersistedTreeRow;
+function row(
+  id: string,
   nodeType: TreeRow["nodeType"],
   parentId?: string,
   isActive = true,
-): TreeRow {
-  return {
+): PersistedTreeRow {
+  const result = toAccountGridTreeRow({
     id,
     nodeType,
     parentId,
@@ -40,7 +65,10 @@ function row(
     archiveDisabledReason: undefined,
     unarchivable: false,
     unarchiveDisabledReason: undefined,
-  };
+  });
+  if (!isPersistedTreeRow(result))
+    throw new Error("Expected persisted fixture");
+  return result;
 }
 
 describe("asset class assignment targets", () => {
@@ -56,14 +84,17 @@ describe("asset class assignment targets", () => {
   ];
 
   it("shows checkboxes on balance accounts, real groups, and Archived wrappers", () => {
-    const projected = buildUnifiedAccountTreeRows(raw);
+    const projected =
+      buildUnifiedAccountTreeRows(raw).map(toAccountGridTreeRow);
     expect(projected.some((row) => row.isVirtualArchivedGroup)).toBe(true);
     expect(projected.every(isBulkAccountRow)).toBe(true);
     for (const nodeType of ["account", "accountGroup"] as const) {
       expect(
         isBulkAccountRow({
-          ...raw[0],
-          nodeType,
+          ...row(
+            "category",
+            nodeType === "account" ? "account" : "accountGroup",
+          ),
           type: AccountType.EQUITY,
         }),
       ).toBe(false);
@@ -80,7 +111,8 @@ describe("asset class assignment targets", () => {
   });
 
   it("selects balance-account leaves only, including archived accounts", () => {
-    const projected = buildUnifiedAccountTreeRows(raw);
+    const projected =
+      buildUnifiedAccountTreeRows(raw).map(toAccountGridTreeRow);
     expect(projected.filter(isBulkAccount).map((r) => r.id)).toEqual([
       "active",
       "archived",
@@ -100,7 +132,7 @@ describe("asset class assignment targets", () => {
   });
 
   it("freezes IDs and archived count when opening a dialog", () => {
-    const accounts = [raw[2], raw[3], raw[5]];
+    const accounts = [raw[2], raw[3], raw[5]].filter(isBulkAccount);
     const target = createAccountBulkActionTarget(accounts);
     accounts.push(row("new", "account", "group"));
     expect(target).toEqual({

@@ -1,3 +1,4 @@
+import { toAccountGridTreeRow } from "./-page-types";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
@@ -57,7 +58,7 @@ it("includes archived leaves once in balances and keeps virtual rows out of reor
   ];
   const rows = buildUnifiedAccountTreeRows(source);
   function Harness() {
-    const byParent = useRowsByParentKey(rows);
+    const byParent = useRowsByParentKey(rows.map(toAccountGridTreeRow));
     const balances = calculateBalanceInReferenceCurrencyByGroupId(
       byParent,
       rows,

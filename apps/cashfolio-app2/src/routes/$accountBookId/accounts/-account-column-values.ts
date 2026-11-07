@@ -5,9 +5,10 @@ import { getAccountTrackingMethodLabel } from "@/shared/account-tracking-method"
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
+  type TreeRow,
 } from "./-page-types";
 export function getAccountListAssetClassValue(
-  data: AccountsGridRow | undefined,
+  data: TreeRow | AccountsGridRow | undefined,
   assetClasses?: readonly ClassificationNode[],
 ): string | undefined {
   if (!data || isReferenceCurrencyTotalFooterRow(data)) {
@@ -23,7 +24,7 @@ export function getAccountListAssetClassValue(
 }
 
 export function getAccountListPathValue(
-  data: AccountsGridRow | undefined,
+  data: TreeRow | AccountsGridRow | undefined,
 ): string | undefined {
   if (
     !data ||
@@ -37,7 +38,7 @@ export function getAccountListPathValue(
 }
 
 export function getAccountListTrackingMethodValue(
-  data: AccountsGridRow | undefined,
+  data: TreeRow | AccountsGridRow | undefined,
 ): string | undefined {
   if (!data || isReferenceCurrencyTotalFooterRow(data)) return undefined;
   if (data.nodeType === "accountGroup") {
@@ -50,7 +51,7 @@ export function getAccountListTrackingMethodValue(
 }
 
 export function getAccountListUnitIdentifierDisplayValue(args: {
-  data: AccountsGridRow | undefined;
+  data: TreeRow | AccountsGridRow | undefined;
   referenceCurrency: string;
 }): string | null | undefined {
   const { data, referenceCurrency } = args;
@@ -74,7 +75,7 @@ export function getAccountListUnitIdentifierDisplayValue(args: {
 }
 
 export function getAccountListBalanceValue(args: {
-  data: AccountsGridRow | undefined;
+  data: TreeRow | AccountsGridRow | undefined;
   referenceCurrency: string;
 }): number | null {
   const { data, referenceCurrency } = args;

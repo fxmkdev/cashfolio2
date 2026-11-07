@@ -1,3 +1,4 @@
+import { toAccountGridTreeRow } from "./-page-types";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AssetClassContext } from "@/classification-context";
@@ -126,7 +127,7 @@ describe("shared Accounts presentation", () => {
       grouping: "accountStructure",
       isEquityTab: true,
     });
-    expect(categories.rows).toEqual(sourceRows);
+    expect(categories.rows).toEqual(sourceRows.map(toAccountGridTreeRow));
     expect(categories.pinnedBottomRowData).toBeUndefined();
     expect(categories.balanceInReferenceCurrencyByGroupId.size).toBe(0);
   });
