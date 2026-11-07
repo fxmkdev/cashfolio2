@@ -190,6 +190,12 @@ importers:
       '@fxmk/releaser':
         specifier: 0.5.7
         version: 0.5.7(magicast@0.5.5)
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
+      '@typescript/native':
+        specifier: npm:typescript@^7.0.2
+        version: typescript@7.0.2
       github-actionlint:
         specifier: 1.7.12
         version: 1.7.12

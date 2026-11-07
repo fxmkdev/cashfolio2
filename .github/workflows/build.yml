@@ -306,6 +306,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run actionlint
         run: pnpm lint:workflows
+      - name: Typecheck release tooling
+        run: pnpm typecheck:release
+      - name: Test release publication
+        run: pnpm test:release
 
   cli-typecheck:
     name: "cli: Typecheck"
@@ -539,12 +543,17 @@ jobs:
       - name: Checkout with full history
         uses: actions/checkout@v5
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - name: Setup
         uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --workspace-root install --frozen-lockfile
-      - name: Publish release
-        run: pnpm releaser publish ${{ needs.version.outputs.version }}
+      - name: Revalidate and publish release
+        run: pnpm exec node scripts/publish-release.ts
         env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RELEASE_SHA: ${{ needs.version.outputs.sha }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          FORCE_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_release }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
