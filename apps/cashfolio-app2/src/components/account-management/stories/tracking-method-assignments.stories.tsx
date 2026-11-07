@@ -2,7 +2,7 @@ import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
 import { Box } from "@mantine/core";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Unit } from "@/.prisma-client/enums";
-import { REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID } from "../page-types";
+import { REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID } from "../grid/rows";
 import {
   bulkRows,
   groupSelectionRows,
@@ -15,7 +15,7 @@ import {
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,

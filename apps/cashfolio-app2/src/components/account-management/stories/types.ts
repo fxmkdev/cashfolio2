@@ -1,7 +1,7 @@
-import type { AccountsPageViewProps } from "../page-view-types";
+import type { AccountsPageViewProps } from "../view-types";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
-import type { TreeRow } from "../page-types";
+import type { TreeRow } from "../grid/rows";
 import type { AccountsMode, TabValue } from "@/shared/account-tabs";
 export type AccountsStoryOptions = {
   refreshConstraints?: AccountsPageViewProps["onRefreshConstraints"];

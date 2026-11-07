@@ -2,7 +2,7 @@ import { Box, Text } from "@mantine/core";
 import { useMemo, useRef, useState } from "react";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { SettingsNavigation } from "@/routes/$accountBookId/settings/-settings-navigation";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { StoryControls } from "./controls";
 import { useAccountsStoryModel } from "./use-story-model";
 import { getStoryViewProps } from "./view-props";

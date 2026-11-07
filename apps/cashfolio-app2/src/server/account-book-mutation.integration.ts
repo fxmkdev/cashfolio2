@@ -79,9 +79,9 @@ const db = new PrismaClient({
 let databaseCreated = false;
 let applicationDb: PrismaClient | undefined;
 let mutations: typeof import("./accounts/accounts-mutations");
-let organize: typeof import("./accounts/organize");
+let organize: typeof import("./accounts/organize/handlers");
 let transactions: typeof import("./transactions/transactions-mutations");
-let settings: typeof import("./accounts/account-book-settings");
+let settings: typeof import("./accounts/settings/handlers");
 let boundary: typeof import("./account-book-mutation.server");
 
 const bookId = "book-1";
@@ -188,9 +188,9 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     applicationDb = (await import("../prisma.server")).prisma;
     boundary = await import("./account-book-mutation.server");
     mutations = await import("./accounts/accounts-mutations");
-    organize = await import("./accounts/organize");
+    organize = await import("./accounts/organize/handlers");
     transactions = await import("./transactions/transactions-mutations");
-    settings = await import("./accounts/account-book-settings");
+    settings = await import("./accounts/settings/handlers");
   });
   beforeEach(async () => {
     await db.accountBook.deleteMany();

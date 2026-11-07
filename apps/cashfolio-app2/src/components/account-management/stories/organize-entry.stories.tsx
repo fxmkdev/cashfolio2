@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { AccountsPageStoryHarness } from "./harness";
 import { expandAssignmentGroup } from "./interaction-helpers";
 import { organizeAccountNodes } from "./organize-action-fixtures";

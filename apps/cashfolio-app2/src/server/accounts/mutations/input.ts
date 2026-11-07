@@ -1,0 +1,175 @@
+import {
+  AccountTrackingMethod,
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../../../.prisma-client/enums";
+import { readStatementImportCsvFormat } from "../../../shared/statement-import-csv-format";
+import {
+  assertRecord,
+  nullableOptionalField,
+  optionalField,
+  requireArrayField,
+  requireBooleanField,
+  requireEnumField,
+  requireIntegerField,
+  requireNumberField,
+  requireStringField,
+  requireTextField,
+} from "../../input-validation";
+import type { AccountGroupInput, AccountInput } from "../accounts-types";
+
+function readCommonFields(data: Record<string, unknown>) {
+  return {
+    accountBookId: requireStringField(
+      data,
+      "accountBookId",
+      "Account book id is required.",
+    ),
+    name: requireStringField(data, "name", "Name is required"),
+    type: requireEnumField(data, "type", Object.values(AccountType)),
+    equityAccountSubtype: optionalField(
+      data,
+      "equityAccountSubtype",
+      (record, field) =>
+        requireEnumField(record, field, Object.values(EquityAccountSubtype)),
+    ),
+    sortOrder: optionalField(data, "sortOrder", requireIntegerField),
+    isCashAccount: optionalField(data, "isCashAccount", requireBooleanField),
+  };
+}
+
+export function validateAccountMutationInput(data: unknown): AccountInput {
+  assertRecord(data);
+  const commonFields = readCommonFields(data);
+  const openingBalance = nullableOptionalField(
+    data,
+    "openingBalance",
+    requireNumberField,
+  );
+  const csv = data.statementImportCsvFormat;
+  const parsedCsv =
+    csv === undefined ? undefined : readStatementImportCsvFormat(csv);
+  if (parsedCsv?.errors.length) {
+    throw new Error(parsedCsv.errors[0]);
+  }
+  return {
+    ...commonFields,
+    trackingMethod: optionalField(data, "trackingMethod", (record, field) =>
+      requireEnumField(record, field, Object.values(AccountTrackingMethod)),
+    ),
+    assetClassId: nullableOptionalField(
+      data,
+      "assetClassId",
+      requireStringField,
+    ),
+    groupId: nullableOptionalField(data, "groupId", requireStringField),
+    unit: optionalField(data, "unit", (record, field) =>
+      requireEnumField(record, field, Object.values(Unit)),
+    ),
+    currency: optionalField(data, "currency", requireTextField),
+    cryptocurrency: optionalField(data, "cryptocurrency", requireTextField),
+    symbol: optionalField(data, "symbol", requireTextField),
+    tradeCurrency: optionalField(data, "tradeCurrency", requireTextField),
+    statementImportCsvFormat: parsedCsv?.format,
+    openingBalance,
+  };
+}
+
+export function validateAccountUpdateInput(
+  data: unknown,
+): AccountInput & { id: string } {
+  assertRecord(data);
+  const id = requireStringField(data, "id", "Account id is required.");
+  return { ...validateAccountMutationInput(data), id };
+}
+
+export function validateAccountGroupMutationInput(
+  data: unknown,
+): AccountGroupInput {
+  assertRecord(data);
+  return {
+    ...readCommonFields(data),
+    parentGroupId: nullableOptionalField(
+      data,
+      "parentGroupId",
+      requireStringField,
+    ),
+    isActive: optionalField(data, "isActive", requireBooleanField),
+  };
+}
+
+export function validateAccountGroupUpdateInput(
+  data: unknown,
+): AccountGroupInput & { id: string } {
+  assertRecord(data);
+  const id = requireStringField(data, "id", "Account group id is required.");
+  return { ...validateAccountGroupMutationInput(data), id };
+}
+
+export function validateAccountBookNodeIdInput(data: unknown): {
+  id: string;
+  accountBookId: string;
+} {
+  assertRecord(data);
+  return {
+    id: requireStringField(data, "id", "Node id is required."),
+    accountBookId: requireStringField(
+      data,
+      "accountBookId",
+      "Account book id is required.",
+    ),
+  };
+}
+
+export function validateSetAccountsAssetClassInput(data: unknown): {
+  accountBookId: string;
+  accountIds: string[];
+  assetClassId: string | null;
+} {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    accountIds: readAccountIds(data, "accountIds"),
+    assetClassId:
+      data.assetClassId === null
+        ? null
+        : requireStringField(data, "assetClassId"),
+  };
+}
+
+export function validateSetAccountsTrackingMethodInput(data: unknown): {
+  accountBookId: string;
+  accountIds: string[];
+  trackingMethod: AccountTrackingMethod;
+} {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    accountIds: readAccountIds(data, "accountIds"),
+    trackingMethod: requireEnumField(
+      data,
+      "trackingMethod",
+      Object.values(AccountTrackingMethod),
+    ),
+  };
+}
+
+function readAccountIds(
+  data: Record<string, unknown>,
+  field: string,
+): string[] {
+  const ids = requireArrayField(data, field);
+  if (!ids.length) throw new Error("Select at least one account.");
+  return [
+    ...new Set(
+      Array.from(ids, (id) =>
+        requireStringField(
+          { id },
+          "id",
+          "Each account id must be a nonempty string.",
+        ),
+      ),
+    ),
+  ];
+}

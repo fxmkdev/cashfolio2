@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { AccountsPageStoryHarness } from "./harness";
 import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
 import { useState } from "react";
-import type { AccountsPageViewProps } from "../page-view-types";
+import type { AccountsPageViewProps } from "../view-types";
 import { expandAssignmentGroup } from "./interaction-helpers";
 import { organizeAccountNodes } from "./organize-action-fixtures";
 

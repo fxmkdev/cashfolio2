@@ -1,7 +1,7 @@
 export {
   getAccountOrganizeData,
   moveAccountTreeItems,
-} from "./accounts/organize";
+} from "./accounts/organize/handlers";
 
 export type {
   AccountGroupInput,
@@ -39,4 +39,4 @@ export {
   archiveAccountTreeItems,
   unarchiveAccountTreeItems,
   deleteAccountTreeItems,
-} from "./accounts/bulk-lifecycle";
+} from "./accounts/mutations/bulk-lifecycle";

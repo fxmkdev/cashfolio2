@@ -1,7 +1,7 @@
 import { writeAssetClass } from "../../classification-data";
 import { AccountType } from "../../../.prisma-client/enums";
 import type { Prisma } from "../../../.prisma-client/client";
-import type { validateSetAccountsAssetClassInput } from "../accounts-input-validation";
+import type { validateSetAccountsAssetClassInput } from "./input";
 
 export async function setAccountsAssetClassOperation(
   data: ReturnType<typeof validateSetAccountsAssetClassInput>,

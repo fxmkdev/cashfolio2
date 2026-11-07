@@ -3,9 +3,9 @@ import {
   assetClassRowId,
   unitRowId,
   archivedClassRowId,
-} from "../asset-class-tree";
+} from "../grid/asset-class-tree";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID } from "../page-types";
+import { REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID } from "../grid/rows";
 import { bulkRows } from "./assignment-fixtures";
 import {
   findVisibleDialog,
@@ -15,7 +15,7 @@ import {
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,

@@ -1,7 +1,7 @@
-import { isPersistedTreeRow, isPersistedGroupRow } from "../page-types";
+import { isPersistedTreeRow, isPersistedGroupRow } from "../grid/rows";
 import { getManagementTabs } from "@/shared/account-tabs";
-import type { AccountsPageViewProps } from "../page-view-types";
-import { isVirtualArchivedGroup } from "../archived-grid-rows";
+import type { AccountsPageViewProps } from "../view-types";
+import { isVirtualArchivedGroup } from "../grid/archived-rows";
 import { accountGroups, existingNodes } from "./fixtures";
 import { getStoryModalProps } from "./use-story-modals";
 import type { useAccountsStoryModel } from "./use-story-model";

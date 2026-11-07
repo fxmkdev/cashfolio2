@@ -1,5 +1,5 @@
 import { AccountType, Unit } from "@/.prisma-client/enums";
-import { type TreeRow } from "../page-types";
+import { type TreeRow } from "../grid/rows";
 import { createGroupRow, activeAssetRows } from "./fixtures";
 export const bulkRows: TreeRow[] = [
   createGroupRow({

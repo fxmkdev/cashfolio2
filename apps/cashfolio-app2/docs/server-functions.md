@@ -156,6 +156,32 @@ must continue to respect the supported browser baseline.
   `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
   `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
 
+### Account Module Organization
+
+The public `accounts.ts`, `account-books.ts`, and `account-gain-loss.ts` facades
+retain their exports. Inside `src/server/accounts/`, `accounts-queries.ts`,
+`accounts-mutations.ts`, and `accounts-mutation-operations.ts` retain their
+existing boundaries. Import internal modules directly from their owners:
+
+- `queries/`: selector metadata, unit usage, tree assembly, ledger actions,
+  reference balances, and page composition, each in a focused module. Database
+  tree data, valuation helpers, and the page snapshot remain separate owners.
+  `types.ts` owns shared query inputs/state; the read-only RepeatableRead page
+  snapshot supplies metadata and tree data to `page.ts` in one transaction.
+- `mutations/`: account/group operations, atomic bulk lifecycle handlers,
+  assignments, input validation, cash rules, and system-managed equity guards.
+- `hierarchy/`: group paths/ancestry/cycle helpers and group action-availability
+  sets shared by reads and writes. Cross-layer eligibility rules live in
+  `src/shared/account-tree-rules.ts` for server/browser reuse.
+- `organize/`: versioned snapshots, move validation, availability, and handlers.
+- `settings/`: account-book settings and deletion handlers.
+- `gain-loss/`: queries, range loading, calculations, recorded adjustments,
+  prefetch, and summary/basis caches.
+
+Tests and test support stay beside their implementation. Existing facade tests
+exercise the composed handlers; moving an implementation does not add a
+forwarding module at its old path.
+
 ### Account Mutation Operations
 
 Account mutations accept optional nullable `assetClassId`. Creation stores null
@@ -221,7 +247,9 @@ operation exports stable. Implementations live in
   creation, reconciliation, and removal
 - `status.ts`: account/group archive and unarchive eligibility and writes
 - `delete.ts`: account/group deletion checks and writes
-- `reorder.ts`: sibling sort-order writes
+- `asset-class.ts` and `tracking-method.ts`: bulk assignment operations
+- `input.ts`, `cash-rules.ts`, and `system-managed-equity-guards.ts`: validation
+  and mutation-specific rules
 - `types.ts`: shared operation inputs and mutation results
 
 Every operation still receives the owning mutation boundary's transaction
@@ -432,9 +460,8 @@ namespaces and preserves global valuation caches.
   quotes are classified as fallback and do not qualify. Metrics that needed
   provider fetches, short-lived fallback entries, or missing valuation results
   are returned but not persisted as derived History metrics.
-- `updateAccountBookSettings` (`src/server/accounts/account-book-settings.ts`)
-  also invalidates period caches when `referenceCurrency` or `startDate`
-  changes.
+- `updateAccountBookSettings` (`src/server/accounts/settings/handlers.ts`) also
+  invalidates period caches when `referenceCurrency` or `startDate` changes.
 - When `startDate` changes via `updateAccountBookSettings`, all bookings in
   transactions containing an `OPENING_BALANCES` booking are shifted to the day
   before the new start date, preserving the opening-balance date invariant.
@@ -896,13 +923,13 @@ automatic privilege restoration is introduced.
 
 `src/server/account-gain-loss.ts` exposes authorized GET functions for
 account-list summaries and individual-account summaries/details. The range
-loader in `src/server/accounts/account-gain-loss-range.server.ts` uses
-account-book start, the existing opening balance date, UTC as-of dates, shared
-holding transaction queries, and valuation conversions. Its metadata, opening
-balances, transactions, and group hierarchy share one read-only RepeatableRead
-snapshot; valuation requests and FIFO replay run after that transaction
-completes. All relevant real accounts participate before active/archived and
-balance-scope display filtering.
+loader in `src/server/accounts/gain-loss/range.server.ts` uses account-book
+start, the existing opening balance date, UTC as-of dates, shared holding
+transaction queries, and valuation conversions. Its metadata, opening balances,
+transactions, and group hierarchy share one read-only RepeatableRead snapshot;
+valuation requests and FIFO replay run after that transaction completes. All
+relevant real accounts participate before active/archived and balance-scope
+display filtering.
 
 `calculateAccountGainLoss` reuses the shared holding FIFO/pricing engine with
 chronological replay and per-account callbacks. Shared transaction decomposition
@@ -928,9 +955,9 @@ deduplication remain shared.
 
 ### Accounts-list accumulated G/L summary cache
 
-`src/server/accounts/account-gain-loss-cache.server.ts` caches one book-wide
-summary dataset, including leaf diagnostics and account/group view metadata.
-Filtering by persisted type (`BALANCE` or `EQUITY`), account state, and Decimal
+`src/server/accounts/gain-loss/cache.server.ts` caches one book-wide summary
+dataset, including leaf diagnostics and account/group view metadata. Filtering
+by persisted type (`BALANCE` or `EQUITY`), account state, and Decimal
 group/footer aggregation happen after retrieval. Accounts requests `BALANCE`
 with the `all` state; group metadata includes archived state so the shared
 display projection can aggregate virtual Archived groups from account leaves.
@@ -990,15 +1017,15 @@ basis persistence.
 
 ### Accumulated G/L historical basis cache
 
-`src/server/accounts/account-gain-loss-basis-cache.server.ts` supplies the
-Accounts-list cache and ledger summaries with book-wide realised G/L and open
-FIFO lots. The calculation separates chronological execution/transfer replay
-from closing valuation. A basis hit needs only lightweight validity reads and
-closing-price lookups; it does not load historical transactions or reprice
-executions. Calculation drawers still replay independently, using the same
-stages and retaining detailed execution explanations. Period Report and History
-use the shared matching rules with their own period-opening bases and do not use
-this historical basis cache.
+`src/server/accounts/gain-loss/basis-cache.server.ts` supplies the Accounts-list
+cache and ledger summaries with book-wide realised G/L and open FIFO lots. The
+calculation separates chronological execution/transfer replay from closing
+valuation. A basis hit needs only lightweight validity reads and closing-price
+lookups; it does not load historical transactions or reprice executions.
+Calculation drawers still replay independently, using the same stages and
+retaining detailed execution explanations. Period Report and History use the
+shared matching rules with their own period-opening bases and do not use this
+historical basis cache.
 
 - Key:
   `account:gain-loss-basis:v4:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.

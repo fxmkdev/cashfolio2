@@ -18,7 +18,7 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId: mocks.authorize,
 }));
-vi.mock("./accounts/account-gain-loss.server", () => ({
+vi.mock("./accounts/gain-loss/queries.server", () => ({
   queryAccountGainLossSummaries: mocks.summaries,
   queryAccountGainLoss: mocks.details,
   queryAccountRecordedGainLossEligibility: mocks.eligibility,

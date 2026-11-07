@@ -10,7 +10,7 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/auth/session.integration.ts",
-      "src/server/accounts/account-asset-class-migration.integration.ts",
+      "src/server/accounts/mutations/asset-class-migration.integration.ts",
       "src/server/classification-migration.integration.ts",
       "src/server/balance-account-migration.integration.ts",
       "src/server/account-book-mutation.integration.ts",

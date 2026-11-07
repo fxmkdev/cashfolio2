@@ -2,7 +2,7 @@ import { Stack } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { getRowsFor } from "./fixtures";
 import { StoryControls } from "./controls";
 import { useAccountsStoryModel } from "./use-story-model";

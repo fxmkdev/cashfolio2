@@ -21,7 +21,7 @@ import {
 import { getExplicitPeriodDateRange } from "../shared/period";
 
 import type { StatementImportCsvFormat } from "../shared/statement-import-csv-format";
-import { createGroupPathSegmentsResolver } from "./accounts/accounts-helpers";
+import { createGroupPathSegmentsResolver } from "./accounts/hierarchy/groups";
 import { doesLedgerAccountContextMatchAccount } from "./ledger-account-context";
 import { mapWithConcurrencyLimit } from "./concurrency";
 import { convertBookingValueToReference } from "./period/period-conversion";

@@ -4,7 +4,7 @@ import {
   createOrganizerStoryApi,
   organizeStoryNodes,
 } from "@/components/hierarchy-organize/story-fixtures";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { AccountsPageStoryHarness } from "./harness";
 
 function categoryApi() {

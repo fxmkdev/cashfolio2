@@ -2,11 +2,11 @@ import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-hel
 import { Button, Text } from "@mantine/core";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { useAccountsPageModalState } from "../page-modal-state";
+import { useAccountsPageModalState } from "../dialogs/state";
 import { findVisibleDialog } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,

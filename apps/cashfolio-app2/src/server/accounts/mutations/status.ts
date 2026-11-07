@@ -3,7 +3,7 @@ import { Prisma } from "../../../.prisma-client/client";
 import {
   assertNoSystemManagedAccountSubtype,
   assertNoSystemManagedGroupSubtype,
-} from "../accounts-system-managed-equity-guards";
+} from "./system-managed-equity-guards";
 import {
   accountTypeRequiresZeroBalanceForArchive,
   getAccountArchiveAvailability,
@@ -15,7 +15,7 @@ import { moneyIsZero } from "../../../shared/money";
 import {
   getGroupHierarchy,
   hasInactiveAncestorGroup,
-} from "../accounts-helpers";
+} from "../hierarchy/groups";
 
 export async function archiveAccountOperation(
   data: AccountBookNodeIdInput,

@@ -9,7 +9,7 @@ import {
   validateAccountGroupMutationInput,
   validateAccountGroupUpdateInput,
   validateAccountBookNodeIdInput,
-} from "./accounts-input-validation";
+} from "./mutations/input";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";

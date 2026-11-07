@@ -24,9 +24,10 @@ for:
 
 Primary consumers:
 
-- `src/server/accounts/accounts-queries.ts`
+- `src/server/accounts/queries/reference-balance-valuation.ts`
   - account tree reference balances
-  - `getAccountReferenceBalances` lazy hydration endpoint
+  - backs the `getAccountReferenceBalances` lazy hydration endpoint exposed by
+    `src/server/accounts/accounts-queries.ts`
 - `src/server/period/history/period-history-point-metrics.server.ts`
   - History point valuation conversions
   - exposes internal source metadata so derived History metrics are cached only
@@ -70,7 +71,7 @@ flowchart LR
 
 This deduplicates identical lookups during a single server-function execution.
 
-- `src/server/accounts/accounts-queries.ts`
+- `src/server/accounts/queries/reference-balance-valuation.ts`
   - Uses per-request maps for currencies, cryptocurrencies, and securities.
   - For account reference balances, all lookups use `today`, so memoization keys
     do not need an explicit date.

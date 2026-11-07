@@ -1,7 +1,7 @@
-import { toAccountGridTreeRow, isPersistedTreeRow } from "../page-types";
+import { toAccountGridTreeRow, isPersistedTreeRow } from "../grid/rows";
 import { useEffect } from "react";
-import { useAccountsPageModalState } from "../page-modal-state";
-import { getAccountsModalViewProps } from "../page-modal-props";
+import { useAccountsPageModalState } from "../dialogs/state";
+import { getAccountsModalViewProps } from "../dialogs/props";
 import { activeAssetRows } from "./fixtures";
 import type { AccountsStoryOptions } from "./types";
 

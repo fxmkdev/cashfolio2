@@ -3,9 +3,9 @@ import { Alert, Button } from "@mantine/core";
 import { PageShell } from "@/components/layout/page-shell";
 import { HierarchyOrganizer } from "@/components/hierarchy-organize/organizer";
 import { useHierarchyManagement } from "@/components/hierarchy-organize/use-hierarchy-management";
-import { AccountsPageHeader } from "./page-header";
-import { AccountsPageDialogs } from "./page-dialogs";
-import type { AccountsPageViewProps } from "./page-view-types";
+import { AccountsPageHeader } from "./header";
+import { AccountsPageDialogs } from "./dialogs/dialogs";
+import type { AccountsPageViewProps } from "./view-types";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 
 type CategoryOrganizer = ReturnType<typeof useHierarchyManagement>;
