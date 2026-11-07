@@ -37,5 +37,6 @@ export {
 } from "./accounts/accounts-mutations";
 export {
   archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
   deleteAccountTreeItems,
 } from "./accounts/bulk-lifecycle";

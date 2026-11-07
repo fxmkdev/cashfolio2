@@ -1,6 +1,9 @@
 import { Button, Checkbox, Group, Text, Tooltip } from "@mantine/core";
-import { bulkLifecycleAvailability } from "./lifecycle";
-import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
+import { bulkLifecycleAvailability, bulkStatusAction } from "./lifecycle";
+import type {
+  OrganizeNodeRef,
+  OrganizeLifecycleAction,
+} from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
 import styles from "./organizer.module.css";
 
@@ -22,7 +25,7 @@ export function OrganizerToolbar({
 }: {
   selectedCount: number;
   selected: OrganizeNodeRef[];
-  onBulkLifecycle: (action: "archive" | "delete") => void;
+  onBulkLifecycle: (action: OrganizeLifecycleAction) => void;
   roots: OrganizeNodeRef[];
   onMove: () => void;
   onClear: () => void;
@@ -47,6 +50,7 @@ export function OrganizerToolbar({
     (node) => node.nodeType === "accountGroup",
   ).length;
   const accounts = selected.length - groups;
+  const statusAction = bulkStatusAction(organizer.snapshot, selected);
   const status =
     hint ||
     (organizer.pending
@@ -81,20 +85,31 @@ export function OrganizerToolbar({
           </Button>
           {organizer.kind === "accounts" &&
             organizer.supportsBulkLifecycle &&
-            (["archive", "delete"] as const).map((action) => {
+            ([statusAction, "delete"] as const).map((action) => {
               const available = bulkLifecycleAvailability(
                 organizer.snapshot,
                 selected,
                 action,
               );
-              const label = action === "archive" ? "Archive" : "Delete";
+              const label =
+                action === "archive"
+                  ? "Archive"
+                  : action === "unarchive"
+                    ? "Unarchive"
+                    : "Delete";
               return (
                 <Tooltip key={action} label={available.reason ?? label}>
                   <span>
                     <Button
                       size="sm"
                       variant="light"
-                      color={action === "archive" ? "yellow" : "red"}
+                      color={
+                        action === "archive"
+                          ? "yellow"
+                          : action === "unarchive"
+                            ? "blue"
+                            : "red"
+                      }
                       aria-description={available.reason}
                       disabled={!available.enabled || blocked || dragging}
                       onClick={() => onBulkLifecycle(action)}

@@ -124,9 +124,13 @@ export function HierarchyOrganizer({
         roots={roots}
         onMove={() => setDialogItems(roots)}
         onClear={clearSelection}
-        onBulkLifecycle={(action) =>
-          setBulkDialog({ action, items: [...selected] })
-        }
+        onBulkLifecycle={(action) => {
+          if (action === "unarchive")
+            void organizer.submitState.runSubmit(() =>
+              organizer.performBulkLifecycle(action, [...selected]),
+            );
+          else setBulkDialog({ action, items: [...selected] });
+        }}
         blocked={movementBlocked}
         dragging={drag.dragging}
         hint={drag.hint}

@@ -38,7 +38,7 @@ export function organizeLifecycleAvailability(
 export function bulkLifecycleAvailability(
   snapshot: OrganizeSnapshot | undefined,
   targets: OrganizeNodeRef[],
-  action: "archive" | "delete",
+  action: OrganizeLifecycleAction,
 ) {
   if (!targets.length)
     return { enabled: false, reason: "Select at least one account or group." };
@@ -57,6 +57,23 @@ export function bulkLifecycleAvailability(
     }
   }
   return { enabled: true, reason: undefined };
+}
+
+export function bulkStatusAction(
+  snapshot: OrganizeSnapshot | undefined,
+  targets: OrganizeNodeRef[],
+): "archive" | "unarchive" {
+  return targets.length > 0 &&
+    targets.every((target) =>
+      snapshot?.nodes.some(
+        (node) =>
+          node.id === target.id &&
+          node.nodeType === target.nodeType &&
+          node.isActive === false,
+      ),
+    )
+    ? "unarchive"
+    : "archive";
 }
 
 /** Reflect a confirmed commit while its canonical version/eligibility reloads. */

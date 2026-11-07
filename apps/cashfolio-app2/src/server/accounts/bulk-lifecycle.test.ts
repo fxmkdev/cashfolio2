@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   invalidate: vi.fn(),
   archiveAccount: vi.fn(),
   archiveGroup: vi.fn(),
+  unarchiveAccount: vi.fn(),
+  unarchiveGroup: vi.fn(),
   deleteAccount: vi.fn(),
   deleteGroup: vi.fn(),
   changed: [] as string[],
@@ -38,6 +40,8 @@ vi.mock("./organize-data", () => ({ readOrganizeSnapshot: mocks.read }));
 vi.mock("./mutations/status", () => ({
   archiveAccountOperation: mocks.archiveAccount,
   archiveAccountGroupOperation: mocks.archiveGroup,
+  unarchiveAccountOperation: mocks.unarchiveAccount,
+  unarchiveAccountGroupOperation: mocks.unarchiveGroup,
 }));
 vi.mock("./mutations/delete", () => ({
   deleteAccountOperation: mocks.deleteAccount,
@@ -46,6 +50,7 @@ vi.mock("./mutations/delete", () => ({
 
 import {
   archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
   deleteAccountTreeItems,
 } from "./bulk-lifecycle";
 
@@ -91,6 +96,8 @@ beforeEach(() => {
   for (const operation of [
     mocks.archiveAccount,
     mocks.archiveGroup,
+    mocks.unarchiveAccount,
+    mocks.unarchiveGroup,
     mocks.deleteAccount,
     mocks.deleteGroup,
   ])
@@ -99,9 +106,14 @@ beforeEach(() => {
     });
 });
 
-it.each([archiveAccountTreeItems, deleteAccountTreeItems])(
+it.each([
+  archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
+  deleteAccountTreeItems,
+])(
   "authorizes and commits all explicit targets in one transaction",
   async (endpoint) => {
+    if (endpoint === unarchiveAccountTreeItems) prepareUnarchive();
     await endpoint({ data: { accountBookId: "book", items } });
     expect(mocks.authorize).toHaveBeenCalledExactlyOnceWith("book");
     expect(mocks.transaction).toHaveBeenCalledExactlyOnceWith(
@@ -177,15 +189,62 @@ it.each(["archive", "delete"] as const)(
   },
 );
 
-it.each([archiveAccountTreeItems, deleteAccountTreeItems])(
-  "rolls back the batch when a later operation fails",
-  async (endpoint) => {
-    for (const operation of [mocks.archiveGroup, mocks.deleteGroup])
-      operation.mockRejectedValueOnce(new Error("Write failed"));
-    await expect(
-      endpoint({ data: { accountBookId: "book", items } }),
-    ).rejects.toThrow("Write failed");
-    expect(mocks.changed).toEqual([]);
-    expect(mocks.invalidate).not.toHaveBeenCalled();
-  },
-);
+it.each([
+  archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
+  deleteAccountTreeItems,
+])("rolls back the batch when a later operation fails", async (endpoint) => {
+  if (endpoint === unarchiveAccountTreeItems) prepareUnarchive();
+  for (const operation of [
+    mocks.archiveGroup,
+    mocks.unarchiveGroup,
+    mocks.deleteGroup,
+  ])
+    operation.mockRejectedValueOnce(new Error("Write failed"));
+  await expect(
+    endpoint({ data: { accountBookId: "book", items } }),
+  ).rejects.toThrow("Write failed");
+  expect(mocks.changed).toEqual([]);
+  expect(mocks.invalidate).not.toHaveBeenCalled();
+});
+
+function prepareUnarchive() {
+  for (const node of snapshot.nodes) {
+    node.isActive = false;
+    snapshot.actionAvailability[node.id].unarchivable = true;
+  }
+}
+
+it("authorizes bulk Unarchive before reading the hierarchy", async () => {
+  mocks.authorize.mockRejectedValueOnce(new Error("Forbidden"));
+  await expect(
+    unarchiveAccountTreeItems({ data: { accountBookId: "book", items } }),
+  ).rejects.toThrow("Forbidden");
+  expect(mocks.transaction).not.toHaveBeenCalled();
+});
+
+it("does not unarchive an ineligible child even when its archived parent is selected first", async () => {
+  prepareUnarchive();
+  snapshot.nodes[0].parentId = "group";
+  snapshot.actionAvailability.account.unarchivable = false;
+  snapshot.actionAvailability.account.unarchiveDisabledReason =
+    "Its parent group is archived";
+  await expect(
+    unarchiveAccountTreeItems({
+      data: { accountBookId: "book", items: items.toReversed() },
+    }),
+  ).rejects.toThrow("account: Its parent group is archived");
+  expect(mocks.changed).toEqual([]);
+  expect(mocks.invalidate).not.toHaveBeenCalled();
+});
+
+it("rejects a bulk Unarchive target that is no longer archived before writing any rows", async () => {
+  prepareUnarchive();
+  snapshot.nodes[1].isActive = true;
+  snapshot.actionAvailability.group.unarchivable = false;
+  snapshot.actionAvailability.group.unarchiveDisabledReason = "Already active";
+  await expect(
+    unarchiveAccountTreeItems({ data: { accountBookId: "book", items } }),
+  ).rejects.toThrow("Already active");
+  expect(mocks.changed).toEqual([]);
+});

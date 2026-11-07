@@ -2,13 +2,19 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-helpers";
-import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
+import {
+  createOrganizerStoryApi,
+  organizeStoryNodes,
+} from "@/components/hierarchy-organize/story-fixtures";
 import type { OrganizeNode } from "@/shared/account-organize/types";
 import { AccountsPageView } from "../page-view";
 import type { AccountsPageViewProps } from "../page-view-types";
 import { AccountsPageStoryHarness } from "./harness";
 import { activeAssetRows, archivedAssetRows } from "./fixtures";
-import { selectAssignmentAccount } from "./interaction-helpers";
+import {
+  selectAssignmentAccount,
+  expandAssignmentGroup,
+} from "./interaction-helpers";
 
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
@@ -248,8 +254,11 @@ export const OrganizeBulkLifecycleActions: Story = {
       region.getByRole("toolbar", { name: "Organize Account Actions" }),
     );
     await expect(
-      toolbar.getByRole("button", { name: "Archive" }),
-    ).toBeDisabled();
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
+    await expect(
+      toolbar.queryByRole("button", { name: "Archive" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(toolbar.getByRole("button", { name: "Delete" }));
     dialog = within(
       await body.findByRole("dialog", { name: "Delete Selected Items" }),
@@ -348,5 +357,95 @@ export const OrganizeCreationPendingAndRecovery: Story = {
     } finally {
       release();
     }
+  },
+};
+
+export const OrganizeBulkUnarchive: Story = {
+  args: {
+    organizerApi: createOrganizerStoryApi(
+      undefined,
+      organizeStoryNodes.map((node) => ({
+        ...node,
+        isActive: ["checking", "empty", "nested", "holding"].includes(node.id)
+          ? false
+          : node.isActive,
+      })),
+    ),
+  },
+  render: (args) => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      organizerApi={args.organizerApi}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement),
+      body = within(canvasElement.ownerDocument.body);
+    const unarchive = fn(args.organizerApi!.unarchiveMany);
+    args.organizerApi!.unarchiveMany = unarchive;
+    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+    const regionElement = await canvas.findByRole("region", {
+      name: "Organize Accounts",
+    });
+    const region = within(regionElement);
+    await userEvent.click(
+      region.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await selectAssignmentAccount(regionElement, "checking");
+    let toolbar = within(
+      region.getByRole("toolbar", { name: "Organize Account Actions" }),
+    );
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
+    await expect(
+      toolbar.queryByRole("button", { name: "Archive" }),
+    ).not.toBeInTheDocument();
+    await selectAssignmentAccount(regionElement, "empty");
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
+    await selectAssignmentAccount(regionElement, "destination");
+    await expect(
+      toolbar.getByRole("button", { name: "Archive" }),
+    ).toBeDisabled();
+    await expect(
+      toolbar.queryByRole("button", { name: "Unarchive" }),
+    ).not.toBeInTheDocument();
+    await selectAssignmentAccount(regionElement, "destination");
+    await userEvent.click(toolbar.getByRole("button", { name: "Unarchive" }));
+    await waitFor(() =>
+      expect(toolbar.getByRole("button", { name: "Archive" })).toBeEnabled(),
+    );
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+    await expect(unarchive).toHaveBeenCalledOnce();
+    await expect(
+      unarchive.mock.calls[0][0].map((item) => item.id).sort(),
+    ).toEqual(["checking", "empty"]);
+    await expect(
+      region.getByRole("checkbox", { name: "Show Archived" }),
+    ).toBeChecked();
+    await userEvent.click(
+      toolbar.getByRole("button", { name: "Clear Selection" }),
+    );
+    await selectAssignmentAccount(regionElement, "nested");
+    toolbar = within(
+      region.getByRole("toolbar", { name: "Organize Account Actions" }),
+    );
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
+    await expandAssignmentGroup(regionElement, "nested");
+    await selectAssignmentAccount(regionElement, "holding");
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toBeDisabled();
+    await expect(
+      toolbar.queryByRole("button", { name: "Archive" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toHaveAttribute("aria-description", expect.stringContaining("Fund"));
+    await expect(unarchive).toHaveBeenCalledOnce();
   },
 };

@@ -1,6 +1,7 @@
 import {
   getAccountOrganizeData,
   archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
   deleteAccountTreeItems,
   moveAccountTreeItems,
   archiveAccount,
@@ -55,6 +56,10 @@ export function createAccountOrganizerApi(
       ? ({
           archiveMany: (items) =>
             archiveAccountTreeItems({
+              data: { accountBookId, items: accountMoveItems(items) },
+            }),
+          unarchiveMany: (items) =>
+            unarchiveAccountTreeItems({
               data: { accountBookId, items: accountMoveItems(items) },
             }),
           deleteMany: (items) =>

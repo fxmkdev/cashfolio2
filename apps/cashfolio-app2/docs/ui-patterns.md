@@ -1682,12 +1682,16 @@ still normalizes selected descendants out of its subtree roots. Display counts
 for the explicit selection. Enable a lifecycle action only when every selected
 row is individually eligible in the current hierarchy, with an accessible
 explanation naming a blocking row. Selecting children alongside a group does not
-make a nonempty group deletable or a group with active children archivable.
-Confirm the selected names and account/group counts once. The server validates
-the complete balance-hierarchy selection before writes and commits it in one
-authorized book mutation transaction, with rollback on any failure. There is no
-implicit descendant inclusion or bulk Unarchive. Bulk lifecycle actions are
-exclusive to Account List Organize.
+make a nonempty group deletable or a group with active children archivable. When
+all explicitly selected accounts/groups are archived, replace Archive with
+Unarchive (blue), based on status rather than eligibility. Disable Unarchive if
+any selected row is ineligible, including when its archived ancestor is also
+selected. Active or mixed-status selections retain Archive. Bulk Unarchive runs
+directly, like row Unarchive; Archive/Delete confirm the selected names and
+account/group counts once. The server validates the complete balance-hierarchy
+selection before writes and commits it in one authorized book mutation
+transaction, with rollback on any failure. There is no implicit descendant
+inclusion. Bulk lifecycle actions are exclusive to Account List Organize.
 
 Default Account List row menus offer Move To for real accounts and groups,
 including archived rows and accounts displayed under Asset Class grouping.

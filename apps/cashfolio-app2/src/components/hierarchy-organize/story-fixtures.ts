@@ -162,7 +162,7 @@ export function createOrganizerStoryApi(
           );
   }
   function mutateMany(
-    action: "archive" | "delete",
+    action: "archive" | "unarchive" | "delete",
     targets: Parameters<NonNullable<OrganizerApi["archiveMany"]>>[0],
   ) {
     const before = structuredClone(nodes);
@@ -170,7 +170,13 @@ export function createOrganizerStoryApi(
     try {
       for (const target of targets) {
         const allowed = availability[target.id];
-        if (!(action === "archive" ? allowed?.archivable : allowed?.deletable))
+        if (
+          !(action === "archive"
+            ? allowed?.archivable
+            : action === "unarchive"
+              ? allowed?.unarchivable
+              : allowed?.deletable)
+        )
           throw new Error("Action unavailable");
       }
       for (const target of targets) mutate(action, target.id);
@@ -226,6 +232,7 @@ export function createOrganizerStoryApi(
       mutate("delete", target.id);
     },
     archiveMany: async (targets) => mutateMany("archive", targets),
+    unarchiveMany: async (targets) => mutateMany("unarchive", targets),
     deleteMany: async (targets) => mutateMany("delete", targets),
   };
 }

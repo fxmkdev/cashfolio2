@@ -663,3 +663,120 @@ describe("Account List bulk lifecycle", () => {
     load.mockRestore();
   });
 });
+
+describe("bulk Unarchive", () => {
+  const targets = [
+    { id: "checking", nodeType: "account" as const },
+    { id: "empty", nodeType: "accountGroup" as const },
+  ];
+  const archivedNodes = () =>
+    organizeStoryNodes.map((node) => ({
+      ...node,
+      isActive: targets.some((target) => target.id === node.id)
+        ? false
+        : node.isActive,
+    }));
+
+  it("unarchives accounts and groups once, refreshes, and announces the result", async () => {
+    const api = createOrganizerStoryApi(undefined, archivedNodes());
+    const operation = vi.spyOn(api, "unarchiveMany");
+    const organizer = await ready(api);
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("unarchive", targets),
+    );
+    expect(operation).toHaveBeenCalledExactlyOnceWith(targets);
+    const next = render(api);
+    expect(next.message).toBe("2 selected items unarchived.");
+    expect(next.snapshot).toEqual(await api.load());
+    expect(
+      next.snapshot?.nodes
+        .filter((node) => targets.some((target) => target.id === node.id))
+        .every((node) => node.isActive),
+    ).toBe(true);
+    expect(next.revealIds).toEqual(["checking", "empty"]);
+    expect(saved).toHaveBeenCalledOnce();
+  });
+
+  it("blocks duplicate unarchives and allows a confirmed busy rollback to retry", async () => {
+    const api = createOrganizerStoryApi("busy", archivedNodes());
+    const operation = vi.spyOn(api, "unarchiveMany");
+    const organizer = await ready(api);
+    const pending = organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("unarchive", targets),
+    );
+    expect(
+      await organizer.submitState.runSubmit(() =>
+        organizer.performBulkLifecycle("unarchive", targets),
+      ),
+    ).toBe(false);
+    await pending;
+    expect(render(api).retryDisabled).toBe(false);
+    render(api).retry();
+    for (let i = 0; i < 24; i++) await Promise.resolve();
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(render(api).message).toBe("2 selected items unarchived.");
+  });
+
+  it("disables retry when refreshed Unarchive eligibility changes", async () => {
+    const api = createOrganizerStoryApi("busy", archivedNodes());
+    const organizer = await ready(api);
+    const before = organizer.snapshot!;
+    const operation = vi.spyOn(api, "unarchiveMany");
+    vi.spyOn(api, "load").mockResolvedValue({
+      ...before,
+      actionAvailability: {
+        ...before.actionAvailability,
+        checking: {
+          ...before.actionAvailability.checking,
+          unarchivable: false,
+          unarchiveDisabledReason: "Archived ancestor",
+        },
+      },
+    });
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("unarchive", targets),
+    );
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    expect(operation).toHaveBeenCalledOnce();
+  });
+
+  it("does not replay a committed bulk Unarchive after its refresh fails", async () => {
+    const api = createOrganizerStoryApi(undefined, archivedNodes());
+    const organizer = await ready(api);
+    const operation = vi.spyOn(api, "unarchiveMany");
+    const load = vi.spyOn(api, "load").mockRejectedValue(new Error("Offline"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("unarchive", targets),
+    );
+    expect(
+      render(api).snapshot?.nodes.find((node) => node.id === "checking")
+        ?.isActive,
+    ).toBe(true);
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).retryDisabled).toBe(true);
+    render(api).retry();
+    load.mockRestore();
+    await render(api).submitState.refreshConstraints();
+    expect(operation).toHaveBeenCalledOnce();
+    expect(render(api).blocked).toBe(false);
+  });
+
+  it("requires read recovery after an uncertain unarchive outcome", async () => {
+    const api = createOrganizerStoryApi("network", archivedNodes());
+    const organizer = await ready(api);
+    const operation = vi.spyOn(api, "unarchiveMany");
+    vi.spyOn(api, "load").mockRejectedValueOnce(new Error("Offline"));
+    await organizer.submitState.runSubmit(() =>
+      organizer.performBulkLifecycle("unarchive", targets),
+    );
+    expect(render(api).blocked).toBe(true);
+    expect(render(api).submitState.submissionError?.isUncertainOutcome).toBe(
+      true,
+    );
+    render(api).retry();
+    expect(operation).toHaveBeenCalledOnce();
+    await render(api).submitState.refreshConstraints();
+    expect(render(api).blocked).toBe(false);
+  });
+});

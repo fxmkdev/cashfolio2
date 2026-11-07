@@ -8,15 +8,33 @@ import { validateAccountTreeBatch } from "./organize-input";
 import {
   archiveAccountOperation,
   archiveAccountGroupOperation,
+  unarchiveAccountOperation,
+  unarchiveAccountGroupOperation,
 } from "./mutations/status";
 import {
   deleteAccountOperation,
   deleteAccountGroupOperation,
 } from "./mutations/delete";
+import type { OrganizeLifecycleAction } from "../../shared/account-organize/types";
+
+const operations = {
+  archive: {
+    account: archiveAccountOperation,
+    accountGroup: archiveAccountGroupOperation,
+  },
+  unarchive: {
+    account: unarchiveAccountOperation,
+    accountGroup: unarchiveAccountGroupOperation,
+  },
+  delete: {
+    account: deleteAccountOperation,
+    accountGroup: deleteAccountGroupOperation,
+  },
+};
 
 async function mutateBatch(
   data: ReturnType<typeof validateAccountTreeBatch>,
-  action: "archive" | "delete",
+  action: OrganizeLifecycleAction,
 ) {
   await ensureAuthorizedAccountBookMutation(data.accountBookId);
   await withDatabaseConflictRetry(() =>
@@ -39,21 +57,16 @@ async function mutateBatch(
         const enabled =
           action === "archive"
             ? availability.archivable
-            : availability.deletable;
+            : action === "unarchive"
+              ? availability.unarchivable
+              : availability.deletable;
         if (!enabled)
           throw new Error(
-            `${node.name}: ${action === "archive" ? availability.archiveDisabledReason : availability.deleteDisabledReason}`,
+            `${node.name}: ${action === "archive" ? availability.archiveDisabledReason : action === "unarchive" ? availability.unarchiveDisabledReason : availability.deleteDisabledReason}`,
           );
       }
       for (const target of data.items) {
-        const operation =
-          action === "archive"
-            ? target.nodeType === "account"
-              ? archiveAccountOperation
-              : archiveAccountGroupOperation
-            : target.nodeType === "account"
-              ? deleteAccountOperation
-              : deleteAccountGroupOperation;
+        const operation = operations[action][target.nodeType];
         await operation(
           { accountBookId: data.accountBookId, id: target.id },
           tx,
@@ -71,3 +84,7 @@ export const archiveAccountTreeItems = createServerFn({ method: "POST" })
 export const deleteAccountTreeItems = createServerFn({ method: "POST" })
   .validator(validateAccountTreeBatch)
   .handler(({ data }) => mutateBatch(data, "delete"));
+
+export const unarchiveAccountTreeItems = createServerFn({ method: "POST" })
+  .validator(validateAccountTreeBatch)
+  .handler(({ data }) => mutateBatch(data, "unarchive"));

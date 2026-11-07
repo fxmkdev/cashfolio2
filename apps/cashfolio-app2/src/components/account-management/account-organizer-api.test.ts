@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import {
   getAccountOrganizeData,
   archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
   deleteAccountTreeItems,
   moveAccountTreeItems,
   archiveAccount,
@@ -16,6 +17,7 @@ import { createAccountOrganizerApi } from "./account-organizer-api";
 vi.mock("@/server/accounts", () => ({
   getAccountOrganizeData: vi.fn(),
   archiveAccountTreeItems: vi.fn(),
+  unarchiveAccountTreeItems: vi.fn(),
   deleteAccountTreeItems: vi.fn(),
   moveAccountTreeItems: vi.fn(),
   archiveAccount: vi.fn(),
@@ -107,8 +109,13 @@ it("routes explicit bulk selections to atomic endpoints only for Accounts", asyn
     { id: "g", nodeType: "accountGroup" as const },
   ];
   await api.archiveMany!(items);
+  await api.unarchiveMany!(items);
   await api.deleteMany!(items);
-  for (const endpoint of [archiveAccountTreeItems, deleteAccountTreeItems])
+  for (const endpoint of [
+    archiveAccountTreeItems,
+    unarchiveAccountTreeItems,
+    deleteAccountTreeItems,
+  ])
     expect(endpoint).toHaveBeenCalledExactlyOnceWith({
       data: { accountBookId: "book", items },
     });
@@ -118,5 +125,6 @@ it("routes explicit bulk selections to atomic endpoints only for Accounts", asyn
     managementContext: "categories",
   });
   expect(categories.archiveMany).toBeUndefined();
+  expect(categories.unarchiveMany).toBeUndefined();
   expect(categories.deleteMany).toBeUndefined();
 });

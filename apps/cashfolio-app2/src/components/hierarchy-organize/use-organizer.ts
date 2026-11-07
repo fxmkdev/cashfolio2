@@ -26,6 +26,7 @@ export type OrganizerApi = {
     replacementId?: string | null,
   ) => Promise<unknown>;
   archiveMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
+  unarchiveMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
   deleteMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
 };
 
@@ -59,7 +60,7 @@ export function useOrganizer(
           target: OrganizeNodeRef;
           replacementId?: string | null;
         };
-        batch?: { action: "archive" | "delete"; targets: OrganizeNodeRef[] };
+        batch?: { action: OrganizeLifecycleAction; targets: OrganizeNodeRef[] };
         version: string;
       }
     | undefined
@@ -252,13 +253,18 @@ export function useOrganizer(
     await refresh();
   };
   const performBulkLifecycle = async (
-    action: "archive" | "delete",
+    action: OrganizeLifecycleAction,
     targets: OrganizeNodeRef[],
     onCommitted?: () => void,
   ) => {
     const before = confirmed.current;
     const availability = bulkLifecycleAvailability(before, targets, action);
-    const operation = action === "archive" ? api?.archiveMany : api?.deleteMany;
+    const operation =
+      action === "archive"
+        ? api?.archiveMany
+        : action === "unarchive"
+          ? api?.unarchiveMany
+          : api?.deleteMany;
     if (!before || !operation || needsRefresh || !availability.enabled)
       throw new Error(
         availability.reason ?? "Refresh the hierarchy before saving.",
@@ -281,7 +287,7 @@ export function useOrganizer(
     setRevealIds([...new Set(reveal)]);
     setFocusFallbackIds([...new Set(fallback)]);
     setMessage(
-      `${targets.length} selected items ${action === "archive" ? "archived" : "deleted"}.`,
+      `${targets.length} selected items ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
     );
     onSaved();
     onCommitted?.();
@@ -329,7 +335,8 @@ export function useOrganizer(
     refresh,
     performLifecycle,
     performBulkLifecycle,
-    supportsBulkLifecycle: !!api?.archiveMany && !!api?.deleteMany,
+    supportsBulkLifecycle:
+      !!api?.archiveMany && !!api?.unarchiveMany && !!api?.deleteMany,
     performEdit,
     saveMove,
     pending,
