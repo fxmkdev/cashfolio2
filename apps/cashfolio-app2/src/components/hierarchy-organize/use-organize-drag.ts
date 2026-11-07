@@ -40,11 +40,13 @@ export function useOrganizeDrag({
   api,
   blocked,
   saveMove,
+  formatErrorMessage,
 }: {
   nodes: OrganizeNode[];
   api?: GridApi<OrganizeDisplayRow>;
   blocked: boolean;
   saveMove: (move: OrganizeMove) => Promise<boolean | undefined>;
+  formatErrorMessage?: (message: string) => string;
 }) {
   const proposed = useRef<OrganizeMove | undefined>(undefined);
   const cancelled = useRef(false);
@@ -159,13 +161,13 @@ export function useOrganizeDrag({
         };
       } catch (error) {
         proposed.current = undefined;
-        showHint(
-          error instanceof Error ? error.message : "Invalid destination.",
-        );
+        const message =
+          error instanceof Error ? error.message : "Invalid destination.";
+        showHint(formatErrorMessage?.(message) ?? message);
         return false;
       }
     },
-    [blocked, clearHover, itemsFor, preview, showHint],
+    [blocked, clearHover, itemsFor, preview, showHint, formatErrorMessage],
   );
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;

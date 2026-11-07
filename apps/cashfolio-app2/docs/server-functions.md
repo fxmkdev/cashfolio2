@@ -176,16 +176,18 @@ and ledger mutation recovery refresh both page constraints and class choices
 without remounting open drafts.
 
 `getAssetClasses` returns the book-specific tree and direct active/archived
-assignment counts. `saveAssetClass`, `reorderAssetClasses`, and
+assignment counts. `saveAssetClass`, `moveAssetClassTreeItems`, and
 `deleteAssetClass` use the existing same-origin, authorization, retry, and
 serialized book boundaries. Deletion requires an explicit replacement ID or
 null; children must be moved or deleted first. Reassignment and deletion commit
 atomically. Successful mutations invalidate period caches after commit.
-`reorderAssetClasses({ accountBookId, parentId, orderedIds })` requires an
-explicit nullable parent and a unique, complete permutation of its current
-siblings. Parent and membership checks run inside the serialized transaction;
-only then are sequential sort orders assigned. Invalid or stale membership
-leaves all rows unchanged. No schema change is required for sibling reordering.
+`getAssetClassOrganizeData` returns a coherent, versioned tree with assignment
+counts and deletion eligibility. `moveAssetClassTreeItems` accepts selected
+class IDs, a nullable parent, First/Last/Before/After placement, and an optional
+sibling anchor. Under the book mutation lock it checks the version, book/scheme
+membership, cycles, and resulting sibling names before writing parent/order
+changes atomically. Complete subtrees move together; assignments remain
+unchanged.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
@@ -493,12 +495,22 @@ The accounts route keeps archive/unarchive eligibility in loader data
 (`getAccountTreeData`), but all status rules are enforced again in these server
 functions.
 
-## Reorder Pattern
+## Hierarchy Organization
 
-`reorderAccountTreeItems` (implemented in
-`src/server/accounts/accounts-mutations.ts`, re-exported from
-`src/server/accounts.ts`) issues a batch of Prisma updates inside a transaction
-to update `sortOrder` values after reordering sibling rows in the reorder modal.
+`getAccountOrganizeData` and `moveAccountTreeItems` accept an optional validated
+`scope`: `balance` (default), `income`, or `expense`. Snapshots, versions,
+selected items, destinations, and writes stay within that hierarchy. Category
+moves cannot cross Income/Expenses or enter system-managed equity groups.
+Snapshots include archived descendants and current lifecycle eligibility;
+category archive rules allow nonzero balances.
+
+`moveAccountTreeItems` checks the snapshot version and resulting hierarchy under
+the serialized book mutation lock, then writes parent/order changes atomically.
+Balance-account moves also apply inherited Cash Account settings; category moves
+preserve financial fields. Successful structural changes invalidate period
+caches. The shared organizer uses canonical move results and read-only recovery
+after confirmed editor or lifecycle commits. Reorder-only APIs and dialogs have
+been removed.
 
 ## Period Overview Gain/Loss
 

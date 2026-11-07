@@ -44,6 +44,7 @@ type MoveDialogProps = {
   };
   onClose: () => void;
   onMove: (move: OrganizeMove) => Promise<boolean | undefined>;
+  formatErrorMessage?: (message: string) => string;
 };
 
 export function MoveDialog(props: MoveDialogProps) {
@@ -72,6 +73,7 @@ function MoveDialogContent({
   submission,
   onClose,
   onMove,
+  formatErrorMessage,
 }: MoveDialogProps & { items: OrganizeNodeRef[] }) {
   const positionLabelId = useId();
   const [parent, setParent] = useState<string | null>(null);
@@ -141,12 +143,14 @@ function MoveDialogContent({
       });
       return { effect: moveSummary(nodes, next), error: undefined };
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Choose a destination.";
       return {
         effect: "",
-        error: error instanceof Error ? error.message : "Choose a destination.",
+        error: formatErrorMessage?.(message) ?? message,
       };
     }
-  }, [nodes, items, parent, placement, anchorId, missing]);
+  }, [nodes, items, parent, placement, anchorId, missing, formatErrorMessage]);
   const submitMove = async () => {
     if (preview.error || blocked) return;
     if (await onMove(makeMove(parent))) onClose();

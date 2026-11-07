@@ -449,6 +449,26 @@ describe("asset class lifecycle recovery", () => {
 });
 
 describe("management editor submissions", () => {
+  it("preserves category wording in shared editor and movement errors", async () => {
+    const api = { ...createOrganizerStoryApi(), kind: "categories" as const };
+    const organizer = await ready(api);
+    const message = "An account with this name already exists in this group";
+    await organizer.submitState.runSubmit(() =>
+      organizer.performEdit(async () => {
+        throw new Error(message);
+      }),
+    );
+    expect(render(api).submitState.submissionError?.message).toBe(
+      "A category with this name already exists in this category group",
+    );
+    expect(
+      organizer.formatErrorMessage(
+        "Active accounts and groups cannot belong to an archived group.",
+      ),
+    ).toBe(
+      "Active categories and category groups cannot belong to an archived category group.",
+    );
+  });
   it("refreshes and reveals an edited item without resetting the hierarchy", async () => {
     const api = createAssetClassStoryApi();
     const organizer = await ready(api);

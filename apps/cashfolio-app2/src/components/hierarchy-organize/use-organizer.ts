@@ -4,6 +4,7 @@ import {
   organizeLifecycleAvailability,
 } from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { planOrganizeMove } from "@/shared/hierarchy-organize/move";
 import type {
   OrganizeMove,
@@ -81,9 +82,18 @@ export function useOrganizer(
       committedEdit.current = undefined;
     }
   }, [api]);
+  const formatErrorMessage = useCallback(
+    (message: string) =>
+      getAccountConstraintMessage(
+        message,
+        api?.kind === "categories" ? "categories" : "accounts",
+      ) ?? message,
+    [api],
+  );
   const submitState = useDialogSubmitState({
     captureErrors: true,
     onRefreshConstraints: refresh,
+    formatErrorMessage,
   });
   const pending = submitState.isSubmitting || submitState.isRefreshing;
   const needsRefresh = !!submitState.refreshError;
@@ -279,6 +289,7 @@ export function useOrganizer(
     submitState,
     retry,
     retryDisabled: !isRetryValid(),
+    formatErrorMessage,
   };
 }
 

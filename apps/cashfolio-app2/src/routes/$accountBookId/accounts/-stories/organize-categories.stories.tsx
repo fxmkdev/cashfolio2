@@ -37,11 +37,11 @@ const meta: Meta<typeof AccountsPageView> = {
         "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
     },
   },
-  render: () => (
+  render: (args) => (
     <AccountsPageStoryHarness
       initialMode="active"
       initialTab="EQUITY-EXPENSE"
-      organizerApi={categoryApi()}
+      organizerApi={args.organizerApi ?? categoryApi()}
       expandGroups
     />
   ),
@@ -104,5 +104,34 @@ export const DirectCategoryEntry: Story = {
     await expect(
       canvas.getByRole("checkbox", { name: "Show Archived" }),
     ).toBeChecked();
+  },
+};
+
+export const CategoryMutationFailureUsesCategoryWording: Story = {
+  args: {
+    organizerApi: {
+      ...categoryApi(),
+      archive: async () => {
+        throw new Error("This account is no longer available.");
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Archive Electricity" }),
+    );
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Archive Category" }),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Archive" }));
+    await expect(await dialog.findByRole("alert")).toHaveTextContent(
+      "This category is no longer available.",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Archive Electricity" }),
+    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
 };

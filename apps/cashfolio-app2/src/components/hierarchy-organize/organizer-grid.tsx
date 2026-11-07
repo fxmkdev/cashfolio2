@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { Badge } from "@mantine/core";
 import type {
-  ColDef,
   GridApi,
   GridOptions,
   GridReadyEvent,
-  ICellRendererParams,
   SelectionChangedEvent,
-  ValueGetterParams,
 } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
-import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
-import { OrganizerRowActions } from "@/components/hierarchy-organize/organizer-row-actions";
 import type { OrganizeDisplayRow } from "@/shared/hierarchy-organize/tree";
 import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
@@ -19,6 +13,7 @@ import type { useOrganizeDrag } from "./use-organize-drag";
 import type { LifecycleDialog } from "./lifecycle-dialogs";
 import styles from "./organizer.module.css";
 import type { HierarchyManagement } from "./management";
+import { useOrganizerColumns } from "./organizer-columns";
 
 // Hint updates must not reconfigure the tree column or recreate its controls.
 const gridOptions: GridOptions<OrganizeDisplayRow> = {
@@ -70,123 +65,15 @@ export function OrganizerGrid({
   const expansion = useRef(new Map<string, boolean>());
   const organizerRef = useRef(organizer);
   organizerRef.current = organizer;
-  const callbacks = useRef({ onMoveItems, onLifecycle });
   const managementRef = useRef(management);
   managementRef.current = management;
-  callbacks.current = { onMoveItems, onLifecycle };
-  const columnDefs = useMemo<ColDef<OrganizeDisplayRow>[]>(
-    () => [
-      ...(management?.columns ?? []),
-      ...(organizer.kind === "assetClasses"
-        ? []
-        : ([
-            {
-              headerName: "Type",
-              width: 135,
-              valueGetter: ({ data }: ValueGetterParams<OrganizeDisplayRow>) =>
-                data?.nodeType === "accountGroup"
-                  ? "Group"
-                  : organizer.kind === "categories"
-                    ? "Category"
-                    : "Account",
-            },
-            {
-              headerName: "Status",
-              width: 125,
-              cellRenderer: ({
-                data,
-              }: ICellRendererParams<OrganizeDisplayRow>) =>
-                data && data.isActive === false ? (
-                  <Badge color="gray" variant="light">
-                    Archived
-                  </Badge>
-                ) : null,
-            },
-          ] satisfies ColDef<OrganizeDisplayRow>[])),
-      {
-        ...rowActionsColumnProps,
-        colId: "actions",
-        width: management ? (organizer.kind === "categories" ? 200 : 144) : 120,
-        minWidth: management
-          ? organizer.kind === "categories"
-            ? 200
-            : 144
-          : 120,
-        maxWidth: management
-          ? organizer.kind === "categories"
-            ? 200
-            : 144
-          : 120,
-        pinned: "right",
-        cellRenderer: ({ data }: ICellRendererParams<OrganizeDisplayRow>) =>
-          data ? (
-            <OrganizerRowActions
-              isCategory={organizer.kind === "categories"}
-              node={{ ...data, parentId: data.parentId ?? null }}
-              availability={organizer.snapshot?.actionAvailability[data.id]}
-              blocked={blocked || drag.dragging}
-              onMove={() => callbacks.current.onMoveItems([data])}
-              addChildLabel={management?.addChildLabel}
-              onEdit={
-                management
-                  ? () =>
-                      managementRef.current?.onEdit({
-                        ...data,
-                        parentId: data.parentId ?? null,
-                      })
-                  : undefined
-              }
-              onAddChild={
-                management &&
-                (data.nodeType === "assetClass" ||
-                  (data.nodeType === "accountGroup" && data.isActive))
-                  ? () =>
-                      managementRef.current?.onAddChild({
-                        ...data,
-                        parentId: data.parentId ?? null,
-                      })
-                  : undefined
-              }
-              onAddGroup={
-                management?.onAddGroup &&
-                data.nodeType === "accountGroup" &&
-                data.isActive
-                  ? () =>
-                      managementRef.current?.onAddGroup?.({
-                        ...data,
-                        parentId: data.parentId ?? null,
-                      })
-                  : undefined
-              }
-              onArchive={() =>
-                callbacks.current.onLifecycle({
-                  action: "archive",
-                  node: { ...data, parentId: data.parentId ?? null },
-                })
-              }
-              onDelete={() =>
-                callbacks.current.onLifecycle({
-                  action: "delete",
-                  node: { ...data, parentId: data.parentId ?? null },
-                })
-              }
-              onUnarchive={() =>
-                void organizerRef.current.submitState.runSubmit(() =>
-                  organizerRef.current.performLifecycle("unarchive", data),
-                )
-              }
-            />
-          ) : null,
-      },
-    ],
-    [
-      drag.dragging,
-      blocked,
-      organizer.snapshot?.actionAvailability,
-      organizer.kind,
-      management,
-    ],
-  );
+  const columnDefs = useOrganizerColumns({
+    organizer,
+    management,
+    blocked: blocked || drag.dragging,
+    onMoveItems,
+    onLifecycle,
+  });
   const rowClassRules = useMemo<
     GridOptions<OrganizeDisplayRow>["rowClassRules"]
   >(

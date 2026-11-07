@@ -7,11 +7,7 @@ import {
   useState,
 } from "react";
 import { Box, Button, Text, VisuallyHidden } from "@mantine/core";
-import type {
-  GridApi,
-  GridReadyEvent,
-  SelectionChangedEvent,
-} from "ag-grid-enterprise";
+import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
 import { OrganizerGrid } from "./organizer-grid";
 import { useOrganizeReveal } from "./use-organize-reveal";
 import {
@@ -20,11 +16,7 @@ import {
 } from "./lifecycle-dialogs";
 import { OrganizerMutationFeedback } from "./organizer-mutation-feedback";
 import { OrganizerToolbar } from "./organizer-toolbar";
-import {
-  normalizeOrganizeSelection,
-  organizeDisplayRows,
-  type OrganizeDisplayRow,
-} from "@/shared/hierarchy-organize/tree";
+import { type OrganizeDisplayRow } from "@/shared/hierarchy-organize/tree";
 import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
 import { MoveDialog } from "./move-dialog";
 import type { Organizer } from "./use-organizer";
@@ -32,6 +24,7 @@ import { useOrganizeDrag } from "./use-organize-drag";
 import styles from "./organizer.module.css";
 import type { HierarchyManagement } from "./management";
 import { useManagementFocus } from "./use-management-focus";
+import { useOrganizeSelection } from "./use-organize-selection";
 
 export function HierarchyOrganizer({
   accountBookId,
@@ -54,12 +47,8 @@ export function HierarchyOrganizer({
       : organizer.kind === "categories"
         ? "Categories"
         : "Accounts";
-  const [localShowArchived, setShowArchived] = useState(false);
-  const showArchived = management?.showArchived ?? localShowArchived;
-  const [selectionNotice, setSelectionNotice] = useState("");
   const region = useRef<HTMLElement>(null);
   const [api, setApi] = useState<GridApi<OrganizeDisplayRow>>();
-  const [selected, setSelected] = useState<OrganizeNodeRef[]>([]);
   const [dialogItems, setDialogItems] = useState<OrganizeNodeRef[]>();
   const [lifecycleDialog, setLifecycleDialog] = useState<LifecycleDialog>();
   const movementBlocked =
@@ -72,33 +61,22 @@ export function HierarchyOrganizer({
     () => organizer.snapshot?.nodes ?? [],
     [organizer.snapshot],
   );
-  const rows = useMemo(
-    () => organizeDisplayRows(nodes, showArchived),
-    [nodes, showArchived],
-  );
-  useEffect(() => {
-    const visible = new Set(rows.map((row) => row.id));
-    const retained = selected.filter((item) => visible.has(item.id));
-    if (retained.length !== selected.length) {
-      setSelected(retained);
-      setSelectionNotice(
-        `${selected.length - retained.length} unavailable or hidden ${selected.length - retained.length === 1 ? "item was" : "items were"} deselected.`,
-      );
-    }
-  }, [rows, selected]);
-  const roots = useMemo(
-    () =>
-      normalizeOrganizeSelection(
-        nodes,
-        selected.filter((item) => nodes.some((node) => node.id === item.id)),
-      ),
-    [nodes, selected],
-  );
+  const {
+    rows,
+    selected,
+    roots,
+    selectionNotice,
+    showArchived,
+    onSelectionChanged,
+    clearSelection,
+    changeArchivedVisibility,
+  } = useOrganizeSelection(nodes, api, management?.showArchived);
   const drag = useOrganizeDrag({
     nodes,
     api,
     blocked: movementBlocked,
     saveMove: organizer.saveMove,
+    formatErrorMessage: organizer.formatErrorMessage,
   });
   const onInteractionBlockedChange = management?.onInteractionBlockedChange;
   useEffect(() => {
@@ -109,28 +87,6 @@ export function HierarchyOrganizer({
     ({ api }: GridReadyEvent<OrganizeDisplayRow>) => setApi(api),
     [],
   );
-  const onSelectionChanged = useCallback(
-    ({ api }: SelectionChangedEvent<OrganizeDisplayRow>) =>
-      setSelected(api.getSelectedRows()),
-    [],
-  );
-  const changeArchivedVisibility = (value: boolean) => {
-    if (!value) {
-      const hidden = selected.filter(
-        (item) => !nodes.find((node) => node.id === item.id)?.isActive,
-      );
-      for (const item of hidden) api?.getRowNode(item.id)?.setSelected(false);
-      setSelected(
-        selected.filter((item) => !hidden.some((node) => node.id === item.id)),
-      );
-      setSelectionNotice(
-        hidden.length
-          ? `${hidden.length} hidden archived ${hidden.length === 1 ? "item was" : "items were"} deselected.`
-          : "",
-      );
-    } else setSelectionNotice("");
-    setShowArchived(value);
-  };
   const hiddenResults = organizer.revealIds.filter(
     (id) =>
       !showArchived &&
@@ -155,10 +111,7 @@ export function HierarchyOrganizer({
         selectedCount={selected.length}
         roots={roots}
         onMove={() => setDialogItems(roots)}
-        onClear={() => {
-          api?.deselectAll();
-          setSelected([]);
-        }}
+        onClear={clearSelection}
         blocked={movementBlocked}
         dragging={drag.dragging}
         hint={drag.hint}
@@ -220,6 +173,7 @@ export function HierarchyOrganizer({
         }}
         onClose={() => setDialogItems(undefined)}
         onMove={organizer.saveMove}
+        formatErrorMessage={organizer.formatErrorMessage}
       />
       {renderLifecycleDialog ? (
         renderLifecycleDialog(lifecycleDialog, () =>
