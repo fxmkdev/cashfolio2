@@ -100,13 +100,11 @@ describe("shared holding explain mapping", () => {
       { ...lot, acquisitionSortKey: "2026-02-02T00:00:00.000Z::later" },
       lot,
     ];
-    const rounded = addRunningUnrealizedGainLoss(
-      lots.map((item) => toRoundedOpenLot(item)),
-    );
-    const exact = addRunningUnrealizedGainLoss(
-      lots.map((item) => toRoundedOpenLot(item, false)),
-      false,
-    );
+    const roundedInput = lots.map((item) => toRoundedOpenLot(item));
+    const exactInput = lots.map((item) => toRoundedOpenLot(item, false));
+    const originalOrder = lots.map((item) => item.acquisitionSortKey);
+    const rounded = addRunningUnrealizedGainLoss(roundedInput);
+    const exact = addRunningUnrealizedGainLoss(exactInput, false);
 
     expect(
       rounded.map((item) => item.runningUnrealizedGainLoss.toString()),
@@ -118,6 +116,14 @@ describe("shared holding explain mapping", () => {
     expect(exact[0]!.unitCostInReference.toString()).toBe("1.125");
     expect(rounded[0]!.quantity.toString()).toBe("0.123456789123456789");
     expect(exact[0]!.id).toBe(`lot:${acquisitionSortKey}`);
+    for (const input of [roundedInput, exactInput]) {
+      expect(input.map((item) => item.acquisitionSortKey)).toEqual(
+        originalOrder,
+      );
+      expect(
+        input.map((item) => item.runningUnrealizedGainLoss.toString()),
+      ).toEqual(["0", "0"]);
+    }
     expect(lots[0]!.acquisitionSortKey).toBe("2026-02-02T00:00:00.000Z::later");
     expect(lot.unrealizedGainLoss.toString()).toBe("0.015");
   });
