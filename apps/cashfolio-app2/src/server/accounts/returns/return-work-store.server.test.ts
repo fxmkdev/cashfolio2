@@ -45,12 +45,12 @@ it("uses Redis checkpoints across local eviction and rejects corrupt data", asyn
   for (let i = 0; i < 18; i++) await store.save(String(i), state());
   expect(await store.read("0")).toMatchObject({ revision: "r1", sequence: 1 });
   expect(redis.setEx).toHaveBeenCalledWith(
-    "account:returns-work:v1:test:redis-book:user:0",
+    "account:returns-work:v2:test:redis-book:user:0",
     900,
     expect.any(String),
   );
   entries.set(
-    "account:returns-work:v1:test:redis-book:user:0",
+    "account:returns-work:v2:test:redis-book:user:0",
     '{"phase":"invalid"}',
   );
   expect(await store.read("0")).toBeUndefined();

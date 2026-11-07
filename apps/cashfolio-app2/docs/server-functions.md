@@ -45,7 +45,7 @@ requests stop between scopes after ten seconds or four scopes. Request-wide
 60-second/250-attempt limits remain enforced. Completed dependencies survive a
 failed sibling lookup. Calculation never performs unplanned provider requests.
 
-Temporary `account:returns-work:v1` checkpoints have a 15-minute TTL and an 8
+Temporary `account:returns-work:v2` checkpoints have a 15-minute TTL and an 8
 MiB size limit. A process-local fallback retains at most 16 checkpoints and 64
 MiB, including when Redis is unavailable. Expired/evicted checkpoints restart
 safely; temporary provider/fallback results never enter the stable summary
@@ -55,7 +55,7 @@ completion rechecks revision, reporting day, and publication cutoff.
 Implementations live under `src/server/accounts/returns/`. A repeatable-read
 snapshot loads balances, complete transaction peers, and grouping metadata.
 Returns use the existing conversion scheduler and execution-pricing helpers,
-independently of the G/L FIFO caches. Return summaries use `account:returns:v2`
+independently of the G/L FIFO caches. Return summaries use `account:returns:v3`
 with revision, date, publication-cutoff, grouping, and account-state keys.
 Persistence requires stable valuation sources and matching snapshot/committed
 revisions. Cache failures fall back to calculation; resource failures propagate.

@@ -11,6 +11,12 @@ export const unitRowId = (classId: string, key: string) =>
 export const archivedClassRowId = (id: string) =>
   `__asset_class_archived__:${id}`;
 
+export const archivedUnitGroupRowId = (
+  classId: string,
+  unitId: string,
+  hasActiveAccounts: boolean,
+) => archivedClassRowId(hasActiveAccounts ? unitId : classId);
+
 export type ReturnAccount = {
   id: string;
   name: string;
@@ -48,6 +54,10 @@ export function buildAccountReturnGroups(args: {
   };
   if (args.grouping === "assetClass") {
     const classes = new Map(args.classes.map((node) => [node.id, node]));
+    const units = new Map<
+      string,
+      { classId: string; hasActive: boolean; archived: string[] }
+    >();
     for (const account of args.accounts) {
       let node = account.assetClassId
         ? classes.get(account.assetClassId)
@@ -63,9 +73,21 @@ export function buildAccountReturnGroups(args: {
       const investment = getGainLossInvestmentGroup(account);
       const unitId = unitRowId(classId, investment.key);
       add(unitId, investment.label, account.id);
-      if (!account.isActive)
-        add(archivedClassRowId(unitId), "Archived", account.id);
+      const unit = units.getOrInsertComputed(unitId, () => ({
+        classId,
+        hasActive: false,
+        archived: [],
+      }));
+      unit.hasActive ||= account.isActive;
+      if (!account.isActive) unit.archived.push(account.id);
     }
+    for (const [unitId, unit] of units)
+      for (const id of unit.archived)
+        add(
+          archivedUnitGroupRowId(unit.classId, unitId, unit.hasActive),
+          "Archived",
+          id,
+        );
   } else {
     const projection = projectArchivedAccountHierarchy([
       ...args.groups.map((group) => ({

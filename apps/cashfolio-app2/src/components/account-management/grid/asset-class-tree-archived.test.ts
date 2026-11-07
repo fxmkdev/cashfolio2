@@ -105,3 +105,55 @@ describe("archived asset class units", () => {
     },
   );
 });
+
+it.each(["swiss", "equities", null])(
+  "matches return memberships to every displayed heading for %s",
+  async (assetClassId) => {
+    const { buildAccountReturnGroups } =
+      await import("@/shared/account-return-groups");
+    for (const isActive of [false, true]) {
+      const leaves = [
+        account("usd-a", { assetClassId, currency: "USD", isActive }),
+        account("usd-old", { assetClassId, currency: "USD", isActive: false }),
+        account("eur-old", { assetClassId, currency: "EUR", isActive: false }),
+        account("active", { assetClassId }),
+        account("mixed-old", { assetClassId, isActive: false }),
+      ];
+      const rows = buildAssetClassTree(leaves, classes);
+      const memberships = buildAccountReturnGroups({
+        accounts: leaves.map((a) => ({
+          ...a,
+          groupId: a.groupId ?? null,
+          assetClassId: a.assetClassId ?? null,
+          trackingMethod: a.trackingMethod ?? "INDIVIDUAL_UNITS",
+        })),
+        classes,
+        groups: [],
+        grouping: "assetClass",
+      });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      for (const heading of rows.filter((r) => r.nodeType === "accountGroup")) {
+        const descendants = leaves
+          .filter((a) => {
+            let row = byId.get(a.id);
+            while (row?.parentId) {
+              if (row.parentId === heading.id) return true;
+              row = byId.get(row.parentId);
+            }
+            return false;
+          })
+          .map((a) => a.id)
+          .sort();
+        expect([...memberships.get(heading.id)!.accountIds].sort()).toEqual(
+          descendants,
+        );
+      }
+      expect([...memberships.keys()].sort()).toEqual(
+        rows
+          .filter((r) => r.nodeType === "accountGroup")
+          .map((r) => r.id)
+          .sort(),
+      );
+    }
+  },
+);

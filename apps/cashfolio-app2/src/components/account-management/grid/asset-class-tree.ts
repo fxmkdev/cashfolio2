@@ -8,7 +8,7 @@ import {
   assetClassRowId,
   UNCLASSIFIED_ROW_ID,
   unitRowId,
-  archivedClassRowId,
+  archivedUnitGroupRowId,
 } from "@/shared/account-return-groups";
 export {
   assetClassRowId,
@@ -89,9 +89,12 @@ function appendUnitGroups(result: TreeRow[], units: Map<string, UnitGroup>) {
   const archivedClassParents = new Set<string>();
   for (const unit of orderedUnits) {
     const hasActiveAccounts = unit.accounts.some((account) => account.isActive);
-    const parentId = hasActiveAccounts
-      ? unit.parentId
-      : archivedClassRowId(unit.parentId);
+    const archivedId = archivedUnitGroupRowId(
+      unit.parentId,
+      unit.id,
+      hasActiveAccounts,
+    );
+    const parentId = hasActiveAccounts ? unit.parentId : archivedId;
     if (!hasActiveAccounts && !archivedClassParents.has(parentId)) {
       result.push(heading(parentId, "Archived", unit.parentId, "archived"));
       archivedClassParents.add(parentId);
@@ -108,10 +111,10 @@ function appendUnitGroups(result: TreeRow[], units: Map<string, UnitGroup>) {
     const archived = unit.accounts.filter((account) => !account.isActive);
     if (hasActiveAccounts && archived.length)
       result.push(
-        heading(archivedClassRowId(unit.id), "Archived", unit.id, "archived"),
+        heading(archivedId, "Archived", unit.id, "archived"),
         ...archived.map((account) => ({
           ...account,
-          parentId: archivedClassRowId(unit.id),
+          parentId: archivedId,
         })),
       );
   }
