@@ -18,6 +18,7 @@ import { TopPageHeader } from "@/components/layout/top-page-header";
 import { getAccountsPageTitle } from "./page-types";
 import type { AccountsPageViewProps } from "./page-view-types";
 import type { ReactNode } from "react";
+import classes from "./page-header.module.css";
 
 type HeaderProps = Pick<
   AccountsPageViewProps,
@@ -61,6 +62,7 @@ type ManagementActionProps = Pick<
   | "onOpenCreateAccount"
   | "tab"
   | "organizing"
+  | "organizerActions"
 >;
 type CategoriesHeaderProps = Pick<
   HeaderLayoutProps,
@@ -73,11 +75,7 @@ type CategoriesHeaderProps = Pick<
 >;
 type AccountsHeaderProps = Pick<
   HeaderLayoutProps,
-  | "organizing"
-  | "grouping"
-  | "onGroupingChange"
-  | "organizerActions"
-  | "managementActions"
+  "organizing" | "grouping" | "onGroupingChange" | "managementActions"
 >;
 
 function ManagementTabs({
@@ -122,18 +120,8 @@ function ManagementActions(props: ManagementActionProps) {
   return (
     <Group gap={isCategories ? "sm" : "md"}>
       {!isCategories &&
-        !props.organizing &&
         props.grouping === "accountStructure" &&
-        props.onOrganize && (
-          <Button
-            variant="default"
-            leftSection={<IconArrowsMove size={16} />}
-            onClick={props.onOrganize}
-            disabled={props.organizePending}
-          >
-            Organize
-          </Button>
-        )}
+        (props.organizing || props.onOrganize) && <ModeAction {...props} />}
       <GroupCreationAction {...props} />
       <Button
         leftSection={<IconPlus size={16} />}
@@ -147,6 +135,34 @@ function ManagementActions(props: ManagementActionProps) {
           : "Add Account"}
       </Button>
     </Group>
+  );
+}
+
+function ModeAction({
+  organizing,
+  organizerActions,
+  onOrganize,
+  organizePending,
+}: Pick<
+  ManagementActionProps,
+  "organizing" | "organizerActions" | "onOrganize" | "organizePending"
+>) {
+  return (
+    <div className={classes.modeAction}>
+      {/* Keep Organize's intrinsic width while Done occupies the same slot. */}
+      <Button
+        className={organizing ? classes.modeSizer : undefined}
+        aria-hidden={organizing || undefined}
+        tabIndex={organizing ? -1 : undefined}
+        variant="default"
+        leftSection={<IconArrowsMove size={16} />}
+        onClick={onOrganize}
+        disabled={organizing || organizePending}
+      >
+        Organize
+      </Button>
+      {organizing && organizerActions}
+    </div>
   );
 }
 function GroupCreationAction(
@@ -220,7 +236,6 @@ function AccountsHeader({
   organizing,
   grouping,
   onGroupingChange,
-  organizerActions,
   managementActions,
 }: AccountsHeaderProps) {
   return (
@@ -238,16 +253,7 @@ function AccountsHeader({
           />
         )
       }
-      actions={
-        organizing ? (
-          <Group gap="md">
-            {managementActions}
-            {organizerActions}
-          </Group>
-        ) : (
-          managementActions
-        )
-      }
+      actions={managementActions}
     />
   );
 }

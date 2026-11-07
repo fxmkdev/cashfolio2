@@ -1645,8 +1645,10 @@ visibility, expansion, and dialogs; reentry uses defaults. See
 
 On Accounts, keep **Accounts** as the heading with an **Organizing** badge and
 standard header spacing, without a mode-specific background. Use a large
-Organizing badge beside the heading. **Done** uses the same right-aligned header
-toolbar as normal management actions. Selection actions appear only after
+Organizing badge beside the heading. **Done** replaces Organize in the first
+slot of the same right-aligned header toolbar, followed by Add Group and Add
+Account. Reserve Organize's intrinsic width in both modes so the mode control
+and creation actions stay in place. Selection actions appear only after
 selection, replacing the instruction row without shifting the grid. Routine
 drag/save feedback shares that row, with no separate empty status line. Keep
 routine feedback on one line, retaining full text for assistive technology and
