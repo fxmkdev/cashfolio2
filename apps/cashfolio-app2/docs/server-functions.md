@@ -267,12 +267,12 @@ invalidation in the existing mutation handlers.
 ### Valuation Provider Adapters
 
 `src/server/valuation/providers.server.ts` remains the provider facade.
-Individual HTTP adapters live in `providers/currencylayer.ts`,
-`providers/coinlayer.ts`, and `providers/marketstack.ts`. `providers/request.ts`
-owns shared fetch timeout, request-error logging, and attempt-outcome recording.
-Adapters own their API key, URL, response interpretation, usage metadata, and
-HTTP/provider errors; Marketstack also owns its provider-specific rate-limit
-retry.
+Individual HTTP adapters live in `providers/currencylayer.server.ts`,
+`providers/coinlayer.server.ts`, and `providers/marketstack.server.ts`.
+`providers/request.server.ts` owns shared fetch timeout, request-error logging,
+and attempt-outcome recording. Adapters own their API key, URL, response
+interpretation, usage metadata, and HTTP/provider errors; Marketstack also owns
+its provider-specific rate-limit retry.
 
 ### Period Module Organization
 

@@ -18,14 +18,22 @@ export function localImportTarget(
 
 /** Support is identified by deliberate directory/file naming, never by importers. */
 export function isTestSupport(filename: string, sourceRoot: string): boolean {
-  const path = relative(sourceRoot, filename).split(sep).join("/");
-  const name = basename(filename);
+  const parts = relative(sourceRoot, filename).split(sep);
+  const name = basename(filename).replace(/\.[cm]?[jt]sx?$/, "");
   return (
-    /(?:^|\/)(?:testing|stories|fixtures|__tests__|__mocks__|__fixtures__|(?:test|story|storybook)-(?:support|fixtures|helpers|utils))(?:\/|$)/.test(
-      path,
+    parts.some(
+      (part) =>
+        /^(?:testing|stories|fixtures|__tests__|__mocks__|__fixtures__)$/.test(
+          part,
+        ) ||
+        /(?:^|[.-])(?:test|story|storybook)[.-](?:support|fixtures|helpers|utils|harness|setup)(?:[.-]|$)/.test(
+          part,
+        ),
     ) ||
-    /(?:^|[.-])(?:test|integration|stories)(?:[.-]|$)/.test(name) ||
-    /(?:^|[.-])(?:story|storybook)[.-]/.test(name)
+    /(?:^|[.-])(?:test|spec|integration|stories|fixtures?)(?:[.-]|$)/.test(
+      name,
+    ) ||
+    /(?:^|[.-])(?:story|storybook)(?:[.-]|$)/.test(name)
   );
 }
 

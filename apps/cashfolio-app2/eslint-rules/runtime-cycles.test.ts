@@ -95,11 +95,15 @@ describe("runtime cycle detection", () => {
   });
   it.each([
     "a.test.ts",
+    "a.spec.tsx",
     "a.integration.ts",
     "a.stories.tsx",
     "a.story-harness.tsx",
     "testing/a.ts",
     "test-support/a.ts",
+    "account-test-fixtures/a.ts",
+    "account-story-helpers/a.ts",
+    "fixtures.ts",
     "routeTree.gen.ts",
     ".prisma-client/client.ts",
   ])("excludes %s", (file) => {

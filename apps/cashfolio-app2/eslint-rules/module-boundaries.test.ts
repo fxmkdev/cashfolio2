@@ -73,6 +73,12 @@ describe("configured module boundaries", () => {
     "@/server/test-support",
     "@/components/fixtures/example",
     "@/components/story-fixtures/example",
+    "@/components/account-test-fixtures/rows",
+    "@/components/account-story-helpers/rows.ts",
+    "@/components/fixtures.ts",
+    "@/components/account-fixtures",
+    "@/shared/accounts/account-utils.spec.ts",
+    "../components/account-test-fixtures/../account-test-fixtures/rows",
   ])("rejects support target %s", async (target) => {
     expect(
       await messages(
@@ -102,6 +108,11 @@ describe("configured module boundaries", () => {
     ["src/server.tsx", "@/server/resource-context.server"],
     ["src/routes/api/example.tsx", "@/auth/functions.server"],
     ["src/components/example.test.ts", "@/routes/admin/-admin-shell"],
+    ["src/components/example.spec.tsx", "@/routes/admin/-admin-shell"],
+    [
+      "src/components/account-test-fixtures/rows.ts",
+      "@/components/testing/storybook-fixtures",
+    ],
     [
       "src/components/example.integration.ts",
       "@/server/accounts/accounts-queries",

@@ -110,11 +110,13 @@ typecheck; Node 26 loads tool sources using native type stripping.
 - Tests, integration tests, stories, and deliberately named support modules may
   import across these boundaries. Support includes `testing/`, `test-support/`,
   `stories/`, `fixtures/`, `__tests__/`, `__mocks__/`, `__fixtures__/`, and
-  named test/story support directories and filenames identifying test/story
-  fixtures, helpers, harnesses, or setup. Production modules cannot import those
-  files, even only for types. Keep support names explicit. Directory
-  classification is relative to the app source root, so checkout ancestors do
-  not grant exemptions.
+  `.test`, `.spec`, `.integration`, and story files, fixture filenames, and
+  named test/story support directories and filenames identifying fixtures,
+  helpers, harnesses, or setup (for example, `account-test-fixtures/` and
+  `test-harness/`). Ordinary production helpers remain subject to the rules.
+  Production modules cannot import support, even only for types. Keep support
+  names explicit. Directory classification is relative to the app source root,
+  so checkout ancestors do not grant exemptions.
 - Build-gated E2E runtime seams under `src/e2e/` are application runtime
   modules, not blanket test-support exemptions. Their `.server` consumers and
   existing `__E2E_BUILD__` gates remain in place.
