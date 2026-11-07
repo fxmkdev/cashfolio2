@@ -6,7 +6,7 @@ import {
   ArchivedAccountTreeActionsCell,
 } from "@/components/account-tree/account-tree-actions-cells";
 import {
-  isReferenceCurrencyTotalFooterRow,
+  isPersistedTreeRow,
   type AccountsGridRow,
   toRowTarget,
 } from "./-page-types";
@@ -40,9 +40,7 @@ function renderAccountRowActions({
     onArchiveRow,
     onDeleteRow,
   } = params;
-  if (!data) return null;
-  if (isReferenceCurrencyTotalFooterRow(data)) return null;
-  if (data.isVirtualArchivedGroup || data.presentationKind) return null;
+  if (!isPersistedTreeRow(data)) return null;
 
   if (!data.isActive) {
     return (

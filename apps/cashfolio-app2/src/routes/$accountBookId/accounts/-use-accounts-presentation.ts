@@ -13,6 +13,7 @@ import {
 } from "./-page-data";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+  toAccountGridTreeRow,
   type TreeRow,
   type ReferenceCurrencyTotalFooterRow,
 } from "./-page-types";
@@ -72,7 +73,8 @@ export function useAccountsPresentation({
   );
   const { rows, balanceInReferenceCurrencyByGroupId } =
     useRowsWithGroupSummaries(projectedRows, !isEquityTab);
-  const rowsByParentKey = useRowsByParentKey(rows);
+  const gridRows = useMemo(() => rows.map(toAccountGridTreeRow), [rows]);
+  const rowsByParentKey = useRowsByParentKey(gridRows);
   const projectedGainLoss = useMemo(
     () =>
       grouping === "assetClass"
@@ -93,7 +95,7 @@ export function useAccountsPresentation({
           },
         ];
   return {
-    rows,
+    rows: gridRows,
     rowsByParentKey,
     balanceInReferenceCurrencyByGroupId,
     gainLossData: projectedGainLoss,

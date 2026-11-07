@@ -4,7 +4,7 @@ import {
   type AccountInitialValues,
 } from "@/components/account-editor/edit-account-modal";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
-import type { TreeRow } from "./-page-types";
+import { isPersistedTreeRow, type PersistedTreeRow } from "./-page-types";
 
 export type RowTarget = {
   id: string;
@@ -60,8 +60,8 @@ export function useAccountsPageModalState(
     setDeletingRow(undefined);
   }, [scopeKey, resetEditorsOnScopeChange]);
 
-  const handleEditRow = useCallback((data: TreeRow) => {
-    if (data.isVirtualArchivedGroup || data.presentationKind) return;
+  const handleEditRow = useCallback((data: PersistedTreeRow) => {
+    if (!isPersistedTreeRow(data)) return;
     if (data.nodeType === "account") {
       setEditingAccount({
         id: data.id,

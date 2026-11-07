@@ -120,6 +120,13 @@ export const AssetClassSwitchingAndExpansion: Story = {
     await waitFor(() =>
       expect(canvasElement.querySelector('[row-id="old"]')).not.toBeNull(),
     );
+    for (const id of [classId, unitId, archivedClassRowId(unitId)]) {
+      await expect(
+        canvasElement.querySelectorAll(
+          `[row-id="${id}"] [col-id="actions"] button`,
+        ),
+      ).toHaveLength(0);
+    }
     for (const id of ["account-checking", "old"]) {
       await expect(
         canvasElement

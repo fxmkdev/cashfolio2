@@ -16,7 +16,7 @@ import type {
   AccountsMode,
   ReferenceCurrencyTotalFooterRow,
   TabValue,
-  TreeRow,
+  AccountGridTreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
@@ -59,7 +59,7 @@ export type AccountsPageViewProps = {
   accountGroups: AccountsPageLoaderData["accountGroups"];
   existingNodes: AccountsPageLoaderData["existingNodes"];
   unitUsage: AccountsPageLoaderData["unitUsage"];
-  rows: TreeRow[];
+  rows: AccountGridTreeRow[];
   columnDefs: NonNullable<AgGridReactProps<AccountsGridRow>["columnDefs"]>;
   onGridReady?: AgGridReactProps<AccountsGridRow>["onGridReady"];
   pinnedBottomRowData?: ReferenceCurrencyTotalFooterRow[];

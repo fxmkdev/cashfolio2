@@ -4,7 +4,7 @@ import type { GridApi } from "ag-grid-enterprise";
 
 import { notifications } from "@mantine/notifications";
 import type { AccountTrackingMethod } from "@/.prisma-client/enums";
-import type { AccountsGridRow, TreeRow } from "./-page-types";
+import type { AccountsGridRow, AccountGridTreeRow } from "./-page-types";
 import {
   createAccountBulkActionTarget,
   createTrackingMethodBulkActionTarget,
@@ -18,7 +18,7 @@ import {
 export function useBulkAccountActions(args: {
   scopeKey: string;
   enabled: boolean;
-  rows: TreeRow[];
+  rows: AccountGridTreeRow[];
   submitAssetClass: (
     accountIds: string[],
     assetClassId: string | null,
@@ -63,9 +63,9 @@ export function useBulkAccountActions(args: {
     );
   }, []);
   const selectedIdSet = new Set(selectedIds);
-  const selectedAccounts = args.rows.filter(
-    (row) => isBulkAccount(row) && selectedIdSet.has(row.id),
-  );
+  const selectedAccounts = args.rows
+    .filter(isBulkAccount)
+    .filter((row) => selectedIdSet.has(row.id));
   const rowSelection = useMemo<
     AgGridReactProps<AccountsGridRow>["rowSelection"]
   >(

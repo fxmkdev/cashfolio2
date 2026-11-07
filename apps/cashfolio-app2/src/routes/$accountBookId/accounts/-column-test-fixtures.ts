@@ -1,7 +1,15 @@
 import { AccountType, Unit } from "@/.prisma-client/enums";
-import type { AccountsGridRow, TreeRow } from "./-page-types";
-export function createAccountRow(overrides: Partial<TreeRow> = {}): TreeRow {
-  return {
+import {
+  toAccountGridTreeRow,
+  type AccountGridTreeRow,
+  type PersistedGroupRow,
+  type AccountsGridRow,
+  type TreeRow,
+} from "./-page-types";
+export function createAccountRow(
+  overrides: Partial<TreeRow> = {},
+): AccountGridTreeRow {
+  return toAccountGridTreeRow({
     id: "account-1",
     nodeType: "account",
     name: "Cash",
@@ -26,12 +34,13 @@ export function createAccountRow(overrides: Partial<TreeRow> = {}): TreeRow {
     unarchivable: true,
     unarchiveDisabledReason: undefined,
     ...overrides,
-  };
+  });
 }
 
-export function createGroupRow(): TreeRow {
+export function createGroupRow(): PersistedGroupRow {
   return {
     id: "group-1",
+    rowType: "accountGroup",
     nodeType: "accountGroup",
     name: "Assets",
     type: AccountType.BALANCE,

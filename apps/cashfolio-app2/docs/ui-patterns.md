@@ -20,6 +20,18 @@ shared owners. Existing server type exports remain as compatibility re-exports.
 Money-based reconciliation inputs and calculation callbacks remain server
 implementation details.
 
+The Accounts grid adapts wire/projection `TreeRow` values to a client-only
+`AccountsGridRow` discriminated union in `accounts/-account-grid-rows.ts`.
+`rowType` distinguishes persisted accounts, persisted groups, synthetic
+headings, and the total footer. Convert rows at the presentation boundary with
+`toAccountGridTreeRow`; server payloads, IDs, hierarchy ordering, and expansion
+keys remain unchanged. Use `isPersistedTreeRow`, `isPersistedAccountRow`, or
+`isPersistedGroupRow` before edit/delete/child-creation actions, including
+callbacks from the shared hierarchy editor. Mutation target builders accept only
+persisted variants. Synthetic headings can retain group checkboxes for
+descendant selection, but bulk targets include persisted account leaves only.
+Read-only projection helpers can still consume source rows.
+
 The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
 production modules in `src/shared/` and `src/server/` into `src/components/` or
 `src/routes/`. It also rejects dependencies from production `src/shared/`
