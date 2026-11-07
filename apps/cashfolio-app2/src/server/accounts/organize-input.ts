@@ -21,6 +21,15 @@ function readRef(value: unknown): OrganizeNodeRef {
   };
 }
 
+export function validateAccountTreeBatch(data: unknown) {
+  assertRecord(data);
+  const items = Array.from(requireArrayField(data, "items"), readRef);
+  if (!items.length) throw new Error("Select at least one account or group.");
+  if (new Set(items.map((item) => item.id)).size !== items.length)
+    throw new Error("Select each account or group only once.");
+  return { accountBookId: requireStringField(data, "accountBookId"), items };
+}
+
 export function validateOrganizeBook(data: unknown) {
   assertRecord(data);
   return {

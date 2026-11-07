@@ -1,13 +1,19 @@
-import { Button, Checkbox, Group, Text } from "@mantine/core";
-import type { OrganizeNodeRef } from "@/shared/hierarchy-organize/types";
+import { Button, Checkbox, Group, Text, Tooltip } from "@mantine/core";
+import { bulkLifecycleAvailability, bulkStatusAction } from "./lifecycle";
+import type {
+  OrganizeNodeRef,
+  OrganizeLifecycleAction,
+} from "@/shared/hierarchy-organize/types";
 import type { Organizer } from "./use-organizer";
 import styles from "./organizer.module.css";
 
 export function OrganizerToolbar({
   selectedCount,
+  selected,
   roots,
   onMove,
   onClear,
+  onBulkLifecycle,
   blocked,
   dragging,
   hint,
@@ -18,22 +24,33 @@ export function OrganizerToolbar({
   supportsArchived = true,
 }: {
   selectedCount: number;
+  selected: OrganizeNodeRef[];
+  onBulkLifecycle: (action: OrganizeLifecycleAction) => void;
   roots: OrganizeNodeRef[];
   onMove: () => void;
   onClear: () => void;
   blocked: boolean;
   dragging: boolean;
   hint: string;
-  organizer: Pick<Organizer, "pending" | "message" | "submitState" | "kind">;
+  organizer: Pick<
+    Organizer,
+    | "pending"
+    | "message"
+    | "submitState"
+    | "kind"
+    | "snapshot"
+    | "supportsBulkLifecycle"
+  >;
   hiddenResults: number;
   showArchived: boolean;
   onVisibility: (value: boolean) => void;
   supportsArchived?: boolean;
 }) {
-  const groups = roots.filter(
+  const groups = selected.filter(
     (node) => node.nodeType === "accountGroup",
   ).length;
-  const accounts = roots.length - groups;
+  const accounts = selected.length - groups;
+  const statusAction = bulkStatusAction(organizer.snapshot, selected);
   const status =
     hint ||
     (organizer.pending
@@ -66,6 +83,43 @@ export function OrganizerToolbar({
           >
             Move To…
           </Button>
+          {organizer.kind === "accounts" &&
+            organizer.supportsBulkLifecycle &&
+            ([statusAction, "delete"] as const).map((action) => {
+              const available = bulkLifecycleAvailability(
+                organizer.snapshot,
+                selected,
+                action,
+              );
+              const label =
+                action === "archive"
+                  ? "Archive"
+                  : action === "unarchive"
+                    ? "Unarchive"
+                    : "Delete";
+              return (
+                <Tooltip key={action} label={available.reason ?? label}>
+                  <span>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      color={
+                        action === "archive"
+                          ? "yellow"
+                          : action === "unarchive"
+                            ? "blue"
+                            : "red"
+                      }
+                      aria-description={available.reason}
+                      disabled={!available.enabled || blocked || dragging}
+                      onClick={() => onBulkLifecycle(action)}
+                    >
+                      {label}
+                    </Button>
+                  </span>
+                </Tooltip>
+              );
+            })}
           <Button
             size="sm"
             variant="subtle"

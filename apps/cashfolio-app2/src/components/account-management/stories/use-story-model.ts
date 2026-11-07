@@ -89,6 +89,7 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
       kind === "account"
         ? modalState.openCreateAccount(row.id)
         : modalState.openCreateGroup(row.id),
+    onMoveRow: isEquityTab ? undefined : modalState.setMovingRow,
     onEditRow: modalState.handleEditRow,
     onUnarchiveRow: async () => {
       routing.setModeState("active");

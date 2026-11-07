@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   committedLifecycleView,
+  committedBulkLifecycleView,
   organizeLifecycleAvailability,
+  bulkLifecycleAvailability,
 } from "./lifecycle";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
@@ -24,6 +26,9 @@ export type OrganizerApi = {
     target: OrganizeNodeRef,
     replacementId?: string | null,
   ) => Promise<unknown>;
+  archiveMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
+  unarchiveMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
+  deleteMany?: (targets: OrganizeNodeRef[]) => Promise<unknown>;
 };
 
 export function useOrganizer(
@@ -56,6 +61,7 @@ export function useOrganizer(
           target: OrganizeNodeRef;
           replacementId?: string | null;
         };
+        batch?: { action: OrganizeLifecycleAction; targets: OrganizeNodeRef[] };
         version: string;
       }
     | undefined
@@ -247,6 +253,36 @@ export function useOrganizer(
     onSaved();
     await refresh();
   };
+  const performBulkLifecycle = async (
+    action: OrganizeLifecycleAction,
+    targets: OrganizeNodeRef[],
+    onCommitted?: () => void,
+  ) => {
+    const before = confirmed.current;
+    const availability = bulkLifecycleAvailability(before, targets, action);
+    const operation =
+      action === "archive"
+        ? api?.archiveMany
+        : action === "unarchive"
+          ? api?.unarchiveMany
+          : api?.deleteMany;
+    if (!before || !operation || needsRefresh || !availability.enabled)
+      throw new Error(
+        availability.reason ?? "Refresh the hierarchy before saving.",
+      );
+    attempted.current = { batch: { action, targets }, version: before.version };
+    await operation(targets);
+    attempted.current = undefined;
+    if (!mounted.current) return;
+    const committed = committedBulkLifecycleView(before, action, targets);
+    setSnapshot(committed.snapshot);
+    setRevealIds(committed.revealIds);
+    setFocusFallbackIds(committed.focusFallbackIds);
+    setMessage(committed.message);
+    onSaved();
+    onCommitted?.();
+    await refresh();
+  };
   const isRetryValid = () => {
     const attempt = attempted.current;
     return (
@@ -257,6 +293,12 @@ export function useOrganizer(
           confirmed.current,
           attempt.lifecycle.target,
           attempt.lifecycle.action,
+        ).enabled) &&
+      (!attempt.batch ||
+        bulkLifecycleAvailability(
+          confirmed.current,
+          attempt.batch.targets,
+          attempt.batch.action,
         ).enabled)
     );
   };
@@ -268,6 +310,9 @@ export function useOrganizer(
       void runSubmit(() =>
         performLifecycle(action, target, undefined, replacementId),
       );
+    } else if (attempted.current?.batch) {
+      const { action, targets } = attempted.current.batch;
+      void runSubmit(() => performBulkLifecycle(action, targets));
     }
   };
   return {
@@ -279,6 +324,9 @@ export function useOrganizer(
     loadError,
     refresh,
     performLifecycle,
+    performBulkLifecycle,
+    supportsBulkLifecycle:
+      !!api?.archiveMany && !!api?.unarchiveMany && !!api?.deleteMany,
     performEdit,
     saveMove,
     pending,

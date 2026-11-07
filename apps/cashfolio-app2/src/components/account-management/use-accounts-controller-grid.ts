@@ -31,6 +31,7 @@ export function useAccountsControllerGrid({
     isReferenceBalancesLoading: data.shouldShowReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId:
       presentation.balanceInReferenceCurrencyByGroupId,
+    onMoveRow: data.isEquityTab ? undefined : modalState.setMovingRow,
     onEditRow: modalState.handleEditRow,
     onAddChild: management.onAddChild,
     onUnarchiveRow: management.unarchiveRecovery.unarchive,

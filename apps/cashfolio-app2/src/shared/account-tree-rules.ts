@@ -1,4 +1,4 @@
-import type { AccountType } from "../../.prisma-client/enums";
+import type { AccountType } from "../.prisma-client/enums";
 
 export type ActionAvailability =
   | { enabled: true; disabledReason: undefined }

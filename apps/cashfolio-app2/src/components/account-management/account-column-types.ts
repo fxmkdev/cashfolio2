@@ -19,6 +19,7 @@ export type AccountTreeColumnParams = {
   referenceCurrency: string;
   isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
+  onMoveRow?: (row: PersistedTreeRow) => void;
   onEditRow: (row: PersistedTreeRow) => void;
   onAddChild?: (
     row: PersistedGroupRow,

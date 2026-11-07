@@ -37,6 +37,11 @@ type MoveDialogProps = {
   items?: OrganizeNodeRef[];
   pending: boolean;
   blocked?: boolean;
+  initialLoad?: {
+    loading: boolean;
+    error?: string;
+    onRetry: () => void;
+  };
   submission?: {
     state: ReturnType<typeof useDialogSubmitState>;
     onRefreshConstraints: () => Promise<void>;
@@ -58,8 +63,28 @@ export function MoveDialog(props: MoveDialogProps) {
       closeOnEscape={!props.pending}
       closeOnClickOutside={!props.pending}
       withCloseButton={!props.pending}
+      aria-busy={props.initialLoad?.loading || undefined}
     >
-      {props.items && <MoveDialogContent {...props} items={props.items} />}
+      {props.items &&
+        (props.initialLoad ? (
+          <Stack>
+            {props.initialLoad.error && (
+              <Alert color="red" role="alert">
+                {props.initialLoad.error}
+                <Button variant="subtle" onClick={props.initialLoad.onRetry}>
+                  Try Again
+                </Button>
+              </Alert>
+            )}
+            <Group justify="flex-end">
+              <Button variant="default" onClick={props.onClose}>
+                Cancel
+              </Button>
+            </Group>
+          </Stack>
+        ) : (
+          <MoveDialogContent {...props} items={props.items} />
+        ))}
     </Modal>
   );
 }

@@ -42,7 +42,7 @@ import {
   getAccountArchiveAvailability,
   getAccountDeleteAvailability,
   getAccountUnarchiveAvailability,
-} from "./account-tree-rules";
+} from "../../shared/account-tree-rules";
 import {
   buildAccountRows,
   buildUnifiedAccountTreeRows,

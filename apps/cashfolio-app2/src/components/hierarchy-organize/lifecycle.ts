@@ -1,4 +1,5 @@
 import { organizeDisplayRows } from "@/shared/hierarchy-organize/tree";
+import { planBulkLifecycle } from "@/shared/hierarchy-organize/lifecycle";
 import type {
   OrganizeLifecycleAction,
   OrganizeNodeRef,
@@ -35,6 +36,42 @@ export function organizeLifecycleAvailability(
   };
 }
 
+export function bulkLifecycleAvailability(
+  snapshot: OrganizeSnapshot | undefined,
+  targets: OrganizeNodeRef[],
+  action: OrganizeLifecycleAction,
+) {
+  try {
+    planBulkLifecycle(snapshot, targets, action);
+    return { enabled: true, reason: undefined };
+  } catch (error) {
+    return {
+      enabled: false,
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Refresh the hierarchy before saving.",
+    };
+  }
+}
+
+export function bulkStatusAction(
+  snapshot: OrganizeSnapshot | undefined,
+  targets: OrganizeNodeRef[],
+): "archive" | "unarchive" {
+  return targets.length > 0 &&
+    targets.every((target) =>
+      snapshot?.nodes.some(
+        (node) =>
+          node.id === target.id &&
+          node.nodeType === target.nodeType &&
+          node.isActive === false,
+      ),
+    )
+    ? "unarchive"
+    : "archive";
+}
+
 /** Reflect a confirmed commit while its canonical version/eligibility reloads. */
 export function committedLifecycleView(
   before: OrganizeSnapshot,
@@ -67,5 +104,28 @@ export function committedLifecycleView(
     revealIds: [node.id, ...(node.parentId ? [node.parentId] : [])],
     focusFallbackIds,
     message: `${node.name} ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
+  };
+}
+
+export function committedBulkLifecycleView(
+  before: OrganizeSnapshot,
+  action: OrganizeLifecycleAction,
+  targets: OrganizeNodeRef[],
+) {
+  let snapshot = before;
+  const revealIds: string[] = [];
+  const focusFallbackIds: string[] = [];
+  for (const target of targets) {
+    const node = snapshot.nodes.find((node) => node.id === target.id)!;
+    const view = committedLifecycleView(snapshot, action, node);
+    snapshot = view.snapshot;
+    revealIds.push(...view.revealIds);
+    focusFallbackIds.push(...view.focusFallbackIds);
+  }
+  return {
+    snapshot,
+    revealIds: [...new Set(revealIds)],
+    focusFallbackIds: [...new Set(focusFallbackIds)],
+    message: `${targets.length} selected items ${action === "archive" ? "archived" : action === "unarchive" ? "unarchived" : "deleted"}.`,
   };
 }

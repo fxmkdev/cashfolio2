@@ -10,7 +10,7 @@ import {
   getGroupArchiveAvailability,
   getAccountUnarchiveAvailability,
   getGroupUnarchiveAvailability,
-} from "../account-tree-rules";
+} from "../../../shared/account-tree-rules";
 import { moneyIsZero } from "../../../shared/money";
 import {
   getGroupHierarchy,

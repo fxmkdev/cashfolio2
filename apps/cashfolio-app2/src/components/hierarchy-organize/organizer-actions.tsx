@@ -4,9 +4,11 @@ import type { Organizer } from "./use-organizer";
 export function OrganizerActions({
   organizer,
   onDone,
+  blocked = false,
 }: {
   organizer: Organizer;
   onDone: () => void;
+  blocked?: boolean;
 }) {
   return (
     <Group
@@ -15,7 +17,11 @@ export function OrganizerActions({
       role="toolbar"
       aria-label="Organize Mode Actions"
     >
-      <Button variant="default" disabled={organizer.pending} onClick={onDone}>
+      <Button
+        variant="default"
+        disabled={organizer.pending || blocked}
+        onClick={onDone}
+      >
         Done
       </Button>
     </Group>

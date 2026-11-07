@@ -12,7 +12,7 @@ import type { Organizer } from "./use-organizer";
 import type { useOrganizeDrag } from "./use-organize-drag";
 import type { LifecycleDialog } from "./lifecycle-dialogs";
 import styles from "./organizer.module.css";
-import type { HierarchyManagement } from "./management";
+import type { HierarchyManagement, HierarchyCreation } from "./management";
 import { useOrganizerColumns } from "./organizer-columns";
 
 // Hint updates must not reconfigure the tree column or recreate its controls.
@@ -48,6 +48,7 @@ export function OrganizerGrid({
   onMoveItems,
   onLifecycle,
   management,
+  creation,
 }: {
   rows: OrganizeDisplayRow[];
   api?: GridApi<OrganizeDisplayRow>;
@@ -61,6 +62,7 @@ export function OrganizerGrid({
   onMoveItems: (items: OrganizeNodeRef[]) => void;
   onLifecycle: (dialog: LifecycleDialog) => void;
   management?: HierarchyManagement;
+  creation?: HierarchyCreation;
 }) {
   const expansion = useRef(new Map<string, boolean>());
   const organizerRef = useRef(organizer);
@@ -70,6 +72,7 @@ export function OrganizerGrid({
   const columnDefs = useOrganizerColumns({
     organizer,
     management,
+    creation,
     blocked: blocked || drag.dragging,
     onMoveItems,
     onLifecycle,

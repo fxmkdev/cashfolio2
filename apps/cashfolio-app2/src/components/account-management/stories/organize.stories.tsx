@@ -21,23 +21,51 @@ export const OrganizeEntryAndExit: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const organizeTop = canvas
-      .getByRole("button", { name: "Organize" })
-      .getBoundingClientRect().top;
+    const initialBounds = {
+      mode: canvas
+        .getByRole("button", { name: "Organize" })
+        .getBoundingClientRect(),
+      group: canvas
+        .getByRole("button", { name: "Add Group" })
+        .getBoundingClientRect(),
+      account: canvas
+        .getByRole("button", { name: "Add Account" })
+        .getBoundingClientRect(),
+    };
+    const expectStationaryActions = async (mode: "Organize" | "Done") => {
+      for (const [name, before] of [
+        [mode, initialBounds.mode],
+        ["Add Group", initialBounds.group],
+        ["Add Account", initialBounds.account],
+      ] as const) {
+        const after = canvas
+          .getByRole("button", { name })
+          .getBoundingClientRect();
+        for (const dimension of ["left", "top", "width"] as const)
+          await expect(after[dimension]).toBeCloseTo(before[dimension], 0);
+      }
+    };
     await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
     await expect(
       await canvas.findByRole("region", { name: "Organize Accounts" }),
     ).toBeVisible();
     await expect(canvas.getByText("Organizing", { exact: true })).toBeVisible();
+    await expectStationaryActions("Done");
+    canvas.getByRole("button", { name: "Done" }).focus();
+    await userEvent.tab();
     await expect(
-      canvas.getByRole("button", { name: "Done" }).getBoundingClientRect().top,
-    ).toBeCloseTo(organizeTop, 0);
+      canvas.getByRole("button", { name: "Add Group" }),
+    ).toHaveFocus();
+    await userEvent.tab();
+    await expect(
+      canvas.getByRole("button", { name: "Add Account" }),
+    ).toHaveFocus();
     await expect(
       canvas.queryByRole("toolbar", { name: "Organize Account Actions" }),
     ).not.toBeInTheDocument();
     await expect(
-      canvas.queryByRole("button", { name: "Add Account" }),
-    ).not.toBeInTheDocument();
+      canvas.getByRole("button", { name: "Add Account" }),
+    ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Set Asset Class" }),
     ).not.toBeInTheDocument();
@@ -48,6 +76,7 @@ export const OrganizeEntryAndExit: Story = {
     await expect(
       canvas.getByRole("button", { name: "Add Account" }),
     ).toBeVisible();
+    await expectStationaryActions("Organize");
   },
 };
 

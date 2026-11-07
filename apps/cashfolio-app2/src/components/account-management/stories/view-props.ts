@@ -15,7 +15,8 @@ export function getStoryViewProps(
   const { tab, mode, showArchived, isEquityTab, navigate } = routing;
   const { rows } = presentation;
   return {
-    ...getStoryModalProps(modalState),
+    ...getStoryModalProps(modalState, options),
+    onRefreshConstraints: options.refreshConstraints,
     onEditHierarchyNode: (node) => {
       const row = rows.find((row) => row.id === node.id);
       if (isPersistedTreeRow(row))

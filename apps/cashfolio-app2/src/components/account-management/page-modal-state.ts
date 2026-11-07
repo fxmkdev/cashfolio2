@@ -114,6 +114,8 @@ export function useAccountsPageModalState(
 ) {
   const creation = useAccountCreationState(scopeKey);
   const { resetEditors, ...editors } = useAccountEditorState();
+  const [movingRow, setMovingRow] = useState<RowTarget>();
+  useEffect(() => setMovingRow(undefined), [scopeKey]);
   const [archivingRow, setArchivingRow] = useState<RowTarget | undefined>();
   const [deletingRow, setDeletingRow] = useState<RowTarget | undefined>();
   useEffect(() => {
@@ -125,6 +127,8 @@ export function useAccountsPageModalState(
   return {
     ...creation,
     ...editors,
+    movingRow,
+    setMovingRow,
     archivingRow,
     setArchivingRow,
     deletingRow,

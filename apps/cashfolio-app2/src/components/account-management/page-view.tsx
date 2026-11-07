@@ -8,12 +8,15 @@ import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutati
 import { BulkAccountToolbar } from "./bulk-account-toolbar";
 import { AccountsPageHeader } from "./page-header";
 import { AccountsPageGrid } from "./page-grid";
-import {
-  AccountsPageDialogs,
-  AccountsBulkAssignmentDialogs,
-} from "./page-dialogs";
+import { AccountsBulkAssignmentDialogs } from "./page-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import { CategoriesPageView } from "./categories-page";
+import { useState } from "react";
+import { AccountOrganizeDialogs } from "./organize-dialogs";
+import { AccountRowMoveDialog } from "./row-move-dialog";
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { useOrganizeNavigationGuard } from "@/components/hierarchy-organize/use-organize-navigation-guard";
 export type { AccountsPageViewProps } from "./page-view-types";
 
 export function AccountsPageView(props: AccountsPageViewProps) {
@@ -129,6 +132,21 @@ function AccountsPageContent(props: AccountsPageViewProps) {
   const isCategories = managementContext === "categories";
   const grouping = props.grouping ?? "accountStructure";
   const canOrganize = grouping === "accountStructure" && !!props.organizerApi;
+  const internalSubmitState = useDialogSubmitState({
+    captureErrors: true,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(message, "accounts") ?? message,
+    onRefreshConstraints: props.onRefreshConstraints,
+  });
+  const normalSubmitState = props.editorSubmitState ?? internalSubmitState;
+  const normalPending =
+    normalSubmitState.isSubmitting || normalSubmitState.isRefreshing;
+  useOrganizeNavigationGuard(props.accountBookId, normalPending, "accounts");
+  const editorOpened =
+    props.createModalOpened ||
+    props.createGroupModalOpened ||
+    props.editModalOpen ||
+    props.editGroupModalOpen;
   const session = useOrganizeSession<AccountsGridRow>({
     accountBookId: props.accountBookId,
     requested: !!props.organize,
@@ -137,24 +155,50 @@ function AccountsPageContent(props: AccountsPageViewProps) {
     api: props.organizerApi,
     onSaved: props.onOrganizeSaved ?? (() => {}),
     onActivate: () => bulkAccountActions?.clearSelection(),
+    refreshMetadata: props.onRefreshConstraints,
+    entryBlocked:
+      normalPending ||
+      (editorOpened &&
+        !!(
+          normalSubmitState.submissionError || normalSubmitState.refreshError
+        )),
   });
   const { organizer, navigation, isOrganizing } = session;
+  const [interactionBlocked, setInteractionBlocked] = useState(false);
 
   return (
     <PageShell>
       <AccountsPageHeader
         {...props}
         organizing={isOrganizing}
-        onOrganize={canOrganize ? navigation.enter : undefined}
+        managementPending={
+          isOrganizing
+            ? organizer.blocked || interactionBlocked || editorOpened
+            : !!props.movingRow
+        }
+        onOrganize={
+          canOrganize && !props.movingRow ? navigation.enter : undefined
+        }
         organizePending={organizer.loading}
         organizerActions={
-          <OrganizerActions organizer={organizer} onDone={navigation.exit} />
+          <OrganizerActions
+            organizer={organizer}
+            blocked={editorOpened || interactionBlocked}
+            onDone={navigation.exit}
+          />
         }
       />
       {isOrganizing && (
         <HierarchyOrganizer
           accountBookId={props.accountBookId}
           organizer={organizer}
+          creation={{
+            editorOpened,
+            onAddChild: (node) => props.onAddHierarchyChild?.(node, "account"),
+            onAddGroup: (node) =>
+              props.onAddHierarchyChild?.(node, "accountGroup"),
+            onInteractionBlockedChange: setInteractionBlocked,
+          }}
         />
       )}
       <AccountsNormalContent
@@ -162,7 +206,11 @@ function AccountsPageContent(props: AccountsPageViewProps) {
         session={session}
         canOrganize={canOrganize}
       />
-      <AccountsPageDialogs {...props} />
+      <AccountOrganizeDialogs
+        props={{ ...props, editorSubmitState: normalSubmitState }}
+        organizer={isOrganizing ? organizer : undefined}
+      />
+      <AccountRowMoveDialog props={props} />
     </PageShell>
   );
 }

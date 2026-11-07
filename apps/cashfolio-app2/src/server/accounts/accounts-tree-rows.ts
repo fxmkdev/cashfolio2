@@ -22,7 +22,7 @@ import {
   getGroupArchiveAvailability,
   getGroupDeleteAvailability,
   getGroupUnarchiveAvailability,
-} from "./account-tree-rules";
+} from "../../shared/account-tree-rules";
 
 const ACTION_AVAILABILITY_NOT_REQUESTED_REASON =
   "Action availability not requested";

@@ -1,5 +1,8 @@
 import {
   getAccountOrganizeData,
+  archiveAccountTreeItems,
+  unarchiveAccountTreeItems,
+  deleteAccountTreeItems,
   moveAccountTreeItems,
   archiveAccount,
   archiveAccountGroup,
@@ -23,8 +26,8 @@ export function getAccountOrganizeScope(args: OrganizerOptions) {
     : "balance";
 }
 
-function accountMoveItems(move: Parameters<OrganizerApi["move"]>[0]) {
-  return move.items.map((item) => {
+function accountMoveItems(items: Parameters<OrganizerApi["move"]>[0]["items"]) {
+  return items.map((item) => {
     if (item.nodeType === "assetClass")
       throw new Error("Choose a category or account.");
     return { ...item, nodeType: item.nodeType };
@@ -44,11 +47,27 @@ export function createAccountOrganizerApi(
         data: {
           accountBookId,
           ...move,
-          items: accountMoveItems(move),
+          items: accountMoveItems(move.items),
           version,
           scope,
         },
       }),
+    ...(args.managementContext !== "categories"
+      ? ({
+          archiveMany: (items) =>
+            archiveAccountTreeItems({
+              data: { accountBookId, items: accountMoveItems(items) },
+            }),
+          unarchiveMany: (items) =>
+            unarchiveAccountTreeItems({
+              data: { accountBookId, items: accountMoveItems(items) },
+            }),
+          deleteMany: (items) =>
+            deleteAccountTreeItems({
+              data: { accountBookId, items: accountMoveItems(items) },
+            }),
+        } satisfies Partial<OrganizerApi>)
+      : {}),
     archive: (target) =>
       (target.nodeType === "account" ? archiveAccount : archiveAccountGroup)({
         data: { id: target.id, accountBookId },

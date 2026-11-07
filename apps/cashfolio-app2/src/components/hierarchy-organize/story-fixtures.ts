@@ -1,3 +1,4 @@
+import { planBulkLifecycle } from "@/shared/hierarchy-organize/lifecycle";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
   OrganizeNode,
@@ -95,6 +96,7 @@ export function createOrganizerStoryApi(
 ): OrganizerApi &
   Required<Pick<OrganizerApi, "archive" | "unarchive">> & {
     rename: (id: string, name: string) => void;
+    create: (node: OrganizeNode) => void;
   } {
   let nodes = structuredClone(initialNodes);
   let failed = false;
@@ -160,7 +162,23 @@ export function createOrganizerStoryApi(
               : node,
           );
   }
+  function mutateMany(
+    action: "archive" | "unarchive" | "delete",
+    targets: Parameters<NonNullable<OrganizerApi["archiveMany"]>>[0],
+  ) {
+    const before = structuredClone(nodes);
+    try {
+      const ordered = planBulkLifecycle(snapshot(), targets, action);
+      for (const target of ordered) mutate(action, target.id);
+    } catch (error) {
+      nodes = before;
+      throw error;
+    }
+  }
   return {
+    create: (node) => {
+      nodes = [...nodes, node];
+    },
     rename: (id, name) => {
       nodes = nodes.map((node) => (node.id === id ? { ...node, name } : node));
     },
@@ -203,5 +221,8 @@ export function createOrganizerStoryApi(
     delete: async (target) => {
       mutate("delete", target.id);
     },
+    archiveMany: async (targets) => mutateMany("archive", targets),
+    unarchiveMany: async (targets) => mutateMany("unarchive", targets),
+    deleteMany: async (targets) => mutateMany("delete", targets),
   };
 }

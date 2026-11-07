@@ -14,6 +14,8 @@ export function getAccountsModalViewProps(
   >,
 ) {
   return {
+    movingRow: modalState.movingRow,
+    onCloseMove: () => modalState.setMovingRow(undefined),
     createAccountGroupId: modalState.createAccountGroupId,
     createGroupParentId: modalState.createGroupParentId,
     createModalOpened: modalState.createModalOpened,

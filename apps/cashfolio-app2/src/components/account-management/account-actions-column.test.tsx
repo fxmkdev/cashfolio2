@@ -17,11 +17,13 @@ describe("account tree Delete explanations", () => {
       let render!: (params: {
         data: AccountsGridRow | undefined;
       }) => ReactElement<{
+        onMove?: () => void;
         onEdit: () => void;
         onAddAccount?: () => void;
         onAddGroup?: () => void;
       }> | null;
       const onEdit = vi.fn();
+      const onMove = vi.fn();
       const onAddChild = vi.fn();
       function Harness() {
         const columns = useAccountTreeColumnDefs({
@@ -33,6 +35,7 @@ describe("account tree Delete explanations", () => {
           isReferenceBalancesLoading: false,
           balanceInReferenceCurrencyByGroupId: new Map(),
           onEditRow: onEdit,
+          onMoveRow: onMove,
           onAddChild,
           onUnarchiveRow: async () => {},
           onArchiveRow: () => {},
@@ -77,6 +80,11 @@ describe("account tree Delete explanations", () => {
       const account = createAccountRow({ isActive });
       const action = render({ data: account })!;
       expect(action.props).not.toHaveProperty("onReorder");
+      action.props.onMove!();
+      expect(onMove).toHaveBeenCalledWith(account);
+      const groupMove = { ...createGroupRow(), isActive };
+      render({ data: groupMove })!.props.onMove!();
+      expect(onMove).toHaveBeenCalledWith(groupMove);
       action.props.onEdit();
       expect(onEdit).toHaveBeenCalledWith(account);
       expect(action.props.onAddAccount).toBeUndefined();

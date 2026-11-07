@@ -8,6 +8,7 @@ export function ConfirmArchiveModal({
   onClose,
   title,
   name,
+  confirmDisabled = false,
   onConfirm,
   onRefreshConstraints,
   formatErrorMessage,
@@ -20,6 +21,7 @@ export function ConfirmArchiveModal({
   submitState?: ReturnType<typeof useDialogSubmitState>;
   title: string;
   name?: string;
+  confirmDisabled?: boolean;
   onConfirm: () => void | Promise<void>;
 }) {
   const internalSubmitState = useDialogSubmitState({
@@ -37,6 +39,7 @@ export function ConfirmArchiveModal({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (confirmDisabled) return;
     await runSubmit(async () => {
       await onConfirm();
     });
@@ -56,6 +59,7 @@ export function ConfirmArchiveModal({
         <MutationSubmitFeedback
           state={submitState}
           onRefreshConstraints={onRefreshConstraints}
+          retryDisabled={confirmDisabled}
         />
         <Group justify="flex-end">
           <Button
@@ -69,7 +73,7 @@ export function ConfirmArchiveModal({
             color="yellow"
             type="submit"
             loading={isSubmitting}
-            disabled={isSubmitting}
+            disabled={isSubmitting || confirmDisabled}
           >
             Archive
           </Button>

@@ -14,6 +14,8 @@ export function useOrganizeSession<Row>({
   api,
   onSaved,
   onActivate,
+  refreshMetadata,
+  entryBlocked = false,
 }: {
   accountBookId: string;
   requested: boolean;
@@ -22,9 +24,11 @@ export function useOrganizeSession<Row>({
   api?: OrganizerApi;
   onSaved: () => void;
   onActivate?: () => void;
+  refreshMetadata?: () => Promise<void>;
+  entryBlocked?: boolean;
 }) {
   const [active, setActive] = useState(false);
-  const organizer = useOrganizer(onSaved, api, false);
+  const organizer = useOrganizer(onSaved, api, false, refreshMetadata);
   useGlobalLoading(organizer.loading || organizer.submitState.isRefreshing);
   const navigation = useOrganizeNavigation(
     accountBookId,
@@ -41,7 +45,9 @@ export function useOrganizeSession<Row>({
     setActive(true);
   });
   const { reset, load, snapshot } = organizer;
-  const shouldLoad = requested && available;
+  // A normal editor can start saving after entry has begun loading. Discard
+  // that read and start fresh when its controller permits the handoff.
+  const shouldLoad = requested && available && (active || !entryBlocked);
   useEffect(() => {
     if (shouldLoad && snapshot && !active) activate();
   }, [active, shouldLoad, snapshot]);

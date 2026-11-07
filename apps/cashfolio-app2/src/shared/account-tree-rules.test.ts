@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { AccountType } from "../../.prisma-client/enums";
+import { AccountType } from "../.prisma-client/enums";
 import {
   accountTypeRequiresZeroBalanceForArchive,
   getAccountArchiveAvailability,

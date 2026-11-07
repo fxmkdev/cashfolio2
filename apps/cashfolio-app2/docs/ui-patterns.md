@@ -1645,8 +1645,10 @@ visibility, expansion, and dialogs; reentry uses defaults. See
 
 On Accounts, keep **Accounts** as the heading with an **Organizing** badge and
 standard header spacing, without a mode-specific background. Use a large
-Organizing badge beside the heading. **Done** uses the same right-aligned header
-toolbar as normal management actions. Selection actions appear only after
+Organizing badge beside the heading. **Done** replaces Organize in the first
+slot of the same right-aligned header toolbar, followed by Add Group and Add
+Account. Reserve Organize's intrinsic width in both modes so the mode control
+and creation actions stay in place. Selection actions appear only after
 selection, replacing the instruction row without shifting the grid. Routine
 drag/save feedback shares that row, with no separate empty status line. Keep
 routine feedback on one line, retaining full text for assistive technology and
@@ -1659,16 +1661,69 @@ Organize checkboxes select real accounts or groups themselves, including empty
 groups. Selected descendants of a selected group are normalized out of the move;
 the complete subtree travels intact, including archived descendants. This
 selection is separate from the normal account-property bulk selection and starts
-empty on entry. Creation, editing, and property bulk actions are hidden while
-organizing. Row actions use an unlabeled, fixed-width, right-pinned column with
-shared hover/focus styling: Move To (`IconArrowsMove`, blue), Archive
+empty on entry. Account List keeps Add Account and Add Group in its Organize
+header beside Done, and on active group rows with the parent preselected.
+Editing and property bulk actions remain hidden while organizing. Creation
+shares the organizer submission controller, refreshes hierarchy and editor
+metadata after commit, and reveals the new row. Open editors block conflicting
+actions; pending submissions and recovery queue navigation. A failed refresh
+never replays a committed creation. Keep existing editors mounted across mode
+changes through browser history; finish normal editor submissions/recovery
+before switching controllers, including submissions begun while initial Organize
+loading is already in progress. Discard any overlapping initial read and
+activate only after a fresh hierarchy/metadata read. Failed normal editors
+retain their controller, draft, and feedback until saved or cancelled. Retained
+edits share the organizer controller, block conflicting actions, and refresh
+canonical hierarchy after saving. Row actions use an unlabeled, fixed-width,
+right-pinned column with shared hover/focus styling: Move To (`IconArrowsMove`,
+blue), Add Account and Add Group (`IconPlus`, blue) on active groups, Archive
 (`IconArchive`, yellow) or Unarchive (`IconArchiveOff`, blue), then Delete
 (`IconTrash`, red). Use accessible labels identifying the row and
 disabled-reason tooltips. Archive/delete reuse the shared confirmation dialogs;
 unarchive runs directly. Existing eligibility remains authoritative: groups with
 active children cannot be archived, nonempty groups cannot be deleted, booked
-accounts cannot be deleted, and archived ancestors prevent unarchiving. These
-are single-row operations, not recursive subtree archive/delete or bulk actions.
+accounts cannot be deleted, and archived ancestors prevent unarchiving. Row
+lifecycle actions affect only that row.
+
+Account List Organize also offers Archive and Delete beside Move To in its
+selection toolbar. Lifecycle actions use every explicitly selected row; movement
+still normalizes selected descendants out of its subtree roots. Display counts
+for the explicit selection. A shared batch planner evaluates prerequisites
+against the projected hierarchy and provides the same availability and operation
+order to the toolbar, submissions, retries, and server mutations. Pure account
+lifecycle rules live in `src/shared/account-tree-rules.ts` for server/browser
+reuse.
+
+Selected rows can satisfy each other's hierarchy prerequisites. Unarchive runs
+ancestors before descendants and requires every blocking archived ancestor to be
+selected. Archive runs descendants before ancestors and requires all active
+children needed to archive selected groups to be selected; already archived,
+unselected children do not block it. Delete runs descendants before ancestors
+and requires all accounts and subgroups, including archived descendants, of a
+selected group to be explicitly selected. Missing prerequisites disable the
+whole batch with an accessible explanation naming the blocking row. Nonzero
+balances still prevent account archive, and bookings still prevent account
+deletion. No ancestors or descendants are added automatically.
+
+When all explicitly selected accounts/groups are archived, replace Archive with
+Unarchive (blue), based on status rather than eligibility. Otherwise show
+Archive; its selected rows must all be active. Unarchive runs directly, like row
+Unarchive; Archive/Delete confirm the selected names and account/group counts
+once. The server reads current metadata and validates the complete
+balance-hierarchy batch under the book lock before writing in the planned order,
+with rollback on any failure and one cache invalidation. Single-row eligibility
+rules remain unchanged. Bulk lifecycle actions are exclusive to Account List
+Organize.
+
+Default Account List row menus offer Move To for real accounts and groups,
+including archived rows and accounts displayed under Asset Class grouping.
+Virtual headings and totals have no action. Open the shared move dialog
+immediately to block conflicting page actions during its fresh structural read.
+Use global progress during loading and offer load retry/cancellation inside the
+dialog. Do not change modes or the URL; use persisted parents and include
+archived destinations for archived targets. The default property bulk toolbar
+does not offer movement. In row menus, Edit precedes Move To; both use the
+default neutral menu styling.
 
 Organize displays real persisted parents and manual order, including archived
 items, without virtual Archived branches. Archived rows have a status badge and

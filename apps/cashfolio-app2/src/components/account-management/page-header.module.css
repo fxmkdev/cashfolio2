@@ -1,0 +1,17 @@
+.modeAction {
+  display: grid;
+  grid-template-areas: "action";
+}
+
+.modeAction > * {
+  grid-area: action;
+}
+
+.modeAction :global(.mantine-Button-root) {
+  width: 100%;
+}
+
+.modeSizer {
+  visibility: hidden;
+  pointer-events: none;
+}
