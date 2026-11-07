@@ -100,6 +100,10 @@ stories, and fixtures stay with their owner; the cross-feature story harness
 stays in `stories/`. Folder names supply context, so implementation filenames
 omit redundant account/page prefixes.
 
+Organizer-aware editor submission and row moves live in `dialogs/organize.tsx`
+and `dialogs/row-move.tsx`. The page header's CSS module is colocated as
+`header.module.css`; cross-mode interaction stories stay in `stories/`.
+
 ## Page Loading
 
 Use the global top progress bar for page-level loading, including client-side

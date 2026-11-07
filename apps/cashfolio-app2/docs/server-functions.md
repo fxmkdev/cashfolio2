@@ -168,10 +168,11 @@ existing boundaries. Import internal modules directly from their owners:
   tree data, valuation helpers, and the page snapshot remain separate owners.
   `types.ts` owns shared query inputs/state; the read-only RepeatableRead page
   snapshot supplies metadata and tree data to `page.ts` in one transaction.
-- `mutations/`: account/group operations, assignments, input validation, cash
-  rules, and system-managed equity guards.
-- `hierarchy/`: group paths/ancestry/cycle helpers and action eligibility rules
-  shared by reads and writes.
+- `mutations/`: account/group operations, atomic bulk lifecycle handlers,
+  assignments, input validation, cash rules, and system-managed equity guards.
+- `hierarchy/`: group paths/ancestry/cycle helpers and group action-availability
+  sets shared by reads and writes. Cross-layer eligibility rules live in
+  `src/shared/account-tree-rules.ts` for server/browser reuse.
 - `organize/`: versioned snapshots, move validation, availability, and handlers.
 - `settings/`: account-book settings and deletion handlers.
 - `gain-loss/`: queries, range loading, calculations, recorded adjustments,
