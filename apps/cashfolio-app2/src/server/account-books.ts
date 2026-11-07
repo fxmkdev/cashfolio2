@@ -4,4 +4,4 @@ export {
   deleteAccountBook,
   getAccountBookSettings,
   updateAccountBookSettings,
-} from "./accounts/account-book-settings";
+} from "./accounts/settings/handlers";

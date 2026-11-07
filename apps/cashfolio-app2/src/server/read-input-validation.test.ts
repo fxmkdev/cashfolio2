@@ -59,7 +59,7 @@ import {
 import {
   readAccountTreeInput,
   readAccountSelectorsInput,
-} from "./accounts/accounts-read-input";
+} from "./accounts/queries/input";
 import {
   readLedgerInput,
   readLedgerPeriodBoundsInput,

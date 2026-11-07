@@ -3,7 +3,7 @@ import { Prisma } from "../../../.prisma-client/client";
 import {
   assertNoSystemManagedAccountSubtype,
   assertNoSystemManagedGroupSubtype,
-} from "../accounts-system-managed-equity-guards";
+} from "./system-managed-equity-guards";
 import {
   getAccountDeleteAvailability,
   getGroupDeleteAvailability,

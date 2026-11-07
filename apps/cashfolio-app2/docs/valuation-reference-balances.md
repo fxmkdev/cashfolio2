@@ -55,25 +55,25 @@ this view.
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.
 - The shared feature in `src/components/account-management/` serves both
-  Accounts and Settings Categories. Its `page-controller.ts` composes data
+  Accounts and Settings Categories. Its `controller.ts` composes data
   loading/refresh, presentation, grid lifecycle, and management actions through
   focused model and grid hooks, an organizer API factory, guarded hierarchy
-  callbacks, and view-prop assembly. `account-mutations.ts` owns mutation
-  payloads and the injectable API used by its unit tests; `page-modal-state.ts`
-  owns editor/confirmation state, with `page-modal-props.ts` binding it to
+  callbacks, and view-prop assembly. `management/mutations.ts` owns mutation
+  payloads and the injectable API used by its unit tests; `dialogs/state.ts`
+  owns editor/confirmation state, with `dialogs/props.ts` binding it to
   submission and close callbacks.
-- `use-accounts-presentation.ts` derives hierarchy projections, group metadata,
+- `grid/use-presentation.ts` derives hierarchy projections, group metadata,
   reference balances, gain/loss, and footer rows without server requests. Both
   the production controller and Storybook harness use this hook. Reference
-  balance hydration is composed by `page-reference-balances.ts`, with pure row
-  projection helpers, a cancellable request hook, and a separate delayed loading
-  hook. Scope/row refreshes reset overlays and start a new request, late
+  balance hydration is composed by `loading/reference-balances.ts`, with pure
+  row projection helpers, a cancellable request hook, and a separate delayed
+  loading hook. Scope/row refreshes reset overlays and start a new request, late
   responses cannot publish after cancellation, and the indicator retains its 100
   ms delay.
-- `page-view.tsx` composes typed header/navigation, grid, and dialog components.
-  The column hook assembles separate balance, metadata, and action definitions;
-  live refs keep loading indicators and sibling checks current without
-  rebuilding column definitions for each balance update.
+- `view.tsx` composes typed header/navigation, grid, and dialog components. The
+  column hook assembles separate balance, metadata, and action definitions; live
+  refs keep loading indicators and sibling checks current without rebuilding
+  column definitions for each balance update.
 - Bulk grid selection/reconciliation and assignment targets/submission have
   separate hooks. Opening an assignment freezes its account IDs; changing the
   selection does not change that target. Failed submissions retain the target

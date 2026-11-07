@@ -1,7 +1,7 @@
 import {
   readAccountGainLossInput,
   readAccountGainLossScopeInput,
-} from "./accounts/accounts-read-input";
+} from "./accounts/queries/input";
 import { startReadBudget } from "./resource-context.server";
 import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
@@ -9,7 +9,7 @@ import {
   queryAccountGainLoss,
   queryAccountGainLossSummaries,
   queryAccountRecordedGainLossEligibility,
-} from "./accounts/account-gain-loss.server";
+} from "./accounts/gain-loss/queries.server";
 
 export const getAccountRecordedGainLossEligibility = createServerFn({
   method: "GET",

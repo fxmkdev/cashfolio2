@@ -22,16 +22,16 @@ implementation details.
 
 The Accounts grid adapts wire/projection `TreeRow` values to a client-only
 `AccountsGridRow` discriminated union in
-`src/components/account-management/account-grid-rows.ts`. `rowType`
-distinguishes persisted accounts, persisted groups, synthetic headings, and the
-total footer. Convert rows at the presentation boundary with
-`toAccountGridTreeRow`; server payloads, IDs, hierarchy ordering, and expansion
-keys remain unchanged. Use `isPersistedTreeRow`, `isPersistedAccountRow`, or
-`isPersistedGroupRow` before edit/delete/child-creation actions, including
-callbacks from the shared hierarchy editor. Mutation target builders accept only
-persisted variants. Synthetic headings can retain group checkboxes for
-descendant selection, but bulk targets include persisted account leaves only.
-Read-only projection helpers can still consume source rows.
+`src/components/account-management/grid/rows.ts`. `rowType` distinguishes
+persisted accounts, persisted groups, synthetic headings, and the total footer.
+Convert rows at the presentation boundary with `toAccountGridTreeRow`; server
+payloads, IDs, hierarchy ordering, and expansion keys remain unchanged. Use
+`isPersistedTreeRow`, `isPersistedAccountRow`, or `isPersistedGroupRow` before
+edit/delete/child-creation actions, including callbacks from the shared
+hierarchy editor. Mutation target builders accept only persisted variants.
+Synthetic headings can retain group checkboxes for descendant selection, but
+bulk targets include persisted account leaves only. Read-only projection helpers
+can still consume source rows.
 
 The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
 production modules in `src/shared/` and `src/server/` into `src/components/` or
@@ -81,6 +81,23 @@ helpers and common tab contracts remain in `src/shared/`. Shared feature modules
 must not depend on either route's private implementation. Colocated story
 fixtures can include route-shell decoration without making it a production
 feature dependency.
+
+Within `account-management/`, root modules compose the page, controller, and
+feature contracts. Concern folders own the implementation:
+
+| Folder         | Responsibility                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| `loading/`     | Page loading/refresh, reference-balance requests, cancellation, and loading visibility                   |
+| `grid/`        | Row models, hierarchy projections, summaries, presentation, columns/cells, selection, and grid lifecycle |
+| `dialogs/`     | Editor/confirmation state, prop assembly, and dialog components                                          |
+| `assignments/` | Assignment forms, frozen bulk targets, submission, and toolbar                                           |
+| `management/`  | Mutation payloads, management actions, organizer API, and guarded hierarchy callbacks                    |
+| `gain-loss/`   | Gain/loss columns, header, and asset-class projection                                                    |
+
+Import row contracts from `grid/rows.ts` and view contracts from `view-types.ts`
+directly. Tests, component stories, and fixtures stay with their owner; the
+cross-feature story harness stays in `stories/`. Folder names supply context, so
+implementation filenames omit redundant account/page prefixes.
 
 ## Page Loading
 

@@ -10,8 +10,8 @@ import { AccountType } from "../../../.prisma-client/enums";
 import {
   resolveAccountCashFlag,
   normalizeMissingCashAccountFlag,
-} from "../accounts-cash-rules";
-import { assertNoSystemManagedAccountSubtype } from "../accounts-system-managed-equity-guards";
+} from "./cash-rules";
+import { assertNoSystemManagedAccountSubtype } from "./system-managed-equity-guards";
 import { validateAccountInput } from "../../../shared/account-validation";
 import { applyOpeningBalanceTarget } from "./opening-balances";
 import { type AccountUpdateInput } from "./types";

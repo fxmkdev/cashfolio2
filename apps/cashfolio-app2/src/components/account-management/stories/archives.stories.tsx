@@ -5,7 +5,7 @@ import { createGroupRow, createAccountRow } from "./fixtures";
 import { findVisibleDialog } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,

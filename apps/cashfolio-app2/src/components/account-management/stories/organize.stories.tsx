@@ -1,6 +1,6 @@
 import { expect, fn, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { AccountsPageStoryHarness } from "./harness";
 import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-fixtures";
 import { chooseAccountGrouping } from "./interaction-helpers";

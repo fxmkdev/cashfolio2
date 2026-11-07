@@ -2,7 +2,7 @@ import {
   assetClassRowId,
   unitRowId,
   archivedClassRowId,
-} from "../asset-class-tree";
+} from "../grid/asset-class-tree";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { bulkRows } from "./assignment-fixtures";
 import {
@@ -11,7 +11,7 @@ import {
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",

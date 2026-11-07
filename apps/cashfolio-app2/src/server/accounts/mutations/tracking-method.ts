@@ -1,6 +1,6 @@
 import { AccountType, Unit } from "../../../.prisma-client/enums";
 import type { Prisma } from "../../../.prisma-client/client";
-import type { validateSetAccountsTrackingMethodInput } from "../accounts-input-validation";
+import type { validateSetAccountsTrackingMethodInput } from "./input";
 
 export async function setAccountsTrackingMethodOperation(
   data: ReturnType<typeof validateSetAccountsTrackingMethodInput>,

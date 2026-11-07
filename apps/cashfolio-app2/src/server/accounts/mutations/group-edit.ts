@@ -5,11 +5,11 @@ import {
   normalizeMissingGroupCashAccountFlag,
   assertCashableGroupSubtree,
   applyGroupCashFlagToSubtree,
-} from "../accounts-cash-rules";
-import { assertNoSystemManagedGroupSubtype } from "../accounts-system-managed-equity-guards";
+} from "./cash-rules";
+import { assertNoSystemManagedGroupSubtype } from "./system-managed-equity-guards";
 import { validateAccountGroupInput } from "../../../shared/account-validation";
 import { type AccountGroupUpdateInput } from "./types";
-import { getGroupHierarchy, ensureNoGroupCycle } from "../accounts-helpers";
+import { getGroupHierarchy, ensureNoGroupCycle } from "../hierarchy/groups";
 
 export async function createAccountGroupOperation(
   data: AccountGroupInput,

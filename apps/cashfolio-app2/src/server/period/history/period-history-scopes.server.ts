@@ -6,7 +6,7 @@ import {
   moneySum,
 } from "../../../shared/money";
 import { type AccountType } from "../../../.prisma-client/enums";
-import { createGroupPathResolver } from "../../accounts/accounts-helpers";
+import { createGroupPathResolver } from "../../accounts/hierarchy/groups";
 import {
   round2,
   type BreakdownHierarchyAccumulatorItem,

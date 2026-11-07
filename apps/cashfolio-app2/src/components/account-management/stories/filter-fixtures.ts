@@ -1,6 +1,6 @@
 import { AccountType } from "@/.prisma-client/enums";
 import { createAccountRow, createGroupRow } from "./fixtures";
-import type { TreeRow } from "../page-types";
+import type { TreeRow } from "../grid/rows";
 
 const group = (id: string, name: string, parentId?: string) =>
   createGroupRow({

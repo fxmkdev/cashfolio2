@@ -2,7 +2,7 @@ import { Box, Button, Group, Text } from "@mantine/core";
 import { useState } from "react";
 import { SET_FILTER_SPECIAL } from "@/components/grid/set-filter";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 import { useAccountsStoryModel } from "./use-story-model";
 import { getStoryViewProps } from "./view-props";
 import { filterRows } from "./filter-fixtures";

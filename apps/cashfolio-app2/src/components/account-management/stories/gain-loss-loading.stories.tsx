@@ -2,7 +2,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { findVisibleDialog, openGainLossDetails } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AccountsPageView } from "../page-view";
+import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
   component: AccountsPageView,

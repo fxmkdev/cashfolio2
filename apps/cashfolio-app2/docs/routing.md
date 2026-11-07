@@ -370,6 +370,13 @@ mutations, bulk actions, and colocated tests and stories. Neither route owns the
 other screen's implementation, and there are no route-private compatibility
 re-exports.
 
+Both routes import `loading/loader.ts`, `controller.ts`, and the lazy-loaded
+`view.tsx` directly from that feature. Root modules compose the page; concern
+folders own loading, grid presentation, dialogs, assignments, management, and
+gain/loss. See
+[Shared Component Organization](ui-patterns.md#shared-component-organization)
+for the ownership map. Route adapters do not duplicate these implementations.
+
 The controller composes a data/presentation model, management actions, grid
 wiring, and view-prop assembly. Organizer API construction and guarded hierarchy
 editor callbacks have separate owners. Reference-balance requests, row

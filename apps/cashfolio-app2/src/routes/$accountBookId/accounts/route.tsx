@@ -7,17 +7,17 @@ import {
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { getAccountsPageTitle } from "@/components/account-management/page-types";
+import { getAccountsPageTitle } from "@/components/account-management/types";
 import {
   parseAccountsSearch,
   getCategoriesRedirect,
   getCanonicalAccountsSearch,
 } from "@/shared/account-management-search";
-import { loadAccountsPageData } from "@/components/account-management/page-loader";
-import { useAccountsPageController } from "@/components/account-management/page-controller";
+import { loadAccountsPageData } from "@/components/account-management/loading/loader";
+import { useAccountsPageController } from "@/components/account-management/controller";
 
 const AccountsPageView = lazy(async () => {
-  const module = await import("@/components/account-management/page-view");
+  const module = await import("@/components/account-management/view");
   return { default: module.AccountsPageView };
 });
 
