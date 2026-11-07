@@ -3,12 +3,13 @@ import type { GroupBalanceAggregation } from "./-page-data";
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
+  type TreeRow,
 } from "./-page-types";
 
 export const REFERENCE_BALANCES_LOADING_DELAY_MS = 100;
 
 export function getImmediateReferenceBalance(args: {
-  data: AccountsGridRow;
+  data: TreeRow | AccountsGridRow;
   referenceCurrency: string;
 }): number | undefined {
   const { data, referenceCurrency } = args;
@@ -29,7 +30,7 @@ export function getImmediateReferenceBalance(args: {
 }
 
 export function shouldShowReferenceBalanceLoadingIndicator(args: {
-  data: AccountsGridRow | undefined;
+  data: TreeRow | AccountsGridRow | undefined;
   isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
 }): boolean {

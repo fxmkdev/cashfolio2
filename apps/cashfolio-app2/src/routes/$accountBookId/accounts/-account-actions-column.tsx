@@ -7,7 +7,7 @@ import {
 } from "@/components/account-tree/account-tree-actions-cells";
 import {
   ROOT_PARENT_KEY,
-  isReferenceCurrencyTotalFooterRow,
+  isPersistedTreeRow,
   type AccountsGridRow,
   toRowTarget,
   type TreeRow,
@@ -49,15 +49,12 @@ function renderAccountRowActions({
     onDeleteRow,
     onReorderRow,
   } = params;
-  if (!data) return null;
-  if (isReferenceCurrencyTotalFooterRow(data)) return null;
-  if (data.isVirtualArchivedGroup || data.presentationKind) return null;
+  if (!isPersistedTreeRow(data)) return null;
 
   const parentKey = data.parentId ?? ROOT_PARENT_KEY;
   const siblingCount =
-    (rowsByParentKey
-      .get(parentKey)
-      ?.filter((row) => !row.isVirtualArchivedGroup).length ?? 0) - 1;
+    (rowsByParentKey.get(parentKey)?.filter(isPersistedTreeRow).length ?? 0) -
+    1;
   const hasSiblings = grouping === "accountStructure" && siblingCount >= 1;
   const reorderLabel =
     grouping === "assetClass"

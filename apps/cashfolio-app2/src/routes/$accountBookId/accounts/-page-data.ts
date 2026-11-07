@@ -10,6 +10,7 @@ export {
 } from "./-reference-balance-aggregation";
 import {
   ROOT_PARENT_KEY,
+  isPersistedTreeRow,
   type GroupAssetClassSummary,
   type TreeRow,
 } from "./-page-types";
@@ -82,7 +83,7 @@ export function useSelectedSiblingRows(
   return useMemo(() => {
     if (!reorderingRow) return [];
     return (rowsByParentKey.get(reorderingRow.parentKey) ?? [])
-      .filter((row) => !row.isVirtualArchivedGroup)
+      .filter(isPersistedTreeRow)
       .map((row) => ({
         id: row.id,
         name: row.name,

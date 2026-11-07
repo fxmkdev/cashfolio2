@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { GroupBalanceAggregation } from "./-page-data";
-import type { AccountsGridRow } from "./-page-types";
+import type { PersistedAccountRow, PersistedGroupRow } from "./-page-types";
 import {
   REFERENCE_BALANCES_LOADING_DELAY_MS,
   getImmediateReferenceBalance,
@@ -10,9 +10,10 @@ import {
 
 function createAccountRow(
   balanceInReferenceCurrency: number | null,
-): AccountsGridRow {
+): PersistedAccountRow {
   return {
     id: "account-1",
+    rowType: "account",
     nodeType: "account",
     name: "Cash",
     type: AccountType.BALANCE,
@@ -38,9 +39,10 @@ function createAccountRow(
   };
 }
 
-function createGroupRow(): AccountsGridRow {
+function createGroupRow(): PersistedGroupRow {
   return {
     id: "group-1",
+    rowType: "accountGroup",
     nodeType: "accountGroup",
     name: "Assets",
     type: AccountType.BALANCE,
