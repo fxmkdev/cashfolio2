@@ -422,3 +422,15 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
   matching rows. After the scroll completes (via `bodyScrollEnd` or a double
   `requestAnimationFrame` fallback), `flashCells()` is called. The search param
   is cleared from the URL immediately to avoid re-triggering on re-renders.
+
+## Statement Import Settings Prototype
+
+Storybook **Prototypes/StatementImportSettingsDialog** explores a separate,
+frontend-only settings dialog. Its implementation is isolated under
+`src/components/statement-import-settings/` and is not connected to the Account
+editor, import routes, or backend. The story harness saves settings in memory;
+closing a draft discards changes, and reopening restores the last saved format.
+CSV samples are read locally and preview only the first 20 data rows. Sample
+loading never assigns mappings automatically. Configuration validation gates
+saving; sample-data errors do not. The dialog supports existing ordered-column
+formats and emits explicit mappings using the shared CSV format contract.
