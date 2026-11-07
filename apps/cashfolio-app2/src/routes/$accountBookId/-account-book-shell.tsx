@@ -19,7 +19,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
-import { UserMenu } from "../-user-menu";
+import { UserMenu } from "@/components/navigation/user-menu";
 import {
   AccountBookAdminNavigationLinks,
   AccountBookNavigationLinks,
@@ -34,9 +34,9 @@ import {
   type AccountBookSection,
 } from "./-route-helpers";
 import {
-  ACCOUNT_BOOK_RAIL_WIDTH,
-  ACCOUNT_BOOK_SIDEBAR_WIDTH,
-} from "./-shell-dimensions";
+  SIDEBAR_RAIL_WIDTH,
+  SIDEBAR_WIDTH,
+} from "@/components/layout/sidebar-dimensions";
 
 export type AccountBookShellProps = {
   userSecurityUrl: string | null;
@@ -168,10 +168,8 @@ export function AccountBookShell({
       }}
       navbar={{
         width: {
-          base: ACCOUNT_BOOK_SIDEBAR_WIDTH,
-          sm: desktopRailCollapsed
-            ? ACCOUNT_BOOK_RAIL_WIDTH
-            : ACCOUNT_BOOK_SIDEBAR_WIDTH,
+          base: SIDEBAR_WIDTH,
+          sm: desktopRailCollapsed ? SIDEBAR_RAIL_WIDTH : SIDEBAR_WIDTH,
         },
         breakpoint: "sm",
         collapsed: { mobile: !mobileOpened, desktop: false },

@@ -3,7 +3,7 @@ import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { loadSettingsPageData } from "./-page-loader";
 import { Suspense, lazy } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
+import { invalidateCachedUserAccountBooks } from "@/account-books/options";
 
 const SettingsPageView = lazy(async () => {
   const module = await import("./-page-view");

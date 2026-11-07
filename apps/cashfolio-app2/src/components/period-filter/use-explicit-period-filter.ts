@@ -9,7 +9,7 @@ import {
   type PeriodMode,
 } from "@/shared/period-selector-model";
 import type { UserLocale } from "@/user-locale";
-import type { PeriodFilterActionProps } from "./-period-filter-action";
+import type { PeriodFilterActionProps } from "./period-filter-action";
 
 type PeriodSelection = {
   value: string;

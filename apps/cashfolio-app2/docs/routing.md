@@ -324,6 +324,32 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   report route uses `-breakdown/`, `-gains-losses/`, `-selector/`, and
   `-net-worth/` to keep URL routes separate from page internals.
 
+### Shared Route Dependencies
+
+Production code shared across routes belongs outside `src/routes/`, including
+helpers reused by child routes. Do not import another route's private
+implementation or add route-private compatibility re-exports. Keep route
+registration, navigation callbacks, and invalidation wiring in the routes;
+colocate tests and stories with their shared implementation. Test and story
+fixtures may still use route-local helpers or shell decoration.
+
+- Sidebar dimensions live in `src/components/layout/sidebar-dimensions.ts`: the
+  expanded width is 260 and the rail width is 64. Account-book and Admin shells
+  and footer menus import these constants directly.
+- The user menu lives in `src/components/navigation/user-menu.tsx` and is shared
+  by the account-book and Admin shells.
+- Account-book options loading and browser caching belong to
+  `src/account-books/options.ts`. `loadUserAccountBooks` serves the shell's
+  switcher, sharing in-flight and completed requests in the browser and clearing
+  rejected requests so later calls can retry. SSR calls always fetch
+  independently. Creation and Settings use the same invalidation function after
+  successful creation, update, and deletion, before their existing navigation or
+  router invalidation. Creation's loader continues to fetch options directly
+  from the server function.
+- Report and reconciliation share the pure period-search contract in
+  `src/shared/report-period-search.ts`. Period constants are imported directly
+  from `src/shared/period.ts`.
+
 ### Shared Account Management
 
 Accounts and Settings Categories both import their loader, controller, and lazy
@@ -355,8 +381,9 @@ the Settings navigation shell as a fixture.
 
 ### Search Parameters
 
-Ledger and Transactions share `-use-explicit-period-filter.ts` beside the
-account-book period-filter component. It owns picker state, month/year mode,
+Ledger and Transactions share `use-explicit-period-filter.ts` beside the
+period-filter component in `src/components/period-filter/`. The component also
+serves Report and reconciliation. The hook owns picker state, month/year mode,
 explicit selection derivation, URL normalization, stepping, picker callbacks,
 and optional clearing, and returns typed `PeriodFilterAction` props. Each route
 supplies its parser, clamping policy, bounds, availability, and navigation

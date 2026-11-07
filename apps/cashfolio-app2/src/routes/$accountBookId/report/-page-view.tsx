@@ -13,7 +13,7 @@ import {
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useMemo } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
-import { PeriodFilterAction } from "../-period-filter-action";
+import { PeriodFilterAction } from "@/components/period-filter/period-filter-action";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import type { getPeriodOverview } from "@/server/period";

@@ -3,9 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliationPageData } from "@/server/period-gain-loss-reconciliation";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { formatMonthPeriodValue } from "@/shared/period";
-import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
-import { getPeriodValue, parsePeriodSearch } from "../../-page-types";
+import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/period";
+import {
+  getPeriodValue,
+  parsePeriodSearch,
+} from "@/shared/report-period-search";
 import { getGainLossReconciliationPageTitle } from "./-page-title";
 
 const GainLossReconciliationPageView = lazy(async () => {

@@ -1,7 +1,7 @@
 import { Box, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { PeriodFilterAction } from "../../-period-filter-action";
+import { PeriodFilterAction } from "@/components/period-filter/period-filter-action";
 import { useLedgerColumnDefs } from "./page-columns";
 import { LedgerPageView } from "./page-view";
 import {

@@ -19,7 +19,7 @@ import {
 } from "react";
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
-import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "./-shell-dimensions";
+import { SIDEBAR_WIDTH } from "@/components/layout/sidebar-dimensions";
 import type { AccountsMode, TabValue } from "@/shared/account-tabs";
 
 const MenuItemLinkBase = forwardRef<
@@ -80,10 +80,7 @@ export function AccountBookSwitcherMenu({
       ?.name ?? accountBookId;
 
   return (
-    <Menu
-      position="bottom-start"
-      width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
-    >
+    <Menu position="bottom-start" width={collapsed ? SIDEBAR_WIDTH : "target"}>
       <Menu.Target>
         {collapsed ? (
           <Tooltip label={currentAccountBookName} position="right">
@@ -105,9 +102,7 @@ export function AccountBookSwitcherMenu({
           </Button>
         )}
       </Menu.Target>
-      <Menu.Dropdown
-        style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
-      >
+      <Menu.Dropdown style={{ maxWidth: collapsed ? SIDEBAR_WIDTH : "100%" }}>
         {accountBooks.map((accountBook) => {
           const isCurrentBook = accountBook.id === accountBookId;
 
