@@ -35,6 +35,12 @@ export function ArchivedAccountTreeActionsCell({
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
+        {
+          id: "edit",
+          label: "Edit",
+          icon: <IconPencil size={16} />,
+          onClick: onEdit,
+        },
         ...(onMove
           ? [
               {
@@ -42,16 +48,9 @@ export function ArchivedAccountTreeActionsCell({
                 label: "Move To…",
                 icon: <IconArrowsMove size={16} />,
                 onClick: onMove,
-                color: "blue",
               },
             ]
           : []),
-        {
-          id: "edit",
-          label: "Edit",
-          icon: <IconPencil size={16} />,
-          onClick: onEdit,
-        },
         {
           id: "delete",
           label: "Delete",
@@ -107,6 +106,12 @@ export function ActiveAccountTreeActionsCell({
     <RowActionsMenu
       rowLabel={rowLabel}
       actions={[
+        {
+          id: "edit",
+          label: "Edit",
+          icon: <IconPencil size={16} />,
+          onClick: onEdit,
+        },
         ...(onMove
           ? [
               {
@@ -114,16 +119,9 @@ export function ActiveAccountTreeActionsCell({
                 label: "Move To…",
                 icon: <IconArrowsMove size={16} />,
                 onClick: onMove,
-                color: "blue",
               },
             ]
           : []),
-        {
-          id: "edit",
-          label: "Edit",
-          icon: <IconPencil size={16} />,
-          onClick: onEdit,
-        },
         ...(onAddAccount && onAddGroup
           ? [
               {

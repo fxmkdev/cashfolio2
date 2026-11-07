@@ -1694,7 +1694,8 @@ including archived rows and accounts displayed under Asset Class grouping.
 Virtual headings and totals have no action. Open the shared move dialog after a
 fresh structural read without changing modes or the URL; use persisted parents
 and include archived destinations for archived targets. The default property
-bulk toolbar does not offer movement.
+bulk toolbar does not offer movement. In row menus, Edit precedes Move To; both
+use the default neutral menu styling.
 
 Organize displays real persisted parents and manual order, including archived
 items, without virtual Archived branches. Archived rows have a status badge and
