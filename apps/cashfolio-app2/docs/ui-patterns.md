@@ -592,9 +592,9 @@ hover states, and selection markers match form TreeSelect controls. Use public
 `flattenTreeData` metadata to supply the row hierarchy and a small wrapper for
 TreeSelect's line and spacing variables; do not copy row CSS or import private
 Mantine files. This navigation control is an exception to the form-field
-TreeSelect pattern. It follows the Accounts page's configured hierarchy, sibling
-ordering within the current account book. Only active financial accounts are
-destinations; omit archived accounts and groups without active account
+TreeSelect pattern. It follows the Accounts page's configured hierarchy and
+sibling ordering within the current account book. Only active financial accounts
+are destinations; omit archived accounts and groups without active account
 descendants. Retain the real ancestor groups of active destinations. Groups
 expand and collapse but cannot be selected. There is no archived-account option.
 
