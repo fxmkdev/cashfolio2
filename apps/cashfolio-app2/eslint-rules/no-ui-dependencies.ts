@@ -43,7 +43,7 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
         /^(?:react(?:[-/]|$)|@mantine\/|@tabler\/|@tanstack\/react-(?:router|start)(?:\/|$)|ag-(?:charts|grid)(?:-|\/|$))/.test(
           specifier,
         );
-      const uiTarget = target?.replace(/\.[cm]?[jt]sx?$/, "");
+      const normalizedTarget = target?.replace(/\.[cm]?[jt]sx?$/, "");
       const uiOwners = [
         "components",
         "routes",
@@ -59,9 +59,9 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
       ];
       if (
         (isShared && uiPackage) ||
-        (uiTarget &&
+        (normalizedTarget &&
           uiOwners.some((root) =>
-            isWithin(uiTarget, resolve(sourceRoot, root)),
+            isWithin(normalizedTarget, resolve(sourceRoot, root)),
           ))
       )
         context.report({ node, messageId: "uiDependency" });
@@ -72,10 +72,13 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
       if (
         isShared &&
         (serverPackage ||
-          (target &&
-            (isWithin(target, resolve(sourceRoot, "server")) ||
-              isWithin(target, resolve(sourceRoot, ".prisma-client/client")) ||
-              /\.server(?:\.[cm]?[jt]sx?)?$/.test(target))))
+          (normalizedTarget &&
+            (isWithin(normalizedTarget, resolve(sourceRoot, "server")) ||
+              isWithin(
+                normalizedTarget,
+                resolve(sourceRoot, ".prisma-client/client"),
+              ) ||
+              /\.server$/.test(normalizedTarget))))
       )
         context.report({ node, messageId: "serverDependency" });
     });

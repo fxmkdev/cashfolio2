@@ -1722,8 +1722,8 @@ still normalizes selected descendants out of its subtree roots. Display counts
 for the explicit selection. A shared batch planner evaluates prerequisites
 against the projected hierarchy and provides the same availability and operation
 order to the toolbar, submissions, retries, and server mutations. Pure account
-lifecycle rules live in `src/shared/accounts/account-tree-rules.ts` for server/browser
-reuse.
+lifecycle rules live in `src/shared/accounts/account-tree-rules.ts` for
+server/browser reuse.
 
 Selected rows can satisfy each other's hierarchy prerequisites. Unarchive runs
 ancestors before descendants and requires every blocking archived ancestor to be

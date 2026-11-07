@@ -189,6 +189,7 @@ describe("shared domain ownership", () => {
     "redis",
     "@prisma/client",
     "@/.prisma-client/client",
+    "@/.prisma-client/client.ts",
   ])("rejects server-only dependency %s", async (target) => {
     expect(
       await boundaryMessages(
