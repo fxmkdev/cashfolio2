@@ -330,7 +330,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(income).toHaveAttribute("aria-selected", "true");
       await expect(visibility).not.toBeChecked();
       await expect(
-        page.getByRole("button", { name: "Add Income Category" }),
+        page.getByRole("button", { name: "Add Income Category", exact: true }),
       ).toBeVisible();
       await expect(page.getByRole("treegrid")).toBeVisible();
       await capture("income.png");
@@ -339,7 +339,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(expenses).toHaveAttribute("aria-selected", "true");
       await expect(page).toHaveURL(/tab=EQUITY-EXPENSE&showArchived=false$/);
       await expect(
-        page.getByRole("button", { name: "Add Expense Category" }),
+        page.getByRole("button", { name: "Add Expense Category", exact: true }),
       ).toBeVisible();
       await capture("expenses.png");
       await visibility.focus();
@@ -455,6 +455,6 @@ test("deleting an archived category ledger returns with archived visibility enab
     page.getByRole("checkbox", { name: "Show Archived" }),
   ).toBeChecked();
   await expect(
-    page.getByRole("button", { name: "Add Expense Category" }),
+    page.getByRole("button", { name: "Add Expense Category", exact: true }),
   ).toBeVisible();
 });

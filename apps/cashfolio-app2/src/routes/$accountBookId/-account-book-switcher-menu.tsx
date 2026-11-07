@@ -20,7 +20,7 @@ import {
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
 import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "./-shell-dimensions";
-import type { AccountsMode, TabValue } from "./accounts/-page-types";
+import type { AccountsMode, TabValue } from "@/shared/account-tabs";
 
 const MenuItemLinkBase = forwardRef<
   HTMLAnchorElement,
