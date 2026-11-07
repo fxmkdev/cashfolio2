@@ -105,8 +105,11 @@ as victim and verifies a fresh transaction retries successfully without losing
 the competing writer's changes. CI runs the suite in the PostgreSQL-backed
 staging-seed integration job.
 
-The same command also verifies period snapshots against real PostgreSQL. It
-pauses a read after balance loading or between pagination queries, commits an
+The same command also verifies period snapshots against real PostgreSQL. It also
+pauses an account-page read after metadata loading, commits a rename and deposit
+independently, and checks that rows, balances, and selector constraints all
+retain the earlier snapshot while the next request sees the new state. It pauses
+a read after balance loading or between pagination queries, commits an
 independent deposit or settings change, and verifies that the paused dataset
 retains the earlier state while the next load sees the complete committed state.
 It also freezes planner statistics in its disposable database, inserts a new

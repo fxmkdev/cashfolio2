@@ -1057,6 +1057,14 @@ Valuation caches remain compatible.
 
 ### Unified account management queries
 
+Account-page responses load account/group metadata once inside a read-only
+RepeatableRead snapshot. Balance aggregates and booking counts use the same
+explicit `AccountReadClient`; selector options, archived constraints, unit
+usage, and child-action availability are projected from that shared metadata.
+Page assembly runs after the transaction closes. External valuation must remain
+outside the database transaction. Standalone query endpoints retain their
+existing filters and response contracts.
+
 Tree, page-data, reference-balance, and account gain/loss summary queries accept
 the persisted `BALANCE` type directly for both accounts and groups, excluding
 categories and system accounts. Balance-group ancestry and G/L aggregation span

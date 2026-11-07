@@ -1,3 +1,4 @@
+import type { AccountReadClient } from "./accounts-read-client";
 import { assetClassSelection, withAssetClassId } from "../classification-data";
 import { toMoney } from "../../shared/money";
 import { prisma } from "../../prisma.server";
@@ -54,22 +55,21 @@ type AccountBookTreeMeta = {
   startDate: Date;
 };
 
-export async function fetchAccountTreeQueryData(args: {
-  accountBookId: string;
-  accountState: AccountState;
-  type?: AccountType;
-  equityAccountSubtype?: EquityAccountSubtype;
-  includeActionAvailability: boolean;
-}) {
+export async function fetchAccountTreeMetadata(
+  accountBookId: string,
+  db: AccountReadClient,
+  scope?: {
+    accountState: AccountState;
+    type?: AccountType;
+    equityAccountSubtype?: EquityAccountSubtype;
+  },
+) {
   const [accounts, accountGroups] = await Promise.all([
-    prisma.account
+    db.account
       .findMany({
-        where: getAccountsWhereClause({
-          accountBookId: args.accountBookId,
-          accountState: args.accountState,
-          type: args.type,
-          equityAccountSubtype: args.equityAccountSubtype,
-        }),
+        where: scope
+          ? getAccountsWhereClause({ accountBookId, ...scope })
+          : { accountBookId },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: {
           id: true,
@@ -98,18 +98,18 @@ export async function fetchAccountTreeQueryData(args: {
             account.statementImportCsvFormat as StatementImportCsvFormat | null,
         })),
       ),
-    prisma.accountGroup.findMany({
+    db.accountGroup.findMany({
       where: {
-        accountBookId: args.accountBookId,
-        type: args.type,
-        ...(args.equityAccountSubtype
+        accountBookId,
+        type: scope?.type,
+        ...(scope?.equityAccountSubtype
           ? {
               OR: [
-                { equityAccountSubtype: args.equityAccountSubtype },
+                { equityAccountSubtype: scope.equityAccountSubtype },
                 { equityAccountSubtype: null },
               ],
             }
-          : undefined),
+          : {}),
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
@@ -124,6 +124,45 @@ export async function fetchAccountTreeQueryData(args: {
       },
     }),
   ]);
+  return { accounts, accountGroups };
+}
+
+export type AccountTreeMetadata = Awaited<
+  ReturnType<typeof fetchAccountTreeMetadata>
+>;
+
+export async function fetchAccountTreeQueryData(
+  args: {
+    accountBookId: string;
+    accountState: AccountState;
+    type?: AccountType;
+    equityAccountSubtype?: EquityAccountSubtype;
+    includeActionAvailability: boolean;
+  },
+  db: AccountReadClient = prisma,
+  metadata?: AccountTreeMetadata,
+) {
+  const source =
+    metadata ?? (await fetchAccountTreeMetadata(args.accountBookId, db, args));
+  const [accounts, accountGroups] = metadata
+    ? [
+        metadata.accounts.filter(
+          (account) =>
+            (args.accountState === "all" ||
+              account.isActive === (args.accountState === "active")) &&
+            (args.type === undefined || account.type === args.type) &&
+            (args.equityAccountSubtype === undefined ||
+              account.equityAccountSubtype === args.equityAccountSubtype),
+        ),
+        metadata.accountGroups.filter(
+          (group) =>
+            (args.type === undefined || group.type === args.type) &&
+            (args.equityAccountSubtype === undefined ||
+              group.equityAccountSubtype === null ||
+              group.equityAccountSubtype === args.equityAccountSubtype),
+        ),
+      ]
+    : [source.accounts, source.accountGroups];
   const groupById = new Map(accountGroups.map((group) => [group.id, group]));
 
   const balanceAccountIds = accounts
@@ -142,7 +181,7 @@ export async function fetchAccountTreeQueryData(args: {
     activeGroupsForParent,
   ] = await Promise.all([
     args.includeActionAvailability
-      ? prisma.booking.groupBy({
+      ? db.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
@@ -152,7 +191,7 @@ export async function fetchAccountTreeQueryData(args: {
         })
       : Promise.resolve([]),
     balanceAccountIds.length > 0
-      ? prisma.booking.groupBy({
+      ? db.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
@@ -163,7 +202,7 @@ export async function fetchAccountTreeQueryData(args: {
         })
       : Promise.resolve([]),
     balanceAccountIds.length > 0
-      ? prisma.booking.groupBy({
+      ? db.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
@@ -172,7 +211,7 @@ export async function fetchAccountTreeQueryData(args: {
           _sum: { value: true },
         })
       : Promise.resolve([]),
-    prisma.accountBook.findUniqueOrThrow({
+    db.accountBook.findUniqueOrThrow({
       where: { id: args.accountBookId },
       select: {
         referenceCurrency: true,
@@ -180,43 +219,72 @@ export async function fetchAccountTreeQueryData(args: {
       },
     }),
     args.includeActionAvailability
-      ? prisma.account.groupBy({
-          by: ["groupId"],
-          where: { accountBookId: args.accountBookId },
-          _count: true,
-        })
+      ? metadata
+        ? Promise.resolve(
+            metadata.accounts.map((account) => ({
+              groupId: account.groupId,
+              _count: 1,
+            })),
+          )
+        : db.account.groupBy({
+            by: ["groupId"],
+            where: { accountBookId: args.accountBookId },
+            _count: true,
+          })
       : Promise.resolve([]),
     args.includeActionAvailability
-      ? prisma.accountGroup.groupBy({
-          by: ["parentGroupId"],
-          where: {
-            accountBookId: args.accountBookId,
-            parentGroupId: { not: null },
-          },
-          _count: true,
-        })
+      ? metadata
+        ? Promise.resolve(
+            metadata.accountGroups.map((group) => ({
+              parentGroupId: group.parentGroupId,
+              _count: 1,
+            })),
+          )
+        : db.accountGroup.groupBy({
+            by: ["parentGroupId"],
+            where: {
+              accountBookId: args.accountBookId,
+              parentGroupId: { not: null },
+            },
+            _count: true,
+          })
       : Promise.resolve([]),
     args.includeActionAvailability
-      ? prisma.account.groupBy({
-          by: ["groupId"],
-          where: {
-            accountBookId: args.accountBookId,
-            groupId: { not: null },
-            isActive: true,
-          },
-          _count: true,
-        })
+      ? metadata
+        ? Promise.resolve(
+            metadata.accounts
+              .filter((account) => account.isActive)
+              .map((account) => ({ groupId: account.groupId, _count: 1 })),
+          )
+        : db.account.groupBy({
+            by: ["groupId"],
+            where: {
+              accountBookId: args.accountBookId,
+              groupId: { not: null },
+              isActive: true,
+            },
+            _count: true,
+          })
       : Promise.resolve([]),
     args.includeActionAvailability
-      ? prisma.accountGroup.groupBy({
-          by: ["parentGroupId"],
-          where: {
-            accountBookId: args.accountBookId,
-            parentGroupId: { not: null },
-            isActive: true,
-          },
-          _count: true,
-        })
+      ? metadata
+        ? Promise.resolve(
+            metadata.accountGroups
+              .filter((group) => group.isActive)
+              .map((group) => ({
+                parentGroupId: group.parentGroupId,
+                _count: 1,
+              })),
+          )
+        : db.accountGroup.groupBy({
+            by: ["parentGroupId"],
+            where: {
+              accountBookId: args.accountBookId,
+              parentGroupId: { not: null },
+              isActive: true,
+            },
+            _count: true,
+          })
       : Promise.resolve([]),
   ]);
 
@@ -238,7 +306,7 @@ export async function fetchAccountTreeQueryData(args: {
   const openingBalanceRange = getUtcDayRange(openingBalanceDate);
   const openingBalanceSums =
     balanceAccountIds.length > 0
-      ? await prisma.booking.groupBy({
+      ? await db.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,

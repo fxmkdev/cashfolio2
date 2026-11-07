@@ -193,6 +193,74 @@ describe("period read consistency against disposable PostgreSQL", () => {
     await admin.$disconnect();
   });
 
+  it("keeps account-page metadata, selectors, and balances in the same snapshot", async () => {
+    const treeData = await import("../../accounts/accounts-queries-tree-data");
+    const { queryAccountsPageData } =
+      await import("../../accounts/accounts-queries-orchestration");
+    let started!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = treeData.fetchAccountTreeMetadata;
+    const spy = vi
+      .spyOn(treeData, "fetchAccountTreeMetadata")
+      .mockImplementationOnce(async (...args) => {
+        const metadata = await original(...args);
+        started();
+        await gate;
+        return metadata;
+      });
+    const reading = queryAccountsPageData({
+      accountBookId: bookId,
+      type: AccountType.BALANCE,
+      accountState: "all",
+    });
+    const outcome = reading.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      await Promise.race([ready, reading]);
+      await writer.$transaction(async (tx) => {
+        await tx.account.update({
+          where: { id_accountBookId: { id: "cash", accountBookId: bookId } },
+          data: { name: "Renamed Cash" },
+        });
+        await tx.transaction.create({
+          data: deposit("account-page-deposit", 100),
+        });
+      });
+    } finally {
+      release();
+      await outcome;
+      spy.mockRestore();
+    }
+    const earlier = await reading;
+    expect(earlier.rows.find((row) => row.id === "cash")).toMatchObject({
+      name: "Cash",
+      balance: 0,
+    });
+    expect(earlier.existingNodes.find((row) => row.id === "cash")?.name).toBe(
+      "Cash",
+    );
+    const later = await queryAccountsPageData({
+      accountBookId: bookId,
+      type: AccountType.BALANCE,
+      accountState: "all",
+    });
+    expect(later.rows.find((row) => row.id === "cash")).toMatchObject({
+      name: "Renamed Cash",
+      balance: 100,
+    });
+    expect(later.existingNodes.find((row) => row.id === "cash")?.name).toBe(
+      "Renamed Cash",
+    );
+  });
+
   it("keeps pre-deposit balances and bookings together while a writer commits independently", async () => {
     const before = await writer.accountBook.findUniqueOrThrow({
       where: { id: bookId },

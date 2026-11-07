@@ -30,6 +30,8 @@ const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 const getSecurityToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $transaction: vi.fn(),
+  $executeRaw: vi.fn(),
   account: {
     findMany: vi.fn(),
     groupBy: vi.fn(),
@@ -513,177 +515,103 @@ describe("getLedgerAccountActionData", () => {
 });
 
 describe("getAccountsPageData", () => {
+  const group = (
+    id: string,
+    isActive: boolean,
+    parentGroupId: string | null = null,
+  ) => ({
+    id,
+    name: id,
+    type: AccountType.BALANCE,
+    equityAccountSubtype: null,
+    isCashAccount: false,
+    parentGroupId,
+    isActive,
+    sortOrder: 0,
+  });
+  const account = (id: string, isActive: boolean, groupId: string) => ({
+    id,
+    name: id,
+    type: AccountType.BALANCE,
+    equityAccountSubtype: null,
+    unit: Unit.CURRENCY,
+    currency: "USD",
+    cryptocurrency: null,
+    symbol: null,
+    tradeCurrency: null,
+    isCashAccount: false,
+    groupId,
+    isActive,
+    sortOrder: 0,
+    statementImportCsvFormat: null,
+  });
   beforeEach(() => {
     vi.clearAllMocks();
-
-    prisma.account.findMany.mockResolvedValue([]);
-    prisma.account.groupBy.mockResolvedValue([]);
-    prisma.account.findFirst.mockResolvedValue(null);
-    prisma.account.findUnique.mockResolvedValue(null);
-    prisma.accountGroup.findMany.mockResolvedValue([]);
-    prisma.accountGroup.groupBy.mockResolvedValue([]);
+    prisma.$transaction.mockImplementation((operation) => operation(prisma));
+    prisma.$executeRaw.mockResolvedValue(0);
+    prisma.account.findMany.mockResolvedValue([
+      account("active", true, "root"),
+      account("archived", false, "child"),
+    ]);
+    prisma.accountGroup.findMany.mockResolvedValue([
+      group("root", true),
+      group("child", false, "root"),
+      group("sibling", true, "root"),
+    ]);
     prisma.booking.groupBy.mockResolvedValue([]);
-    prisma.booking.aggregate.mockResolvedValue({ _sum: { value: null } });
-    prisma.booking.count.mockResolvedValue(0);
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-08T00:00:00.000Z"),
+      startDate: new Date("2026-01-08Z"),
     });
-
-    getCurrencyExchangeRate.mockResolvedValue(1);
-    getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(null);
-    getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
   });
 
-  it("authorizes once and exposes archived group modal data for inactive state", async () => {
-    prisma.account.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: "archived-account",
-          name: "Archived Account",
-          groupId: "group-child",
-          type: AccountType.BALANCE,
-          unit: Unit.CURRENCY,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "archived-account",
-          name: "Archived Account",
-          groupId: "group-child",
-          type: AccountType.BALANCE,
-          unit: Unit.CURRENCY,
-        },
+  it.each(["active", "inactive", "all"] as const)(
+    "projects %s selectors from one metadata read inside a read-only snapshot",
+    async (accountState) => {
+      const result = await getAccountsPageData({
+        data: { accountBookId: "book-3", accountState },
+      });
+      expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: "RepeatableRead",
+        timeout: 30_000,
+      });
+      expect(prisma.$executeRaw).toHaveBeenCalledWith([
+        "SET TRANSACTION READ ONLY",
       ]);
-    prisma.accountGroup.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: "group-root",
-          name: "Root",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: null,
-          isActive: true,
-          sortOrder: 0,
-        },
-        {
-          id: "group-child",
-          name: "Archived Child",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: "group-root",
-          isActive: false,
-          sortOrder: 1,
-        },
-        {
-          id: "group-active-sibling",
-          name: "Active Sibling",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: "group-root",
-          isActive: true,
-          sortOrder: 2,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "group-root",
-          name: "Root",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: null,
-          isActive: true,
-          sortOrder: 0,
-        },
-        {
-          id: "group-child",
-          name: "Archived Child",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: "group-root",
-          isActive: false,
-          sortOrder: 1,
-        },
-        {
-          id: "group-active-sibling",
-          name: "Active Sibling",
-          type: AccountType.BALANCE,
-          equityAccountSubtype: null,
-          parentGroupId: "group-root",
-          isActive: true,
-          sortOrder: 2,
-        },
-      ]);
-
-    const result = await getAccountsPageData({
-      data: {
-        accountBookId: "book-3",
-        accountState: "inactive",
-      },
-    });
-
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-3");
-    expect(prisma.account.findMany).toHaveBeenCalledTimes(3);
-    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(3);
-    expect(result.accountGroups.map((group) => group.value)).toEqual([
-      "group-root",
-      "group-child",
-    ]);
-    expect(result.existingNodes).toEqual([
-      {
-        id: "archived-account",
-        name: "Archived Account",
-        nodeType: "account",
-        groupId: "group-child",
-        type: AccountType.BALANCE,
-        unit: Unit.CURRENCY,
-      },
-      {
-        id: "group-root",
-        name: "Root",
-        nodeType: "accountGroup",
-        parentId: undefined,
-        type: AccountType.BALANCE,
-      },
-      {
-        id: "group-child",
-        name: "Archived Child",
-        nodeType: "accountGroup",
-        parentId: "group-root",
-        type: AccountType.BALANCE,
-      },
-    ]);
-    expect(result).toMatchObject({
-      referenceCurrency: "CHF",
-      unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
-      rows: [],
-    });
-  });
-
-  it("keeps active group modal helper queries scoped to active groups", async () => {
-    await getAccountsPageData({
-      data: {
-        accountBookId: "book-3",
-        accountState: "active",
-      },
-    });
-
-    expect(prisma.accountGroup.findMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: { accountBookId: "book-3", isActive: true },
-      }),
-    );
-    expect(prisma.accountGroup.findMany).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        where: { accountBookId: "book-3", isActive: true },
-      }),
-    );
-  });
+      expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.account.groupBy).not.toHaveBeenCalled();
+      expect(prisma.accountGroup.groupBy).not.toHaveBeenCalled();
+      expect(result.accountGroups.map((row) => row.value)).toEqual(
+        accountState === "inactive" ? ["root", "child"] : ["root", "sibling"],
+      );
+      expect(
+        result.existingNodes
+          .filter((row) => row.nodeType === "account")
+          .map((row) => row.id),
+      ).toEqual(accountState === "inactive" ? ["archived"] : ["active"]);
+      expect(result.archivedAccountGroups.map((row) => row.value)).toEqual(
+        accountState === "all" ? ["root", "child"] : [],
+      );
+      expect(result.unitUsage.currencies).toEqual(
+        accountState === "inactive" ? ["CHF"] : ["CHF", "USD"],
+      );
+      expect(
+        result.rows
+          .filter((row) => row.nodeType === "account")
+          .map((row) => row.id)
+          .sort(),
+      ).toEqual(
+        accountState === "all"
+          ? ["active", "archived"]
+          : accountState === "inactive"
+            ? ["archived"]
+            : ["active"],
+      );
+      expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("getActiveAccountBookUnitUsage", () => {
