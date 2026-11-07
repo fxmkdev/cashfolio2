@@ -1,7 +1,7 @@
 import type { SimpleTransactionInitialValues } from "@/components/transactions/simple-transaction-modal";
 import type { SimpleTransactionEditInitialValues } from "./page-data";
 import type { LedgerTransactionApi } from "./page-mutation-actions";
-import type { SplitModalInitialValues } from "./page-view.types";
+import type { SplitModalInitialValues } from "./transaction-dialog.types";
 
 export type LoadedTransaction = Awaited<
   ReturnType<LedgerTransactionApi["getTransaction"]>

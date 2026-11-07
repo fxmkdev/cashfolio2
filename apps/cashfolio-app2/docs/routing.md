@@ -293,10 +293,13 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
       dialogs have separate renderers that preserve submission-dismissal guards.
       `use-transaction-workflow.ts` owns transaction create/copy/edit states,
       simple-to-split draft transitions, submission flags, and exit cleanup
-      through a discriminated reducer. Request identity and account/book scope
-      tokens prevent superseded loads or callbacks from replacing newer state.
-      Closed drafts survive until their matching exit; old exits cannot clear a
-      reopened workflow. Account management and rebooking remain separate.
+      through a discriminated reducer. `transaction-flow-builders.ts` constructs
+      flow states and converts drafts; `transaction-workflow-presentation.ts`
+      adapts states and events to the dialog contracts. Request identity and
+      account/book scope tokens prevent superseded loads or callbacks from
+      replacing newer state. Closed drafts survive until their matching exit;
+      old exits cannot clear a reopened workflow. Account management and
+      rebooking remain separate.
     - Ledger stories share a small harness backed by fixture data, dialog-state
       helpers, and the existing explicit-period filter with fixed story bounds.
   - statement-import modules:

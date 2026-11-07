@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 
-const harness = vi.hoisted(() => ({ slots: [] as unknown[], cursor: 0 }));
+const harness = vi.hoisted(() => ({
+  slots: [] as unknown[],
+  cursor: 0,
+  updates: 0,
+  effects: [] as (() => void)[],
+  cleanups: new Map<number, () => void>(),
+}));
 vi.mock("react", () => ({
   useRef: (value: unknown) => {
     const index = harness.cursor++;
@@ -17,18 +23,39 @@ vi.mock("react", () => ({
     return [
       harness.slots[index],
       (event: unknown) => {
+        harness.updates++;
         harness.slots[index] = reduce(harness.slots[index], event);
       },
     ];
   },
-  useEffect: () => {},
+  useEffect: (effect: () => (() => void) | void, dependencies: unknown[]) => {
+    const index = harness.cursor++;
+    const previous = harness.slots[index] as unknown[] | undefined;
+    if (
+      !previous ||
+      dependencies.some((value, position) => value !== previous[position])
+    ) {
+      harness.slots[index] = dependencies;
+      harness.effects.push(() => {
+        harness.cleanups.get(index)?.();
+        const cleanup = effect();
+        if (cleanup) harness.cleanups.set(index, cleanup);
+        else harness.cleanups.delete(index);
+      });
+    }
+  },
 }));
 import { useTransactionWorkflow } from "./use-transaction-workflow";
 import type { LoadedTransaction } from "./transaction-workflow";
 
-function Render(scope = "book:account") {
+function flushEffects() {
+  harness.effects.splice(0).forEach((effect) => effect());
+}
+function Render(scope = "book:account", commitEffects = true) {
   harness.cursor = 0;
-  return useTransactionWorkflow(scope, "account");
+  const result = useTransactionWorkflow(scope, "account");
+  if (commitEffects) flushEffects();
+  return result;
 }
 function transaction(id: string): LoadedTransaction {
   return {
@@ -77,11 +104,47 @@ const conversion = {
   },
 };
 beforeEach(() => {
+  harness.cleanups.forEach((cleanup) => cleanup());
+  harness.cleanups.clear();
+  harness.effects = [];
   harness.slots = [];
   harness.cursor = 0;
+  harness.updates = 0;
 });
 
 describe("ledger transaction workflows", () => {
+  it.each(["success", "failure"] as const)(
+    "ignores a pending %s after unmount",
+    async (outcome) => {
+      const pending = deferred();
+      const loading = Render().loadTransaction(
+        "edit",
+        () => pending.promise,
+        true,
+      );
+      const updatesBeforeUnmount = harness.updates;
+      harness.cleanups.forEach((cleanup) => cleanup());
+      harness.cleanups.clear();
+      if (outcome === "success") pending.resolve(transaction("unmounted"));
+      else pending.reject(new Error("Unmounted request failed"));
+      await expect(loading).resolves.toBeUndefined();
+      expect(harness.updates).toBe(updatesBeforeUnmount);
+    },
+  );
+
+  it("keeps a new scope load alive when the previous scope's passive cleanup runs", async () => {
+    Render();
+    const pending = deferred();
+    const loading = Render("other:account", false).loadTransaction(
+      "edit",
+      () => pending.promise,
+      true,
+    );
+    flushEffects();
+    pending.resolve(transaction("new scope"));
+    await loading;
+    expect(Render("other:account").editingTransactionId).toBe("new scope");
+  });
   it("preserves simple copy drafts when switching to split and completing the old exit", async () => {
     await Render().loadTransaction(
       "copy",
