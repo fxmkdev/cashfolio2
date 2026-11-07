@@ -165,21 +165,21 @@ export function ValuationProviderUsagePageView({
         field: "provider",
         headerName: "Provider",
         width: 150,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
         valueFormatter: ({ value }) => labelFromMap(providerLabels, value),
       },
       {
         field: "requestReason",
         headerName: "Reason",
         width: 160,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
         valueFormatter: ({ value }) => labelFromMap(reasonLabels, value),
       },
       {
         field: "outcome",
         headerName: "Outcome",
         width: 160,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
         valueFormatter: ({ value }) => labelFromMap(outcomeLabels, value),
       },
       {
@@ -193,7 +193,7 @@ export function ValuationProviderUsagePageView({
         headerName: "Unit",
         minWidth: 150,
         flex: 1,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
       },
       {
         field: "httpStatus",

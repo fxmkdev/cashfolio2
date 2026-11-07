@@ -72,6 +72,7 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
     ...assignments.mutations,
   });
   const columnDefs = useAccountTreeColumnDefs({
+    filterContext: presentation.filterContext,
     grouping,
     gainLossData:
       isEquityTab || gainLossState === "loading" || gainLossState === "error"

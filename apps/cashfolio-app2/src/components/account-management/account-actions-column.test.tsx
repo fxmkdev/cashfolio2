@@ -1,3 +1,4 @@
+import { buildAccountFilterContext } from "./account-filter-context";
 import { describe, expect, it, vi } from "vitest";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -24,6 +25,7 @@ describe("account tree Delete explanations", () => {
       const onAddChild = vi.fn();
       function Harness() {
         const columns = useAccountTreeColumnDefs({
+          filterContext: buildAccountFilterContext([], [], []),
           grouping: "assetClass",
           isEquityTab: false,
           rowsByParentKey: new Map(),
@@ -112,6 +114,7 @@ describe("account tree Delete explanations", () => {
           }>;
           function Harness() {
             const columns = useAccountTreeColumnDefs({
+              filterContext: buildAccountFilterContext([], [], []),
               isEquityTab,
               rowsByParentKey: new Map(),
               referenceCurrency: "CHF",

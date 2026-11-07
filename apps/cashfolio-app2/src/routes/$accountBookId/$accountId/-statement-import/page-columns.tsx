@@ -125,6 +125,7 @@ export function useStatementImportColumnDefs(args: {
       {
         field: "originalCurrency",
         headerName: "Original Ccy.",
+        filter: "agSetColumnFilter",
         width: 110,
       },
       {

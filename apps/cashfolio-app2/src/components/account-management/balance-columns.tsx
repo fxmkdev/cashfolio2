@@ -9,23 +9,28 @@ import {
 } from "./page-types";
 import { shouldShowReferenceBalanceLoadingIndicator } from "./reference-balance-loading";
 import type { RefObject } from "react";
+import type { AccountSetFilters } from "./use-account-set-filters";
 import {
   getAccountListUnitIdentifierDisplayValue,
   getAccountListBalanceValue,
 } from "./account-column-values";
 
 type BalanceColumnOptions = {
+  unitFilter: AccountSetFilters["unitIdentifier"];
   referenceCurrency: string;
   isReferenceBalancesLoadingRef: RefObject<boolean>;
   balanceInReferenceCurrencyByGroupIdRef: RefObject<
     Map<string, GroupBalanceAggregation>
   >;
 };
-function buildUnitColumn(referenceCurrency: string): ColDef<AccountsGridRow> {
+function buildUnitColumn({
+  referenceCurrency,
+  unitFilter,
+}: BalanceColumnOptions): ColDef<AccountsGridRow> {
   return {
     colId: "unitIdentifier",
     headerName: "Ccy./Symbol",
-    filter: "agTextColumnFilter",
+    ...unitFilter,
     initialWidth: 180,
     resizable: true,
     valueGetter: ({ data }) =>
@@ -105,7 +110,7 @@ export function buildAccountBalanceColumns(
   options: BalanceColumnOptions,
 ): ColDef<AccountsGridRow>[] {
   return [
-    buildUnitColumn(options.referenceCurrency),
+    buildUnitColumn(options),
     buildBalanceColumn(options.referenceCurrency),
     buildReferenceBalanceColumn(options),
   ];

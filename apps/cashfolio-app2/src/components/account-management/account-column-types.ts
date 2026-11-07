@@ -1,6 +1,7 @@
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { GroupBalanceAggregation } from "./page-data";
+import type { AccountFilterContext } from "./account-filter-context";
 import {
   type RowTarget,
   type TreeRow,
@@ -8,6 +9,7 @@ import {
   type PersistedGroupRow,
 } from "./page-types";
 export type AccountTreeColumnParams = {
+  filterContext: AccountFilterContext;
   grouping?: ReportingGrouping;
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;

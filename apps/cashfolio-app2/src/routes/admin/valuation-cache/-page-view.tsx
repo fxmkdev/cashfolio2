@@ -82,7 +82,7 @@ function getColumnsForTab(
         headerName: "Currency",
         field: "currency",
         flex: 1,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
       },
     ];
   }
@@ -93,7 +93,7 @@ function getColumnsForTab(
         headerName: "Cryptocurrency",
         field: "cryptocurrency",
         flex: 1,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
       },
     ];
   }
@@ -103,13 +103,13 @@ function getColumnsForTab(
       headerName: "Symbol",
       field: "symbol",
       flex: 1,
-      filter: "agTextColumnFilter",
+      filter: "agSetColumnFilter",
     },
     {
       headerName: "Trade Currency",
       field: "tradeCurrency",
       width: 180,
-      filter: "agTextColumnFilter",
+      filter: "agSetColumnFilter",
     },
   ];
 }

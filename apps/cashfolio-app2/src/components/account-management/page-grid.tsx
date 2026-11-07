@@ -1,4 +1,5 @@
 import { DataGrid } from "@/components/grid/data-grid";
+import { useMemo } from "react";
 import { postSortAccountRows } from "./archived-grid-rows";
 import {
   AccountNameCell,
@@ -7,7 +8,7 @@ import {
 import { AccountGainLossDetails } from "./gain-loss-header";
 import type { AccountsPageViewProps } from "./page-view-types";
 
-import type { ColDef } from "ag-grid-enterprise";
+import type { ColDef, SetFilterHandler } from "ag-grid-enterprise";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { AccountsGridRow } from "./page-types";
 type PageGridProps = Pick<
@@ -25,7 +26,7 @@ type PageGridProps = Pick<
 >;
 type GridEvents = Pick<
   AgGridReactProps<AccountsGridRow>,
-  "onGridReady" | "onRowDoubleClicked"
+  "onGridReady" | "onRowDoubleClicked" | "onRowDataUpdated"
 >;
 function accountNameColumn(isCategories: boolean): ColDef<AccountsGridRow> {
   return {
@@ -59,6 +60,20 @@ function accountGridEvents({
       onGridReady?.(event);
       bulkAccountActions?.gridProps.onGridReady?.(event);
     },
+    onRowDataUpdated: (event) => {
+      for (const id of [
+        "unitIdentifier",
+        "assetClass",
+        "path",
+        "trackingMethod",
+      ]) {
+        if (event.api.getColumn(id))
+          event.api
+            .getColumnFilterHandler<SetFilterHandler>(id)
+            ?.refreshFilterValues();
+      }
+      bulkAccountActions?.gridProps.onRowDataUpdated?.(event);
+    },
     onRowDoubleClicked: (event) => {
       if (event.isEventHandlingSuppressed) return;
       if (
@@ -71,6 +86,10 @@ function accountGridEvents({
   };
 }
 export function AccountsPageGrid(props: PageGridProps) {
+  const nameColumn = useMemo(
+    () => accountNameColumn(props.managementContext === "categories"),
+    [props.managementContext],
+  );
   return (
     <AccountGainLossDetails
       data={props.gainLoss?.data}
@@ -81,9 +100,7 @@ export function AccountsPageGrid(props: PageGridProps) {
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={props.rows}
         columnDefs={props.columnDefs}
-        autoGroupColumnDef={accountNameColumn(
-          props.managementContext === "categories",
-        )}
+        autoGroupColumnDef={nameColumn}
         postSortRows={postSortAccountRows}
         treeData
         treeDataParentIdField="parentId"

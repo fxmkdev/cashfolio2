@@ -19,6 +19,7 @@ import { isReferenceCurrencyUnit } from "@/shared/reference-currency-display";
 import type { LedgerRow } from "./page-types";
 import { LedgerActionsCell } from "./actions-cell";
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
+import { getUnitFilterValue } from "@/components/grid/unit-filter-value";
 import { buildCounterpartyLedgerSearch } from "./counterparty-ledger-search";
 
 export function getLedgerCounterpartyAccountFilterValues(
@@ -176,7 +177,9 @@ export function useLedgerColumnDefs(args: {
               colId: "unitIdentifier",
               headerName: "Ccy./Symbol",
               width: 130,
-              filter: true,
+              filter: "agSetColumnFilter",
+              filterValueGetter: ({ data }: { data?: LedgerRow }) =>
+                getUnitFilterValue(data),
               valueGetter: ({ data }: { data?: LedgerRow }) => {
                 return getLedgerUnitIdentifierDisplayValue({
                   data,

@@ -1,3 +1,4 @@
+import { buildAccountFilterContext } from "./account-filter-context";
 import { defaultAssetClassIds } from "@/shared/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import { type ReactElement } from "react";
@@ -18,6 +19,7 @@ describe("account classification columns", () => {
     let columns: ReturnType<typeof useAccountTreeColumnDefs> = [];
     function ReadColumns() {
       columns = useAccountTreeColumnDefs({
+        filterContext: buildAccountFilterContext([], [], []),
         grouping,
         isEquityTab,
         rowsByParentKey: new Map(),
@@ -43,7 +45,7 @@ describe("account classification columns", () => {
         headerName: "Ccy./Symbol",
         initialWidth: 180,
         resizable: true,
-        filter: "agTextColumnFilter",
+        filter: "agSetColumnFilter",
       },
       { field: "balance" },
       { field: "balanceInReferenceCurrency" },
@@ -58,7 +60,7 @@ describe("account classification columns", () => {
       width: 220,
       resizable: true,
       sortable: false,
-      filter: "agTextColumnFilter",
+      filter: "agSetColumnFilter",
       valueGetter: expect.any(Function),
       tooltipValueGetter: expect.any(Function),
     });
@@ -81,7 +83,7 @@ describe("account classification columns", () => {
       width: 220,
       resizable: true,
       sortable: false,
-      filter: "agTextColumnFilter",
+      filter: "agSetColumnFilter",
     });
     expect(columns[5]).toMatchObject({ colId: "trackingMethod" });
     expect(
@@ -151,7 +153,7 @@ describe("account classification columns", () => {
       initialWidth: 220,
       resizable: true,
       sortable: false,
-      filter: "agTextColumnFilter",
+      filter: "agSetColumnFilter",
       valueGetter: expect.any(Function),
       tooltipValueGetter: expect.any(Function),
     });
