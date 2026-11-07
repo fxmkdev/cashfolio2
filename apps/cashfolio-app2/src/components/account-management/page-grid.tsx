@@ -6,18 +6,11 @@ import {
 } from "./account-name-cell";
 import { AccountGainLossDetails } from "./gain-loss-header";
 import type { AccountsPageViewProps } from "./page-view-types";
-export function AccountsPageGrid({
-  managementContext = "accounts",
-  gainLoss,
-  bulkAccountActions,
-  rows,
-  columnDefs,
-  pinnedBottomRowData,
-  onGridReady,
-  isGroupOpenByDefault,
-  onRowGroupOpened,
-  onOpenLedger,
-}: Pick<
+
+import type { ColDef } from "ag-grid-enterprise";
+import type { AgGridReactProps } from "ag-grid-react";
+import type { AccountsGridRow } from "./page-types";
+type PageGridProps = Pick<
   AccountsPageViewProps,
   | "managementContext"
   | "gainLoss"
@@ -29,52 +22,76 @@ export function AccountsPageGrid({
   | "isGroupOpenByDefault"
   | "onRowGroupOpened"
   | "onOpenLedger"
->) {
-  const isCategories = managementContext === "categories";
+>;
+type GridEvents = Pick<
+  AgGridReactProps<AccountsGridRow>,
+  "onGridReady" | "onRowDoubleClicked"
+>;
+function accountNameColumn(isCategories: boolean): ColDef<AccountsGridRow> {
+  return {
+    headerName: "Name",
+    field: "name",
+    pinned: isCategories ? null : "left",
+    flex: isCategories ? 1 : 0,
+    initialWidth: 320,
+    minWidth: 320,
+    resizable: true,
+    filter: "agTextColumnFilter",
+    valueGetter: ({ data }) => data?.name,
+    tooltipValueGetter: ({ data }) => data?.name,
+    suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
+    cellRendererParams: {
+      suppressCount: true,
+      innerRenderer: AccountNameCell,
+    },
+  };
+}
+function accountGridEvents({
+  onGridReady,
+  bulkAccountActions,
+  onOpenLedger,
+}: Pick<
+  PageGridProps,
+  "onGridReady" | "bulkAccountActions" | "onOpenLedger"
+>): GridEvents {
+  return {
+    onGridReady: (event) => {
+      onGridReady?.(event);
+      bulkAccountActions?.gridProps.onGridReady?.(event);
+    },
+    onRowDoubleClicked: (event) => {
+      if (event.isEventHandlingSuppressed) return;
+      if (
+        event.data &&
+        "nodeType" in event.data &&
+        event.data.nodeType === "account"
+      )
+        onOpenLedger(event.data.id);
+    },
+  };
+}
+export function AccountsPageGrid(props: PageGridProps) {
   return (
     <AccountGainLossDetails
-      data={gainLoss?.data}
-      loading={gainLoss?.loading ?? false}
+      data={props.gainLoss?.data}
+      loading={props.gainLoss?.loading ?? false}
     >
       <DataGrid
-        {...bulkAccountActions?.gridProps}
+        {...props.bulkAccountActions?.gridProps}
         containerStyle={{ flex: 1, minHeight: 0 }}
-        rowData={rows}
-        columnDefs={columnDefs}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          pinned: isCategories ? null : "left",
-          flex: isCategories ? 1 : 0,
-          initialWidth: 320,
-          minWidth: 320,
-          resizable: true,
-          filter: "agTextColumnFilter",
-          valueGetter: ({ data }) => data?.name,
-          tooltipValueGetter: ({ data }) => data?.name,
-          suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
-          cellRendererParams: {
-            suppressCount: true,
-            innerRenderer: AccountNameCell,
-          },
-        }}
+        rowData={props.rows}
+        columnDefs={props.columnDefs}
+        autoGroupColumnDef={accountNameColumn(
+          props.managementContext === "categories",
+        )}
         postSortRows={postSortAccountRows}
-        treeData={true}
+        treeData
         treeDataParentIdField="parentId"
-        pinnedBottomRowData={pinnedBottomRowData}
-        onGridReady={(event) => {
-          onGridReady?.(event);
-          bulkAccountActions?.gridProps.onGridReady?.(event);
-        }}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
+        pinnedBottomRowData={props.pinnedBottomRowData}
+        {...accountGridEvents(props)}
+        isGroupOpenByDefault={props.isGroupOpenByDefault}
+        onRowGroupOpened={props.onRowGroupOpened}
         getRowId={({ data }) => data.id}
-        onRowDoubleClicked={(e) => {
-          if (e.isEventHandlingSuppressed) return;
-          if (e.data?.nodeType === "account") {
-            onOpenLedger(e.data.id);
-          }
-        }}
       />
     </AccountGainLossDetails>
   );

@@ -32,26 +32,114 @@ export function AccountsPageView(props: AccountsPageViewProps) {
   );
 }
 
+type OrganizeSession = ReturnType<typeof useOrganizeSession<AccountsGridRow>>;
+type NormalContentProps = {
+  props: AccountsPageViewProps;
+  session: OrganizeSession;
+  canOrganize: boolean;
+};
+type GridFeedbackProps = {
+  props: Pick<
+    AccountsPageViewProps,
+    | "gainLoss"
+    | "managementContext"
+    | "unarchiveRecovery"
+    | "onRefreshConstraints"
+  >;
+  organizer: Pick<OrganizeSession["organizer"], "load" | "loadError">;
+  canOrganize: boolean;
+};
+function AccountsGridFeedback({
+  props,
+  organizer,
+  canOrganize,
+}: GridFeedbackProps) {
+  const { gainLoss, managementContext = "accounts" } = props;
+  const isCategories = managementContext === "categories";
+  const { load } = organizer;
+  return (
+    <>
+      {canOrganize && organizer.loadError && (
+        <Alert color="red" role="alert">
+          {organizer.loadError}
+          <Button variant="subtle" onClick={() => void load()}>
+            Try Again
+          </Button>
+        </Alert>
+      )}
+      <UnarchiveMutationFeedback
+        listLabel={isCategories ? "category list" : "account list"}
+        recovery={props.unarchiveRecovery}
+        onRefreshConstraints={props.onRefreshConstraints}
+      />
+      {!isCategories && (
+        <Text size="sm" c="dimmed" mb="sm">
+          Totals include active and archived accounts, including collapsed
+          groups.
+        </Text>
+      )}
+      {gainLoss?.error ? (
+        <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
+          {gainLoss.error}
+          <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
+            Retry
+          </Button>
+        </Alert>
+      ) : null}
+    </>
+  );
+}
+function AccountsNormalContent({
+  props,
+  session,
+  canOrganize,
+}: NormalContentProps) {
+  const { organizer, normalGrid, isOrganizing } = session;
+  const { bulkAccountActions } = props;
+  return (
+    <Box
+      style={{
+        display: isOrganizing ? "none" : "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      <AccountsGridFeedback
+        props={props}
+        organizer={organizer}
+        canOrganize={canOrganize}
+      />
+      {bulkAccountActions && (
+        <BulkAccountToolbar actions={bulkAccountActions} />
+      )}
+      <AccountsBulkAssignmentDialogs {...props} />
+      <AccountsPageGrid
+        {...props}
+        onGridReady={(event) => {
+          normalGrid.current = event.api;
+          props.onGridReady?.(event);
+        }}
+      />
+    </Box>
+  );
+}
 function AccountsPageContent(props: AccountsPageViewProps) {
-  const {
-    bulkAccountActions,
-    gainLoss,
-    managementContext = "accounts",
-  } = props;
+  const { bulkAccountActions, managementContext = "accounts" } = props;
   const isCategories = managementContext === "categories";
   const grouping = props.grouping ?? "accountStructure";
   const canOrganize = grouping === "accountStructure" && !!props.organizerApi;
-  const { organizer, navigation, normalGrid, isOrganizing } =
-    useOrganizeSession<AccountsGridRow>({
-      accountBookId: props.accountBookId,
-      requested: !!props.organize,
-      available: canOrganize,
-      page: isCategories ? "categories" : "accounts",
-      api: props.organizerApi,
-      onSaved: props.onOrganizeSaved ?? (() => {}),
-      onActivate: () => bulkAccountActions?.clearSelection(),
-    });
-  const { load } = organizer;
+  const session = useOrganizeSession<AccountsGridRow>({
+    accountBookId: props.accountBookId,
+    requested: !!props.organize,
+    available: canOrganize,
+    page: isCategories ? "categories" : "accounts",
+    api: props.organizerApi,
+    onSaved: props.onOrganizeSaved ?? (() => {}),
+    onActivate: () => bulkAccountActions?.clearSelection(),
+  });
+  const { organizer, navigation, isOrganizing } = session;
+
   return (
     <PageShell>
       <AccountsPageHeader
@@ -69,53 +157,11 @@ function AccountsPageContent(props: AccountsPageViewProps) {
           organizer={organizer}
         />
       )}
-      <Box
-        style={{
-          display: isOrganizing ? "none" : "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        {canOrganize && organizer.loadError && (
-          <Alert color="red" role="alert">
-            {organizer.loadError}
-            <Button variant="subtle" onClick={() => void load()}>
-              Try Again
-            </Button>
-          </Alert>
-        )}
-        <UnarchiveMutationFeedback
-          listLabel={isCategories ? "category list" : "account list"}
-          recovery={props.unarchiveRecovery}
-          onRefreshConstraints={props.onRefreshConstraints}
-        />
-        {!isCategories && (
-          <Text size="sm" c="dimmed" mb="sm">
-            Totals include active and archived accounts, including collapsed
-            groups.
-          </Text>
-        )}
-        {gainLoss?.error ? (
-          <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
-            {gainLoss.error}
-            <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
-              Retry
-            </Button>
-          </Alert>
-        ) : null}
-        {bulkAccountActions && (
-          <BulkAccountToolbar actions={bulkAccountActions} />
-        )}
-        <AccountsBulkAssignmentDialogs {...props} />
-        <AccountsPageGrid
-          {...props}
-          onGridReady={(event) => {
-            normalGrid.current = event.api;
-            props.onGridReady?.(event);
-          }}
-        />
-      </Box>
+      <AccountsNormalContent
+        props={props}
+        session={session}
+        canOrganize={canOrganize}
+      />
       <AccountsPageDialogs {...props} />
     </PageShell>
   );

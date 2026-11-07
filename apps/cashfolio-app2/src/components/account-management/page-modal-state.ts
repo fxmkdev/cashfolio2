@@ -12,10 +12,7 @@ export type RowTarget = {
   name: string;
 };
 
-export function useAccountsPageModalState(
-  scopeKey?: string,
-  resetEditorsOnScopeChange = false,
-) {
+function useAccountCreationState(scopeKey?: string) {
   const [createModalOpened, setCreateAccountOpened] = useState(false);
   const [createGroupModalOpened, setCreateGroupOpened] = useState(false);
   const [createAccountGroupId, setCreateAccountGroupId] = useState<string>();
@@ -40,6 +37,20 @@ export function useAccountsPageModalState(
     setCreateModalOpened(false);
     setCreateGroupModalOpened(false);
   }, [scopeKey, setCreateModalOpened, setCreateGroupModalOpened]);
+
+  return {
+    createAccountGroupId,
+    createGroupParentId,
+    openCreateAccount,
+    openCreateGroup,
+    createModalOpened,
+    setCreateModalOpened,
+    createGroupModalOpened,
+    setCreateGroupModalOpened,
+  };
+}
+
+function useAccountEditorState() {
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
   >();
@@ -48,17 +59,6 @@ export function useAccountsPageModalState(
     { id: string; initialValues: AccountGroupInitialValues } | undefined
   >();
   const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
-  const [archivingRow, setArchivingRow] = useState<RowTarget | undefined>();
-  const [deletingRow, setDeletingRow] = useState<RowTarget | undefined>();
-  useEffect(() => {
-    if (!resetEditorsOnScopeChange) return;
-    setEditModalOpen(false);
-    setEditGroupModalOpen(false);
-    setEditingAccount(undefined);
-    setEditingGroup(undefined);
-    setArchivingRow(undefined);
-    setDeletingRow(undefined);
-  }, [scopeKey, resetEditorsOnScopeChange]);
 
   const handleEditRow = useCallback((data: PersistedTreeRow) => {
     if (!isPersistedTreeRow(data)) return;
@@ -88,27 +88,46 @@ export function useAccountsPageModalState(
     setEditGroupModalOpen(true);
   }, []);
 
+  const resetEditors = useCallback(() => {
+    setEditModalOpen(false);
+    setEditGroupModalOpen(false);
+    setEditingAccount(undefined);
+    setEditingGroup(undefined);
+  }, []);
   return {
-    createAccountGroupId,
-    createGroupParentId,
-    openCreateAccount,
-    openCreateGroup,
-    createModalOpened,
-    setCreateModalOpened,
     editingAccount,
     setEditingAccount,
     editModalOpen,
     setEditModalOpen,
-    createGroupModalOpened,
-    setCreateGroupModalOpened,
     editingGroup,
     setEditingGroup,
     editGroupModalOpen,
     setEditGroupModalOpen,
+    handleEditRow,
+    resetEditors,
+  };
+}
+
+export function useAccountsPageModalState(
+  scopeKey?: string,
+  resetEditorsOnScopeChange = false,
+) {
+  const creation = useAccountCreationState(scopeKey);
+  const { resetEditors, ...editors } = useAccountEditorState();
+  const [archivingRow, setArchivingRow] = useState<RowTarget | undefined>();
+  const [deletingRow, setDeletingRow] = useState<RowTarget | undefined>();
+  useEffect(() => {
+    if (!resetEditorsOnScopeChange) return;
+    resetEditors();
+    setArchivingRow(undefined);
+    setDeletingRow(undefined);
+  }, [scopeKey, resetEditorsOnScopeChange, resetEditors]);
+  return {
+    ...creation,
+    ...editors,
     archivingRow,
     setArchivingRow,
     deletingRow,
     setDeletingRow,
-    handleEditRow,
   };
 }

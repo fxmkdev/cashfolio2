@@ -25,15 +25,53 @@ const GainLossDetailsTargetContext = createContext<
   { targetRef: Ref<HTMLButtonElement>; toggle: () => void } | undefined
 >(undefined);
 
+type DetailsContentProps = {
+  data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
+  loading: boolean;
+  startDate?: string;
+  asOfDate?: string;
+};
+function GainLossDetailsContent({
+  data,
+  loading,
+  startDate,
+  asOfDate,
+}: DetailsContentProps) {
+  return (
+    <Stack gap="xs">
+      <Text size="sm">
+        {data ? (
+          <>
+            Since {startDate} · As of {asOfDate}
+          </>
+        ) : loading ? (
+          "Loading calculation dates…"
+        ) : (
+          "Dates unavailable"
+        )}
+      </Text>
+      <Text size="sm">
+        Calculated holding G/L plus recorded adjustments since account-book
+        start. Realised includes recorded adjustments and does not establish
+        economic realisation.
+      </Text>
+      <Text size="sm">
+        Totals include active and archived accounts in this tab, including
+        collapsed groups. Incomplete columns show —; totals require complete
+        data for every eligible account.
+      </Text>
+    </Stack>
+  );
+}
+
+type GainLossDetailsProps = Pick<DetailsContentProps, "data" | "loading"> & {
+  children: ReactNode;
+};
 export function AccountGainLossDetails({
   data,
   loading,
   children,
-}: {
-  data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
-  loading: boolean;
-  children: ReactNode;
-}) {
+}: GainLossDetailsProps) {
   const locale = useUserLocale();
   const targetRef = useRef<HTMLButtonElement>(null);
   const [opened, setOpened] = useState(false);
@@ -76,29 +114,12 @@ export function AccountGainLossDetails({
             targetRef.current?.focus({ preventScroll: true });
           }}
         >
-          <Stack gap="xs">
-            <Text size="sm">
-              {data ? (
-                <>
-                  Since {startDate} · As of {asOfDate}
-                </>
-              ) : loading ? (
-                "Loading calculation dates…"
-              ) : (
-                "Dates unavailable"
-              )}
-            </Text>
-            <Text size="sm">
-              Calculated holding G/L plus recorded adjustments since
-              account-book start. Realised includes recorded adjustments and
-              does not establish economic realisation.
-            </Text>
-            <Text size="sm">
-              Totals include active and archived accounts in this tab, including
-              collapsed groups. Incomplete columns show —; totals require
-              complete data for every eligible account.
-            </Text>
-          </Stack>
+          <GainLossDetailsContent
+            data={data}
+            loading={loading}
+            startDate={startDate}
+            asOfDate={asOfDate}
+          />
         </Popover.Dropdown>
       </Popover>
     </GainLossDetailsTargetContext.Provider>

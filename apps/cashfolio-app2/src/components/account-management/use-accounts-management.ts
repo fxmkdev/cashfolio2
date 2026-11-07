@@ -16,7 +16,8 @@ import {
   type PersistedGroupRow,
 } from "./page-types";
 import { createAccountsMutationActions } from "./account-mutations";
-export function useAccountsManagement(args: {
+
+type ManagementOptions = {
   accountBookId: string;
   scopeKey: string;
   managementContext?: AccountManagementContext;
@@ -27,32 +28,27 @@ export function useAccountsManagement(args: {
   modalState: ReturnType<typeof useAccountsPageModalState>;
   invalidate: () => void;
   onRefreshConstraints: () => Promise<void>;
-}) {
-  const {
-    modalState,
-    rows,
-    scopeKey,
-    grouping,
-    isEquityTab,
-    onRefreshConstraints,
-  } = args;
-  const actions = createAccountsMutationActions({
-    accountBookId: args.accountBookId,
-    invalidate: args.invalidate,
-    state: {
-      getEditingAccount: () => modalState.editingAccount,
-      getEditingGroup: () => modalState.editingGroup,
-      getDeletingRow: () => modalState.deletingRow,
-      getArchivingRow: () => modalState.archivingRow,
-      setCreateModalOpened: modalState.setCreateModalOpened,
-      setEditModalOpen: modalState.setEditModalOpen,
-      setCreateGroupModalOpened: modalState.setCreateGroupModalOpened,
-      setEditGroupModalOpen: modalState.setEditGroupModalOpen,
-      setDeletingRow: modalState.setDeletingRow,
-      setArchivingRow: modalState.setArchivingRow,
-    },
-  });
-
+};
+type ManagementActions = ReturnType<typeof createAccountsMutationActions>;
+function getMutationState(modalState: ManagementOptions["modalState"]) {
+  return {
+    getEditingAccount: () => modalState.editingAccount,
+    getEditingGroup: () => modalState.editingGroup,
+    getDeletingRow: () => modalState.deletingRow,
+    getArchivingRow: () => modalState.archivingRow,
+    setCreateModalOpened: modalState.setCreateModalOpened,
+    setEditModalOpen: modalState.setEditModalOpen,
+    setCreateGroupModalOpened: modalState.setCreateGroupModalOpened,
+    setEditGroupModalOpen: modalState.setEditGroupModalOpen,
+    setDeletingRow: modalState.setDeletingRow,
+    setArchivingRow: modalState.setArchivingRow,
+  };
+}
+function useAccountUnarchiveRecovery(
+  args: ManagementOptions,
+  actions: ManagementActions,
+) {
+  const { rows, scopeKey, onRefreshConstraints } = args;
   const unarchiveRecovery = useUnarchiveMutation({
     scopeKey,
     onUnarchive: actions.handleUnarchiveRow,
@@ -71,22 +67,11 @@ export function useAccountsManagement(args: {
           row.unarchivable,
       ),
   });
-  const bulkAccountActions = useBulkAccountActions({
-    scopeKey: `${scopeKey}:${grouping}`,
-    enabled: !isEquityTab,
-    rows,
-    submitAssetClass: (accountIds, assetClassId) =>
-      setAccountsAssetClass({
-        data: { accountBookId: args.accountBookId, accountIds, assetClassId },
-      }),
-    submitTrackingMethod: (accountIds, trackingMethod) =>
-      setAccountsTrackingMethod({
-        data: { accountBookId: args.accountBookId, accountIds, trackingMethod },
-      }),
-    invalidate: args.invalidate,
-    onRefreshConstraints,
-  });
 
+  return unarchiveRecovery;
+}
+function createAddChildAction(args: ManagementOptions) {
+  const { modalState } = args;
   const onAddChild = (
     row: PersistedGroupRow,
     kind: "account" | "accountGroup",
@@ -100,5 +85,35 @@ export function useAccountsManagement(args: {
     if (kind === "account") modalState.openCreateAccount(row.id);
     else modalState.openCreateGroup(row.id);
   };
-  return { actions, unarchiveRecovery, bulkAccountActions, onAddChild };
+
+  return onAddChild;
+}
+export function useAccountsManagement(args: ManagementOptions) {
+  const actions = createAccountsMutationActions({
+    accountBookId: args.accountBookId,
+    invalidate: args.invalidate,
+    state: getMutationState(args.modalState),
+  });
+  const unarchiveRecovery = useAccountUnarchiveRecovery(args, actions);
+  const bulkAccountActions = useBulkAccountActions({
+    scopeKey: `${args.scopeKey}:${args.grouping}`,
+    enabled: !args.isEquityTab,
+    rows: args.rows,
+    submitAssetClass: (accountIds, assetClassId) =>
+      setAccountsAssetClass({
+        data: { accountBookId: args.accountBookId, accountIds, assetClassId },
+      }),
+    submitTrackingMethod: (accountIds, trackingMethod) =>
+      setAccountsTrackingMethod({
+        data: { accountBookId: args.accountBookId, accountIds, trackingMethod },
+      }),
+    invalidate: args.invalidate,
+    onRefreshConstraints: args.onRefreshConstraints,
+  });
+  return {
+    actions,
+    unarchiveRecovery,
+    bulkAccountActions,
+    onAddChild: createAddChildAction(args),
+  };
 }

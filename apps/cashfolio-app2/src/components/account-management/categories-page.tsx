@@ -8,6 +8,79 @@ import { AccountsPageDialogs } from "./page-dialogs";
 import type { AccountsPageViewProps } from "./page-view-types";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 
+type CategoryOrganizer = ReturnType<typeof useHierarchyManagement>;
+type CategoryTreeProps = {
+  props: AccountsPageViewProps;
+  organizer: CategoryOrganizer;
+  editorOpened: boolean;
+  expansion: ReturnType<typeof useExpandedGroups>;
+  setInteractionBlocked: (blocked: boolean) => void;
+};
+function CategoryTree({
+  props,
+  organizer,
+  editorOpened,
+  expansion,
+  setInteractionBlocked,
+}: CategoryTreeProps) {
+  return (
+    <HierarchyOrganizer
+      accountBookId={props.accountBookId}
+      organizer={organizer}
+      management={{
+        addChildLabel:
+          props.tab === "EQUITY-INCOME"
+            ? "Add Income Category"
+            : "Add Expense Category",
+        editorOpened,
+        expansion,
+        showArchived: props.showArchived ?? false,
+        onInteractionBlockedChange: setInteractionBlocked,
+        onEdit: (node) => props.onEditHierarchyNode?.(node),
+        onAddChild: (node) => props.onAddHierarchyChild?.(node, "account"),
+        onAddGroup: (node) => props.onAddHierarchyChild?.(node, "accountGroup"),
+        onOpenLeaf: props.onOpenLedger,
+      }}
+    />
+  );
+}
+function CategoryDialogs({
+  props,
+  organizer,
+}: Pick<CategoryTreeProps, "props" | "organizer">) {
+  return (
+    <AccountsPageDialogs
+      {...props}
+      onRefreshConstraints={organizer.refresh}
+      editorSubmitState={{
+        ...organizer.submitState,
+        isSubmitting: organizer.pending,
+      }}
+      onSubmitCreateAccount={(values) =>
+        organizer.performEdit(() => props.onSubmitCreateAccount(values))
+      }
+      onSubmitCreateGroup={(values) =>
+        organizer.performEdit(() => props.onSubmitCreateGroup(values))
+      }
+      onSubmitUpdateAccount={(values) =>
+        organizer.performEdit(
+          () => props.onSubmitUpdateAccount(values),
+          props.editingAccount
+            ? { id: props.editingAccount.id, nodeType: "account" }
+            : undefined,
+        )
+      }
+      onSubmitUpdateGroup={(values) =>
+        organizer.performEdit(
+          () => props.onSubmitUpdateGroup(values),
+          props.editingGroup
+            ? { id: props.editingGroup.id, nodeType: "accountGroup" }
+            : undefined,
+        )
+      }
+    />
+  );
+}
 export function CategoriesPageView(props: AccountsPageViewProps) {
   const organizer = useHierarchyManagement({
     accountBookId: props.accountBookId,
@@ -27,6 +100,7 @@ export function CategoriesPageView(props: AccountsPageViewProps) {
     props.createGroupModalOpened ||
     props.editModalOpen ||
     props.editGroupModalOpen;
+
   return (
     <PageShell>
       <AccountsPageHeader
@@ -44,56 +118,15 @@ export function CategoriesPageView(props: AccountsPageViewProps) {
         </Alert>
       )}
       {organizer.snapshot && (
-        <HierarchyOrganizer
-          accountBookId={props.accountBookId}
+        <CategoryTree
+          props={props}
           organizer={organizer}
-          management={{
-            addChildLabel:
-              props.tab === "EQUITY-INCOME"
-                ? "Add Income Category"
-                : "Add Expense Category",
-            editorOpened,
-            expansion,
-            showArchived: props.showArchived ?? false,
-            onInteractionBlockedChange: setInteractionBlocked,
-            onEdit: (node) => props.onEditHierarchyNode?.(node),
-            onAddChild: (node) => props.onAddHierarchyChild?.(node, "account"),
-            onAddGroup: (node) =>
-              props.onAddHierarchyChild?.(node, "accountGroup"),
-            onOpenLeaf: props.onOpenLedger,
-          }}
+          editorOpened={editorOpened}
+          expansion={expansion}
+          setInteractionBlocked={setInteractionBlocked}
         />
       )}
-      <AccountsPageDialogs
-        {...props}
-        onRefreshConstraints={organizer.refresh}
-        editorSubmitState={{
-          ...organizer.submitState,
-          isSubmitting: organizer.pending,
-        }}
-        onSubmitCreateAccount={(values) =>
-          organizer.performEdit(() => props.onSubmitCreateAccount(values))
-        }
-        onSubmitCreateGroup={(values) =>
-          organizer.performEdit(() => props.onSubmitCreateGroup(values))
-        }
-        onSubmitUpdateAccount={(values) =>
-          organizer.performEdit(
-            () => props.onSubmitUpdateAccount(values),
-            props.editingAccount
-              ? { id: props.editingAccount.id, nodeType: "account" }
-              : undefined,
-          )
-        }
-        onSubmitUpdateGroup={(values) =>
-          organizer.performEdit(
-            () => props.onSubmitUpdateGroup(values),
-            props.editingGroup
-              ? { id: props.editingGroup.id, nodeType: "accountGroup" }
-              : undefined,
-          )
-        }
-      />
+      <CategoryDialogs props={props} organizer={organizer} />
     </PageShell>
   );
 }

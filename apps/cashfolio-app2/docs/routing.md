@@ -334,6 +334,16 @@ mutations, bulk actions, and colocated tests and stories. Neither route owns the
 other screen's implementation, and there are no route-private compatibility
 re-exports.
 
+The controller composes a data/presentation model, management actions, grid
+wiring, and view-prop assembly. Organizer API construction and guarded hierarchy
+editor callbacks have separate owners. Reference-balance requests, row
+projections, and delayed loading visibility are independent; bulk selection is
+separate from assignment targets and submission. Modal creation, editing, and
+confirmation state are composed without changing their public contract. Views
+use stable components for headers, organizer/grid content, editor and
+confirmation dialogs, and assignment forms. Column builders separate values,
+rendering, and keyboard handling while retaining live refs and memoized inputs.
+
 Routes own search registration, redirects, loader dependencies, document heads,
 navigation callbacks, ledger navigation state, and invalidation wiring. Pure
 search parsing and legacy URL normalization live in

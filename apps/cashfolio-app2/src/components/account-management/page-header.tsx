@@ -18,23 +18,8 @@ import { TopPageHeader } from "@/components/layout/top-page-header";
 import { getAccountsPageTitle } from "./page-types";
 import type { AccountsPageViewProps } from "./page-view-types";
 import type { ReactNode } from "react";
-export function AccountsPageHeader({
-  managementContext = "accounts",
-  grouping = "accountStructure",
-  onGroupingChange,
-  accountBookId,
-  tab,
-  showArchived = false,
-  onShowArchivedChange,
-  tabs,
-  onOpenCreateGroup,
-  onOpenCreateAccount,
-  organizing = false,
-  onOrganize,
-  organizePending,
-  organizerActions,
-  managementPending = false,
-}: Pick<
+
+type HeaderProps = Pick<
   AccountsPageViewProps,
   | "managementContext"
   | "grouping"
@@ -52,10 +37,61 @@ export function AccountsPageHeader({
   organizePending?: boolean;
   organizerActions?: ReactNode;
   managementPending?: boolean;
-}) {
+};
+type HeaderOptions = HeaderProps & {
+  managementContext: NonNullable<HeaderProps["managementContext"]>;
+  grouping: NonNullable<HeaderProps["grouping"]>;
+  showArchived: boolean;
+  organizing: boolean;
+  managementPending: boolean;
+};
+type HeaderLayoutProps = HeaderOptions & {
+  managementTabs: ReactNode;
+  managementActions: ReactNode;
+};
+type ManagementActionProps = Pick<
+  HeaderOptions,
+  | "managementContext"
+  | "grouping"
+  | "onOrganize"
+  | "organizePending"
+  | "accountBookId"
+  | "onOpenCreateGroup"
+  | "managementPending"
+  | "onOpenCreateAccount"
+  | "tab"
+>;
+type CategoriesHeaderProps = Pick<
+  HeaderLayoutProps,
+  | "managementContext"
+  | "managementTabs"
+  | "managementActions"
+  | "managementPending"
+  | "showArchived"
+  | "onShowArchivedChange"
+>;
+type AccountsHeaderProps = Pick<
+  HeaderLayoutProps,
+  | "organizing"
+  | "grouping"
+  | "onGroupingChange"
+  | "organizerActions"
+  | "managementActions"
+>;
+
+function ManagementTabs({
+  managementContext,
+  accountBookId,
+  tab,
+  showArchived,
+  tabs,
+}: Pick<
+  HeaderOptions,
+  "managementContext" | "accountBookId" | "tab" | "showArchived" | "tabs"
+>) {
   const isCategories = managementContext === "categories";
   const managementPath = getAccountManagementPath(managementContext);
-  const managementTabs = (
+  return (
     <Tabs value={tab} variant={isCategories ? "pills" : "default"}>
       <Tabs.List
         aria-label={isCategories ? "Category Type" : undefined}
@@ -79,107 +115,158 @@ export function AccountsPageHeader({
       </Tabs.List>
     </Tabs>
   );
-  const managementActions = (
+}
+function ManagementActions(props: ManagementActionProps) {
+  const isCategories = props.managementContext === "categories";
+  return (
     <Group gap={isCategories ? "sm" : "md"}>
-      {!isCategories && grouping === "accountStructure" && onOrganize && (
-        <Button
-          variant="default"
-          leftSection={<IconArrowsMove size={16} />}
-          onClick={onOrganize}
-          disabled={organizePending}
-        >
-          Organize
-        </Button>
-      )}
-      {!isCategories && grouping === "assetClass" ? (
-        <Button
-          renderRoot={(props) => (
-            <Link
-              {...props}
-              to="/$accountBookId/settings/classifications"
-              params={{ accountBookId }}
-            />
-          )}
-          variant="default"
-        >
-          Manage Asset Classes
-        </Button>
-      ) : (
-        <Button
-          variant="default"
-          leftSection={<IconPlus size={16} />}
-          onClick={onOpenCreateGroup}
-          disabled={managementPending}
-        >
-          Add Group
-        </Button>
-      )}
+      {!isCategories &&
+        props.grouping === "accountStructure" &&
+        props.onOrganize && (
+          <Button
+            variant="default"
+            leftSection={<IconArrowsMove size={16} />}
+            onClick={props.onOrganize}
+            disabled={props.organizePending}
+          >
+            Organize
+          </Button>
+        )}
+      <GroupCreationAction {...props} />
       <Button
         leftSection={<IconPlus size={16} />}
-        onClick={onOpenCreateAccount}
-        disabled={managementPending}
+        onClick={props.onOpenCreateAccount}
+        disabled={props.managementPending}
       >
         {isCategories
-          ? tab === "EQUITY-INCOME"
+          ? props.tab === "EQUITY-INCOME"
             ? "Add Income Category"
             : "Add Expense Category"
           : "Add Account"}
       </Button>
     </Group>
   );
-
-  return (
-    <>
-      {isCategories ? (
-        <>
-          <VisuallyHidden component="div">
-            <Title order={2}>
-              {getAccountsPageTitle(undefined, managementContext)}
-            </Title>
-          </VisuallyHidden>
-          <Group justify="space-between" align="center" gap="md" mb="md">
-            <Group gap="md">
-              {managementTabs}
-              <Checkbox
-                label="Show Archived"
-                disabled={managementPending}
-                checked={showArchived}
-                onChange={(event) =>
-                  onShowArchivedChange?.(event.currentTarget.checked)
-                }
-              />
-            </Group>
-            {managementActions}
-          </Group>
-        </>
-      ) : (
-        <TopPageHeader
-          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
-          headingAccessory={
-            organizing ? (
-              <Badge variant="light" size="lg">
-                Organizing
-              </Badge>
-            ) : (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">Group By</Text>
-                <Select
-                  aria-label="Group By"
-                  w={180}
-                  data={reportingGroupingOptions}
-                  value={grouping}
-                  allowDeselect={false}
-                  onChange={(value) => {
-                    if (value === "accountStructure" || value === "assetClass")
-                      onGroupingChange?.(value);
-                  }}
-                />
-              </Group>
-            )
-          }
-          actions={organizing ? organizerActions : managementActions}
+}
+function GroupCreationAction(
+  props: Pick<
+    HeaderOptions,
+    | "managementContext"
+    | "grouping"
+    | "accountBookId"
+    | "onOpenCreateGroup"
+    | "managementPending"
+  >,
+) {
+  return props.managementContext !== "categories" &&
+    props.grouping === "assetClass" ? (
+    <Button
+      renderRoot={(linkProps) => (
+        <Link
+          {...linkProps}
+          to="/$accountBookId/settings/classifications"
+          params={{ accountBookId: props.accountBookId }}
         />
       )}
+      variant="default"
+    >
+      Manage Asset Classes
+    </Button>
+  ) : (
+    <Button
+      variant="default"
+      leftSection={<IconPlus size={16} />}
+      onClick={props.onOpenCreateGroup}
+      disabled={props.managementPending}
+    >
+      Add Group
+    </Button>
+  );
+}
+function CategoriesHeader({
+  managementContext,
+  managementTabs,
+  managementActions,
+  managementPending,
+  showArchived,
+  onShowArchivedChange,
+}: CategoriesHeaderProps) {
+  return (
+    <>
+      <VisuallyHidden component="div">
+        <Title order={2}>
+          {getAccountsPageTitle(undefined, managementContext)}
+        </Title>
+      </VisuallyHidden>
+      <Group justify="space-between" align="center" gap="md" mb="md">
+        <Group gap="md">
+          {managementTabs}
+          <Checkbox
+            label="Show Archived"
+            disabled={managementPending}
+            checked={showArchived}
+            onChange={(event) =>
+              onShowArchivedChange?.(event.currentTarget.checked)
+            }
+          />
+        </Group>
+        {managementActions}
+      </Group>
     </>
+  );
+}
+function AccountsHeader({
+  organizing,
+  grouping,
+  onGroupingChange,
+  organizerActions,
+  managementActions,
+}: AccountsHeaderProps) {
+  return (
+    <TopPageHeader
+      heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+      headingAccessory={
+        organizing ? (
+          <Badge variant="light" size="lg">
+            Organizing
+          </Badge>
+        ) : (
+          <Group gap="xs" wrap="nowrap">
+            <Text size="sm">Group By</Text>
+            <Select
+              aria-label="Group By"
+              w={180}
+              data={reportingGroupingOptions}
+              value={grouping}
+              allowDeselect={false}
+              onChange={(value) => {
+                if (value === "accountStructure" || value === "assetClass")
+                  onGroupingChange?.(value);
+              }}
+            />
+          </Group>
+        )
+      }
+      actions={organizing ? organizerActions : managementActions}
+    />
+  );
+}
+export function AccountsPageHeader(props: HeaderProps) {
+  const options: HeaderOptions = {
+    ...props,
+    managementContext: props.managementContext ?? "accounts",
+    grouping: props.grouping ?? "accountStructure",
+    showArchived: props.showArchived ?? false,
+    organizing: props.organizing ?? false,
+    managementPending: props.managementPending ?? false,
+  };
+  const layout = {
+    ...options,
+    managementTabs: <ManagementTabs {...options} />,
+    managementActions: <ManagementActions {...options} />,
+  };
+  return options.managementContext === "categories" ? (
+    <CategoriesHeader {...layout} />
+  ) : (
+    <AccountsHeader {...layout} />
   );
 }

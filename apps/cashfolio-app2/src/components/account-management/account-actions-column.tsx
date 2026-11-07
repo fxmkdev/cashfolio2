@@ -1,14 +1,15 @@
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import { getAccountConstraintMessage } from "@/shared/account-presentation";
-import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import {
   ActiveAccountTreeActionsCell,
   ArchivedAccountTreeActionsCell,
 } from "@/components/account-tree/account-tree-actions-cells";
 import {
   isPersistedTreeRow,
-  type AccountsGridRow,
   toRowTarget,
+  type AccountsGridRow,
+  type PersistedTreeRow,
 } from "./page-types";
 import type { AccountTreeColumnParams } from "./account-column-types";
 type AccountActionsParams = Pick<
@@ -22,55 +23,54 @@ type AccountActionsParams = Pick<
   | "onArchiveRow"
   | "onDeleteRow"
 >;
-
-function renderAccountRowActions({
-  data,
-  params,
-}: {
-  data: AccountsGridRow | undefined;
+type PersistedActionProps = {
+  data: PersistedTreeRow;
   params: AccountActionsParams;
-}) {
-  const {
-    isEquityTab,
-    categoryType,
-    onEditRow,
-    onAddChild,
-    onUnarchiveRow,
-    unarchivePending,
-    onArchiveRow,
-    onDeleteRow,
-  } = params;
-  if (!isPersistedTreeRow(data)) return null;
+};
 
-  if (!data.isActive) {
-    return (
-      <ArchivedAccountTreeActionsCell
-        rowLabel={data.name}
-        unarchivePending={unarchivePending}
-        deleteLabel={
-          getAccountConstraintMessage(
-            data.deleteDisabledReason,
-            isEquityTab ? "categories" : "accounts",
-          ) ?? "Delete"
-        }
-        unarchiveLabel={
-          getAccountConstraintMessage(
-            data.unarchiveDisabledReason,
-            isEquityTab ? "categories" : "accounts",
-          ) ?? "Unarchive"
-        }
-        deletable={data.deletable}
-        unarchivable={data.unarchivable}
-        onEdit={() => onEditRow(data)}
-        onDelete={() => onDeleteRow(toRowTarget(data))}
-        onUnarchive={() => void onUnarchiveRow(data)}
-      />
-    );
-  }
-
+function constraintLabel(
+  message: string | null | undefined,
+  params: AccountActionsParams,
+  fallback: string,
+) {
+  return (
+    getAccountConstraintMessage(
+      message,
+      params.isEquityTab ? "categories" : "accounts",
+    ) ?? fallback
+  );
+}
+function commonActionProps({ data, params }: PersistedActionProps) {
+  return {
+    rowLabel: data.name,
+    deletable: data.deletable,
+    deleteLabel: constraintLabel(data.deleteDisabledReason, params, "Delete"),
+    onEdit: () => params.onEditRow(data),
+    onDelete: () => params.onDeleteRow(toRowTarget(data)),
+  };
+}
+function renderArchivedActions(props: PersistedActionProps) {
+  const { data, params } = props;
+  return (
+    <ArchivedAccountTreeActionsCell
+      {...commonActionProps(props)}
+      unarchivePending={params.unarchivePending}
+      unarchiveLabel={constraintLabel(
+        data.unarchiveDisabledReason,
+        params,
+        "Unarchive",
+      )}
+      unarchivable={data.unarchivable}
+      onUnarchive={() => void params.onUnarchiveRow(data)}
+    />
+  );
+}
+function renderActiveActions(props: PersistedActionProps) {
+  const { data, params } = props;
+  const { isEquityTab, categoryType, onAddChild } = params;
   return (
     <ActiveAccountTreeActionsCell
-      rowLabel={data.name}
+      {...commonActionProps(props)}
       addAccountLabel={
         isEquityTab
           ? categoryType === "INCOME"
@@ -88,27 +88,25 @@ function renderAccountRowActions({
           ? () => onAddChild(data, "accountGroup")
           : undefined
       }
-      archiveLabel={
-        getAccountConstraintMessage(
-          data.archiveDisabledReason,
-          isEquityTab ? "categories" : "accounts",
-        ) ?? "Archive"
-      }
-      deleteLabel={
-        getAccountConstraintMessage(
-          data.deleteDisabledReason,
-          isEquityTab ? "categories" : "accounts",
-        ) ?? "Delete"
-      }
+      archiveLabel={constraintLabel(
+        data.archiveDisabledReason,
+        params,
+        "Archive",
+      )}
       archivable={data.archivable}
-      deletable={data.deletable}
-      onEdit={() => onEditRow(data)}
-      onArchive={() => onArchiveRow(toRowTarget(data))}
-      onDelete={() => onDeleteRow(toRowTarget(data))}
+      onArchive={() => params.onArchiveRow(toRowTarget(data))}
     />
   );
 }
-
+function renderAccountRowActions(
+  data: AccountsGridRow | undefined,
+  params: AccountActionsParams,
+) {
+  if (!isPersistedTreeRow(data)) return null;
+  return data.isActive
+    ? renderActiveActions({ data, params })
+    : renderArchivedActions({ data, params });
+}
 export function buildAccountActionsColumn(
   params: AccountActionsParams,
 ): ColDef<AccountsGridRow> {
@@ -117,9 +115,6 @@ export function buildAccountActionsColumn(
     ...rowActionsColumnProps,
     pinned: "right",
     cellRenderer: ({ data }: ICellRendererParams<AccountsGridRow>) =>
-      renderAccountRowActions({
-        data,
-        params,
-      }),
+      renderAccountRowActions(data, params),
   };
 }

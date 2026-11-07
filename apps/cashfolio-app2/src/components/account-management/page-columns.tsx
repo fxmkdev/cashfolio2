@@ -14,10 +14,59 @@ export {
   getAccountListUnitIdentifierDisplayValue,
   getAccountListBalanceValue,
 } from "./account-column-values";
-export function useAccountTreeColumnDefs(
-  params: AccountTreeColumnParams,
-): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
-  const assetClasses = useAssetClasses();
+
+type ColumnDefs = (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[];
+type AssetClasses = ReturnType<typeof useAssetClasses>;
+type ColumnRefs = ReturnType<typeof useReferenceBalanceColumnRefs>;
+type ColumnOptions = Omit<
+  AccountTreeColumnParams,
+  | "rowsByParentKey"
+  | "isReferenceBalancesLoading"
+  | "balanceInReferenceCurrencyByGroupId"
+>;
+function useReferenceBalanceColumnRefs(params: AccountTreeColumnParams) {
+  const isReferenceBalancesLoadingRef = useRef(
+    params.isReferenceBalancesLoading,
+  );
+  isReferenceBalancesLoadingRef.current = params.isReferenceBalancesLoading;
+  const balanceInReferenceCurrencyByGroupIdRef = useRef(
+    params.balanceInReferenceCurrencyByGroupId,
+  );
+  balanceInReferenceCurrencyByGroupIdRef.current =
+    params.balanceInReferenceCurrencyByGroupId;
+  return {
+    isReferenceBalancesLoadingRef,
+    balanceInReferenceCurrencyByGroupIdRef,
+  };
+}
+function buildAccountTreeColumns(
+  params: ColumnOptions,
+  assetClasses: AssetClasses,
+  refs: ColumnRefs,
+): ColumnDefs {
+  const {
+    isEquityTab,
+    referenceCurrency,
+    gainLossData,
+    isGainLossLoading,
+    grouping = "accountStructure",
+  } = params;
+  return [
+    ...(!isEquityTab
+      ? [
+          ...buildAccountBalanceColumns({ referenceCurrency, ...refs }),
+          buildAccountGainLossColumns({
+            referenceCurrency,
+            data: gainLossData,
+            loading: isGainLossLoading ?? false,
+          }),
+          ...buildAccountMetadataColumns({ grouping, assetClasses }),
+        ]
+      : []),
+    buildAccountActionsColumn(params),
+  ];
+}
+function useAccountColumnOptions(params: AccountTreeColumnParams) {
   const {
     grouping = "accountStructure",
     gainLossData,
@@ -25,8 +74,6 @@ export function useAccountTreeColumnDefs(
     isEquityTab,
     categoryType,
     referenceCurrency,
-    isReferenceBalancesLoading,
-    balanceInReferenceCurrencyByGroupId,
     onEditRow,
     onAddChild,
     onUnarchiveRow,
@@ -34,45 +81,9 @@ export function useAccountTreeColumnDefs(
     onArchiveRow,
     onDeleteRow,
   } = params;
-  const isReferenceBalancesLoadingRef = useRef(isReferenceBalancesLoading);
-  isReferenceBalancesLoadingRef.current = isReferenceBalancesLoading;
-  const balanceInReferenceCurrencyByGroupIdRef = useRef(
-    balanceInReferenceCurrencyByGroupId,
-  );
-  balanceInReferenceCurrencyByGroupIdRef.current =
-    balanceInReferenceCurrencyByGroupId;
-
-  return useMemo<(ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[]>(
-    () => [
-      ...(!isEquityTab
-        ? [
-            ...buildAccountBalanceColumns({
-              referenceCurrency,
-              isReferenceBalancesLoadingRef,
-              balanceInReferenceCurrencyByGroupIdRef,
-            }),
-            buildAccountGainLossColumns({
-              referenceCurrency,
-              data: gainLossData,
-              loading: isGainLossLoading ?? false,
-            }),
-            ...buildAccountMetadataColumns({ grouping, assetClasses }),
-          ]
-        : []),
-      buildAccountActionsColumn({
-        isEquityTab,
-        categoryType,
-        onEditRow,
-        onAddChild,
-        onUnarchiveRow,
-        unarchivePending,
-        onArchiveRow,
-        onDeleteRow,
-      }),
-    ],
-    [
+  return useMemo(
+    () => ({
       grouping,
-      assetClasses,
       gainLossData,
       isGainLossLoading,
       isEquityTab,
@@ -84,6 +95,44 @@ export function useAccountTreeColumnDefs(
       unarchivePending,
       onArchiveRow,
       onDeleteRow,
+    }),
+    [
+      grouping,
+      gainLossData,
+      isGainLossLoading,
+      isEquityTab,
+      categoryType,
+      referenceCurrency,
+      onEditRow,
+      onAddChild,
+      onUnarchiveRow,
+      unarchivePending,
+      onArchiveRow,
+      onDeleteRow,
+    ],
+  );
+}
+
+export function useAccountTreeColumnDefs(
+  params: AccountTreeColumnParams,
+): ColumnDefs {
+  const assetClasses = useAssetClasses();
+  const {
+    isReferenceBalancesLoadingRef,
+    balanceInReferenceCurrencyByGroupIdRef,
+  } = useReferenceBalanceColumnRefs(params);
+  const options = useAccountColumnOptions(params);
+  return useMemo(
+    () =>
+      buildAccountTreeColumns(options, assetClasses, {
+        isReferenceBalancesLoadingRef,
+        balanceInReferenceCurrencyByGroupIdRef,
+      }),
+    [
+      options,
+      assetClasses,
+      isReferenceBalancesLoadingRef,
+      balanceInReferenceCurrencyByGroupIdRef,
     ],
   );
 }
