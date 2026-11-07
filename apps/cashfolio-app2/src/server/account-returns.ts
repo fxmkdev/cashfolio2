@@ -5,26 +5,28 @@ import {
   readAccountReturnScope,
   readAccountReturnDetailsInput,
 } from "./accounts/returns/return-read-input";
-import {
-  queryAccountReturnSummaries,
-  queryAccountReturnDetails,
-} from "./accounts/returns/account-returns.server";
+import { queryAccountReturnWork } from "./accounts/returns/account-returns.server";
 
 export const getAccountReturnSummaries = createServerFn({ method: "GET" })
   .validator(readAccountReturnScope)
   .handler(async ({ data }) => {
-    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const link = await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
-    return queryAccountReturnSummaries(data);
+    const result = await queryAccountReturnWork(data, link.userId);
+    if (result.status !== "complete") return result;
+    if (!("rows" in result.data))
+      throw new Error("Invalid return summary response.");
+    return { status: "complete" as const, data: result.data };
   });
 
 export const getAccountReturnDetails = createServerFn({ method: "GET" })
   .validator(readAccountReturnDetailsInput)
   .handler(async ({ data }) => {
-    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const link = await ensureAuthorizedForAccountBookId(data.accountBookId);
     startReadBudget();
-    const result = await queryAccountReturnDetails(data);
-    return data.includeDetails
-      ? result
-      : { ...result, valuations: [], cashFlows: [] };
+    const result = await queryAccountReturnWork(data, link.userId);
+    if (result.status !== "complete") return result;
+    if ("rows" in result.data)
+      throw new Error("Invalid return detail response.");
+    return { status: "complete" as const, data: result.data };
   });

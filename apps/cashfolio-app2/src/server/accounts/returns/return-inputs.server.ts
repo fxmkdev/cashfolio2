@@ -6,7 +6,11 @@ import type { HoldingTransaction } from "../../period/holdings/period-overview-h
 import { checkResourceBudget } from "../../resource-context.server";
 
 /** Read all required business data at one revision; future peers remain available for settlement bridges. */
-export function loadAccountReturnInputs(accountBookId: string, asOfDate: Date) {
+export function loadAccountReturnInputs(
+  accountBookId: string,
+  asOfDate: Date,
+  accountId?: string,
+) {
   return prisma.$transaction(
     async (db) => {
       await db.$executeRaw`SET TRANSACTION READ ONLY`;
@@ -69,6 +73,7 @@ export function loadAccountReturnInputs(accountBookId: string, asOfDate: Date) {
           const page = await db.transaction.findMany({
             where: {
               accountBookId,
+              ...(accountId ? { bookings: { some: { accountId } } } : {}),
               AND: [
                 { bookings: { some: { date: { gte: startDate } } } },
                 {

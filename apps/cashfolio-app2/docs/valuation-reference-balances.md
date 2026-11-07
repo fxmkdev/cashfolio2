@@ -407,13 +407,19 @@ day before book start. The convention follows the
 MWR solves dated investor cash flows and terminal value with Decimal arithmetic,
 using actual days/365. Contributions and opening capital use day-start
 boundaries; withdrawals and terminal value use the following day boundary. The
-solver isolates crossing and tangent roots using derivative brackets and rejects
-multiple roots. Cumulative MWR uses the effective investment span, starting at
-book start for opening holdings or first funding otherwise, and ending at the
-as-of date for open capital or final withdrawal for closed accounts. Empty gaps
-between investment episodes remain in the span. Calculation details show these
-dates, cash flows, TWR factors, and annualized equivalents for spans of at least
-365 days. This implements the
+solver evaluates integer-day cash-flow polynomials using Decimal Horner
+arithmetic. A fast path certifies global uniqueness using discounted cumulative
+cash flows outside the candidate bracket and a derivative bound inside it.
+Uncertified cases use derivative isolation, including tangent and close roots;
+multiple roots are rejected. Budget checks cover bound construction and
+isolation. A deterministic solver work limit makes only MWR unavailable,
+preserving TWR; request-wide cancellation/resource errors still propagate.
+Cumulative MWR uses the effective investment span, starting at book start for
+opening holdings or first funding otherwise, and ending at the as-of date for
+open capital or final withdrawal for closed accounts. Empty gaps between
+investment episodes remain in the span. Calculation details show these dates,
+cash flows, TWR factors, and annualized equivalents for spans of at least 365
+days. This implements the
 [dated cash-flow formulation](https://help.portfolio-performance.info/en/concepts/performance/money-weighted/).
 
 Negative invested value, unfunded performance, missing valuations, and undefined
@@ -424,9 +430,17 @@ Return summaries have their own versioned, revision-scoped Redis cache,
 including the grouping, account state, UTC as-of day, and publication cutoff.
 Stable valuation sources, committed revision checks, 24-hour TTL, size limits,
 workload budgets, and book-deletion/restore cleanup follow the existing G/L
-cache policy. Calculation details use the same engine with a fresh snapshot.
-Return request failures have their own retry action and do not hide balances or
-G/L.
+cache policy. Summary cache version 2 separates the revised solver behavior.
+Both summaries and details use resumable capital-valuation, scope-valuation, and
+calculation phases. Dependencies are deduplicated across all scopes and fetched
+with the existing four-lookup scheduler. Large books finish across bounded
+requests, rather than repeating a monolithic calculation after timeout.
+Temporary checkpoints retain completed rates and scopes, are user/revision/date/
+publication-bound, expire after 15 minutes, and use a bounded local fallback
+without Redis. Only complete, current results reach the UI or stable cache. See
+[account return requests](server-functions.md#account-returns) for limits and
+continuation/restart behavior. Return request failures have their own retry
+action and do not hide balances or G/L.
 
 ### Historical basis reuse
 

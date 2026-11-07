@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Drawer } from "@mantine/core";
+import { Button, Drawer } from "@mantine/core";
 import { useState } from "react";
 import { expect, fn, userEvent, within, waitFor } from "storybook/test";
 import { DataGrid } from "@/components/grid/data-grid";
@@ -184,7 +184,7 @@ export const Calculation: Story = {
 };
 
 const selected = fn();
-function ReturnGridExample() {
+function ReturnGridExample({ loading = false }: { loading?: boolean }) {
   const [target, setTarget] = useState<AccountReturnTarget>();
   const summary: AccountReturnSummaries = {
     referenceCurrency: "CHF",
@@ -198,6 +198,7 @@ function ReturnGridExample() {
   };
   const columns = buildAccountReturnColumns({
     data: summary,
+    loading,
     locale: "en-US",
     onOpen: (item) => {
       selected(item);
@@ -250,5 +251,56 @@ export const AccountAndGroupGrid: Story = {
         }),
       ).toBeVisible(),
     );
+  },
+};
+
+export const GridLoading: Story = {
+  render: () => <ReturnGridExample loading />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const indicators = await canvas.findAllByRole("status", {
+      name: "Loading TWR",
+    });
+    await expect(indicators).toHaveLength(3);
+    for (const indicator of indicators) {
+      await expect(indicator).toHaveStyle({
+        justifyContent: "flex-end",
+        alignItems: "center",
+      });
+      await expect(
+        indicator.querySelector(".mantine-Loader-root")?.children,
+      ).toHaveLength(3);
+    }
+    await expect(
+      canvas.getAllByRole("status", { name: "Loading MWR" }),
+    ).toHaveLength(3);
+  },
+};
+
+function GridLoadingCompletion() {
+  const [loading, setLoading] = useState(true);
+  return (
+    <>
+      <Button onClick={() => setLoading(false)}>Complete Loading</Button>
+      <ReturnGridExample loading={loading} />
+    </>
+  );
+}
+export const GridLoadingCompletes: Story = {
+  render: () => <GridLoadingCompletion />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByRole("status", { name: "Loading TWR" });
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Complete Loading" }),
+    );
+    await expect(
+      await canvas.findByRole("button", {
+        name: /View TWR calculation for Investment Account: 21.00%/,
+      }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("status", { name: "Loading TWR" }),
+    ).not.toBeInTheDocument();
   },
 };

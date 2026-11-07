@@ -1,3 +1,5 @@
+import { fetchWithResourceErrors } from "@/shared/resource-fetch";
+import { loadCompleteReturnWork } from "@/shared/load-return-work";
 import { Alert, Button, Drawer, Loader } from "@mantine/core";
 import { useCallback } from "react";
 import { getAccountReturnDetails } from "@/server/account-returns";
@@ -18,19 +20,30 @@ export function AccountReturnDrawer(
   },
 ) {
   const { accountBookId, grouping, accountState, target, period } = args;
-  const load = useCallback(() => {
-    if (!target) throw new Error("Choose an account or group.");
-    return getAccountReturnDetails({
-      data: {
-        accountBookId,
-        grouping,
-        accountState,
-        target,
-        period,
-        includeDetails: true,
-      },
-    });
-  }, [accountBookId, grouping, accountState, target, period]);
+  const load = useCallback(
+    (signal: AbortSignal) => {
+      if (!target) throw new Error("Choose an account or group.");
+      return loadCompleteReturnWork(
+        (continuation, batchSize) =>
+          getAccountReturnDetails({
+            signal,
+            fetch: fetchWithResourceErrors,
+            data: {
+              accountBookId,
+              continuation,
+              batchSize,
+              grouping,
+              accountState,
+              target,
+              period,
+              includeDetails: true,
+            },
+          }),
+        signal,
+      );
+    },
+    [accountBookId, grouping, accountState, target, period],
+  );
   const request = useGainLossRequest({
     enabled: !!target,
     scopeKey: `${accountBookId}:${grouping}:${accountState}:${JSON.stringify(target)}:${period ?? "today"}`,

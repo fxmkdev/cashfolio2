@@ -40,7 +40,9 @@ const date = (value: unknown): value is string =>
 const rate = (value: unknown) =>
   value === null ||
   (typeof value === "number" && Number.isFinite(value) && value >= -1);
-function isResult(value: unknown): value is AccountReturnResult {
+export function isAccountReturnResult(
+  value: unknown,
+): value is AccountReturnResult {
   return (
     record(value) &&
     typeof value.applicable === "boolean" &&
@@ -67,11 +69,13 @@ export function isAccountReturnSummaries(
     typeof value.referenceCurrency === "string" &&
     date(value.startDate) &&
     date(value.asOfDate) &&
-    isResult(value.total) &&
+    isAccountReturnResult(value.total) &&
     Array.isArray(value.rows) &&
     value.rows.every(
       (item: unknown) =>
-        record(item) && typeof item.id === "string" && isResult(item),
+        record(item) &&
+        typeof item.id === "string" &&
+        isAccountReturnResult(item),
     )
   );
 }

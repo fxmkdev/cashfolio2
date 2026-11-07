@@ -3,6 +3,7 @@ import {
   assertRecord,
   optionalField,
   requireBooleanField,
+  requireIntegerField,
   requireEnumField,
   requireStringField,
   requireTextField,
@@ -20,8 +21,13 @@ function readGroupId(data: Record<string, unknown>): string {
 
 export function readAccountReturnScope(data: unknown) {
   assertRecord(data);
+  const batchSize = optionalField(data, "batchSize", requireIntegerField);
+  if (batchSize !== undefined && (batchSize < 1 || batchSize > 128))
+    throw new Error("batchSize must be between 1 and 128.");
   return {
     ...readAccountBookInput(data),
+    batchSize,
+    continuation: optionalField(data, "continuation", requireStringField),
     accountState: requireEnumField(data, "accountState", [
       "active",
       "inactive",

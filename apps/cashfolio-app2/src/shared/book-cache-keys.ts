@@ -6,6 +6,7 @@ const PERIOD_CACHE_GENERATION_FAMILY = `${PERIOD_BASE_CACHE_FAMILY}:generation`;
 const ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY = "account:gain-loss-basis";
 const ACCOUNT_GAIN_LOSS_CACHE_FAMILY = "account:gain-loss";
 const ACCOUNT_RETURN_CACHE_FAMILY = "account:returns";
+const ACCOUNT_RETURN_WORK_FAMILY = "account:returns-work";
 const PERIOD_HISTORY_METRICS_CACHE_FAMILY = "period:history:metrics";
 
 export const PERIOD_BASE_CACHE_ENTRY_PREFIX = `${PERIOD_BASE_CACHE_FAMILY}:v12`;
@@ -60,7 +61,7 @@ export function getAccountReturnCacheEntryKey(
     scopeKey: string;
   },
 ): string {
-  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v1:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
+  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v2:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
 }
 
 function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {
@@ -72,6 +73,7 @@ function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {
     `${ACCOUNT_GAIN_LOSS_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
     `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
     `${ACCOUNT_RETURN_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
+    `${ACCOUNT_RETURN_WORK_FAMILY}:v*:*:${bookPattern}:*`,
   ];
 }
 
@@ -93,6 +95,7 @@ export function isBookScopedPeriodCacheKey(
     ACCOUNT_GAIN_LOSS_CACHE_FAMILY,
     ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY,
     ACCOUNT_RETURN_CACHE_FAMILY,
+    ACCOUNT_RETURN_WORK_FAMILY,
   ].some((family) => {
     const prefix = `${family}:`;
     if (!key.startsWith(prefix)) return false;
@@ -104,4 +107,10 @@ export function isBookScopedPeriodCacheKey(
 /** All book caches on the dedicated restore Redis, preserving global valuation. */
 export function getRestoreBookCacheKeyPatterns(): string[] {
   return ["account-book:*", ...getPeriodCacheCleanupPatterns("*")];
+}
+
+export function getAccountReturnWorkKey(
+  args: BookCacheScope & { userId: string; id: string },
+): string {
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v1:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }
