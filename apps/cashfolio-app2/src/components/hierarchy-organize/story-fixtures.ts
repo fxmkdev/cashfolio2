@@ -1,3 +1,4 @@
+import { planBulkLifecycle } from "@/shared/hierarchy-organize/lifecycle";
 import { planAccountMove } from "@/shared/account-organize/move";
 import type {
   OrganizeNode,
@@ -166,20 +167,9 @@ export function createOrganizerStoryApi(
     targets: Parameters<NonNullable<OrganizerApi["archiveMany"]>>[0],
   ) {
     const before = structuredClone(nodes);
-    const availability = snapshot().actionAvailability;
     try {
-      for (const target of targets) {
-        const allowed = availability[target.id];
-        if (
-          !(action === "archive"
-            ? allowed?.archivable
-            : action === "unarchive"
-              ? allowed?.unarchivable
-              : allowed?.deletable)
-        )
-          throw new Error("Action unavailable");
-      }
-      for (const target of targets) mutate(action, target.id);
+      const ordered = planBulkLifecycle(snapshot(), targets, action);
+      for (const target of ordered) mutate(action, target.id);
     } catch (error) {
       nodes = before;
       throw error;

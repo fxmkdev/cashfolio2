@@ -35,7 +35,7 @@ it("shows Unarchive independently of an archived ancestor's eligibility restrict
   expect(bulkStatusAction(snapshot, selected)).toBe("unarchive");
   expect(bulkLifecycleAvailability(snapshot, selected, "unarchive")).toEqual({
     enabled: false,
-    reason: "Fund: Its parent group is archived",
+    reason: expect.stringContaining("Investments"),
   });
 });
 

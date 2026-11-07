@@ -166,24 +166,57 @@ it.each(["foreign", "category", "missing"])(
 );
 
 it.each(["archive", "delete"] as const)(
-  "validates current %s eligibility for every row before writing",
+  "validates nonstructural %s eligibility for every row before writing",
   async (action) => {
-    snapshot.actionAvailability.group = {
-      archivable: false,
-      deletable: false,
-      unarchivable: false,
-      archiveDisabledReason: "Active children",
-      deleteDisabledReason: "Nonempty group",
-    };
-    // Explicitly selecting the child does not make its parent eligible.
     snapshot.nodes[0].parentId = "group";
+    snapshot.actionAvailability.account.archivable = false;
+    snapshot.actionAvailability.account.archiveDisabledReason =
+      "Nonzero balance";
+    snapshot.actionAvailability.account.deletable = false;
+    snapshot.actionAvailability.account.deleteDisabledReason = "Has bookings";
     const endpoint =
       action === "archive" ? archiveAccountTreeItems : deleteAccountTreeItems;
     await expect(
       endpoint({ data: { accountBookId: "book", items } }),
     ).rejects.toThrow(
-      action === "archive" ? "Active children" : "Nonempty group",
+      action === "archive" ? "Nonzero balance" : "Has bookings",
     );
+    expect(mocks.changed).toEqual([]);
+    expect(mocks.invalidate).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["archive", "delete"] as const)(
+  "processes selected children before parents for %s in either selection order",
+  async (action) => {
+    snapshot.nodes[0].parentId = "group";
+    snapshot.actionAvailability.group.archivable = false;
+    snapshot.actionAvailability.group.deletable = false;
+    const endpoint =
+      action === "archive" ? archiveAccountTreeItems : deleteAccountTreeItems;
+    for (const targets of [items, items.toReversed()]) {
+      mocks.changed = [];
+      await endpoint({ data: { accountBookId: "book", items: targets } });
+      expect(mocks.changed).toEqual(["account", "group"]);
+    }
+  },
+);
+
+it.each(["archive", "delete"] as const)(
+  "does not change any rows when a required child is omitted from %s",
+  async (action) => {
+    snapshot.nodes[0].parentId = "group";
+    snapshot.nodes.push({
+      ...snapshot.nodes[0],
+      id: "omitted",
+      name: "Omitted Child",
+      isActive: action === "archive",
+    });
+    const endpoint =
+      action === "archive" ? archiveAccountTreeItems : deleteAccountTreeItems;
+    await expect(
+      endpoint({ data: { accountBookId: "book", items } }),
+    ).rejects.toThrow("Omitted Child");
     expect(mocks.changed).toEqual([]);
     expect(mocks.invalidate).not.toHaveBeenCalled();
   },
@@ -223,19 +256,30 @@ it("authorizes bulk Unarchive before reading the hierarchy", async () => {
   expect(mocks.transaction).not.toHaveBeenCalled();
 });
 
-it("does not unarchive an ineligible child even when its archived parent is selected first", async () => {
+it("unarchives a selected parent before its child regardless of selection order", async () => {
   prepareUnarchive();
   snapshot.nodes[0].parentId = "group";
   snapshot.actionAvailability.account.unarchivable = false;
   snapshot.actionAvailability.account.unarchiveDisabledReason =
     "Its parent group is archived";
+  for (const targets of [items, items.toReversed()]) {
+    mocks.changed = [];
+    await unarchiveAccountTreeItems({
+      data: { accountBookId: "book", items: targets },
+    });
+    expect(mocks.changed).toEqual(["group", "account"]);
+  }
+});
+
+it("still blocks Unarchive when the archived ancestor is not selected", async () => {
+  prepareUnarchive();
+  snapshot.nodes[0].parentId = "group";
   await expect(
     unarchiveAccountTreeItems({
-      data: { accountBookId: "book", items: items.toReversed() },
+      data: { accountBookId: "book", items: [items[0]] },
     }),
-  ).rejects.toThrow("account: Its parent group is archived");
+  ).rejects.toThrow("group");
   expect(mocks.changed).toEqual([]);
-  expect(mocks.invalidate).not.toHaveBeenCalled();
 });
 
 it("rejects a bulk Unarchive target that is no longer archived before writing any rows", async () => {
@@ -245,6 +289,6 @@ it("rejects a bulk Unarchive target that is no longer archived before writing an
   snapshot.actionAvailability.group.unarchiveDisabledReason = "Already active";
   await expect(
     unarchiveAccountTreeItems({ data: { accountBookId: "book", items } }),
-  ).rejects.toThrow("Already active");
+  ).rejects.toThrow("already active");
   expect(mocks.changed).toEqual([]);
 });

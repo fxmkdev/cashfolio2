@@ -1,4 +1,5 @@
 import { organizeDisplayRows } from "@/shared/hierarchy-organize/tree";
+import { planBulkLifecycle } from "@/shared/hierarchy-organize/lifecycle";
 import type {
   OrganizeLifecycleAction,
   OrganizeNodeRef,
@@ -40,23 +41,18 @@ export function bulkLifecycleAvailability(
   targets: OrganizeNodeRef[],
   action: OrganizeLifecycleAction,
 ) {
-  if (!targets.length)
-    return { enabled: false, reason: "Select at least one account or group." };
-  for (const target of targets) {
-    const availability = organizeLifecycleAvailability(
-      snapshot,
-      target,
-      action,
-    );
-    if (!availability.enabled) {
-      const node = snapshot?.nodes.find((node) => node.id === target.id);
-      return {
-        enabled: false,
-        reason: `${node?.name ?? "Selected item"}: ${availability.reason}`,
-      };
-    }
+  try {
+    planBulkLifecycle(snapshot, targets, action);
+    return { enabled: true, reason: undefined };
+  } catch (error) {
+    return {
+      enabled: false,
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Refresh the hierarchy before saving.",
+    };
   }
-  return { enabled: true, reason: undefined };
 }
 
 export function bulkStatusAction(

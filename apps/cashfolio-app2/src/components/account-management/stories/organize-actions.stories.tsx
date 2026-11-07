@@ -284,10 +284,7 @@ export const OrganizeBulkLifecycleActions: Story = {
     ).toBeDisabled();
     await expect(
       toolbar.getByRole("button", { name: "Delete" }),
-    ).toHaveAttribute(
-      "aria-description",
-      expect.stringContaining("Investments"),
-    );
+    ).toHaveAttribute("aria-description", expect.stringContaining("Fund"));
   },
 };
 
@@ -362,15 +359,24 @@ export const OrganizeCreationPendingAndRecovery: Story = {
 
 export const OrganizeBulkUnarchive: Story = {
   args: {
-    organizerApi: createOrganizerStoryApi(
-      undefined,
-      organizeStoryNodes.map((node) => ({
+    organizerApi: createOrganizerStoryApi(undefined, [
+      ...organizeStoryNodes.map((node) => ({
         ...node,
         isActive: ["checking", "empty", "nested", "holding"].includes(node.id)
           ? false
           : node.isActive,
       })),
-    ),
+      {
+        id: "untouched",
+        nodeType: "account",
+        name: "Untouched Sibling",
+        parentId: "nested",
+        sortOrder: 10,
+        isActive: false,
+        isCashAccount: false,
+        unit: "CURRENCY",
+      },
+    ]),
   },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -439,13 +445,106 @@ export const OrganizeBulkUnarchive: Story = {
     await selectAssignmentAccount(regionElement, "holding");
     await expect(
       toolbar.getByRole("button", { name: "Unarchive" }),
-    ).toBeDisabled();
-    await expect(
-      toolbar.queryByRole("button", { name: "Archive" }),
-    ).not.toBeInTheDocument();
+    ).toBeEnabled();
+    await selectAssignmentAccount(regionElement, "nested");
     await expect(
       toolbar.getByRole("button", { name: "Unarchive" }),
-    ).toHaveAttribute("aria-description", expect.stringContaining("Fund"));
-    await expect(unarchive).toHaveBeenCalledOnce();
+    ).toBeDisabled();
+    await expect(
+      toolbar.getByRole("button", { name: "Unarchive" }),
+    ).toHaveAttribute("aria-description", expect.stringContaining("Brokerage"));
+    await selectAssignmentAccount(regionElement, "nested");
+    await userEvent.click(toolbar.getByRole("button", { name: "Unarchive" }));
+    await waitFor(() =>
+      expect(toolbar.getByRole("button", { name: "Archive" })).toBeEnabled(),
+    );
+    await expect(unarchive).toHaveBeenCalledTimes(2);
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+    await expect(
+      region.getByRole("button", { name: "Unarchive Untouched Sibling" }),
+    ).toBeEnabled();
+    await expect(
+      region.getByRole("button", { name: "Archive Fund" }),
+    ).toBeEnabled();
+  },
+};
+
+export const OrganizeCollectiveArchiveAndDelete: Story = {
+  args: { organizerApi: createOrganizerStoryApi() },
+  render: (args) => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      organizerApi={args.organizerApi}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement),
+      body = within(canvasElement.ownerDocument.body);
+    const archive = fn(args.organizerApi!.archiveMany),
+      remove = fn(args.organizerApi!.deleteMany);
+    args.organizerApi!.archiveMany = archive;
+    args.organizerApi!.deleteMany = remove;
+    await userEvent.click(canvas.getByRole("button", { name: "Organize" }));
+    const regionElement = await canvas.findByRole("region", {
+      name: "Organize Accounts",
+    });
+    const region = within(regionElement);
+    await selectAssignmentAccount(regionElement, "investments");
+    let toolbar = within(
+      region.getByRole("toolbar", { name: "Organize Account Actions" }),
+    );
+    await expect(
+      toolbar.getByRole("button", { name: "Archive" }),
+    ).toBeDisabled();
+    await expect(
+      toolbar.getByRole("button", { name: "Archive" }),
+    ).toHaveAttribute("aria-description", expect.stringContaining("Brokerage"));
+    await selectAssignmentAccount(regionElement, "nested");
+    await expandAssignmentGroup(regionElement, "nested");
+    await selectAssignmentAccount(regionElement, "holding");
+    await expect(
+      toolbar.getByRole("button", { name: "Archive" }),
+    ).toBeEnabled();
+    await userEvent.click(toolbar.getByRole("button", { name: "Archive" }));
+    let dialog = within(
+      await body.findByRole("dialog", { name: "Archive Selected Items" }),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Archive" }));
+    await waitFor(() =>
+      expect(regionElement.querySelector('[row-id="investments"]')).toBeNull(),
+    );
+    await expect(archive).toHaveBeenCalledOnce();
+    await userEvent.click(
+      region.getByRole("checkbox", { name: "Show Archived" }),
+    );
+    await selectAssignmentAccount(regionElement, "investments");
+    await selectAssignmentAccount(regionElement, "nested");
+    await selectAssignmentAccount(regionElement, "holding");
+    toolbar = within(
+      region.getByRole("toolbar", { name: "Organize Account Actions" }),
+    );
+    await expect(
+      toolbar.getByRole("button", { name: "Delete" }),
+    ).toBeDisabled();
+    await expect(
+      toolbar.getByRole("button", { name: "Delete" }),
+    ).toHaveAttribute("aria-description", expect.stringContaining("Old Fund"));
+    await selectAssignmentAccount(regionElement, "archived");
+    await expect(toolbar.getByRole("button", { name: "Delete" })).toBeEnabled();
+    await userEvent.click(toolbar.getByRole("button", { name: "Delete" }));
+    dialog = within(
+      await body.findByRole("dialog", { name: "Delete Selected Items" }),
+    );
+    await waitFor(() =>
+      expect(dialog.getByText(/2 groups and 2 accounts/)).toBeVisible(),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(regionElement.querySelector('[row-id="investments"]')).toBeNull(),
+    );
+    await expect(remove).toHaveBeenCalledOnce();
+    await expect(
+      region.getByRole("button", { name: "Archive Checking" }),
+    ).toBeEnabled();
   },
 };

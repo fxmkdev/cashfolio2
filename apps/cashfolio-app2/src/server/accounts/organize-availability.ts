@@ -13,7 +13,7 @@ import {
   getGroupArchiveAvailability,
   getGroupDeleteAvailability,
   getGroupUnarchiveAvailability,
-} from "./account-tree-rules";
+} from "../../shared/account-tree-rules";
 
 export async function readOrganizeAvailability(
   tx: Prisma.TransactionClient,

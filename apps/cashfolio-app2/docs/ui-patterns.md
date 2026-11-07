@@ -1679,19 +1679,32 @@ lifecycle actions affect only that row.
 Account List Organize also offers Archive and Delete beside Move To in its
 selection toolbar. Lifecycle actions use every explicitly selected row; movement
 still normalizes selected descendants out of its subtree roots. Display counts
-for the explicit selection. Enable a lifecycle action only when every selected
-row is individually eligible in the current hierarchy, with an accessible
-explanation naming a blocking row. Selecting children alongside a group does not
-make a nonempty group deletable or a group with active children archivable. When
-all explicitly selected accounts/groups are archived, replace Archive with
-Unarchive (blue), based on status rather than eligibility. Disable Unarchive if
-any selected row is ineligible, including when its archived ancestor is also
-selected. Active or mixed-status selections retain Archive. Bulk Unarchive runs
-directly, like row Unarchive; Archive/Delete confirm the selected names and
-account/group counts once. The server validates the complete balance-hierarchy
-selection before writes and commits it in one authorized book mutation
-transaction, with rollback on any failure. There is no implicit descendant
-inclusion. Bulk lifecycle actions are exclusive to Account List Organize.
+for the explicit selection. A shared batch planner evaluates prerequisites
+against the projected hierarchy and provides the same availability and operation
+order to the toolbar, submissions, retries, and server mutations. Pure account
+lifecycle rules live in `src/shared/account-tree-rules.ts` for server/browser
+reuse.
+
+Selected rows can satisfy each other's hierarchy prerequisites. Unarchive runs
+ancestors before descendants and requires every blocking archived ancestor to be
+selected. Archive runs descendants before ancestors and requires all active
+children needed to archive selected groups to be selected; already archived,
+unselected children do not block it. Delete runs descendants before ancestors
+and requires all accounts and subgroups, including archived descendants, of a
+selected group to be explicitly selected. Missing prerequisites disable the
+whole batch with an accessible explanation naming the blocking row. Nonzero
+balances still prevent account archive, and bookings still prevent account
+deletion. No ancestors or descendants are added automatically.
+
+When all explicitly selected accounts/groups are archived, replace Archive with
+Unarchive (blue), based on status rather than eligibility. Otherwise show
+Archive; its selected rows must all be active. Unarchive runs directly, like row
+Unarchive; Archive/Delete confirm the selected names and account/group counts
+once. The server reads current metadata and validates the complete
+balance-hierarchy batch under the book lock before writing in the planned order,
+with rollback on any failure and one cache invalidation. Single-row eligibility
+rules remain unchanged. Bulk lifecycle actions are exclusive to Account List
+Organize.
 
 Default Account List row menus offer Move To for real accounts and groups,
 including archived rows and accounts displayed under Asset Class grouping.

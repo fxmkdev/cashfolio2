@@ -7,7 +7,7 @@ import {
 import {
   getAccountDeleteAvailability,
   getGroupDeleteAvailability,
-} from "../account-tree-rules";
+} from "../../../shared/account-tree-rules";
 
 export async function deleteAccountOperation(
   data: AccountBookNodeIdInput,

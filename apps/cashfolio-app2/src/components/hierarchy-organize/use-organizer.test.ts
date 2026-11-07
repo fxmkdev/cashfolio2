@@ -573,7 +573,7 @@ describe("Account List bulk lifecycle", () => {
         { id: "investments", nodeType: "accountGroup" },
         { id: "nested", nodeType: "accountGroup" },
       ]),
-    ).rejects.toThrow("Investments");
+    ).rejects.toThrow("Fund");
     expect(operation).not.toHaveBeenCalled();
   });
   it("blocks duplicate submissions and retries only a confirmed busy rollback", async () => {
@@ -724,14 +724,11 @@ describe("bulk Unarchive", () => {
     const operation = vi.spyOn(api, "unarchiveMany");
     vi.spyOn(api, "load").mockResolvedValue({
       ...before,
-      actionAvailability: {
-        ...before.actionAvailability,
-        checking: {
-          ...before.actionAvailability.checking,
-          unarchivable: false,
-          unarchiveDisabledReason: "Archived ancestor",
-        },
-      },
+      nodes: before.nodes.map((node) =>
+        node.nodeType === "account" && node.id === "checking"
+          ? { ...node, isActive: true }
+          : node,
+      ),
     });
     await organizer.submitState.runSubmit(() =>
       organizer.performBulkLifecycle("unarchive", targets),
