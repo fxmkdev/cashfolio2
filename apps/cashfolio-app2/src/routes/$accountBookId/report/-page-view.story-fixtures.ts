@@ -9,7 +9,7 @@ import {
   PERIOD_PRESET_LAST_YEAR,
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
-} from "./-page-types";
+} from "@/shared/period";
 import type { ReportPageViewProps } from "./-page-view";
 
 export const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";

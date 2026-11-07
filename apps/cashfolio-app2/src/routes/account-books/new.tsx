@@ -25,7 +25,7 @@ import {
 } from "@/shared/date";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { UserLocaleProvider, useUserLocale } from "@/user-locale-context";
-import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
+import { invalidateCachedUserAccountBooks } from "@/account-books/options";
 import {
   NewAccountBookPageActions,
   resolveNewAccountBookReturnTarget,

@@ -4,7 +4,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { formatMonthPeriodValue } from "@/shared/period";
-import { DEFAULT_PERIOD_VALUE } from "./-page-types";
+import { DEFAULT_PERIOD_VALUE } from "@/shared/period";
 import { ReportPageView } from "./-page-view";
 
 import {

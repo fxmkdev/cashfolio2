@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
-import { useExplicitPeriodFilter } from "../../-use-explicit-period-filter";
+import { useExplicitPeriodFilter } from "@/components/period-filter/use-explicit-period-filter";
 import { parseLedgerExplicitPeriod } from "./page-types";
 
 const maxDate = new Date("2026-03-28T00:00:00.000Z");

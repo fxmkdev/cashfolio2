@@ -16,7 +16,7 @@ import {
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
-import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "./$accountBookId/-shell-dimensions";
+import { SIDEBAR_WIDTH } from "@/components/layout/sidebar-dimensions";
 
 const MenuItemLinkBase = forwardRef<
   HTMLAnchorElement,
@@ -88,10 +88,7 @@ export function UserMenu({
   userSettingsReturnTo: string;
 }) {
   return (
-    <Menu
-      position="top-end"
-      width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
-    >
+    <Menu position="top-end" width={collapsed ? SIDEBAR_WIDTH : "target"}>
       <Menu.Target>
         {collapsed ? (
           <Tooltip label={userProfile.displayName} position="right">
@@ -120,9 +117,7 @@ export function UserMenu({
           </Button>
         )}
       </Menu.Target>
-      <Menu.Dropdown
-        style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
-      >
+      <Menu.Dropdown style={{ maxWidth: collapsed ? SIDEBAR_WIDTH : "100%" }}>
         <UserMenuItems
           userSecurityUrl={userSecurityUrl}
           userSettingsReturnTo={userSettingsReturnTo}

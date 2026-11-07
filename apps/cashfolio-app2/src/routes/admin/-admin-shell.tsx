@@ -19,8 +19,8 @@ import {
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import { LinkNavLink } from "@/components/navigation/link-nav-link";
-import { UserMenu } from "../-user-menu";
-import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "../$accountBookId/-shell-dimensions";
+import { UserMenu } from "@/components/navigation/user-menu";
+import { SIDEBAR_WIDTH } from "@/components/layout/sidebar-dimensions";
 
 export type AdminShellProps = {
   userSecurityUrl: string | null;
@@ -46,7 +46,7 @@ export function AdminShell({
         collapsed: false,
       }}
       navbar={{
-        width: ACCOUNT_BOOK_SIDEBAR_WIDTH,
+        width: SIDEBAR_WIDTH,
         breakpoint: "sm",
         collapsed: { mobile: !mobileOpened, desktop: false },
       }}

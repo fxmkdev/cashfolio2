@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
-  DEFAULT_PERIOD_VALUE,
   getPeriodValue,
   isPeriodSearchValue,
   parsePeriodSearch,
-} from "./-page-types";
+} from "./report-period-search";
+import { DEFAULT_PERIOD_VALUE } from "./period";
 
 describe("isPeriodSearchValue", () => {
   test("accepts preset values", () => {

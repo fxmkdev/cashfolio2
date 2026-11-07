@@ -2,17 +2,7 @@ import {
   DEFAULT_PERIOD_VALUE,
   isSupportedPeriodValue,
   normalizePeriodValue,
-} from "@/shared/period";
-
-export {
-  DEFAULT_PERIOD_VALUE,
-  PERIOD_PRESET_LAST_MONTH,
-  PERIOD_PRESET_LAST_YEAR,
-  PERIOD_PRESET_MTD,
-  PERIOD_PRESET_VALUES,
-  PERIOD_PRESET_YTD,
-  type PeriodPresetValue,
-} from "@/shared/period";
+} from "./period";
 
 export type PeriodSearch = {
   period?: string;

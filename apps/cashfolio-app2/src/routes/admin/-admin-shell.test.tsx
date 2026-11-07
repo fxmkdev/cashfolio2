@@ -16,7 +16,7 @@ vi.mock("@/components/navigation/link-nav-link", () => ({
   }) => createElement("a", { href: to }, label),
 }));
 
-vi.mock("../-user-menu", () => ({
+vi.mock("@/components/navigation/user-menu", () => ({
   UserMenu: () => createElement("button", null, "User"),
 }));
 

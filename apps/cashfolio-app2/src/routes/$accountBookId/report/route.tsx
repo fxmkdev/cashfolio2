@@ -5,17 +5,16 @@ import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { formatMonthPeriodValue } from "@/shared/period";
+import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/period";
 import {
   buildNetWorthReconciliationModel,
   getPreviousPeriodValue,
   type NetWorthReconciliationModel,
 } from "./-net-worth/-net-worth-reconciliation";
 import {
-  DEFAULT_PERIOD_VALUE,
   getPeriodValue,
   parsePeriodSearch,
-} from "./-page-types";
+} from "@/shared/report-period-search";
 
 const ReportPageView = lazy(async () => {
   const module = await import("./-page-view");

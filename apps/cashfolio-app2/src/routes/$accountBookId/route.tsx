@@ -17,7 +17,7 @@ import {
 export const Route = createFileRoute("/$accountBookId")({
   loader: async ({ params: { accountBookId } }) => {
     const [
-      { loadUserAccountBooksForAccountBookRoute },
+      { loadUserAccountBooks },
       { getRuntimeAppVersion },
       {
         getAuthenticatedUserLocale,
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/$accountBookId")({
       },
       { getCurrentUserCanAccessAdmin },
     ] = await Promise.all([
-      import("./-account-book-options-loader"),
+      import("@/account-books/options"),
       import("@/server/app-version"),
       import("@/server/user-profile"),
       import("@/server/admin-users"),
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/$accountBookId")({
       userLocale,
       canAccessAdmin,
     ] = await Promise.all([
-      loadUserAccountBooksForAccountBookRoute(),
+      loadUserAccountBooks(),
       getRuntimeAppVersion(),
       getAuthenticatedUserProfile(),
       getUserSecurityUrl(),

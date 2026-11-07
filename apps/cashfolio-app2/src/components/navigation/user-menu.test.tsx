@@ -32,7 +32,7 @@ vi.mock("@tanstack/react-router", async () => {
   };
 });
 
-import { UserMenuItems } from "../-user-menu";
+import { UserMenuItems } from "./user-menu";
 
 describe("UserMenuItems", () => {
   it("renders user settings, account security, and sign out entries", () => {

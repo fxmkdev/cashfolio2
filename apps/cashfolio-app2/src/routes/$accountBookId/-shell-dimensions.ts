@@ -1,2 +1,0 @@
-export const ACCOUNT_BOOK_SIDEBAR_WIDTH = 260;
-export const ACCOUNT_BOOK_RAIL_WIDTH = 64;

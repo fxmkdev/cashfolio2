@@ -63,8 +63,9 @@ responsibility that owns it:
 | `transaction-editor/` | Split transaction editing, booking columns, validation, and form state        |
 | `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy          |
 | `grid/`               | DataGrid, column editors, filters, locale, and grid theme/CSS                 |
-| `navigation/`         | Router link wrappers, breadcrumbs, and navigation progress                    |
-| `layout/`             | Page shells and page headers                                                  |
+| `navigation/`         | Router link wrappers, breadcrumbs, navigation progress, and the user menu     |
+| `layout/`             | Page shells, page headers, and shared sidebar dimensions                      |
+| `period-filter/`      | Period-filter controls and explicit-period state shared across routes         |
 | `dialogs/`            | Confirmations and shared mutation feedback                                    |
 | `controls/`           | Number inputs, unit selectors, and split buttons                              |
 | `testing/`            | Fixtures shared by component stories                                          |
