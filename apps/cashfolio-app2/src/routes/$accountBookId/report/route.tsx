@@ -5,7 +5,10 @@ import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
 import { createDocumentTitleHead } from "@/shared/navigation/document-title";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/reporting/period";
+import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+} from "@/shared/reporting/period";
 import {
   buildNetWorthReconciliationModel,
   getPreviousPeriodValue,

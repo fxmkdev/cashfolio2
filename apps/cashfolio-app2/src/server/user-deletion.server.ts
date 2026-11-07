@@ -11,10 +11,8 @@ import { reserveUserDeletion } from "./user-deletion-reservation.server";
 import { destroyLogtoSession } from "@/auth/logto.server";
 import { prisma } from "@/prisma.server";
 import { ensureSameOriginRequest } from "@/security/same-origin.server";
-import {
-  planUserDeletionFromLinks,
-  type UserDeletionPreview,
-} from "./user-deletion-plan";
+import { planUserDeletionFromLinks } from "./user-deletion-plan";
+import type { UserDeletionPreview } from "../shared/users/user-deletion";
 import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis.server";
 
 function getAuthenticatedExternalId(context: LogtoContext): string {

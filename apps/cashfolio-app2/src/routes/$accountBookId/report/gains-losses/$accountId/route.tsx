@@ -3,7 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliationPageData } from "@/server/period-gain-loss-reconciliation";
 import { createDocumentTitleHead } from "@/shared/navigation/document-title";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/reporting/period";
+import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+} from "@/shared/reporting/period";
 import {
   getPeriodValue,
   parsePeriodSearch,

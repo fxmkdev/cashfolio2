@@ -1,13 +1,9 @@
-export type UserDeletionPreview = {
-  displayName: string;
-  accountBooksToDelete: UserDeletionAccountBook[];
-  accountBooksToUnlink: UserDeletionAccountBook[];
-};
+import type { UserDeletionAccountBook } from "../shared/users/user-deletion";
 
-export type UserDeletionAccountBook = {
-  id: string;
-  name: string;
-};
+export type {
+  UserDeletionAccountBook,
+  UserDeletionPreview,
+} from "../shared/users/user-deletion";
 
 export type LinkedAccountBook = {
   accountBook: {

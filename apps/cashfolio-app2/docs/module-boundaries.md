@@ -38,6 +38,7 @@ rather than adding forwarding files after moves.
 | `units/`                       | Unit formatting, decimal precision, and valuation display models                                              |
 | `resources/`                   | Resource limits, transport errors, fetch helpers, and mutation errors                                         |
 | `navigation/`                  | Document titles, ledger return targets, and expansion preference adapters                                     |
+| `users/`                       | User lifecycle response contracts shared by server implementations and UI                                     |
 | `hierarchy-organize/`          | Generic hierarchy contracts and pure movement/structure algorithms                                            |
 | `statement-import-csv-format/` | CSV format contracts, parsing, normalization, and validation; the existing adjacent facade is retained        |
 
@@ -49,6 +50,11 @@ For example, Report and History import dashboard colors from
 `src/components/charts/dashboard-chart-theme.ts`. Shell dimensions belong to
 `src/components/layout/`; the browser account-book options cache and its loader
 belong to `src/components/account-book-navigation/`.
+
+The deletion view imports `UserDeletionPreview` directly from
+`src/shared/users/user-deletion.ts`; persistence-specific deletion planning
+stays in the server implementation. Existing server type exports remain
+compatible.
 
 ## Route Privacy and Server Facades
 

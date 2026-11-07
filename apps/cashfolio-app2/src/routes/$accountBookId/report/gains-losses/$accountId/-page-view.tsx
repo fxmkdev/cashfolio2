@@ -8,7 +8,10 @@ import { PageShell } from "@/components/layout/page-shell";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PeriodFilterAction } from "@/components/period-filter/period-filter-action";
 import type { PeriodGainLossReconciliation } from "@/shared/reporting/gain-loss-reconciliation";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/reporting/period";
+import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+} from "@/shared/reporting/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,
