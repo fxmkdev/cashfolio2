@@ -547,7 +547,7 @@ describe("Admin and user deletion invariants against disposable PostgreSQL", () 
     await db.user.update({ where: { id: "b" }, data: { roles: [] } });
     auth.authenticated.mockResolvedValue({ claims: { sub: "a" } });
     const response = await deletion.handleUserDeletionRequest(
-      new Request("https://example.test/account/delete", { method: "POST" }),
+      new Request("https://example.test/user/delete", { method: "POST" }),
     );
     expect(response.status).toBe(409);
     expect(await response.text()).toContain("Appoint another Admin");

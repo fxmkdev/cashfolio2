@@ -7,7 +7,6 @@ import type { UserDeletionPreview } from "@/server/user-deletion-plan";
 type PageData = { deleted: boolean; preview: UserDeletionPreview | null };
 type RouteOptions = {
   validateSearch: (search: Record<string, unknown>) => { deleted?: string };
-  beforeLoad?: (context: { search: { deleted?: string } }) => never;
   loader?: (context: { deps: { deleted?: string } }) => Promise<PageData>;
   server: {
     handlers: { POST: (context: { request: Request }) => Promise<Response> };
@@ -35,7 +34,6 @@ vi.mock("@/server/user-deletion", () => ({
 }));
 
 import "./delete";
-import "../account/delete";
 
 function route(path: string) {
   const options = routes.get(path);
@@ -49,33 +47,12 @@ const preview: UserDeletionPreview = {
   accountBooksToUnlink: [{ id: "shared", name: "Shared Book" }],
 };
 
-describe("user deletion routes", () => {
+describe("user deletion route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pageData.value = { deleted: false, preview };
     getPreview.mockResolvedValue(preview);
   });
-
-  it.each([undefined, "0", "1", "anything", 1])(
-    "redirects legacy GET with only validated success state (%s)",
-    (deleted) => {
-      const legacy = route("/account/delete");
-      const search = legacy.validateSearch({ deleted, unexpected: "discard" });
-      expect.assertions(1);
-      try {
-        legacy.beforeLoad!({ search });
-      } catch (error) {
-        expect(error).toMatchObject({
-          options: {
-            to: "/user/delete",
-            search: {
-              deleted: deleted === "1" || deleted === 1 ? "1" : undefined,
-            },
-          },
-        });
-      }
-    },
-  );
 
   it("loads the authenticated preview on the canonical page", async () => {
     expect(await route("/user/delete").loader!({ deps: {} })).toEqual({
@@ -105,23 +82,20 @@ describe("user deletion routes", () => {
     expect(markup).not.toContain("Logto");
   });
 
-  it.each(["/user/delete", "/account/delete"])(
-    "delegates POST %s to the shared handler without redirecting the request",
-    async (path) => {
-      const request = new Request(`https://example.test${path}`, {
-        method: "POST",
-      });
-      const response = new Response(null, {
-        status: 302,
-        headers: { Location: "/user/delete?deleted=1" },
-      });
-      handleRequest.mockResolvedValue(response);
-      expect(await route(path).server.handlers.POST({ request })).toBe(
-        response,
-      );
-      expect(handleRequest).toHaveBeenCalledExactlyOnceWith(request);
-    },
-  );
+  it("delegates POST to the shared handler without redirecting the request", async () => {
+    const request = new Request("https://example.test/user/delete", {
+      method: "POST",
+    });
+    const response = new Response(null, {
+      status: 302,
+      headers: { Location: "/user/delete?deleted=1" },
+    });
+    handleRequest.mockResolvedValue(response);
+    expect(await route("/user/delete").server.handlers.POST({ request })).toBe(
+      response,
+    );
+    expect(handleRequest).toHaveBeenCalledExactlyOnceWith(request);
+  });
 
   it("identifies the Cashfolio identity and both affected-book groups", () => {
     const markup = renderPage();

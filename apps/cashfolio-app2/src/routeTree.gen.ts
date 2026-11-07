@@ -21,7 +21,6 @@ import { Route as AccountBookIdReportRouteRouteImport } from "./routes/$accountB
 import { Route as AccountBookIdSettingsRouteRouteImport } from "./routes/$accountBookId/settings/route";
 import { Route as AccountBookIdTransactionsRouteRouteImport } from "./routes/$accountBookId/transactions/route";
 import { Route as AccountBooksNewRouteImport } from "./routes/account-books/new";
-import { Route as AccountDeleteRouteImport } from "./routes/account/delete";
 import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as AdminUsersRouteImport } from "./routes/admin/users";
 import { Route as AdminValuationCacheRouteRouteImport } from "./routes/admin/valuation-cache/route";
@@ -101,11 +100,6 @@ const AccountBookIdTransactionsRouteRoute =
 const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
   id: "/account-books/new",
   path: "/account-books/new",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const AccountDeleteRoute = AccountDeleteRouteImport.update({
-  id: "/account/delete",
-  path: "/account/delete",
   getParentRoute: () => rootRouteImport,
 } as any);
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -203,7 +197,6 @@ export interface FileRoutesByFullPath {
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
   "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
   "/account-books/new": typeof AccountBooksNewRoute;
-  "/account/delete": typeof AccountDeleteRoute;
   "/admin/users": typeof AdminUsersRoute;
   "/user/delete": typeof UserDeleteRoute;
   "/$accountBookId/": typeof AccountBookIdIndexRoute;
@@ -226,7 +219,6 @@ export interface FileRoutesByTo {
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
   "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
   "/account-books/new": typeof AccountBooksNewRoute;
-  "/account/delete": typeof AccountDeleteRoute;
   "/admin/users": typeof AdminUsersRoute;
   "/user/delete": typeof UserDeleteRoute;
   "/$accountBookId": typeof AccountBookIdIndexRoute;
@@ -256,7 +248,6 @@ export interface FileRoutesById {
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
   "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
   "/account-books/new": typeof AccountBooksNewRoute;
-  "/account/delete": typeof AccountDeleteRoute;
   "/admin/users": typeof AdminUsersRoute;
   "/user/delete": typeof UserDeleteRoute;
   "/$accountBookId/": typeof AccountBookIdIndexRoute;
@@ -287,7 +278,6 @@ export interface FileRouteTypes {
     | "/admin/valuation-cache"
     | "/admin/valuation-provider-usage"
     | "/account-books/new"
-    | "/account/delete"
     | "/admin/users"
     | "/user/delete"
     | "/$accountBookId/"
@@ -310,7 +300,6 @@ export interface FileRouteTypes {
     | "/admin/valuation-cache"
     | "/admin/valuation-provider-usage"
     | "/account-books/new"
-    | "/account/delete"
     | "/admin/users"
     | "/user/delete"
     | "/$accountBookId"
@@ -339,7 +328,6 @@ export interface FileRouteTypes {
     | "/admin/valuation-cache"
     | "/admin/valuation-provider-usage"
     | "/account-books/new"
-    | "/account/delete"
     | "/admin/users"
     | "/user/delete"
     | "/$accountBookId/"
@@ -361,7 +349,6 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren;
   UserSettingsRoute: typeof UserSettingsRoute;
   AccountBooksNewRoute: typeof AccountBooksNewRoute;
-  AccountDeleteRoute: typeof AccountDeleteRoute;
   UserDeleteRoute: typeof UserDeleteRoute;
   ApiLogtoActionRoute: typeof ApiLogtoActionRoute;
 }
@@ -450,13 +437,6 @@ declare module "@tanstack/react-router" {
       path: "/account-books/new";
       fullPath: "/account-books/new";
       preLoaderRoute: typeof AccountBooksNewRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/account/delete": {
-      id: "/account/delete";
-      path: "/account/delete";
-      fullPath: "/account/delete";
-      preLoaderRoute: typeof AccountDeleteRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/admin/": {
@@ -677,10 +657,18 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   UserSettingsRoute: UserSettingsRoute,
   AccountBooksNewRoute: AccountBooksNewRoute,
-  AccountDeleteRoute: AccountDeleteRoute,
   UserDeleteRoute: UserDeleteRoute,
   ApiLogtoActionRoute: ApiLogtoActionRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>();
+
+import type { getRouter } from "./router.tsx";
+import type { createStart } from "@tanstack/react-start";
+declare module "@tanstack/react-start" {
+  interface Register {
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
+  }
+}

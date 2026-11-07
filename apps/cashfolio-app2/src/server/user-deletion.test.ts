@@ -109,42 +109,36 @@ describe("user deletion", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
-  it.each(["/user/delete", "/account/delete"])(
-    "destroys the session and redirects successful POST %s to canonical success",
-    async (path) => {
-      prisma.user.findUnique.mockResolvedValue(null);
-      const response = await handleUserDeletionRequest(
-        new Request(`https://example.test${path}`, {
-          method: "POST",
-          headers: { origin: "https://example.test" },
-        }),
-      );
-      expect(response.status).toBe(302);
-      expect(response.headers.get("location")).toBe("/user/delete?deleted=1");
-      expect(deleteLogtoUser).toHaveBeenCalledExactlyOnceWith("logto-user-1");
-      expect(destroyLogtoSession).toHaveBeenCalledOnce();
-      expect(destroyLogtoSession.mock.invocationCallOrder[0]).toBeGreaterThan(
-        deleteLogtoUser.mock.invocationCallOrder[0],
-      );
-    },
-  );
+  it("destroys the session and redirects successful POST to canonical success", async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    const response = await handleUserDeletionRequest(
+      new Request("https://example.test/user/delete", {
+        method: "POST",
+        headers: { origin: "https://example.test" },
+      }),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/user/delete?deleted=1");
+    expect(deleteLogtoUser).toHaveBeenCalledExactlyOnceWith("logto-user-1");
+    expect(destroyLogtoSession).toHaveBeenCalledOnce();
+    expect(destroyLogtoSession.mock.invocationCallOrder[0]).toBeGreaterThan(
+      deleteLogtoUser.mock.invocationCallOrder[0],
+    );
+  });
 
-  it.each(["/user/delete", "/account/delete"])(
-    "rejects cross-origin POST %s before authentication or deletion",
-    async (path) => {
-      await expect(
-        handleUserDeletionRequest(
-          new Request(`https://example.test${path}`, {
-            method: "POST",
-            headers: { origin: "https://other.test" },
-          }),
-        ),
-      ).rejects.toMatchObject({ status: 403 });
-      expect(ensureAuthenticated).not.toHaveBeenCalled();
-      expect(deleteLogtoUser).not.toHaveBeenCalled();
-      expect(destroyLogtoSession).not.toHaveBeenCalled();
-    },
-  );
+  it("rejects cross-origin POST before authentication or deletion", async () => {
+    await expect(
+      handleUserDeletionRequest(
+        new Request("https://example.test/user/delete", {
+          method: "POST",
+          headers: { origin: "https://other.test" },
+        }),
+      ),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(ensureAuthenticated).not.toHaveBeenCalled();
+    expect(deleteLogtoUser).not.toHaveBeenCalled();
+    expect(destroyLogtoSession).not.toHaveBeenCalled();
+  });
 
   it("returns a readable conflict and preserves the final Admin's session", async () => {
     prisma.user.findUnique.mockResolvedValue({

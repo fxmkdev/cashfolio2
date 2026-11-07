@@ -110,10 +110,8 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   or the originating account-book UI.
 - `user/delete.tsx` - canonical self-service user deletion route at
   `/user/delete`. The UI calls the identity a "Cashfolio account" and previews
-  affected books. `account/delete.tsx` preserves existing Logto Account Center
-  configuration: GET redirects to the canonical route, preserving validated
-  `deleted=1` success state, and POST delegates to the same deletion handler.
-  New integrations use `/user/delete`. See
+  affected books. Configure Logto Account Center with `/user/delete`; POST
+  submits deletion and redirects to `/user/delete?deleted=1` after success. See
   [terminology](ui-patterns.md#identity-and-financial-account-terminology) and
   [deletion behavior](server-functions.md#auth-and-authorization).
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,

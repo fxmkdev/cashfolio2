@@ -277,9 +277,9 @@ unqualified "account settings" or "account deletion" for identities in app-owned
 code, diagnostics, or documentation.
 
 Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
-`/api/my-account` retain the provider's terminology. The legacy
-`/account/delete` URL is a compatibility exception, not a pattern for new
-routes; see [self-service deletion](server-functions.md#auth-and-authorization).
+`/api/my-account` retain the provider's terminology. See
+[self-service deletion](server-functions.md#auth-and-authorization) for the
+app-owned user deletion flow.
 
 Destructive UI must identify the target and explain its consequences. User
 self-deletion uses "Delete Your Cashfolio Account" as the page title and "Delete
