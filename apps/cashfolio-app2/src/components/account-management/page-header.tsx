@@ -230,24 +230,35 @@ function AccountsHeader({
             Organizing
           </Badge>
         ) : (
-          <Group gap="xs" wrap="nowrap">
-            <Text size="sm">Group By</Text>
-            <Select
-              aria-label="Group By"
-              w={180}
-              data={reportingGroupingOptions}
-              value={grouping}
-              allowDeselect={false}
-              onChange={(value) => {
-                if (value === "accountStructure" || value === "assetClass")
-                  onGroupingChange?.(value);
-              }}
-            />
-          </Group>
+          <AccountsGroupingControl
+            grouping={grouping}
+            onGroupingChange={onGroupingChange}
+          />
         )
       }
       actions={organizing ? organizerActions : managementActions}
     />
+  );
+}
+function AccountsGroupingControl({
+  grouping,
+  onGroupingChange,
+}: Pick<AccountsHeaderProps, "grouping" | "onGroupingChange">) {
+  return (
+    <Group gap="xs" wrap="nowrap">
+      <Text size="sm">Group By</Text>
+      <Select
+        aria-label="Group By"
+        w={180}
+        data={reportingGroupingOptions}
+        value={grouping}
+        allowDeselect={false}
+        onChange={(value) => {
+          if (value === "accountStructure" || value === "assetClass")
+            onGroupingChange?.(value);
+        }}
+      />
+    </Group>
   );
 }
 export function AccountsPageHeader(props: HeaderProps) {

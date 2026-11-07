@@ -14,6 +14,7 @@ import {
   useState,
   type ReactNode,
   type Ref,
+  type RefObject,
 } from "react";
 import type { CustomInnerHeaderGroupProps } from "ag-grid-react";
 import { formatUtcDateForLocale } from "@/shared/date";
@@ -67,6 +68,32 @@ function GainLossDetailsContent({
 type GainLossDetailsProps = Pick<DetailsContentProps, "data" | "loading"> & {
   children: ReactNode;
 };
+type DetailsDropdownProps = DetailsContentProps & {
+  targetRef: RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+};
+function GainLossDetailsDropdown({
+  targetRef,
+  onClose,
+  ...content
+}: DetailsDropdownProps) {
+  return (
+    <Popover.Dropdown
+      aria-label="Gain/Loss Details"
+      aria-labelledby={undefined}
+      maw="calc(100vw - 24px)"
+      onKeyDownCapture={(event) => {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
+        onClose();
+        // Grid updates can replace the trigger while the dialog is open.
+        targetRef.current?.focus({ preventScroll: true });
+      }}
+    >
+      <GainLossDetailsContent {...content} />
+    </Popover.Dropdown>
+  );
+}
 export function AccountGainLossDetails({
   data,
   loading,
@@ -102,25 +129,14 @@ export function AccountGainLossDetails({
         middlewares={{ flip: true, shift: { padding: 12 } }}
       >
         {children}
-        <Popover.Dropdown
-          aria-label="Gain/Loss Details"
-          aria-labelledby={undefined}
-          maw="calc(100vw - 24px)"
-          onKeyDownCapture={(event) => {
-            if (event.key !== "Escape") return;
-            event.stopPropagation();
-            setOpened(false);
-            // Grid updates can replace the trigger while the dialog is open.
-            targetRef.current?.focus({ preventScroll: true });
-          }}
-        >
-          <GainLossDetailsContent
-            data={data}
-            loading={loading}
-            startDate={startDate}
-            asOfDate={asOfDate}
-          />
-        </Popover.Dropdown>
+        <GainLossDetailsDropdown
+          data={data}
+          loading={loading}
+          startDate={startDate}
+          asOfDate={asOfDate}
+          targetRef={targetRef}
+          onClose={() => setOpened(false)}
+        />
       </Popover>
     </GainLossDetailsTargetContext.Provider>
   );
