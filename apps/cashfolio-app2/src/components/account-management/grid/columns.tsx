@@ -156,7 +156,8 @@ export function useAccountTreeColumnDefs(
     [options.grouping, assetClasses, filters],
   );
   return useMemo(
-    () => buildAccountTreeColumns(options, balanceColumns, metadataColumns, locale),
+    () =>
+      buildAccountTreeColumns(options, balanceColumns, metadataColumns, locale),
     [options, balanceColumns, metadataColumns, locale],
   );
 }
