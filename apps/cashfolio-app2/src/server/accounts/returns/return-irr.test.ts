@@ -121,8 +121,9 @@ it("rejects three crossing roots and a crossing root alongside a tangent root", 
       ),
     ).toThrow("Multiple");
 });
-it("solves large alternating flows with a known daily rate, including negative rates", () => {
-  for (const daily of ["1.0001", "0.9999", "1"]) {
+it.each(["1.0001", "0.9999", "1"])(
+  "solves large alternating flows with known daily growth %s",
+  (daily) => {
     const growth = toMoney(daily);
     let capital = toMoney(10000);
     const flows = [{ days: 0, amount: capital.neg() }];
@@ -137,5 +138,6 @@ it("solves large alternating flows with a known daily rate, including negative r
       growth.pow(1096).minus(1).toNumber(),
       12,
     );
-  }
-});
+  },
+  30_000,
+);

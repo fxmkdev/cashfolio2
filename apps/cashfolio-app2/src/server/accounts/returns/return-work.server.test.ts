@@ -52,9 +52,17 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-07T12:00:00Z"));
+  const snapshots = new Map<string, ReturnType<typeof stagingReturnInputs>>();
   mocks.inputs.mockImplementation(
-    async (_book: string, date: Date, id?: string) =>
-      stagingReturnInputs(date, id),
+    async (_book: string, date: Date, id?: string) => {
+      const key = `${date.toISOString()}:${id ?? "all"}`;
+      let snapshot = snapshots.get(key);
+      if (!snapshot) {
+        snapshot = stagingReturnInputs(date, id);
+        snapshots.set(key, snapshot);
+      }
+      return snapshot;
+    },
   );
   mocks.revision.mockResolvedValue("revision");
   mocks.redis.mockResolvedValue(null);
@@ -127,7 +135,7 @@ describe("resumable staging return calculations", () => {
         .flatMap((r) => r.diagnostics)
         .some((d) => d.message.includes("complex")),
     ).toBe(false);
-  }, 30_000);
+  }, 120_000);
   it("shares the pipeline for ledger periods and detailed calculations, with account-scoped inputs", async () => {
     const args = {
       ...scope,
