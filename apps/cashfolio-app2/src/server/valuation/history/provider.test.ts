@@ -40,16 +40,12 @@ it("validates every page before completing stock coverage", async () => {
   expect(mocks.fetch.mock.calls[1]![0].url).toContain("offset=1");
 });
 it.each([
-  page("2026-01-02", 0, 2, "CHF"),
   page("2026-02-02"),
   { pagination: { offset: 0, total: 2, count: 0 }, data: [] },
-])(
-  "rejects invalid currency, range and incomplete pagination",
-  async (body) => {
-    mocks.fetch.mockResolvedValue(Response.json(body));
-    await expect(fetchHistory(stock)).rejects.toThrow();
-  },
-);
+])("rejects invalid range and incomplete pagination", async (body) => {
+  mocks.fetch.mockResolvedValue(Response.json(body));
+  await expect(fetchHistory(stock)).rejects.toThrow();
+});
 it("rejects a failed later page without publishing a partial range", async () => {
   mocks.fetch
     .mockResolvedValueOnce(Response.json(page("2026-01-02")))
@@ -117,7 +113,7 @@ it("retains valid quotes while identifying nullable range closes as unproven dat
     unavailable: { stock: ["2026-01-03"] },
   });
 });
-it("rejects the v2 quote-currency field when it disagrees with the requested currency", async () => {
+it("excludes v2 quotes in another currency and leaves their dates unproven", async () => {
   mocks.fetch.mockResolvedValueOnce(
     Response.json({
       pagination: { offset: 0, total: 1, count: 1 },
@@ -131,5 +127,46 @@ it("rejects the v2 quote-currency field when it disagrees with the requested cur
       ],
     }),
   );
-  await expect(fetchHistory(stock)).rejects.toThrow("currency");
+  expect(await fetchHistory(stock)).toEqual({
+    complete: true,
+    points: { stock: [] },
+    unavailable: { stock: ["2026-01-02"] },
+  });
+});
+it("selects the matching-currency listing without proving the other listing's absence", async () => {
+  mocks.fetch.mockResolvedValueOnce(
+    Response.json({
+      pagination: { offset: 0, total: 2, count: 2 },
+      data: [
+        { date: "2026-01-02", symbol: "ABC", price_currency: "EUR", close: 90 },
+        {
+          date: "2026-01-02",
+          symbol: "ABC",
+          price_currency: "USD",
+          close: 100,
+        },
+      ],
+    }),
+  );
+  expect(await fetchHistory(stock)).toEqual({
+    complete: true,
+    points: { stock: [{ date: "2026-01-02", value: 100 }] },
+  });
+});
+it("rejects duplicate matching-currency quotes rather than selecting an arbitrary listing", async () => {
+  mocks.fetch.mockResolvedValueOnce(
+    Response.json({
+      pagination: { offset: 0, total: 2, count: 2 },
+      data: [
+        { date: "2026-01-02", symbol: "ABC", price_currency: "USD", close: 90 },
+        {
+          date: "2026-01-02",
+          symbol: "ABC",
+          price_currency: "USD",
+          close: 100,
+        },
+      ],
+    }),
+  );
+  await expect(fetchHistory(stock)).rejects.toThrow("Duplicate");
 });

@@ -720,6 +720,14 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     release = resolve;
   });
   await page.route("**/_serverFn/**", async (route) => {
+    const payload =
+      new URL(route.request().url()).searchParams.get("payload") ?? "";
+    // Only return summaries have grouping without a detail target. Leave G/L
+    // and balance requests in the browser so navigation cancels them normally.
+    if (!payload.includes('"grouping"') || payload.includes('"target"')) {
+      await route.continue();
+      return;
+    }
     const response = await route.fetch();
     const body = await response.text();
     if (body.includes('"workId"') && body.includes('"pending"')) {
@@ -803,6 +811,6 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     ).toHaveText(total);
   } finally {
     release();
-    await page.unroute("**/_serverFn/**").catch(() => {});
+    await page.unrouteAll({ behavior: "wait" });
   }
 });
