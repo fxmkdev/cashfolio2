@@ -33,13 +33,15 @@ export async function loadLedgerPageData(args: {
   accountId: string;
   period?: string;
 }) {
-  const accountPromise = getAccountForLedger({
-    data: { accountId: args.accountId, accountBookId: args.accountBookId },
-  });
-  const accountsPromise = getAccounts({
-    data: { accountBookId: args.accountBookId },
-  });
-  const account = await accountPromise;
+  // Observe both lookups immediately: a missing book can reject both.
+  const [account, accounts] = await Promise.all([
+    getAccountForLedger({
+      data: { accountId: args.accountId, accountBookId: args.accountBookId },
+    }),
+    getAccounts({
+      data: { accountBookId: args.accountBookId },
+    }),
+  ]);
   const accountState = account.isActive ? "active" : "inactive";
   const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
   const shouldIncludeReferenceValues =
@@ -47,7 +49,6 @@ export async function loadLedgerPageData(args: {
   const shouldIncludeFirstBookingDate = account.type === AccountType.BALANCE;
   const [
     ledgerData,
-    accounts,
     periodBounds,
     accountTreeRow,
     accountGroups,
@@ -70,7 +71,6 @@ export async function loadLedgerPageData(args: {
         accountTradeCurrency: account.tradeCurrency,
       },
     }),
-    accountsPromise,
     getLedgerPeriodBounds({
       data: {
         accountBookId: args.accountBookId,

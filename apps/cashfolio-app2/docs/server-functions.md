@@ -463,15 +463,12 @@ wire format; no cache generation bump is required.
   checks before calling `PATCH /api/my-account`. User locale settings are stored
   on the app-owned `User` row.
 - Self-service deletion is exposed at `/user/delete` for Logto Account Center.
-  Configure new integrations with this canonical URL. The legacy
-  `/account/delete` endpoint remains compatible: GET redirects to `/user/delete`
-  and preserves validated `deleted=1` success state; POST uses the same deletion
-  handler and redirects to `/user/delete?deleted=1` after success. Both POST
-  endpoints retain authentication, same-origin checks, and final-Admin
-  protection. The `POST` flow uses `src/server/user-deletion.ts` to delete the
-  app-owned `User`, remove account books that would otherwise become
-  inaccessible, clear book-scoped Redis period caches, and call Logto Management
-  API `DELETE /api/users/{userId}` through
+  Configure integrations with this canonical URL. POST redirects to
+  `/user/delete?deleted=1` after success and enforces authentication,
+  same-origin checks, and final-Admin protection. The `POST` flow uses
+  `src/server/user-deletion.ts` to delete the app-owned `User`, remove account
+  books that would otherwise become inaccessible, clear book-scoped Redis period
+  caches, and call Logto Management API `DELETE /api/users/{userId}` through
   `src/auth/logto-management.server.ts`. It requires
   `LOGTO_MANAGEMENT_API_ENDPOINT`, `LOGTO_MANAGEMENT_API_RESOURCE`,
   `LOGTO_MANAGEMENT_API_APP_ID`, and `LOGTO_MANAGEMENT_API_APP_SECRET`. The same
