@@ -11,7 +11,7 @@ vi.mock("@/redis.server", () => ({
   getRedisClient,
 }));
 
-import { getBookScopedRedisKeyPatterns } from "../shared/book-cache-keys";
+import { getBookScopedRedisKeyPatterns } from "@cashfolio/book-cache-contracts";
 import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis";
 
 async function* scanResult(keys: string[]) {

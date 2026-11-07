@@ -1,7 +1,7 @@
 import {
   getBookScopedRedisKeyPatterns,
   isBookScopedPeriodCacheKey,
-} from "../shared/book-cache-keys";
+} from "@cashfolio/book-cache-contracts";
 import { getRedisClient } from "@/redis.server";
 
 let hasWarnedUserDeletionRedisCleanupFailure = false;

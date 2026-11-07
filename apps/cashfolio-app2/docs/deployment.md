@@ -51,11 +51,24 @@ configuration cannot activate these capabilities in a normal build. The startup
 guard runs synchronously before the Node listener. No database migration or
 change to the normal start command is required.
 
-Docker runs `test:build-boundary` after building the normal artifact. It
-verifies that setting `APP_ENVIRONMENT=e2e` causes the compiled server to reject
-startup. The existing image-build dependency gates preview and staging
-deployments. Unit tests cover configuration cases; the E2E suite covers
-test-build behavior. See [Testing](testing.md#deployment-build-smoke-test).
+Docker runs `test:build-boundary` after building the normal artifact. It copies
+`.output` outside the workspace and verifies that setting `APP_ENVIRONMENT=e2e`
+causes the standalone server to reject startup. It also checks lazy server
+chunks for unresolved book-cache package imports. The existing image-build
+dependency gates preview and staging deployments. Unit tests cover configuration
+cases; the E2E suite covers test-build behavior. See
+[Testing](testing.md#deployment-build-smoke-test).
+
+## Shared book-cache contracts
+
+The Docker build copies the `@cashfolio/book-cache-contracts` manifest before
+the frozen dependency installation and its source before building the app. The
+app's build commands compile the package to ESM JavaScript and declarations, and
+Vite bundles it into the server artifact. The final image continues to copy
+`.output` without workspace sources or a workspace dependency installation.
+Package checks run separately in CI and gate staging deployment. See the
+[package documentation](../../../libs/book-cache-contracts/README.md) for the
+shared contract boundary and local checks.
 
 ## Nitro version pin
 

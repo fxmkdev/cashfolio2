@@ -13,8 +13,7 @@
     "jsx": "preserve",
     "incremental": true,
     "target": "ES2017",
-    "rootDir": "../..",
-    "rootDirs": ["./src"],
+    "rootDir": "./src",
     "outDir": "./dist"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],

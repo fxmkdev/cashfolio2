@@ -1,13 +1,41 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import {
+  cpSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
-test("the deployment server rejects the E2E environment at startup", () => {
+test("the standalone deployment server rejects the E2E environment at startup", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "cashfolio-deployment-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  cpSync(new URL("../.output", import.meta.url), directory, {
+    recursive: true,
+    dereference: true,
+  });
+  // Also cover lazy server chunks that the startup guard does not execute.
+  const serverDirectory = join(directory, "server");
+  for (const file of readdirSync(serverDirectory, {
+    recursive: true,
+    encoding: "utf8",
+  })) {
+    if (!file.endsWith(".mjs") && !file.endsWith(".js")) continue;
+    assert.doesNotMatch(
+      readFileSync(join(serverDirectory, file), "utf8"),
+      /["']@cashfolio\/book-cache-contracts(?:\/[^"']*)?["']/,
+      `Deployment must bundle book-cache contracts in ${file}`,
+    );
+  }
   const result = spawnSync(
     process.execPath,
-    [fileURLToPath(new URL("../.output/server/index.mjs", import.meta.url))],
+    [join(directory, "server/index.mjs")],
     {
+      cwd: directory,
       env: {
         NODE_ENV: "production",
         APP_ENVIRONMENT: "e2e",

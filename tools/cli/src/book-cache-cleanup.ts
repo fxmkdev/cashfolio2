@@ -1,4 +1,4 @@
-import { getRestoreBookCacheKeyPatterns } from "../../../apps/cashfolio-app2/src/shared/book-cache-keys";
+import { getRestoreBookCacheKeyPatterns } from "@cashfolio/book-cache-contracts";
 
 export type BookCacheRedisClient = {
   scanIterator(options: {
