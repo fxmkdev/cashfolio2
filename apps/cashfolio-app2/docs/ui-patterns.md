@@ -21,9 +21,10 @@ Money-based reconciliation inputs and calculation callbacks remain server
 implementation details.
 
 The Accounts grid adapts wire/projection `TreeRow` values to a client-only
-`AccountsGridRow` discriminated union in `accounts/-account-grid-rows.ts`.
-`rowType` distinguishes persisted accounts, persisted groups, synthetic
-headings, and the total footer. Convert rows at the presentation boundary with
+`AccountsGridRow` discriminated union in
+`src/components/account-management/account-grid-rows.ts`. `rowType`
+distinguishes persisted accounts, persisted groups, synthetic headings, and the
+total footer. Convert rows at the presentation boundary with
 `toAccountGridTreeRow`; server payloads, IDs, hierarchy ordering, and expansion
 keys remain unchanged. Use `isPersistedTreeRow`, `isPersistedAccountRow`, or
 `isPersistedGroupRow` before edit/delete/child-creation actions, including
@@ -54,23 +55,31 @@ check types; the normal `typecheck` command does.
 Shared UI code lives under `src/components/`, grouped by the feature or UI
 responsibility that owns it:
 
-| Folder                | Responsibility                                                         |
-| --------------------- | ---------------------------------------------------------------------- |
-| `account-editor/`     | Account/group editing, form values, and cash-flow inclusion form rules |
-| `account-tree/`       | Account/group tree selection and row actions                           |
-| `transaction-editor/` | Split transaction editing, booking columns, validation, and form state |
-| `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy   |
-| `grid/`               | DataGrid, column editors, filters, locale, and grid theme/CSS          |
-| `navigation/`         | Router link wrappers, breadcrumbs, and navigation progress             |
-| `layout/`             | Page shells and page headers                                           |
-| `dialogs/`            | Confirmations and shared mutation feedback                             |
-| `controls/`           | Number inputs, unit selectors, and split buttons                       |
-| `testing/`            | Fixtures shared by component stories                                   |
+| Folder                | Responsibility                                                                |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `account-editor/`     | Account/group editing, form values, and cash-flow inclusion form rules        |
+| `account-management/` | Shared Accounts/Categories loading, controllers, presentation, and management |
+| `account-tree/`       | Account/group tree selection and row actions                                  |
+| `transaction-editor/` | Split transaction editing, booking columns, validation, and form state        |
+| `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy          |
+| `grid/`               | DataGrid, column editors, filters, locale, and grid theme/CSS                 |
+| `navigation/`         | Router link wrappers, breadcrumbs, and navigation progress                    |
+| `layout/`             | Page shells and page headers                                                  |
+| `dialogs/`            | Confirmations and shared mutation feedback                                    |
+| `controls/`           | Number inputs, unit selectors, and split buttons                              |
+| `testing/`            | Fixtures shared by component stories                                          |
 
 Colocate tests and stories with their implementation. Import modules directly
 from their owning folder; do not add root-level compatibility shims or general
 component barrel files. Keep route-specific UI beside its owning route, and keep
 existing Storybook titles and story export names stable when moving files.
+
+Accounts and Categories use `account-management/` as their single implementation
+owner. Their routes supply routing and navigation integration; pure search
+helpers and common tab contracts remain in `src/shared/`. Shared feature modules
+must not depend on either route's private implementation. Colocated story
+fixtures can include route-shell decoration without making it a production
+feature dependency.
 
 ## Page Loading
 

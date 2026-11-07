@@ -268,13 +268,6 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   `-` prefix or live beneath a `-`-prefixed private folder so TanStack Router
   ignores them. Files inside an ignored folder do not need their own prefix.
   Tests and stories are colocated with their implementation. For example:
-  - accounts route modules:
-    - `$accountBookId/accounts/-page-loader.ts`
-    - `$accountBookId/accounts/-page-controller.ts`
-    - `$accountBookId/accounts/-page-data.ts`
-    - `$accountBookId/accounts/-page-modal-state.ts`
-    - `$accountBookId/accounts/-page-reference-balances.ts`
-    - `$accountBookId/accounts/-page-columns.tsx`
   - ledger route modules:
     - `$accountBookId/$accountId/-ledger/page-loader.ts`
     - `$accountBookId/$accountId/-ledger/page-controller.ts`
@@ -330,6 +323,25 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
 - Large route-local surfaces may also use `-`-prefixed private folders. The
   report route uses `-breakdown/`, `-gains-losses/`, `-selector/`, and
   `-net-worth/` to keep URL routes separate from page internals.
+
+### Shared Account Management
+
+Accounts and Settings Categories both import their loader, controller, and lazy
+page view directly from `src/components/account-management/`. This feature owns
+the cohesive presentation and management implementation: row models, hierarchy
+projections, financial-data hydration, grid lifecycle, columns, modal state,
+mutations, bulk actions, and colocated tests and stories. Neither route owns the
+other screen's implementation, and there are no route-private compatibility
+re-exports.
+
+Routes own search registration, redirects, loader dependencies, document heads,
+navigation callbacks, ledger navigation state, and invalidation wiring. Pure
+search parsing and legacy URL normalization live in
+`src/shared/account-management-search.ts`; common tab definitions and types live
+in `src/shared/account-tabs.ts`. The feature retains typed navigation links and
+the existing shared hierarchy navigation/session helpers. Production feature
+modules do not import route-private modules; the story harness alone includes
+the Settings navigation shell as a fixture.
 
 ### Search Parameters
 

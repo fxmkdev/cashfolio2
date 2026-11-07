@@ -1,0 +1,89 @@
+import { useAssetClasses } from "@/classification-context";
+import { buildAccountGainLossColumns } from "./gain-loss-columns";
+import { useMemo, useRef } from "react";
+import { type ColDef, type ColGroupDef } from "ag-grid-enterprise";
+import { type AccountsGridRow } from "./page-types";
+import type { AccountTreeColumnParams } from "./account-column-types";
+import { buildAccountBalanceColumns } from "./balance-columns";
+import { buildAccountMetadataColumns } from "./metadata-columns";
+import { buildAccountActionsColumn } from "./account-actions-column";
+export {
+  getAccountListAssetClassValue,
+  getAccountListPathValue,
+  getAccountListTrackingMethodValue,
+  getAccountListUnitIdentifierDisplayValue,
+  getAccountListBalanceValue,
+} from "./account-column-values";
+export function useAccountTreeColumnDefs(
+  params: AccountTreeColumnParams,
+): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
+  const assetClasses = useAssetClasses();
+  const {
+    grouping = "accountStructure",
+    gainLossData,
+    isGainLossLoading,
+    isEquityTab,
+    categoryType,
+    referenceCurrency,
+    isReferenceBalancesLoading,
+    balanceInReferenceCurrencyByGroupId,
+    onEditRow,
+    onAddChild,
+    onUnarchiveRow,
+    unarchivePending,
+    onArchiveRow,
+    onDeleteRow,
+  } = params;
+  const isReferenceBalancesLoadingRef = useRef(isReferenceBalancesLoading);
+  isReferenceBalancesLoadingRef.current = isReferenceBalancesLoading;
+  const balanceInReferenceCurrencyByGroupIdRef = useRef(
+    balanceInReferenceCurrencyByGroupId,
+  );
+  balanceInReferenceCurrencyByGroupIdRef.current =
+    balanceInReferenceCurrencyByGroupId;
+
+  return useMemo<(ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[]>(
+    () => [
+      ...(!isEquityTab
+        ? [
+            ...buildAccountBalanceColumns({
+              referenceCurrency,
+              isReferenceBalancesLoadingRef,
+              balanceInReferenceCurrencyByGroupIdRef,
+            }),
+            buildAccountGainLossColumns({
+              referenceCurrency,
+              data: gainLossData,
+              loading: isGainLossLoading ?? false,
+            }),
+            ...buildAccountMetadataColumns({ grouping, assetClasses }),
+          ]
+        : []),
+      buildAccountActionsColumn({
+        isEquityTab,
+        categoryType,
+        onEditRow,
+        onAddChild,
+        onUnarchiveRow,
+        unarchivePending,
+        onArchiveRow,
+        onDeleteRow,
+      }),
+    ],
+    [
+      grouping,
+      assetClasses,
+      gainLossData,
+      isGainLossLoading,
+      isEquityTab,
+      categoryType,
+      referenceCurrency,
+      onEditRow,
+      onAddChild,
+      onUnarchiveRow,
+      unarchivePending,
+      onArchiveRow,
+      onDeleteRow,
+    ],
+  );
+}
