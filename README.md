@@ -15,6 +15,7 @@ manifest pins the exact pnpm version.
   - [Cashfolio domain diagram](docs/cashfolio.excalidraw)
   - [Preview environments](docs/preview-environments.md)
 - App/package docs live alongside code:
+  - [Shared book-cache contracts](packages/book-cache-contracts/README.md)
   - `apps/cashfolio-app2/docs/`
     - [Overview](apps/cashfolio-app2/docs/README.md)
     - [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
@@ -39,8 +40,14 @@ and then clears book-scoped caches from the Redis instance selected by
 `RESTORE_REDIS_URL`. Use a dedicated local restore Redis instance: cleanup
 covers all books and environment namespaces on that instance. It removes legacy
 `account-book:*` keys and all versions of period base entries/indexes,
-generation pointers, and History metrics; global `valuation:*` caches and
-unrelated keys are retained.
+generation pointers, History metrics, and account gain/loss caches (including
+basis data); global `valuation:*` caches and unrelated keys are retained.
+
+The app and CLI share cache namespaces and cleanup contracts through
+`@cashfolio/book-cache-contracts`. Consumer scripts build its JavaScript and
+declarations before use; see the
+[package documentation](packages/book-cache-contracts/README.md) for ownership
+and focused checks.
 
 The Redis URL is required before database restoration begins. Cleanup uses
 incremental scans and bounded deletion batches, reports the number of keys

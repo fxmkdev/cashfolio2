@@ -25,6 +25,8 @@ if (baseUrl) {
 
 export default defineConfig(({ mode }) => ({
   define: { __E2E_BUILD__: JSON.stringify(mode === "e2e") },
+  // The deployment artifact must not require the workspace package at runtime.
+  ssr: { noExternal: ["@cashfolio/book-cache-contracts"] },
   plugins: [
     tanstackStart(),
     nitro({

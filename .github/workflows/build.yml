@@ -307,6 +307,25 @@ jobs:
       - name: Run actionlint
         run: pnpm lint:workflows
 
+  book-cache-contracts:
+    name: "book-cache-contracts: Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run:
+          pnpm --filter @cashfolio/book-cache-contracts install
+          --frozen-lockfile
+      - name: Typecheck source and tests
+        run: pnpm --filter @cashfolio/book-cache-contracts typecheck
+      - name: Test compiled contracts and public exports
+        run: pnpm --filter @cashfolio/book-cache-contracts test
+      - name: Check formatting
+        run: pnpm --filter @cashfolio/book-cache-contracts format
+
   cli-typecheck:
     name: "cli: Typecheck"
     runs-on: ubuntu-latest
@@ -513,6 +532,7 @@ jobs:
       - github-actions-lint
       - cli-typecheck
       - cli-tests
+      - book-cache-contracts
     uses: ./.github/workflows/deploy-version.yml
     with:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}

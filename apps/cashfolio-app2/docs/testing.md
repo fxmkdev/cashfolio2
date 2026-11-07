@@ -227,9 +227,11 @@ provider tests verify responses, interception, initialization, and cleanup.
 ### Deployment Build Smoke Test
 
 Docker runs `test:build-boundary` immediately after the normal build. This small
-test starts the compiled server with `APP_ENVIRONMENT=e2e` and requires a
-nonzero exit with the expected startup-guard error. It has a ten-second timeout
-and needs no database or browser. For a local investigation:
+test copies `.output` outside the workspace, checks that server chunks bundle
+the shared book-cache contracts, and starts the standalone server with
+`APP_ENVIRONMENT=e2e`. It requires a nonzero exit with the expected
+startup-guard error. Startup has a ten-second timeout and needs no database or
+browser. For a local investigation:
 
 ```bash
 pnpm --filter cashfolio-app2 build

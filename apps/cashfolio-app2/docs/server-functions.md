@@ -376,13 +376,16 @@ lock order; this does not introduce optimistic edit-version conflict detection.
 
 ## Period Caches
 
-Cache key prefixes, current versions, key builders, and version-independent
-cleanup patterns are owned by `src/shared/book-cache-keys.ts`. Keep this module
-free of runtime dependencies: both app caches/user deletion and the workspace
-CLI consume it. Add new book-scoped cache families there so restore and deletion
-cleanup stay aligned; version bumps within existing families need no cleanup
-list changes. User deletion cleans only the requested books across environment
-namespaces and preserves global valuation caches.
+Cache key prefixes, current versions, and key builders are owned by
+`src/shared/book-cache-keys.ts`. Family constants, version-independent cleanup
+patterns, and book-ownership checks belong to the dependency-free workspace
+package
+[`@cashfolio/book-cache-contracts`](../../../packages/book-cache-contracts/README.md),
+consumed directly by the app and CLI through its compiled public export. Add new
+book-scoped cache families to that package so restore and deletion cleanup stay
+aligned; version bumps within existing families remain app-local and need no
+cleanup list changes. User deletion cleans only the requested books across
+environment namespaces and preserves global valuation caches.
 
 - Period overview and history use a shared Redis-backed **non-valuation**
   base-data cache (`src/server/period/cache/period-base-data-cache.ts`) backed
