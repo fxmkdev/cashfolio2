@@ -15,6 +15,7 @@ import {
 export function buildAccountReturnColumns(args: {
   data?: AccountReturnSummaries;
   loading?: boolean;
+  completedIds?: Set<string>;
   locale: string;
   onOpen?: (target: AccountReturnTarget) => void;
 }): ColGroupDef<AccountsGridRow> {
@@ -49,7 +50,11 @@ export function buildAccountReturnColumns(args: {
         data,
         valueFormatted,
       }: ICellRendererParams<AccountsGridRow>) => {
-        if (args.loading)
+        const id =
+          data && isReferenceCurrencyTotalFooterRow(data)
+            ? "__return_total__"
+            : data?.id;
+        if (args.loading && (!id || !args.completedIds?.has(id)))
           return <GridCellLoading label={`Loading ${metric.toUpperCase()}`} />;
         const result = resultFor(data);
         if (!data || !result?.applicable) return "—";

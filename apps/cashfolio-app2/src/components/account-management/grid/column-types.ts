@@ -18,6 +18,7 @@ export type AccountTreeColumnParams = {
   gainLossData?: AccountGainLossSummaries;
   returnData?: AccountReturnSummaries;
   isReturnLoading?: boolean;
+  completedReturnIds?: Set<string>;
   onOpenReturn?: (target: AccountReturnTarget) => void;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;

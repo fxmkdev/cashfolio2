@@ -23,18 +23,34 @@ function createSolver() {
     charge(terms.length);
     const q = x.abs().neg().exp();
     const ordered = x.isNegative() ? terms : terms.toReversed();
+    const powers = new Map<number, Money>([[1, q]]);
     let value = ordered[0]!.amount;
     for (let i = 1; i < ordered.length; i++) {
       const gap = Math.abs(ordered[i]!.days - ordered[i - 1]!.days);
-      value = value.mul(gap === 1 ? q : q.pow(gap)).plus(ordered[i]!.amount);
+      let power = powers.get(gap);
+      if (!power) {
+        power = q.pow(gap);
+        powers.set(gap, power);
+      }
+      value = value.mul(power).plus(ordered[i]!.amount);
     }
     return value;
   };
   const bisect = (terms: Term[], bracket: Bracket) => {
     let { left, right } = bracket;
-    let leftSign = evaluate(terms, left).comparedTo(0);
+    let fa = evaluate(terms, left);
+    let fb = evaluate(terms, right);
+    let leftSign = fa.comparedTo(0);
     for (let iteration = 0; iteration < 180; iteration++) {
-      const middle = left.plus(right).div(2);
+      const width = right.minus(left);
+      const secant = fa.eq(fb)
+        ? left.plus(right).div(2)
+        : right.minus(fb.mul(width).div(fb.minus(fa)));
+      const middle =
+        secant.gt(left.plus(width.div(4))) &&
+        secant.lt(right.minus(width.div(4)))
+          ? secant
+          : left.plus(right).div(2);
       const value = evaluate(terms, middle);
       if (right.minus(left).abs().lt(EPSILON))
         return { root: middle, left, right };
@@ -49,7 +65,11 @@ function createSolver() {
       if (value.comparedTo(0) === leftSign) {
         left = middle;
         leftSign = value.comparedTo(0);
-      } else right = middle;
+        fa = value;
+      } else {
+        right = middle;
+        fb = value;
+      }
     }
     throw new Error("Money-weighted return did not converge.");
   };
@@ -185,12 +205,31 @@ function createSolver() {
     return roots.sort((a, b) => a.comparedTo(b));
   };
   return (terms: Term[]) => {
-    const bounds = rootBounds(terms);
     if (terms[0]!.amount.isNegative() && terms.at(-1)!.amount.isPositive()) {
-      const candidate = bisect(terms, bounds);
-      if (unique(terms, candidate)) return [candidate.root];
+      const zero = toMoney(0);
+      const atZero = evaluate(terms, zero);
+      if (atZero.isZero()) {
+        const candidate = { root: zero, left: EPSILON.neg(), right: EPSILON };
+        if (unique(terms, candidate)) return [zero];
+      } else {
+        let step = toMoney(1).div(Math.max(1, terms.at(-1)!.days));
+        for (let attempt = 0; attempt < 64; attempt++) {
+          const edge = atZero.isPositive() ? step : step.neg();
+          if (evaluate(terms, edge).comparedTo(0) !== atZero.comparedTo(0)) {
+            const candidate = bisect(
+              terms,
+              edge.isNegative()
+                ? { left: edge, right: zero }
+                : { left: zero, right: edge },
+            );
+            if (unique(terms, candidate)) return [candidate.root];
+            break;
+          }
+          step = step.mul(2);
+        }
+      }
     }
-    return isolate(terms, bounds);
+    return isolate(terms, rootBounds(terms));
   };
 }
 

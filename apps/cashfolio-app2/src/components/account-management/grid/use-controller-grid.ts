@@ -18,11 +18,13 @@ export function useAccountsControllerGrid({
   const grid = useAccountsGrid({
     ...options,
     shouldShowReferenceBalancesLoading: data.shouldShowReferenceBalancesLoading,
+    returnCellVersion: returns.cellVersion,
   });
   const columnDefs = useAccountTreeColumnDefs({
     filterContext: presentation.filterContext,
     returnData: returns.data,
     isReturnLoading: returns.loading,
+    completedReturnIds: returns.completedIds,
     onOpenReturn: returns.onOpen,
     gainLossData: presentation.gainLossData,
     grouping: options.grouping,

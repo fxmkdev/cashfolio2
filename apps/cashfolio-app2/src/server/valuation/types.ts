@@ -27,7 +27,7 @@ export type CachedRateResult = {
 };
 
 export type ValuationRateSource =
-  "identity" | "timeSeries" | "fallback" | "provider" | "missing";
+  "identity" | "timeSeries" | "covered" | "fallback" | "provider" | "missing";
 
 export type ValuationRateLookupResult = {
   rate: number | null;

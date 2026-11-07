@@ -11,6 +11,7 @@ export function useAccountsGrid({
   grouping,
   showArchived,
   shouldShowReferenceBalancesLoading,
+  returnCellVersion,
 }: Pick<
   AccountsPageViewProps,
   "accountBookId" | "tab" | "managementContext"
@@ -18,6 +19,7 @@ export function useAccountsGrid({
   grouping: NonNullable<AccountsPageViewProps["grouping"]>;
   showArchived: boolean;
   shouldShowReferenceBalancesLoading: boolean;
+  returnCellVersion?: string;
 }) {
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:active:${tab}${grouping === "assetClass" ? ":assetClass" : ""}`;
@@ -39,6 +41,13 @@ export function useAccountsGrid({
       force: true,
     });
   }, [shouldShowReferenceBalancesLoading]);
+
+  useEffect(() => {
+    gridApiRef.current?.refreshCells({
+      columns: ["return-twr", "return-mwr"],
+      force: true,
+    });
+  }, [returnCellVersion]);
 
   const handleGridReady = useCallback(
     (event: GridReadyEvent<AccountsGridRow>) => {

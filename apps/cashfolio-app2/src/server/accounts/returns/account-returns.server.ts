@@ -5,36 +5,35 @@ import type {
   AccountReturnTarget,
   AccountReturnWorkResponse,
 } from "../../../shared/account-returns";
-import { toMoney } from "../../../shared/money";
+import { emptyAccountReturnResult } from "../../../shared/account-returns";
 import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../../resource-context.server";
-import { resourceStorage } from "../../resource-scope.server";
 import { getPeriodCacheGeneration } from "../../period/cache/period-cache";
-import { getUnitToReferenceExchangeRateDetails } from "../../period/period-conversion";
-import type { DecimalValuationRateLookupResult } from "../../valuation/types";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
-import { createAccountGainLossLookupScheduler } from "../account-gain-loss-prefetch.server";
+import { createHistoricalLoader } from "../../valuation/history/loader";
+import { HistoryPending } from "../../valuation/history/types";
 import { resolveAccountGainLossDate } from "../account-gain-loss-range.server";
 import { loadAccountReturnInputs } from "./return-inputs.server";
-import {
-  capitalRateRequests,
-  createReturnEngine,
-  rateInput,
-  rateRequest,
-  returnRateKey,
-  returnTargets,
-  stripReturnDetails,
-  type ReturnInputs,
-  type ReturnRateInput,
-} from "./return-engine";
+import { createReturnEngine, rateInput } from "./return-engine";
 import { getOrLoadAccountReturnSummaries } from "./return-cache.server";
 import {
   returnWorkStore,
   type ReturnWorkState,
 } from "./return-work-store.server";
-
+import { returnArtifacts, returnArtifactId } from "./return-artifacts.server";
+import {
+  getReturnPlan,
+  readReturnBasis,
+  scopeInputs,
+} from "./return-plan.server";
+import {
+  readScopeResults,
+  returnProgress,
+  scopeResultId,
+  type ReturnScopeResult,
+} from "./return-work-results";
 export type ReturnWorkArgs = AccountReturnScope & {
   continuation?: string;
   batchSize?: number;
@@ -42,16 +41,12 @@ export type ReturnWorkArgs = AccountReturnScope & {
   period?: string;
   includeDetails?: boolean;
 };
+type Response = AccountReturnWorkResponse<
+  AccountReturnSummaries | AccountReturnDetails
+>;
 const day = (date: Date) => date.toISOString().slice(0, 10);
-const BATCH_MS = 10_000;
-const MAX_LOOKUPS = 128;
-const MAX_CALCULATIONS = 4;
-const shared =
-  createUserScopedSharedWork<
-    AccountReturnWorkResponse<AccountReturnSummaries | AccountReturnDetails>
-  >();
+const shared = createUserScopedSharedWork<Response>();
 const CACHE_MISS = Symbol("return-cache-miss");
-
 async function cachedSummary(scope: AccountReturnScope) {
   try {
     return await getOrLoadAccountReturnSummaries(scope, async () => {
@@ -61,14 +56,10 @@ async function cachedSummary(scope: AccountReturnScope) {
     if (error !== CACHE_MISS) throw error;
   }
 }
-
-/** A checkpoint contains server-generated inputs only; clients carry an opaque ID. */
-async function advanceReturnWork(
+async function advance(
   args: ReturnWorkArgs,
   userId: string,
-): Promise<
-  AccountReturnWorkResponse<AccountReturnSummaries | AccountReturnDetails>
-> {
+): Promise<Response> {
   const binding = JSON.stringify([
     userId,
     args.accountBookId,
@@ -80,173 +71,7 @@ async function advanceReturnWork(
   ]);
   const asOfDate = day(resolveAccountGainLossDate(args.period));
   const publication = day(createValuationLookupContext().latestFetchableDate);
-  const store = await returnWorkStore(args.accountBookId, userId);
-  const id = args.continuation ?? store.createId();
-  let state = args.continuation ? await store.read(id) : undefined;
-  let inputs: Promise<ReturnInputs> | undefined;
-  const readInputs = async () => {
-    inputs ??= loadAccountReturnInputs(
-      args.accountBookId,
-      new Date(`${asOfDate}T00:00:00Z`),
-      args.target?.kind === "account" ? args.target.id : undefined,
-    );
-    return inputs;
-  };
   const revision =
-    (await getPeriodCacheGeneration({ accountBookId: args.accountBookId })) ??
-    (await readInputs()).revision;
-  if (
-    args.continuation &&
-    (!state ||
-      state.binding !== binding ||
-      state.revision !== revision ||
-      state.asOfDate !== asOfDate ||
-      state.publication !== publication)
-  ) {
-    // Never delete another scope's checkpoint when a continuation is misused.
-    if (state?.binding === binding) await store.remove(id);
-    return { status: "restart" };
-  }
-  if (!state) {
-    if (!args.target) {
-      const cached = await cachedSummary(args);
-      if (cached) return { status: "complete", data: cached };
-    }
-    const snapshot = await readInputs();
-    returnTargets(snapshot, args, args.target); // Validate target before starting work.
-    state = {
-      binding,
-      sequence: 0,
-      revision: snapshot.revision,
-      asOfDate,
-      publication,
-      referenceCurrency: snapshot.referenceCurrency,
-      phase: "capital",
-      requests: capitalRateRequests(snapshot),
-      offset: 0,
-      rates: {},
-      results: [],
-    };
-    await store.save(id, state);
-    return { status: "pending", continuation: id };
-  }
-  const current = state;
-  const pending = async (): Promise<AccountReturnWorkResponse<never>> => {
-    checkResourceBudget();
-    await store.save(id, current);
-    return { status: "pending", continuation: id };
-  };
-  if (current.phase !== "calculation") {
-    const started = Date.now();
-    const scheduleLookup = createAccountGainLossLookupScheduler();
-    const exchangeRateByKey = new Map<
-      string,
-      Promise<DecimalValuationRateLookupResult>
-    >();
-    let count = 0;
-    while (
-      current.offset < current.requests.length &&
-      count < (args.batchSize ?? MAX_LOOKUPS) &&
-      Date.now() - started < BATCH_MS
-    ) {
-      checkResourceBudget();
-      // Leave ample budget for composed FX/security lookups and backtracking.
-      if ((resourceStorage.getStore()?.attempts.size ?? 0) >= 100) break;
-      const requests = current.requests.slice(
-        current.offset,
-        current.offset + Math.min(4, (args.batchSize ?? MAX_LOOKUPS) - count),
-      );
-      const results = await Promise.allSettled(
-        requests
-          .filter(
-            (request) =>
-              !Object.hasOwn(current.rates, returnRateKey(rateInput(request))),
-          )
-          .map(async (request) => {
-            const input = rateInput(request);
-            const result = await getUnitToReferenceExchangeRateDetails({
-              ...input,
-              referenceCurrency: current.referenceCurrency,
-              scheduleLookup,
-              exchangeRateByKey,
-            });
-            current.rates[returnRateKey(input)] = {
-              rate: result.rate?.toString() ?? null,
-              source: result.source,
-            };
-          }),
-      );
-      // Persist successes even if a sibling lookup exhausts the request budget.
-      // Retrying the same checkpoint skips these exact completed dependencies.
-      const failure = results.find((r) => r.status === "rejected");
-      if (failure?.status === "rejected") {
-        await store.save(id, current);
-        throw failure.reason;
-      }
-      current.offset += requests.length;
-      count += requests.length;
-    }
-    if (current.offset < current.requests.length) return pending();
-    if (current.phase === "capital") {
-      const snapshot = await readInputs();
-      if (snapshot.revision !== current.revision) return { status: "restart" };
-      const engine = await createReturnEngine(
-        snapshot,
-        resolver(current, snapshot),
-      );
-      const requests = new Map<string, ReturnType<typeof rateRequest>>();
-      for (const target of returnTargets(snapshot, args, args.target))
-        await engine.calculate(
-          target,
-          async (input) => {
-            const key = returnRateKey(input);
-            if (
-              !identity(input, snapshot.referenceCurrency) &&
-              !Object.hasOwn(current.rates, key)
-            )
-              requests.set(key, rateRequest(input));
-            return toMoney(1);
-          },
-          true,
-        );
-      current.phase = "valuation";
-      current.requests = [...requests.values()];
-      current.offset = 0;
-      return pending();
-    }
-    current.phase = "calculation";
-    current.requests = [];
-    current.offset = 0;
-    return pending();
-  }
-  const snapshot = await readInputs();
-  if (snapshot.revision !== current.revision) return { status: "restart" };
-  const targets = returnTargets(snapshot, args, args.target);
-  const engine = await createReturnEngine(
-    snapshot,
-    resolver(current, snapshot),
-  );
-  const started = Date.now();
-  let count = 0;
-  while (
-    current.results.length < targets.length &&
-    count < MAX_CALCULATIONS &&
-    Date.now() - started < BATCH_MS
-  ) {
-    checkResourceBudget();
-    const target = targets[current.results.length]!;
-    const result = await engine.calculate(target);
-    current.results.push(
-      args.includeDetails
-        ? result
-        : { ...result, valuations: [], cashFlows: [] },
-    );
-    count++;
-  }
-  if (current.results.length < targets.length) return pending();
-  // Recheck after the batch: concurrent edits and publication changes cannot
-  // publish or permanently cache a mixed snapshot.
-  const committedRevision =
     (await getPeriodCacheGeneration({ accountBookId: args.accountBookId })) ??
     (
       await loadAccountReturnInputs(
@@ -255,55 +80,248 @@ async function advanceReturnWork(
         args.target?.kind === "account" ? args.target.id : undefined,
       )
     ).revision;
+  const context = returnArtifactId([binding, revision, asOfDate, publication]);
+  const store = await returnWorkStore(args.accountBookId, userId);
+  if (!args.continuation && !args.target) {
+    const data = await cachedSummary(args);
+    if (data) return { status: "complete", data };
+  }
+  let id =
+    args.continuation ?? (await store.indexed(context, store.createId()));
+  let state = await store.read(id);
   if (
-    committedRevision !== current.revision ||
-    day(createValuationLookupContext().latestFetchableDate) !== publication ||
-    day(resolveAccountGainLossDate(args.period)) !== asOfDate
-  )
-    return { status: "restart" };
-  await store.save(id, current); // Idempotent completion if the response is lost.
-  if (args.target) return { status: "complete", data: current.results[0]! };
-  const total = current.results.at(-1)!;
-  const data: AccountReturnSummaries = {
-    referenceCurrency: snapshot.referenceCurrency,
-    startDate: snapshot.startDate,
+    state &&
+    (state.context !== context ||
+      state.binding !== binding ||
+      state.createdAt + 15 * 60 * 1000 <= Date.now() ||
+      (state.phase === "complete" && state.validUntil <= Date.now()))
+  ) {
+    if (state.binding === binding) await store.invalidate(state.context, id);
+    if (args.continuation) return { status: "restart" };
+    id = await store.indexed(context, store.createId());
+  } else if (args.continuation && !state) return { status: "restart" };
+  const planned = await getReturnPlan(args, revision, asOfDate, publication);
+  if (!planned) return { status: "restart" };
+  const { plan } = planned;
+  const initial = (): ReturnWorkState => ({
+    binding,
+    context,
+    revision,
     asOfDate,
-    rows: targets.slice(0, -1).map((target, index) => ({
-      id: target.id,
-      ...stripReturnDetails(current.results[index]!),
-    })),
-    total: stripReturnDetails(total),
-  };
-  return {
-    status: "complete",
-    data: await getOrLoadAccountReturnSummaries(args, async () => ({
-      data,
-      revision: current.revision,
-      cacheable: Object.values(current.rates).every(
-        (r) => r.source === "identity" || r.source === "timeSeries",
+    publication,
+    planId: planned.id,
+    createdAt: Date.now(),
+    sequence: 0,
+    done: [],
+    failures: {},
+    phase: "history",
+    validUntil: Date.now() + 86400_000,
+  });
+  const release = await store.lease(id);
+  if (!release) {
+    const pendingState = (await store.read(id)) ?? initial();
+    return {
+      status: "pending",
+      continuation: id,
+      retryAfterMs: 200,
+      progress: returnProgress(
+        pendingState,
+        id,
+        plan,
+        await readScopeResults(
+          args.accountBookId,
+          pendingState,
+          plan,
+          args.includeDetails ?? false,
+        ),
       ),
-    })),
-  };
-}
-
-const identity = (input: ReturnRateInput, referenceCurrency: string) =>
-  input.unit === "CURRENCY" &&
-  input.currency?.toUpperCase() === referenceCurrency;
-function resolver(state: ReturnWorkState, inputs: ReturnInputs) {
-  return async (input: ReturnRateInput) => {
-    if (identity(input, inputs.referenceCurrency)) return toMoney(1);
-    const result = state.rates[returnRateKey(input)];
-    if (!result)
+    };
+  }
+  try {
+    // Reread after obtaining the lease, not before: a second tab may just have advanced it.
+    state = (await store.read(id)) ?? initial();
+    if (state.context !== context) return { status: "restart" };
+    const current = state;
+    const artifacts = await returnArtifacts(args.accountBookId);
+    const results = await readScopeResults(
+      args.accountBookId,
+      current,
+      plan,
+      args.includeDetails ?? false,
+    );
+    const inputs = await readReturnBasis(args.accountBookId, plan.basisId);
+    if (!inputs) {
+      await store.invalidate(context, id);
+      return { status: "restart" };
+    }
+    const missingScopes = plan.scopes.filter((s) => !results.has(s.key));
+    const loader = missingScopes.some((s) => s.applicable)
+      ? await createHistoricalLoader(
+          missingScopes.flatMap((s) => s.requests.map(rateInput)),
+          plan.referenceCurrency,
+          publication,
+          current.failures,
+        )
+      : undefined;
+    let calculated = 0;
+    const started = Date.now();
+    const calculateReady = async () => {
+      for (const scope of missingScopes) {
+        if (
+          results.has(scope.key) ||
+          calculated >= 4 ||
+          Date.now() - started >= 10_000
+        )
+          continue;
+        checkResourceBudget();
+        const target = plan.targets.find((t) => t.key === scope.key)!;
+        let validUntil = Date.now() + 86400_000;
+        let missing = false;
+        let data: AccountReturnDetails;
+        if (!scope.applicable)
+          data = {
+            ...emptyAccountReturnResult(false),
+            name: target.name,
+            referenceCurrency: plan.referenceCurrency,
+            startDate: plan.startDate,
+            asOfDate,
+            valuations: [],
+            cashFlows: [],
+          };
+        else {
+          try {
+            // Readiness checks are entirely in memory after the series range reads.
+            for (const request of scope.requests) {
+              const rate = await loader!.lookup(rateInput(request));
+              validUntil = Math.min(
+                validUntil,
+                rate.validUntil,
+                ["provider", "fallback", "covered"].includes(rate.source)
+                  ? current.createdAt + 15 * 60 * 1000
+                  : Infinity,
+              );
+              missing ||= rate.rate === null;
+            }
+            const engine = await createReturnEngine(
+              scopeInputs(inputs, new Set(scope.accountIds)),
+              async (input) => (await loader!.lookup(input)).rate,
+            );
+            data = await engine.calculate({
+              ...target,
+              accountIds: new Set(scope.accountIds),
+            });
+          } catch (error) {
+            if (error instanceof HistoryPending) continue;
+            throw error;
+          }
+        }
+        if (!args.includeDetails)
+          data = { ...data, valuations: [], cashFlows: [] };
+        if (missing)
+          validUntil = Math.min(validUntil, current.createdAt + 15 * 60 * 1000);
+        const result: ReturnScopeResult = { data, validUntil, missing };
+        results.set(scope.key, result);
+        calculated++;
+        await artifacts.save(
+          scopeResultId(current, scope.key, args.includeDetails ?? false),
+          result,
+          validUntil,
+        );
+      }
+    };
+    await calculateReady();
+    // Publish cheap scopes before waiting for providers. Their values are usable immediately.
+    if (results.size < plan.scopes.length && !calculated && loader) {
+      await loader.pump(Math.min(4, args.batchSize ?? 128));
+      await calculateReady();
+    }
+    if (
+      results.size < plan.scopes.length &&
+      !calculated &&
+      loader?.pending() === 0
+    )
       throw new Error(
-        "A return valuation was not included in its lookup plan.",
+        "Return calculation could not resolve its historical dependencies. Please try again.",
       );
-    return result.rate === null ? null : toMoney(result.rate);
-  };
+    current.done = [...results.keys()];
+    current.phase =
+      results.size === plan.scopes.length
+        ? "complete"
+        : calculated
+          ? "calculation"
+          : "history";
+    current.validUntil = Math.min(
+      Date.now() + 86400_000,
+      ...[...results.values()].map((r) => r.validUntil),
+    );
+    const committedRevision =
+      (await getPeriodCacheGeneration({ accountBookId: args.accountBookId })) ??
+      (
+        await loadAccountReturnInputs(
+          args.accountBookId,
+          new Date(`${asOfDate}T00:00:00Z`),
+          args.target?.kind === "account" ? args.target.id : undefined,
+        )
+      ).revision;
+    if (
+      committedRevision !== revision ||
+      day(createValuationLookupContext().latestFetchableDate) !== publication ||
+      day(resolveAccountGainLossDate(args.period)) !== asOfDate
+    ) {
+      await store.invalidate(context, id);
+      return { status: "restart" };
+    }
+    await store.save(id, current);
+    const progress = returnProgress(current, id, plan, results);
+    console.info("Account return batch completed.", {
+      workId: id,
+      phase: current.phase,
+      sequence: current.sequence,
+      completed: progress.completed,
+      total: progress.total,
+      elapsedMs: Date.now() - started,
+    });
+    if (current.phase !== "complete")
+      return {
+        status: "pending",
+        continuation: id,
+        progress,
+        retryAfterMs: calculated ? 0 : 200,
+      };
+    if (args.target) {
+      const target = plan.targets[0]!;
+      return {
+        status: "complete",
+        data: { ...results.get(target.key)!.data, name: target.name },
+        progress,
+      };
+    }
+    const data: AccountReturnSummaries = {
+      referenceCurrency: plan.referenceCurrency,
+      startDate: plan.startDate,
+      asOfDate,
+      rows: progress.rows,
+      total: progress.totalResult!,
+    };
+    return {
+      status: "complete",
+      data: await getOrLoadAccountReturnSummaries(args, async () => ({
+        data,
+        revision,
+        cacheable: [...results.values()].every((r) => !r.missing),
+        expiresAt: current.validUntil,
+      })),
+      progress,
+    };
+  } catch (error) {
+    // A retry starts a new work envelope but reuses already completed scope artifacts.
+    await store.invalidate(context, id);
+    throw error;
+  } finally {
+    await release();
+  }
 }
-
 export function queryAccountReturnWork(args: ReturnWorkArgs, userId: string) {
   const { batchSize: _batchSize, ...key } = args;
-  return shared(JSON.stringify([userId, key]), () =>
-    advanceReturnWork(args, userId),
-  );
+  return shared(JSON.stringify([userId, key]), () => advance(args, userId));
 }

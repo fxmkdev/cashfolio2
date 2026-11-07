@@ -3,7 +3,12 @@ import { loadCompleteReturnWork } from "@/shared/load-return-work";
 import { useCallback, useEffect, useState } from "react";
 import { getAccountReturnSummaries } from "@/server/account-returns";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
-import type { AccountReturnTarget } from "@/shared/account-returns";
+import {
+  emptyAccountReturnResult,
+  type AccountReturnProgress,
+  type AccountReturnSummaries,
+  type AccountReturnTarget,
+} from "@/shared/account-returns";
 import type { ReportingGrouping } from "@/shared/reporting-grouping";
 
 export function useAccountReturns(args: {
@@ -14,6 +19,11 @@ export function useAccountReturns(args: {
 }) {
   const { accountBookId, grouping } = args;
   const scopeKey = `${accountBookId}:${grouping}`;
+  const [partial, setPartial] = useState<{
+    scopeKey: string;
+    refreshKey: unknown;
+    progress: AccountReturnProgress;
+  }>();
   const load = useCallback(
     (signal: AbortSignal) =>
       loadCompleteReturnWork(
@@ -30,8 +40,16 @@ export function useAccountReturns(args: {
             },
           }),
         signal,
+        (progress) => {
+          if (signal.aborted) return;
+          setPartial(
+            progress
+              ? { scopeKey, refreshKey: args.refreshKey, progress }
+              : undefined,
+          );
+        },
       ),
-    [accountBookId, grouping],
+    [accountBookId, grouping, scopeKey, args.refreshKey],
   );
   const request = useGainLossRequest({
     ...args,
@@ -48,8 +66,35 @@ export function useAccountReturns(args: {
     (target: AccountReturnTarget) => setSelection({ scopeKey, target }),
     [scopeKey],
   );
+  const progress =
+    args.enabled &&
+    partial?.scopeKey === scopeKey &&
+    partial.refreshKey === args.refreshKey
+      ? partial.progress
+      : undefined;
+  const partialData: AccountReturnSummaries | undefined = progress
+    ? {
+        referenceCurrency: progress.referenceCurrency,
+        startDate: progress.startDate,
+        asOfDate: progress.asOfDate,
+        rows: progress.rows,
+        total: progress.totalResult ?? emptyAccountReturnResult(),
+      }
+    : undefined;
+  const completedIds = request.data
+    ? undefined
+    : progress
+      ? new Set([
+          ...progress.rows.map((row) => row.id),
+          ...(progress.totalResult ? ["__return_total__"] : []),
+        ])
+      : undefined;
   return {
     ...request,
+    data: request.data ?? partialData,
+    completedIds,
+    cellVersion: `${scopeKey}:${progress?.workId ?? ""}:${progress?.sequence ?? 0}:${request.loading}`,
+
     onOpen,
     target:
       args.enabled && selection?.scopeKey === scopeKey

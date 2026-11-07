@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button, Drawer } from "@mantine/core";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { expect, fn, userEvent, within, waitFor } from "storybook/test";
+import type { GridApi } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
 import { UserLocaleProvider } from "@/user-locale-context";
 import type {
@@ -184,14 +185,29 @@ export const Calculation: Story = {
 };
 
 const selected = fn();
-function ReturnGridExample({ loading = false }: { loading?: boolean }) {
+function ReturnGridExample({
+  loading = false,
+  completedIds,
+  unavailable = false,
+}: {
+  loading?: boolean;
+  completedIds?: Set<string>;
+  unavailable?: boolean;
+}) {
+  const grid = useRef<GridApi | null>(null);
+  useEffect(() => {
+    grid.current?.refreshCells({
+      columns: ["return-twr", "return-mwr"],
+      force: true,
+    });
+  }, [loading, completedIds]);
   const [target, setTarget] = useState<AccountReturnTarget>();
   const summary: AccountReturnSummaries = {
     referenceCurrency: "CHF",
     startDate: data.startDate,
     asOfDate: data.asOfDate,
     rows: [
-      { id: "a", ...data },
+      { id: "a", ...data, ...(unavailable ? { twr: null, mwr: null } : {}) },
       { id: "group", ...data },
     ],
     total: data,
@@ -199,6 +215,7 @@ function ReturnGridExample({ loading = false }: { loading?: boolean }) {
   const columns = buildAccountReturnColumns({
     data: summary,
     loading,
+    completedIds,
     locale: "en-US",
     onOpen: (item) => {
       selected(item);
@@ -208,6 +225,9 @@ function ReturnGridExample({ loading = false }: { loading?: boolean }) {
   return (
     <>
       <DataGrid
+        onGridReady={(event) => {
+          grid.current = event.api;
+        }}
         containerStyle={{ height: 270 }}
         columnDefs={[{ field: "name" }, columns]}
         rowData={[
@@ -301,6 +321,50 @@ export const GridLoadingCompletes: Story = {
     ).toBeVisible();
     await expect(
       canvas.queryByRole("status", { name: "Loading TWR" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+function ProgressiveGridExample() {
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
+  return (
+    <>
+      <Button onClick={() => setCompleted(new Set(["a"]))}>
+        Complete Account
+      </Button>
+      <Button
+        onClick={() =>
+          setCompleted(new Set(["a", "group", "__return_total__"]))
+        }
+      >
+        Complete All
+      </Button>
+      <ReturnGridExample loading completedIds={completed} unavailable />
+    </>
+  );
+}
+export const ProgressiveUnavailableRows: Story = {
+  render: () => <ProgressiveGridExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByRole("status", { name: "Loading TWR" });
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Complete Account" }),
+    );
+    await expect(
+      await canvas.findByRole("button", {
+        name: /View TWR calculation for Investment Account:/,
+      }),
+    ).toHaveTextContent("—");
+    await expect(
+      canvas.getAllByRole("status", { name: "Loading TWR" }),
+    ).toHaveLength(2);
+    await userEvent.click(canvas.getByRole("button", { name: "Complete All" }));
+    await expect(
+      canvas.queryByRole("status", { name: "Loading TWR" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("status", { name: "Loading MWR" }),
     ).not.toBeInTheDocument();
   },
 };

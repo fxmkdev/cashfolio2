@@ -70,3 +70,56 @@ it("stops after a superseding scope or ledger date change, even when the in-flig
   ).rejects.toThrow();
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+it("publishes monotonic progress and clears it when the immutable context changes", async () => {
+  const base = {
+    context: "old",
+    workId: "job",
+    revision: "r1",
+    sequence: 2,
+    phase: "history" as const,
+    completed: 1,
+    total: 2,
+    referenceCurrency: "CHF",
+    startDate: "2026-01-01",
+    asOfDate: "2026-11-07",
+    publication: "2026-11-06",
+    rows: [],
+  };
+  const progress = vi.fn();
+  const request = vi
+    .fn()
+    .mockResolvedValueOnce({
+      status: "pending",
+      continuation: "job",
+      progress: base,
+    })
+    .mockResolvedValueOnce({
+      status: "pending",
+      continuation: "job",
+      progress: { ...base, sequence: 1 },
+    })
+    .mockResolvedValueOnce({
+      status: "complete",
+      data: 42,
+      progress: { ...base, context: "new", workId: "new-job", sequence: 0 },
+    });
+  expect(await loadCompleteReturnWork(request, undefined, progress)).toBe(42);
+  expect(progress.mock.calls.map(([p]) => p?.context)).toEqual([
+    "old",
+    undefined,
+    "new",
+  ]);
+});
+it("cancels a pending batch delay without issuing another request", async () => {
+  const controller = new AbortController();
+  const request = vi.fn().mockResolvedValue({
+    status: "pending",
+    continuation: "job",
+    retryAfterMs: 1000,
+  });
+  const promise = loadCompleteReturnWork(request, controller.signal);
+  await Promise.resolve();
+  controller.abort();
+  await expect(promise).rejects.toThrow();
+  expect(request).toHaveBeenCalledOnce();
+});
