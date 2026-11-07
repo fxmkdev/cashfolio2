@@ -192,14 +192,14 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
           throw new Error("Unexpected stock history symbol.");
         for (const target of targets) {
           const key = `${target.key}:${date}`;
-          if (seen.has(key) || points[target.key]!.some((p) => p.date === date))
-            throw new Error("Duplicate stock history point.");
-          seen.add(key);
           if (
             typeof item.price_currency === "string" &&
+            item.price_currency.trim() &&
             item.price_currency.trim().toUpperCase() !== target.currency
-          )
-            throw new Error("Stock history currency is invalid.");
+          ) {
+            (unavailable[target.key] ??= []).push(date);
+            continue;
+          }
           if (item.close === null) {
             (unavailable[target.key] ??= []).push(date);
             continue;
@@ -210,8 +210,20 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
             tradeCurrency: target.currency,
             date: new Date(`${date}T00:00:00Z`),
           });
-          if (typeof value !== "number")
+          if (typeof value !== "number") {
+            if (
+              typeof item.close === "number" &&
+              Number.isFinite(item.close) &&
+              item.close > 0
+            ) {
+              (unavailable[target.key] ??= []).push(date);
+              continue;
+            }
             throw new Error("Stock history currency or price is invalid.");
+          }
+          if (seen.has(key) || points[target.key]!.some((p) => p.date === date))
+            throw new Error("Duplicate stock history point.");
+          seen.add(key);
           points[target.key]!.push({ date, value });
         }
       }
@@ -278,10 +290,20 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
         throw new Error("Incomplete historical date coverage.");
       await record({ outcome: "RETRIEVED", httpStatus: response.status });
     }
+    const unresolved = Object.fromEntries(
+      Object.entries(unavailable)
+        .map(([key, dates]) => [
+          key,
+          [...new Set(dates)].filter(
+            (date) => !points[key]!.some((point) => point.date === date),
+          ),
+        ])
+        .filter(([, dates]) => dates.length),
+    );
     return {
       points,
       complete: true,
-      ...(Object.keys(unavailable).length ? { unavailable } : {}),
+      ...(Object.keys(unresolved).length ? { unavailable: unresolved } : {}),
     };
   }
   throw new Error("Historical price pagination exceeded the supported limit.");
