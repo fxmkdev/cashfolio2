@@ -3,6 +3,7 @@ import { appendFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import {
   parseManualSeedInput,
+  SeedSafetyError,
   type ManualSeedInput,
 } from "../src/staging-seed/target.ts";
 
@@ -90,6 +91,28 @@ export async function resolveSeedBranch(
     }
     return stagingBranchId;
   }
+  const matches = await findPreviewBranches(projectId, previewBranchName, read);
+  const branch = matches[0];
+  if (
+    matches.length !== 1 ||
+    !branch ||
+    !/^br-[a-z0-9-]+$/.test(branch.id) ||
+    branch.id === stagingBranchId ||
+    branch.project_id !== projectId ||
+    branch.parent_id !== stagingBranchId
+  ) {
+    throw new SeedWorkflowError(
+      "The existing preview Neon branch was not found under staging. Deploy the PR first.",
+    );
+  }
+  return branch.id;
+}
+
+async function findPreviewBranches(
+  projectId: string,
+  previewBranchName: string,
+  read: ReadJson,
+): Promise<NeonBranch[]> {
   const matches: NeonBranch[] = [];
   let cursor: string | undefined;
   do {
@@ -109,20 +132,7 @@ export async function resolveSeedBranch(
     );
     cursor = result.pagination?.next;
   } while (cursor);
-  const branch = matches[0];
-  if (
-    matches.length !== 1 ||
-    !branch ||
-    !/^br-[a-z0-9-]+$/.test(branch.id) ||
-    branch.id === stagingBranchId ||
-    branch.project_id !== projectId ||
-    branch.parent_id !== stagingBranchId
-  ) {
-    throw new SeedWorkflowError(
-      "The existing preview Neon branch was not found under staging. Deploy the PR first.",
-    );
-  }
-  return branch.id;
+  return matches;
 }
 
 export function seedDeployedApp(
@@ -187,68 +197,82 @@ export function jsonReader(base: string, token: string): ReadJson {
   };
 }
 
-async function main() {
-  const env = process.env;
-  const mode = process.argv[2];
-  const output = async (values: Record<string, string>) => {
-    await appendFile(
-      required(env, "GITHUB_OUTPUT"),
-      Object.entries(values)
-        .map(([key, value]) => `${key}=${value}\n`)
-        .join(""),
-    );
-  };
+async function writeOutputs(
+  env: NodeJS.ProcessEnv,
+  values: Record<string, string>,
+) {
+  await appendFile(
+    required(env, "GITHUB_OUTPUT"),
+    Object.entries(values)
+      .map(([key, value]) => `${key}=${value}\n`)
+      .join(""),
+  );
+}
+
+async function resolveWorkflowTarget(env: NodeJS.ProcessEnv) {
+  const target = await resolveSeedTarget(
+    required(env, "GITHUB_REF"),
+    required(env, "GITHUB_REPOSITORY"),
+    jsonReader("https://api.github.com", required(env, "GH_TOKEN")),
+  );
+  await writeOutputs(env, {
+    environment: target.environment,
+    pr_number: target.prNumber,
+  });
+}
+
+async function resolveWorkflowDatabase(env: NodeJS.ProcessEnv) {
+  if (
+    env.SEED_ENVIRONMENT !== "staging" &&
+    env.SEED_ENVIRONMENT !== "preview"
+  ) {
+    throw new SeedWorkflowError("Invalid seed environment.");
+  }
+  // Never let a missing preview name silently select the staging branch.
+  const previewName =
+    env.SEED_ENVIRONMENT === "preview"
+      ? required(env, "NEON_BRANCH_NAME")
+      : undefined;
+  const branchId = await resolveSeedBranch(
+    required(env, "NEON_STAGING_PROJECT_ID"),
+    required(env, "NEON_STAGING_BRANCH_ID"),
+    previewName,
+    jsonReader(
+      "https://console.neon.tech/api/v2",
+      required(env, "NEON_API_KEY"),
+    ),
+  );
+  await writeOutputs(env, { branch_id: branchId });
+}
+
+async function seedWorkflowApp(env: NodeJS.ProcessEnv) {
+  const input = parseManualSeedInput(
+    JSON.stringify({
+      projectId: required(env, "NEON_STAGING_PROJECT_ID"),
+      branchId: required(env, "NEON_BRANCH_ID"),
+      testerExternalIds: required(env, "SEED_USER_EXTERNAL_IDS").split(","),
+    }),
+  );
+  const app = required(env, "FLY_APP");
+  const summaryPath = required(env, "GITHUB_STEP_SUMMARY");
+  await seedDeployedApp(app, input);
+  await appendFile(
+    summaryPath,
+    `Seeded the deployed version of **${app}** on Neon branch \`${input.branchId}\`. Existing demo data was replaced; old book links are no longer valid.\n`,
+  );
+}
+
+export async function runSeedWorkflow(
+  mode: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+) {
   switch (mode) {
-    case "resolve-target": {
-      const target = await resolveSeedTarget(
-        required(env, "GITHUB_REF"),
-        required(env, "GITHUB_REPOSITORY"),
-        jsonReader("https://api.github.com", required(env, "GH_TOKEN")),
-      );
-      await output({
-        environment: target.environment,
-        pr_number: target.prNumber,
-      });
-      break;
-    }
-    case "resolve-database": {
-      // Never let a missing preview name silently select the staging branch.
-      const previewName =
-        env.SEED_ENVIRONMENT === "preview"
-          ? required(env, "NEON_BRANCH_NAME")
-          : undefined;
-      if (
-        env.SEED_ENVIRONMENT !== "staging" &&
-        env.SEED_ENVIRONMENT !== "preview"
-      )
-        throw new SeedWorkflowError("Invalid seed environment.");
-      const branchId = await resolveSeedBranch(
-        required(env, "NEON_STAGING_PROJECT_ID"),
-        required(env, "NEON_STAGING_BRANCH_ID"),
-        previewName,
-        jsonReader(
-          "https://console.neon.tech/api/v2",
-          required(env, "NEON_API_KEY"),
-        ),
-      );
-      await output({ branch_id: branchId });
-      break;
-    }
-    case "seed": {
-      const input = parseManualSeedInput(
-        JSON.stringify({
-          projectId: required(env, "NEON_STAGING_PROJECT_ID"),
-          branchId: required(env, "NEON_BRANCH_ID"),
-          testerExternalIds: required(env, "SEED_USER_EXTERNAL_IDS").split(","),
-        }),
-      );
-      await seedDeployedApp(required(env, "FLY_APP"), input);
-      await appendFile(
-        required(env, "GITHUB_STEP_SUMMARY"),
-        `Seeded the deployed version of **${required(env, "FLY_APP")}** on Neon branch \`${input.branchId}\`. Existing demo data was replaced; old book links are no longer valid.\n`,
-      );
-      break;
-    }
+    case "resolve-target":
+      return resolveWorkflowTarget(env);
+    case "resolve-database":
+      return resolveWorkflowDatabase(env);
+    case "seed":
+      return seedWorkflowApp(env);
     default:
       throw new SeedWorkflowError(
         "Expected resolve-target, resolve-database or seed.",
@@ -260,10 +284,10 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  main().catch((error) => {
+  runSeedWorkflow(process.argv[2]).catch((error) => {
     // API/transport errors can contain credentials; only deliberate messages belong in CI logs.
     console.error(
-      error instanceof SeedWorkflowError
+      error instanceof SeedWorkflowError || error instanceof SeedSafetyError
         ? error.message
         : "Manual database seed workflow failed.",
     );

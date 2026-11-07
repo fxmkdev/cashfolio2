@@ -85,15 +85,30 @@ export function readSeedConfig(
     throw new SeedSafetyError("PGOPTIONS overrides are forbidden for seeding.");
   }
   const input = parseManualSeedInput(raw);
+  const seedConnection = parseSeedConnection(env.DATABASE_URL ?? "");
+  return {
+    target: {
+      hostname: seedConnection.host,
+      endpointId: seedConnection.host.split(".")[0],
+      database: seedConnection.database,
+      role: seedConnection.user,
+      projectId: input.projectId,
+      branchId: input.branchId,
+    },
+    testerExternalIds: input.testerExternalIds,
+    seedConnection,
+  };
+}
+
+function parseSeedConnection(raw: string): VerifiedConnection {
   let url: URL;
   try {
-    url = new URL(env.DATABASE_URL ?? "");
+    url = new URL(raw);
   } catch {
     throw new SeedSafetyError("DATABASE_URL must be a valid database URL.");
   }
   // Use the app's credentials, but connect directly for the replacement transaction.
   const hostname = url.hostname.replace(/-pooler(?=\.)/, "");
-  const endpointId = hostname.split(".")[0];
   let database: string;
   let user: string;
   let password: string;
@@ -115,9 +130,27 @@ export function readSeedConfig(
   ) {
     throw new SeedSafetyError("DATABASE_URL must identify a Neon database.");
   }
+  validateConnectionParameters(url.searchParams);
+  // Never forward a connection string or PGOPTIONS to pg. Whitespace blocks
+  // pg's environment fallback even when PGOPTIONS is unset in this process.
+  return {
+    host: hostname,
+    port: 5432,
+    database,
+    user,
+    password,
+    ssl: { rejectUnauthorized: true },
+    options: " ",
+    enableChannelBinding: true,
+    connectionTimeoutMillis: 20_000,
+    max: 1,
+  };
+}
+
+function validateConnectionParameters(parameters: URLSearchParams) {
   const allowedParameters = new Set(["sslmode", "channel_binding", "schema"]);
   const seen = new Set<string>();
-  for (const [key] of url.searchParams) {
+  for (const [key] of parameters) {
     if (!allowedParameters.has(key) || seen.has(key)) {
       throw new SeedSafetyError(
         "Unexpected or duplicate connection parameters are forbidden.",
@@ -126,43 +159,15 @@ export function readSeedConfig(
     seen.add(key);
   }
   if (
-    !["require", "verify-full"].includes(
-      url.searchParams.get("sslmode") ?? "",
-    ) ||
-    (url.searchParams.has("channel_binding") &&
-      url.searchParams.get("channel_binding") !== "require") ||
-    (url.searchParams.has("schema") &&
-      url.searchParams.get("schema") !== "public")
+    !["require", "verify-full"].includes(parameters.get("sslmode") ?? "") ||
+    (parameters.has("channel_binding") &&
+      parameters.get("channel_binding") !== "require") ||
+    (parameters.has("schema") && parameters.get("schema") !== "public")
   ) {
     throw new SeedSafetyError(
       "The connection must require TLS and the public schema.",
     );
   }
-  return {
-    target: {
-      hostname,
-      endpointId,
-      database,
-      role: user,
-      projectId: input.projectId,
-      branchId: input.branchId,
-    },
-    testerExternalIds: input.testerExternalIds,
-    // Never forward a connection string or PGOPTIONS to pg. Whitespace blocks
-    // pg's environment fallback even when PGOPTIONS is unset in this process.
-    seedConnection: {
-      host: hostname,
-      port: 5432,
-      database,
-      user,
-      password,
-      ssl: { rejectUnauthorized: true },
-      options: " ",
-      enableChannelBinding: true,
-      connectionTimeoutMillis: 20_000,
-      max: 1,
-    },
-  };
 }
 
 export async function verifyServerIdentity(
