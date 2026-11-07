@@ -134,6 +134,7 @@ export function LedgerAccountActions(props: LedgerAccountActionsProps) {
   const context = getAccountManagementContext(props.account);
   const isImportPrimary =
     !isCategoryAccount(props.account) && !props.statementImportDisabledReason;
+  const secondaryActions = getSecondaryActions(props, isImportPrimary);
   return (
     <Tooltip
       label={
@@ -159,8 +160,10 @@ export function LedgerAccountActions(props: LedgerAccountActionsProps) {
             !isImportPrimary && !!props.accountEditDisabledReason
           }
           menuItems={[
-            ...getSecondaryActions(props, isImportPrimary),
-            { type: "divider", key: "danger-actions-divider" },
+            ...secondaryActions,
+            ...(secondaryActions.length > 0
+              ? [{ type: "divider" as const, key: "danger-actions-divider" }]
+              : []),
             ...getDangerActions(props),
           ]}
         >

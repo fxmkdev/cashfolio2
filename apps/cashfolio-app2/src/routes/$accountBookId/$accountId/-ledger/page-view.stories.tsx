@@ -281,6 +281,9 @@ function categoryActionsMenuPlay(
       await expect(
         screen.queryByRole("menuitem", { name: "Manage Category" }),
       ).not.toBeInTheDocument();
+      await expect(
+        screen.getByRole("menu").querySelector(".mantine-Menu-divider"),
+      ).not.toBeInTheDocument();
     }
     await expect(
       screen.queryByRole("menuitem", { name: "Import Statement" }),
