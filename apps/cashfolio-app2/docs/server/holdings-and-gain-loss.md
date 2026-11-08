@@ -5,7 +5,7 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 [Server functions](../server-functions.md) ·
 [Architecture and ownership](../architecture.md)
 
-### Holding Gain/Loss Engine
+## Holding Gain/Loss Engine
 
 The independent server domain at `src/server/holdings/` owns reusable holding
 pricing, transfers, chronological replay, FIFO matching, and open-lot valuation.

@@ -5,7 +5,7 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 [Server functions](../server-functions.md) ·
 [Architecture and ownership](../architecture.md)
 
-### Period Module Organization
+## Period Module Organization
 
 Period implementation modules are grouped by concern under `src/server/period/`:
 
@@ -316,7 +316,7 @@ different revision before merging them. Concurrent edits stop loading with an
 explicit retry action rather than publishing a mixed-revision History chart.
 Retry starts the complete load again; it does not reuse incomplete batches.
 
-### Balance-based Asset and Liability Reporting
+## Balance-based Asset and Liability Reporting
 
 Report and History classify each balance account by its exact reference-currency
 balance at the reporting date, before rounding or grouping. Positive balances

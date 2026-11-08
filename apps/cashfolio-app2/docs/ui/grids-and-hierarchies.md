@@ -474,7 +474,7 @@ row has a `nodeType` field (`"account"` or `"accountGroup"`). AG Grid's tree
 data groups them hierarchically. Fields that don't apply to a node type are
 `null`.
 
-### AG Grid 36 containers and diagnostics
+## AG Grid 36 containers and diagnostics
 
 AG Grid 36 uses `.ag-grid-viewport` for native horizontal and vertical
 scrolling. Rendered body rows are direct children of

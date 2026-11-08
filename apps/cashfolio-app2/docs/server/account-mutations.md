@@ -5,7 +5,7 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 [Server functions](../server-functions.md) ·
 [Architecture and ownership](../architecture.md)
 
-### Account Module Organization
+## Account Module Organization
 
 The public `accounts.ts`, `account-books.ts`, and `account-gain-loss.ts` facades
 retain their exports. Inside `src/server/accounts/`, `accounts-queries.ts`,
@@ -34,7 +34,7 @@ Tests and test support stay beside their implementation. Existing facade tests
 exercise the composed handlers; moving an implementation does not add a
 forwarding module at its old path.
 
-### Account Mutation Operations
+## Account Mutation Operations
 
 Account mutations accept optional nullable `assetClassId`. Creation stores null
 when omitted; updates preserve an omitted value and clear it when explicitly
@@ -197,7 +197,7 @@ removes complete transactions with cascading bookings. Period-cache cleanup runs
 once after commit; database cache-revision triggers participate in the same
 transaction. Single-item APIs remain unchanged.
 
-### Unified account management queries
+## Unified account management queries
 
 Account-page responses load account/group metadata once inside a read-only
 RepeatableRead snapshot. Balance aggregates and booking counts use the same

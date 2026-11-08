@@ -5,7 +5,7 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 [UI patterns](../ui-patterns.md) ·
 [Architecture and ownership](../architecture.md)
 
-### Account Editor
+## Account Editor
 
 The account editor groups identity fields first, followed by unit details and
 the Cash Account flag, then Opening Balance beside Asset Class. Columns stack at

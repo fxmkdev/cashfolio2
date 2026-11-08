@@ -357,7 +357,7 @@ the importer.
   added bookings without a unit inherit the current-account booking's metadata.
   Category booking units and currencies remain editable.
 
-### Conditional Editability Affordance
+## Conditional Editability Affordance
 
 - Conditionally non-editable data cells use `cellClassRules` to apply
   `"ag-cell-disabled"` so users can see which fields are locked in the current
@@ -368,20 +368,20 @@ the importer.
 - Do not apply this affordance to permanently non-editable columns
   (`editable: false`, e.g. status/col-span or actions columns)
 
-### Account Type Debit/Credit Restrictions
+## Account Type Debit/Credit Restrictions
 
 - **Income** accounts may not have a positive (debit) value
 - **Expense** accounts may not have a negative (credit) value
 - Enforced both client-side in `EditTransactionModal` and server-side in
   `validateAccountTypeBookings()`
 
-### Form Root Validation
+## Form Root Validation
 
 - Both `EditTransactionModal` and server validation allow multi-unit
   transactions. Debits and credits must balance exactly only when all bookings
   share the same unit identifier.
 
-### Unit Identifier Pattern
+## Unit Identifier Pattern
 
 Bookings are grouped by a unit identifier string: `currency:${code}`,
 `crypto:${symbol}`, or `security:${symbol}`.
