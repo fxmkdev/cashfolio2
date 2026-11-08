@@ -4,8 +4,11 @@ import { Suspense, lazy } from "react";
 import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
-import { createDocumentTitleHead } from "@/shared/document-title";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/period";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
+import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+} from "@/shared/reporting/period";
 import {
   buildNetWorthReconciliationModel,
   getPreviousPeriodValue,
@@ -14,7 +17,7 @@ import {
 import {
   getPeriodValue,
   parsePeriodSearch,
-} from "@/shared/report-period-search";
+} from "@/shared/reporting/report-period-search";
 
 const ReportPageView = lazy(async () => {
   const module = await import("./-page-view");

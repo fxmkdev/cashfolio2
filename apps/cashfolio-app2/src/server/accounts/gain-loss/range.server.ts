@@ -3,20 +3,20 @@ import {
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
 import { prisma } from "../../../prisma.server";
-import { EMPTY_GAIN_LOSS_SUMMARY } from "../../../shared/account-gain-loss";
+import { EMPTY_GAIN_LOSS_SUMMARY } from "../../../shared/accounts/account-gain-loss";
 import { addUtcDays, startOfUtcDay } from "../../../shared/date";
 import { toMoney } from "../../../shared/money";
 import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelection,
-} from "../../../shared/period";
+} from "../../../shared/reporting/period";
 import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import { loadPeriodHoldingTransactionsRaw } from "../../period/base-data/period-base-data-holding-transactions.server";
 import type { PeriodReadClient } from "../../period/base-data/period-read-client";
 import {
   convertBookingValueToReferenceDetails,
   getUnitToReferenceExchangeRateDetails,
-} from "../../period/period-conversion";
+} from "../../period/period-conversion.server";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
 import type {
   DecimalValuationRateLookupResult,

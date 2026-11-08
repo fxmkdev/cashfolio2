@@ -2,7 +2,7 @@ import { DataGrid } from "@/components/grid/data-grid";
 import { SplitButton } from "@/components/controls/split-button";
 import { Box, Button, Flex, Stack, Text, Title, Tooltip } from "@mantine/core";
 import { IconCopy, IconPencil, IconTrash } from "@tabler/icons-react";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import type { ColumnState, GridApi } from "ag-grid-enterprise";
 import type { AgGridReactProps } from "ag-grid-react";
 import { useEffect, useRef, type RefObject } from "react";

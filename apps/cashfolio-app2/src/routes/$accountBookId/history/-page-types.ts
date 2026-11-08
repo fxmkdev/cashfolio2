@@ -3,7 +3,7 @@ import {
   parseHistoryScopeSelection,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
-} from "@/shared/history-scope";
+} from "@/shared/reporting/history-scope";
 
 export type HistoryPeriodMode = "month" | "year";
 export type HistoryMetric =

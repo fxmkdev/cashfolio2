@@ -5,6 +5,9 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { fileURLToPath } from "node:url";
 import noUiDependencies from "./eslint-rules/no-ui-dependencies.ts";
+import moduleBoundaries from "./eslint-rules/module-boundaries.ts";
+
+const sourceRoot = fileURLToPath(new URL("./src", import.meta.url));
 
 export default tseslint.config(
   {
@@ -68,16 +71,59 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/shared/**/*.{ts,tsx}", "src/server/**/*.{ts,tsx}"],
-    ignores: ["**/*.test.{ts,tsx}", "**/*.integration.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}"],
     plugins: {
-      cashfolio: { rules: { "no-ui-dependencies": noUiDependencies } },
+      cashfolio: {
+        rules: {
+          "no-ui-dependencies": noUiDependencies,
+          "module-boundaries": moduleBoundaries,
+        },
+      },
     },
     rules: {
-      "cashfolio/no-ui-dependencies": [
+      "cashfolio/module-boundaries": [
         "error",
-        { sourceRoot: fileURLToPath(new URL("./src", import.meta.url)) },
+        {
+          sourceRoot,
+          // Explicit public RPC entry points; implementation helpers are private.
+          serverFacades: [
+            "account-books",
+            "account-book-creation",
+            "account-gain-loss",
+            "accounts",
+            "admin-users",
+            "app-version",
+            "asset-class-organize",
+            "authentication",
+            "classifications",
+            "home",
+            "ledger",
+            "period",
+            "period-end-net-worth",
+            "period-gain-loss-reconciliation",
+            "period-history",
+            "period-opening-balance-net-worth",
+            "statement-import",
+            "transactions",
+            "transactions-data",
+            "user-deletion",
+            "user-profile",
+            "valuation-cache",
+            "valuation-provider-usage",
+          ],
+        },
       ],
+    },
+  },
+  {
+    files: [
+      "src/shared/**/*.{ts,tsx}",
+      "src/server/**/*.{ts,tsx}",
+      "src/**/*.server.{ts,tsx}",
+    ],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.integration.{ts,tsx}"],
+    rules: {
+      "cashfolio/no-ui-dependencies": ["error", { sourceRoot }],
     },
   },
   {

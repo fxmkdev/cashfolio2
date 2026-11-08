@@ -4,17 +4,17 @@ import {
   moneyRound2,
   toMoney,
 } from "../../../shared/money";
-import type { ClassificationNode } from "../../../shared/asset-class";
-import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import type { ClassificationNode } from "../../../shared/classification/asset-class";
+import type { ReportingGrouping } from "../../../shared/reporting/reporting-grouping";
 import type { PeriodGroupNode } from "./period-breakdown-state";
-import { type BreakdownHierarchyNode } from "../../../shared/breakdown-hierarchy";
+import { type BreakdownHierarchyNode } from "../../../shared/reporting/breakdown-hierarchy";
 import { type AccountType } from "../../../.prisma-client/enums";
 import { buildBreakdownItems } from "./period-breakdown-buckets";
 import {
   buildAllocationHierarchy,
   type AllocationHierarchyItem,
 } from "./period-allocation-hierarchy";
-import { isBalanceAccount } from "../../../shared/account-presentation";
+import { isBalanceAccount } from "../../../shared/accounts/account-presentation";
 import {
   classifyBalanceAccount,
   type BalanceSide,

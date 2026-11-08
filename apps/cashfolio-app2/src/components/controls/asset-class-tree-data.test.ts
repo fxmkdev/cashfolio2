@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { ClassificationNode } from "../../shared/asset-class";
+import type { ClassificationNode } from "../../shared/classification/asset-class";
 import {
   buildAssetClassTreeData,
   filterAssetClassTreeNode,

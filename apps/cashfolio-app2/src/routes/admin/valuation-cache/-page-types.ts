@@ -2,7 +2,7 @@ import {
   VALUATION_UNIT_TABS,
   isValuationUnitTab,
   type ValuationUnitTab,
-} from "../../../shared/valuation-unit-tabs";
+} from "../../../shared/units/valuation-unit-tabs";
 
 export type { ValuationUnitTab };
 

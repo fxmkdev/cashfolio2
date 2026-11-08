@@ -6,7 +6,7 @@ import {
 import type { ExistingNode } from "../account-editor/account-cash-form-rules";
 import type { AccountGroupInitialValues } from "../account-editor/edit-account-group-modal";
 import type { AccountInitialValues } from "../account-editor/edit-account-modal";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 
 export const accountGroupOptions = [
   {

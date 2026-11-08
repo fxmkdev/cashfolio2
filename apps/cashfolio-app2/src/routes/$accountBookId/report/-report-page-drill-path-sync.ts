@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { BreakdownHierarchyNode } from "@/shared/breakdown-hierarchy";
+import type { BreakdownHierarchyNode } from "@/shared/reporting/breakdown-hierarchy";
 import { clampBreakdownPath } from "./-breakdown/-breakdown-drill";
 import type {
   DrillPathByAllocationBreakdown,

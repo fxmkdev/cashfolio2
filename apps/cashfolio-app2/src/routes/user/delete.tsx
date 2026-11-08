@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { UserDeletePageView } from "./-delete-page-view";
 
 type UserDeleteSearch = {

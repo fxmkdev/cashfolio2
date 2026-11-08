@@ -11,8 +11,8 @@ import {
   validateAccountBookNodeIdInput,
 } from "./mutations/input";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
-import { withDatabaseConflictRetry } from "../database-conflict-retry";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
+import { withDatabaseConflictRetry } from "../database-conflict-retry.server";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache.server";
 import {
   setAccountsAssetClassOperation,
   setAccountsTrackingMethodOperation,
@@ -27,7 +27,7 @@ import {
   updateAccountGroupOperation,
   updateAccountOperation,
   type AccountMutationOperationResult,
-} from "./accounts-mutation-operations";
+} from "./accounts-mutation-operations.server";
 
 async function runAccountMutation<T>(
   accountBookId: string,

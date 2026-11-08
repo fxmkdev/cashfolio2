@@ -21,17 +21,17 @@ vi.mock("../../../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("../transfer-clearing/period-transfer-clearing", async () => {
+vi.mock("../transfer-clearing/period-transfer-clearing.server", async () => {
   const actual = await vi.importActual<
-    typeof import("../transfer-clearing/period-transfer-clearing")
-  >("../transfer-clearing/period-transfer-clearing");
+    typeof import("../transfer-clearing/period-transfer-clearing.server")
+  >("../transfer-clearing/period-transfer-clearing.server");
   return {
     ...actual,
     loadTransferClearingUnitBuckets,
   };
 });
 
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReference,
 }));
 

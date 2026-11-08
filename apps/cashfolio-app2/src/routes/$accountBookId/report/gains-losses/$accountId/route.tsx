@@ -2,12 +2,15 @@ import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliationPageData } from "@/server/period-gain-loss-reconciliation";
-import { createDocumentTitleHead } from "@/shared/document-title";
-import { DEFAULT_PERIOD_VALUE, formatMonthPeriodValue } from "@/shared/period";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
+import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+} from "@/shared/reporting/period";
 import {
   getPeriodValue,
   parsePeriodSearch,
-} from "@/shared/report-period-search";
+} from "@/shared/reporting/report-period-search";
 import { getGainLossReconciliationPageTitle } from "./-page-title";
 
 const GainLossReconciliationPageView = lazy(async () => {

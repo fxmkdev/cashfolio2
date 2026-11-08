@@ -1,4 +1,4 @@
-import type { ClassificationNode } from "@/shared/asset-class";
+import type { ClassificationNode } from "@/shared/classification/asset-class";
 import { assetClassRowId, unitRowId } from "./asset-class-tree";
 import type { TreeRow } from "./rows";
 

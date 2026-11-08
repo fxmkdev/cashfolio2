@@ -6,12 +6,12 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { getAccountsPageTitle } from "@/components/account-management/labels";
 import {
   parseCategoriesSearch,
   getCategoriesRedirect,
-} from "@/shared/account-management-search";
+} from "@/shared/accounts/account-management-search";
 import { loadAccountsPageData } from "@/components/account-management/loading/loader";
 import { useAccountsPageController } from "@/components/account-management/controller";
 

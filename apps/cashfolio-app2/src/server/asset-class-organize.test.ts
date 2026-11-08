@@ -38,10 +38,10 @@ vi.mock("./mutation-guard.server", () => ({
 vi.mock("./account-book-mutation.server", () => ({
   withAccountBookMutation: mocks.lock,
 }));
-vi.mock("./database-conflict-retry", () => ({
+vi.mock("./database-conflict-retry.server", () => ({
   withDatabaseConflictRetry: (operation: () => unknown) => operation(),
 }));
-vi.mock("./period/cache/period-base-data-cache", () => ({
+vi.mock("./period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
 import {

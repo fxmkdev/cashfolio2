@@ -1,7 +1,7 @@
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../server/classification-data";
+} from "../server/classification-data.server";
 import Decimal from "decimal.js";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -21,7 +21,7 @@ import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
 import type { ApprovedSeedTarget } from "./target";
 import { generateStagingDataset } from "./dataset";
 import { replaceStagingData } from "./writer";
-import { defaultAssetClassNodes } from "../shared/asset-class";
+import { defaultAssetClassNodes } from "../shared/classification/asset-class";
 
 const run = promisify(execFile);
 const applicationTables = [

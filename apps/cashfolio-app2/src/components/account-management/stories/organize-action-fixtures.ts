@@ -1,4 +1,4 @@
-import type { OrganizeNode } from "@/shared/account-organize/types";
+import type { OrganizeNode } from "@/shared/accounts/organize/types";
 import { activeAssetRows, archivedAssetRows } from "./fixtures";
 
 export function organizeAccountNodes(archived = false): OrganizeNode[] {

@@ -5,11 +5,11 @@ import type {
 } from "ag-charts-community";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PeriodHistoryResponse } from "@/server/period-history";
-import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { getDashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { useUserLocale } from "@/user-locale-context";
 import type { HistoryMetric, HistoryPeriodMode } from "./-page-types";
 import {

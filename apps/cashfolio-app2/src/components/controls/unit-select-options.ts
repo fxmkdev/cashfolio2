@@ -1,6 +1,6 @@
 import { cryptocurrencies } from "@/cryptocurrencies";
 import { currencies } from "@/currencies";
-import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
+import type { AccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
 
 export type UnitSelectOption = {
   value: string;

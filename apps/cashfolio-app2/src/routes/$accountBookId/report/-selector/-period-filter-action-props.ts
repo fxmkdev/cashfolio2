@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { PeriodFilterActionProps } from "@/components/period-filter/period-filter-action";
 import type { getPeriodOverview } from "@/server/period";
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,

@@ -19,7 +19,7 @@ import {
 import type { CustomInnerHeaderGroupProps } from "ag-grid-react";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import type { AccountsGridRow } from "../grid/rows";
 
 const GainLossDetailsTargetContext = createContext<

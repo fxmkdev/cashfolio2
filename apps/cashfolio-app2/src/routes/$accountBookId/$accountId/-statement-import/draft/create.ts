@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { Unit } from "@/.prisma-client/enums";
-import { getBookingUnitFields } from "@/shared/booking-unit-fields";
+import { getBookingUnitFields } from "@/shared/transactions/booking-unit-fields";
 import { parseUtcDayDate } from "@/shared/date";
 import type {
   CurrentAccountForStatementImport,

@@ -1,6 +1,6 @@
 import { Prisma } from "../.prisma-client/client";
 import { prisma } from "../prisma.server";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/resources/mutation-errors";
 
 function isLockTimeout(error: unknown): boolean {
   if (error instanceof Error && "code" in error && error.code === "55P03")

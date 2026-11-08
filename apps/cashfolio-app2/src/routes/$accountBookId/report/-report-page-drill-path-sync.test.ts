@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { BreakdownHierarchyNode } from "@/shared/breakdown-hierarchy";
+import type { BreakdownHierarchyNode } from "@/shared/reporting/breakdown-hierarchy";
 import type { GainsLossesBreakdownNode } from "./-gains-losses/-gains-losses-breakdown-types";
 import { getSyncedReportDrillPaths } from "./-report-page-drill-path-sync";
 

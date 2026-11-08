@@ -1,12 +1,12 @@
 import type { TreeNodeData } from "@mantine/core";
-import { reportingGroupingOptions } from "@/shared/reporting-grouping";
+import { reportingGroupingOptions } from "@/shared/reporting/reporting-grouping";
 import {
   isHistoryScopedMetric,
   parseHistoryScopeSelection,
   type HistoryScopeOption,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
-} from "@/shared/history-scope";
+} from "@/shared/reporting/history-scope";
 
 import {
   HISTORY_METRIC_OPTIONS,

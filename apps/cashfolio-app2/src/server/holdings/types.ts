@@ -6,12 +6,12 @@ import {
 import type {
   HoldingExecutionPricingSource,
   HoldingGainLossSkippedReason,
-} from "../../shared/gain-loss-reconciliation";
+} from "../../shared/reporting/gain-loss-reconciliation";
 import { type Money } from "../../shared/money";
 export type {
   HoldingExecutionPricingSource,
   HoldingGainLossSkippedReason,
-} from "../../shared/gain-loss-reconciliation";
+} from "../../shared/reporting/gain-loss-reconciliation";
 
 export type HoldingRateConvertibleAccount = {
   id: string;

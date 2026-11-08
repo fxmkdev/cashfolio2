@@ -17,7 +17,7 @@ import {
   isExpenseAccount,
   isIncomeAccount,
   isOpeningBalancesAccount,
-} from "../../shared/account-utils";
+} from "../../shared/accounts/account-utils";
 import {
   formatDateInputValueAsUtcDayIsoString,
   formatUtcDateForLocale,
@@ -27,12 +27,12 @@ import {
   startOfUtcDay,
 } from "../../shared/date";
 import { useDialogSubmitState } from "../../hooks/use-dialog-submit-state";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
-import type { AccountOption } from "@/shared/account-options";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import { AccountTreeSelect } from "../account-tree/account-tree-select";
 import { FormattedNumberInput } from "../controls/formatted-number-input";
 import { useUserLocale } from "@/user-locale-context";
-import { RESOURCE_LIMITS } from "../../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../../shared/resources/resource-limits";
 
 export type SimpleTransactionDirection = "DEBIT" | "CREDIT";
 

@@ -1,5 +1,5 @@
-import { reportingGroupingOptions } from "@/shared/reporting-grouping";
-import { getAccountManagementPath } from "@/shared/account-presentation";
+import { reportingGroupingOptions } from "@/shared/reporting/reporting-grouping";
+import { getAccountManagementPath } from "@/shared/accounts/account-presentation";
 import {
   Badge,
   Button,

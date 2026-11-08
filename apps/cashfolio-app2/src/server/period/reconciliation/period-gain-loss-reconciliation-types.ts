@@ -8,4 +8,4 @@ export type {
   GainLossReconciliationSummary,
   GainLossReconciliationTarget,
   PeriodGainLossReconciliation,
-} from "../../../shared/gain-loss-reconciliation";
+} from "../../../shared/reporting/gain-loss-reconciliation";

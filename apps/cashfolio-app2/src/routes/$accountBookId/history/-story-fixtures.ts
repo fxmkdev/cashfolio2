@@ -1,4 +1,4 @@
-import type { HistoryScopeOption } from "@/shared/history-scope";
+import type { HistoryScopeOption } from "@/shared/reporting/history-scope";
 
 export const netWorthScopeOptions: HistoryScopeOption[] = [
   {

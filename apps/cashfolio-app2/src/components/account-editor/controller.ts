@@ -19,7 +19,7 @@ import {
   validateAccountCryptocurrency,
   validateAccountSymbol,
   validateAccountTradeCurrency,
-} from "../../shared/account-validation";
+} from "../../shared/accounts/account-validation";
 import {
   getAccountCashParentCompatibilityError,
   isRootCashAccountEditable,
@@ -28,7 +28,7 @@ import {
   applyAccountGroupCashInheritance,
 } from "./account-cash-form-rules";
 
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { getAccountConstraintMessage } from "@/shared/accounts/account-presentation";
 
 export function useEditAccountModalController({
   opened,

@@ -1,11 +1,11 @@
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
-import { getAssetClassLabel } from "../../../shared/asset-class";
+import { getAssetClassLabel } from "../../../shared/classification/asset-class";
 import {
   getGainLossInvestmentGroup,
   type GainLossInvestmentGroup,
-} from "../../../shared/investment-group";
+} from "../../../shared/classification/investment-group";
 
 export type GainLossAccountAttribution = {
   assetClassId: string | null;

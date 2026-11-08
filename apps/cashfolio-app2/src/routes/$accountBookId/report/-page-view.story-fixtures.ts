@@ -2,14 +2,14 @@ import {
   PERIOD_MONTH_NAMES,
   parseExplicitMonthPeriod,
   parseExplicitYearPeriod,
-} from "@/shared/period";
+} from "@/shared/reporting/period";
 import {
   DEFAULT_PERIOD_VALUE,
   PERIOD_PRESET_LAST_MONTH,
   PERIOD_PRESET_LAST_YEAR,
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
-} from "@/shared/period";
+} from "@/shared/reporting/period";
 import type { ReportPageViewProps } from "./-page-view";
 
 export const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";

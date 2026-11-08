@@ -5,7 +5,7 @@ import {
   getAccountEntityLabel,
   getAccountManagementContext,
   getAccountConstraintMessage,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import { createLedgerAccountEditModalProps } from "./account-edit-modal-props";
 import type { LedgerPageViewProps } from "./page-view.types";
 export function LedgerAccountDialogs({

@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 
 const AdminUsersPageView = lazy(async () => {
   const module = await import("./-users-page-view");

@@ -1,5 +1,5 @@
 import type { AccountType } from "../../.prisma-client/enums";
-import { isBalanceAccount } from "../../shared/account-presentation";
+import { isBalanceAccount } from "../../shared/accounts/account-presentation";
 import { type Money, toMoney, moneyAbs, moneyIsZero } from "../../shared/money";
 
 export type BalanceSide = "asset" | "liability";

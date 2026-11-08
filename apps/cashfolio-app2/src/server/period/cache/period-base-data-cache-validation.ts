@@ -4,8 +4,8 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../../.prisma-client/enums";
-import { PERIOD_PRESET_VALUES } from "../../../shared/period";
-import type { ClassificationNode } from "../../../shared/asset-class";
+import { PERIOD_PRESET_VALUES } from "../../../shared/reporting/period";
+import type { ClassificationNode } from "../../../shared/classification/asset-class";
 import {
   cacheArray,
   cacheBoolean,

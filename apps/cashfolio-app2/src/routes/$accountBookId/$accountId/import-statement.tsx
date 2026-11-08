@@ -1,12 +1,12 @@
-import { assertTransactionLimits } from "@/shared/resource-limits";
+import { assertTransactionLimits } from "@/shared/resources/resource-limits";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { notifications } from "@mantine/notifications";
 import { Suspense, lazy, useMemo, useState } from "react";
-import type { AccountOption } from "@/shared/account-options";
-import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
-import { createAccountOptions } from "@/shared/account-options";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import type { AccountOption } from "@/shared/accounts/account-options";
+import { createAccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
+import { createAccountOptions } from "@/shared/accounts/account-options";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { createTransactions } from "@/server/transactions";
 import { loadLedgerPageData } from "./-ledger/page-loader";
 import { parseLedgerSearch } from "./-ledger/page-types";

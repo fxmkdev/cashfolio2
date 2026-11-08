@@ -1,4 +1,4 @@
-import { parseExplicitPeriodSelectionFromUnknown } from "../shared/period";
+import { parseExplicitPeriodSelectionFromUnknown } from "../shared/reporting/period";
 import {
   assertRecord,
   optionalField,

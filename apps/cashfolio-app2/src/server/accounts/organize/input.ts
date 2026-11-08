@@ -1,4 +1,4 @@
-import type { AccountOrganizeScope } from "../../../shared/account-organize/scope";
+import type { AccountOrganizeScope } from "../../../shared/accounts/organize/scope";
 import {
   assertRecord,
   requireArrayField,
@@ -8,7 +8,7 @@ import {
 import type {
   OrganizeMove,
   OrganizeNodeRef,
-} from "../../../shared/account-organize/types";
+} from "../../../shared/accounts/organize/types";
 
 function readRef(value: unknown): OrganizeNodeRef {
   assertRecord(value);

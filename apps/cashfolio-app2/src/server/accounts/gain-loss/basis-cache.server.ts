@@ -10,13 +10,13 @@ import { rethrowResourceError } from "../../resource-error";
 import { prisma } from "../../../prisma.server";
 import { getRedisClient } from "../../../redis.server";
 import { addUtcDays } from "../../../shared/date";
-import { getAccountGainLossBasisCacheEntryKey } from "../../../shared/book-cache-keys";
+import { getAccountGainLossBasisCacheEntryKey } from "../../../shared/accounts/book-cache-keys";
 import { encodeMoneyCache } from "../../money-cache-codec";
 import {
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
-} from "../../period/cache/period-cache";
-import { getUnitToReferenceExchangeRateDetails } from "../../period/period-conversion";
+} from "../../period/cache/period-cache.server";
+import { getUnitToReferenceExchangeRateDetails } from "../../period/period-conversion.server";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
 import type { DecimalValuationRateLookupResult } from "../../valuation/types";
 import { valueAccountGainLossBasis } from "./calculation.server";

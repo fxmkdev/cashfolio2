@@ -3,7 +3,7 @@ import { IconBolt } from "@tabler/icons-react";
 import { AccountType } from "@/.prisma-client/enums";
 import { useAssetClasses } from "@/classification-context";
 import { TopPageHeader } from "@/components/layout/top-page-header";
-import { getAssetClassLabel } from "@/shared/asset-class";
+import { getAssetClassLabel } from "@/shared/classification/asset-class";
 import {
   LedgerAccountActions,
   type LedgerAccountActionsProps,

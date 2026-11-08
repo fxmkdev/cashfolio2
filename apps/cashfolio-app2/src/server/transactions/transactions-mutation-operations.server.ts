@@ -1,0 +1,469 @@
+import type { Prisma } from "../../.prisma-client/client";
+import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
+import { getSimpleTransactionUnitIdentifier } from "../../shared/accounts/account-utils";
+import { parseUtcDayDate } from "../../shared/date";
+import { toMoney } from "../../shared/money";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
+import { validateRebookGainLossSimpleTransactionInvariant } from "./rebook-gain-loss-validation.server";
+import { validateRebookBookingTarget } from "./rebook-booking-validation";
+import {
+  accountTypeMeta,
+  buildTransactionCreateData,
+  getBookingUnitFields,
+  requireUtcDayDate,
+  validateAccountTypeBookings,
+  validateAccountTypeBookingsWithAccounts,
+  validateCreateTransaction,
+} from "./transactions-helpers.server";
+import type {
+  CreateSimpleTransactionInput,
+  CreateTransactionInput,
+  CreateTransactionsInput,
+  RebookBookingInput,
+} from "./transactions-types";
+
+export type TransactionMutationOperationResult<T = undefined> = {
+  data: T;
+  invalidatePeriodCache: boolean;
+};
+
+type UpdateTransactionInput = CreateTransactionInput & {
+  transactionId: string;
+};
+
+type DeleteTransactionInput = {
+  transactionId: string;
+  accountBookId: string;
+};
+
+export async function updateTransactionOperation(
+  data: UpdateTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  const existingOpeningBookingCount = await tx.booking.count({
+    where: {
+      accountBookId: data.accountBookId,
+      transactionId: data.transactionId,
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+    },
+  });
+  if (existingOpeningBookingCount > 0) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+
+  const normalizedInput = validateCreateTransaction(data);
+  await validateAccountTypeBookings(
+    normalizedInput.bookings,
+    data.accountBookId,
+    tx,
+  );
+
+  await tx.booking.deleteMany({
+    where: {
+      transactionId: data.transactionId,
+      accountBookId: data.accountBookId,
+    },
+  });
+  await tx.transaction.update({
+    where: {
+      id_accountBookId: {
+        id: data.transactionId,
+        accountBookId: data.accountBookId,
+      },
+    },
+    data: {
+      description: data.description,
+      bookings: {
+        create: normalizedInput.bookings.map((b, sortOrder) => ({
+          date: requireUtcDayDate(b.date),
+          description: b.description,
+          account: {
+            connect: {
+              id_accountBookId: {
+                id: b.accountId,
+                accountBookId: data.accountBookId,
+              },
+            },
+          },
+          unit: b.unit,
+          currency: b.currency,
+          cryptocurrency: b.cryptocurrency,
+          symbol: b.symbol,
+          tradeCurrency: b.tradeCurrency,
+          value: toMoney(b.value).toString(),
+          sortOrder,
+          accountBook: {
+            connect: { id: data.accountBookId },
+          },
+        })),
+      },
+    },
+  });
+  return { data: undefined, invalidatePeriodCache: true };
+}
+
+export async function createTransactionOperation(
+  data: CreateTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  const normalizedInput = validateCreateTransaction(data);
+  await validateAccountTypeBookings(
+    normalizedInput.bookings,
+    data.accountBookId,
+    tx,
+  );
+
+  const transaction = await tx.transaction.create({
+    data: buildTransactionCreateData(normalizedInput),
+  });
+  return { data: transaction, invalidatePeriodCache: true };
+}
+
+export async function createTransactionsOperation(
+  data: CreateTransactionsInput,
+  tx: Prisma.TransactionClient,
+) {
+  const createInputs = data.transactions.map((transaction) =>
+    validateCreateTransaction({
+      ...transaction,
+      accountBookId: data.accountBookId,
+    }),
+  );
+
+  for (const createInput of createInputs) {
+    await validateAccountTypeBookings(
+      createInput.bookings,
+      createInput.accountBookId,
+      tx,
+    );
+  }
+
+  const transactions = await Promise.all(
+    createInputs.map((createInput) =>
+      tx.transaction.create({
+        data: buildTransactionCreateData(createInput),
+      }),
+    ),
+  );
+
+  return { data: transactions, invalidatePeriodCache: transactions.length > 0 };
+}
+
+export async function createSimpleTransactionOperation(
+  data: CreateSimpleTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  if (!Number.isFinite(data.amount) || data.amount <= 0) {
+    throw new Error("Amount must be greater than zero.");
+  }
+  if (data.direction !== "DEBIT" && data.direction !== "CREDIT") {
+    throw new Error("Direction must be either DEBIT or CREDIT.");
+  }
+
+  if (typeof data.date !== "string" || data.date.trim() === "") {
+    throw new Error("Date is required.");
+  }
+
+  const bookingDate = parseUtcDayDate(data.date);
+
+  if (!bookingDate) {
+    throw new Error("Date must be a valid UTC day.");
+  }
+
+  if (data.accountId === data.counterAccountId) {
+    throw new Error(
+      "Counter account must be different from the current account.",
+    );
+  }
+
+  const [accounts, accountBook] = await Promise.all([
+    tx.account.findMany({
+      where: {
+        accountBookId: data.accountBookId,
+        id: { in: [data.accountId, data.counterAccountId] },
+      },
+      select: {
+        id: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+        isActive: true,
+      },
+    }),
+    tx.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { startDate: true },
+    }),
+  ]);
+
+  const currentAccount = accounts.find(
+    (account) => account.id === data.accountId,
+  );
+  const counterAccount = accounts.find(
+    (account) => account.id === data.counterAccountId,
+  );
+
+  if (!currentAccount) {
+    throw new Error("Current account was not found.");
+  }
+  if (!counterAccount) {
+    throw new Error("Counter account was not found.");
+  }
+
+  if (currentAccount.type !== AccountType.BALANCE) {
+    throw new Error("Simple transactions are only available for accounts.");
+  }
+
+  if (!counterAccount.isActive) {
+    throw new Error("Counter account must be active.");
+  }
+
+  const currentUnitIdentifier =
+    getSimpleTransactionUnitIdentifier(currentAccount);
+  if (!currentUnitIdentifier) {
+    throw new Error("Current account unit details are incomplete.");
+  }
+
+  if (
+    counterAccount.type !== AccountType.EQUITY &&
+    counterAccount.type !== AccountType.BALANCE
+  ) {
+    throw new Error("Account type is not supported for simple transactions.");
+  }
+
+  if (counterAccount.type === AccountType.BALANCE) {
+    const counterUnitIdentifier =
+      getSimpleTransactionUnitIdentifier(counterAccount);
+    if (!counterUnitIdentifier) {
+      throw new Error("Counter account unit details are incomplete.");
+    }
+    if (counterUnitIdentifier !== currentUnitIdentifier) {
+      throw new Error(
+        "Asset and liability accounts must use the same unit as the current account.",
+      );
+    }
+  }
+
+  if (
+    counterAccount.type === AccountType.EQUITY &&
+    counterAccount.equityAccountSubtype === EquityAccountSubtype.INCOME &&
+    data.direction !== "DEBIT"
+  ) {
+    throw new Error(
+      "Income categories require a debit on the current account.",
+    );
+  }
+  if (
+    counterAccount.type === AccountType.EQUITY &&
+    counterAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
+    data.direction !== "CREDIT"
+  ) {
+    throw new Error(
+      "Expense categories require a credit on the current account.",
+    );
+  }
+
+  const currentBookingUnitFields = getBookingUnitFields(
+    currentAccount,
+    "current account",
+  );
+  const counterBookingUnitFields =
+    counterAccount.type === AccountType.EQUITY
+      ? currentBookingUnitFields
+      : getBookingUnitFields(counterAccount, "counter account");
+
+  const currentValue = data.direction === "DEBIT" ? data.amount : -data.amount;
+  const createInput: CreateTransactionInput = {
+    accountBookId: data.accountBookId,
+    description: data.description,
+    bookings: [
+      {
+        date: bookingDate.toISOString(),
+        accountId: currentAccount.id,
+        description: "",
+        ...currentBookingUnitFields,
+        value: currentValue,
+      },
+      {
+        date: bookingDate.toISOString(),
+        accountId: counterAccount.id,
+        description: "",
+        ...counterBookingUnitFields,
+        value: -currentValue,
+      },
+    ],
+  };
+
+  const normalizedInput = validateCreateTransaction(createInput);
+  const accountMap = new Map(
+    [currentAccount, counterAccount].map((account) => [
+      account.id,
+      accountTypeMeta(account),
+    ]),
+  );
+  validateAccountTypeBookingsWithAccounts(
+    normalizedInput.bookings,
+    accountMap,
+    {
+      accountBookStartDate: accountBook.startDate,
+    },
+  );
+
+  const transaction = await tx.transaction.create({
+    data: buildTransactionCreateData(normalizedInput),
+  });
+  return { data: transaction, invalidatePeriodCache: true };
+}
+
+export async function rebookBookingOperation(
+  data: RebookBookingInput,
+  tx: Prisma.TransactionClient,
+) {
+  const [booking, targetAccount, accountBook] = await Promise.all([
+    tx.booking.findUnique({
+      where: {
+        id_accountBookId: {
+          id: data.bookingId,
+          accountBookId: data.accountBookId,
+        },
+      },
+      select: {
+        id: true,
+        date: true,
+        accountId: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+        value: true,
+        transactionId: true,
+      },
+    }),
+    tx.account.findUnique({
+      where: {
+        id_accountBookId: {
+          id: data.targetAccountId,
+          accountBookId: data.accountBookId,
+        },
+      },
+      select: {
+        id: true,
+        isActive: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+        type: true,
+        equityAccountSubtype: true,
+      },
+    }),
+    tx.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { startDate: true },
+    }),
+  ]);
+
+  if (!booking) {
+    throw new Error("Booking was not found.");
+  }
+  if (!targetAccount) {
+    throw new Error("Target account was not found.");
+  }
+  const sourceTransactionOpeningBookingCount = await tx.booking.count({
+    where: {
+      accountBookId: data.accountBookId,
+      transactionId: booking.transactionId,
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+    },
+  });
+
+  validateRebookBookingTarget({
+    booking: {
+      accountId: booking.accountId,
+      date: booking.date,
+      unit: booking.unit,
+      currency: booking.currency,
+      cryptocurrency: booking.cryptocurrency,
+      symbol: booking.symbol,
+      tradeCurrency: booking.tradeCurrency,
+      value: toMoney(booking.value),
+    },
+    targetAccount,
+    accountBookStartDate: accountBook.startDate,
+    sourceTransactionContainsOpeningBalancesBooking:
+      sourceTransactionOpeningBookingCount > 0,
+  });
+
+  await validateRebookGainLossSimpleTransactionInvariant(
+    {
+      accountBookId: data.accountBookId,
+      transactionId: booking.transactionId,
+      bookingId: booking.id,
+      targetAccount,
+    },
+    tx,
+  );
+
+  await tx.booking.update({
+    where: {
+      id_accountBookId: {
+        id: booking.id,
+        accountBookId: data.accountBookId,
+      },
+    },
+    data: {
+      account: {
+        connect: {
+          id_accountBookId: {
+            id: targetAccount.id,
+            accountBookId: data.accountBookId,
+          },
+        },
+      },
+    },
+  });
+  return {
+    data: { transactionId: booking.transactionId },
+    invalidatePeriodCache: true,
+  };
+}
+
+export async function deleteTransactionOperation(
+  data: DeleteTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  const openingBookingCount = await tx.booking.count({
+    where: {
+      accountBookId: data.accountBookId,
+      transactionId: data.transactionId,
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+    },
+  });
+  if (openingBookingCount > 0) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+  await tx.transaction.delete({
+    where: {
+      id_accountBookId: {
+        id: data.transactionId,
+        accountBookId: data.accountBookId,
+      },
+    },
+  });
+  return { data: undefined, invalidatePeriodCache: true };
+}

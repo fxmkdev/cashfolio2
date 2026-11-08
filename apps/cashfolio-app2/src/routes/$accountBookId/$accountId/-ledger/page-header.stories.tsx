@@ -3,7 +3,7 @@ import { Box, Button, Group } from "@mantine/core";
 import { useState } from "react";
 import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { AssetClassContext } from "@/classification-context";
-import { defaultAssetClassIds } from "@/shared/asset-class";
+import { defaultAssetClassIds } from "@/shared/classification/asset-class";
 import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
 

@@ -9,7 +9,7 @@ import {
   type RebookBookingValidationInput,
   type RebookTargetAccountValidationInput,
 } from "./rebook-booking-validation";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
 
 function createBooking(
   overrides: Partial<RebookBookingValidationInput> = {},

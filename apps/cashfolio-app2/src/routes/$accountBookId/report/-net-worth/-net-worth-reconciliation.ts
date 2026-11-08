@@ -1,4 +1,4 @@
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   moneyAdd,
   moneyIsZero,

@@ -1,8 +1,8 @@
-import { isAccountGroupCompatible } from "@/shared/account-presentation";
+import { isAccountGroupCompatible } from "@/shared/accounts/account-presentation";
 import {
   isCategoryAccount,
   getAccountConstraintMessage,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import {
   Button,
@@ -22,7 +22,7 @@ import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import {
   validateAccountGroupName,
   validateAccountGroupParentGroupId,
-} from "../../shared/account-validation";
+} from "../../shared/accounts/account-validation";
 import { useDialogSubmitState } from "../../hooks/use-dialog-submit-state";
 import {
   applyAccountGroupParentCashInheritance,

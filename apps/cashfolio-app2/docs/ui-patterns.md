@@ -5,16 +5,20 @@ paths are relative to that app directory.
 
 ## Shared Contract Ownership
 
+See [module ownership and import boundaries](module-boundaries.md) for the
+placement decision, shared domain groups, route privacy, and automated checks.
+
 Cross-feature contracts belong in `src/shared/`, independent of UI components
 and server implementations. Import `AccountOption` directly from
-`src/shared/account-options.ts` in account selectors, transaction editors, route
-controllers, and bulk-action helpers. The transaction-modal modules retain
-compatibility type re-exports; editor-only `BookingValues` and
+`src/shared/accounts/account-options.ts` in account selectors, transaction
+editors, route controllers, and bulk-action helpers. The transaction-modal
+modules retain compatibility type re-exports; editor-only `BookingValues` and
 `TransactionFormValues` remain in the editor's types module.
 
-Account-tree rows use `AccountTreeRow` from `src/shared/account-tree.ts`. Public
-gain/loss response types, source rows, pricing-source values, and diagnostic
-reasons live in `src/shared/gain-loss-reconciliation.ts`. Shared helpers, UI
+Account-tree rows use `AccountTreeRow` from
+`src/shared/accounts/account-tree.ts`. Public gain/loss response types, source
+rows, pricing-source values, and diagnostic reasons live in
+`src/shared/reporting/gain-loss-reconciliation.ts`. Shared helpers, UI
 consumers, and server implementations import these contracts directly from their
 shared owners. Existing server type exports remain as compatibility re-exports.
 Money-based reconciliation inputs and calculation callbacks remain server
@@ -33,15 +37,12 @@ Synthetic headings can retain group checkboxes for descendant selection, but
 bulk targets include persisted account leaves only. Read-only projection helpers
 can still consume source rows.
 
-The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
-production modules in `src/shared/` and `src/server/` into `src/components/` or
-`src/routes/`. It also rejects dependencies from production `src/shared/`
-modules into `src/server/`, including type-only dependencies. Server modules may
-depend on shared contracts and other server modules. The rule checks type-only
-imports, re-exports, literal dynamic imports, TypeScript import types, and
-literal `require` calls as well as regular imports. Both `@/` and normalized
-relative paths are checked. Test and integration-test files are exempt so they
-can compare behavior across layers.
+The architecture checks reject UI dependencies from shared/domain code,
+route-private imports across owners, client bypasses of server facades, and
+production imports of test/story support, including type-only dependencies. The
+app lint command also rejects eager runtime cycles. See
+[automated protection](module-boundaries.md#automated-protection) for import
+forms, test exemptions, and static-analysis limits.
 
 Custom ESLint rules are TypeScript sources under `eslint-rules/`, included in
 the app's strict typecheck. The ESLint config imports their `.ts` files
@@ -358,8 +359,8 @@ copy; technical admin tools and architecture docs may name Logto.
 
 ## Shared Utilities (`src/shared/`)
 
-`src/shared/account-utils.ts` contains pure utility functions used across
-routes, components, and server functions:
+`src/shared/accounts/account-utils.ts` contains pure utility functions used
+across routes, components, and server functions:
 
 | Function                                                        | Purpose                                                                                                                                                                          |
 | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -667,8 +668,8 @@ viewport and its tree scrollable on narrow layouts.
 
 ## Document Title Pattern
 
-- Use `createDocumentTitleHead` (`src/shared/document-title.ts`) from route
-  `head` metadata for document titles.
+- Use `createDocumentTitleHead` (`src/shared/navigation/document-title.ts`) from
+  route `head` metadata for document titles.
 - Match the page-specific document title to the visible page heading text. Use
   `Cashfolio` for routes without a page-specific title, otherwise use
   `<page title> · Cashfolio`.
@@ -1294,9 +1295,9 @@ grids, including account management and transaction lists.
 
 ## Validation Pattern
 
-Shared validators live in `src/shared/account-validation.ts` and are used both
-client-side (in Mantine form `validate`) and server-side (in server function
-handlers).
+Shared validators live in `src/shared/accounts/account-validation.ts` and are
+used both client-side (in Mantine form `validate`) and server-side (in server
+function handlers).
 
 - Per-field validators (e.g. `validateAccountName`) return an error message
   string or `null`
@@ -1311,8 +1312,22 @@ handlers).
 
 ## Transaction Editing (EditTransactionModal)
 
-`src/components/transaction-editor/edit-transaction-modal.tsx` handles
-create/edit of transactions with split bookings:
+`src/components/transaction-editor/edit-transaction-modal.tsx` is the public
+entry point for creating/editing transactions with split bookings.
+
+The public module keeps its component, props, and type exports stable. Its
+implementation is grouped under `edit-transaction-modal/`: `controller.ts`
+composes the form and grid owners and reports combined dirty state; `form.ts`
+owns uncontrolled form initialization, date propagation, provisional date input,
+and submission; `grid.ts` owns copied rows, columns, locking, and grid context;
+`grid-events.ts` contains booking edits and row mutations; `view.tsx` renders
+the existing controls. Field rules remain in the adjacent validation helper,
+with the existing values, unit-defaults, and dirty-state helpers reused.
+Submission stops active cell editing and waits for AG Grid's queued cell-change
+handlers before validation reads the latest form values. Repeated submits share
+the pending edit commit and retain the submission guard.
+
+The editor preserves these behaviors:
 
 - **Debit/credit mutual exclusivity**: setting one clears the other
 - **Current account booking**: locked (read-only) and non-deletable
@@ -1528,8 +1543,8 @@ bookings share the same unit identifier; amounts in different units are not
 summed for balancing.
 
 The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in
-`src/shared/account-utils.ts` produces these strings. Callers must guard that
-`unit` is set before calling it.
+`src/shared/accounts/account-utils.ts` produces these strings. Callers must
+guard that `unit` is set before calling it.
 
 For securities, unit identity intentionally uses only `symbol`. `tradeCurrency`
 is required for pricing and valuation flows, but it does not define the booking
@@ -1721,8 +1736,8 @@ still normalizes selected descendants out of its subtree roots. Display counts
 for the explicit selection. A shared batch planner evaluates prerequisites
 against the projected hierarchy and provides the same availability and operation
 order to the toolbar, submissions, retries, and server mutations. Pure account
-lifecycle rules live in `src/shared/account-tree-rules.ts` for server/browser
-reuse.
+lifecycle rules live in `src/shared/accounts/account-tree-rules.ts` for
+server/browser reuse.
 
 Selected rows can satisfy each other's hierarchy prerequisites. Unarchive runs
 ancestors before descendants and requires every blocking archived ancestor to be
@@ -1844,7 +1859,7 @@ context fallback is `DEFAULT_USER_LOCALE` (`en-US`) from `src/user-locale.ts`.
 Precision behavior:
 
 - **Display contexts** enforce unit-aware precision via
-  `src/shared/unit-format.ts`:
+  `src/shared/units/unit-format.ts`:
   - currencies: Unicode CLDR 48.2 standard display digits (with fallback to
     `2`), covering current and historical codes in `src/currencies.ts`; for
     example, COP and KRW use `0`, CHF uses `2`, KWD uses `3`, and CLF uses `4`
@@ -1854,10 +1869,10 @@ Precision behavior:
   review full decimal precision from the stored numeric value.
 
 Currency display digits are pinned in
-`src/shared/unit-format-currency-decimals.ts` so browser/runtime CLDR versions
-do not change display precision. Cash digits and cash rounding increments are
-not applied. Display formatting does not change stored amounts or calculation
-precision.
+`src/shared/units/unit-format-currency-decimals.ts` so browser/runtime CLDR
+versions do not change display precision. Cash digits and cash rounding
+increments are not applied. Display formatting does not change stored amounts or
+calculation precision.
 
 ## Session Storage for UI State
 

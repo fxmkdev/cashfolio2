@@ -23,8 +23,8 @@ import {
   fetchSecurityPriceFromMarketstack,
   fetchUsdPerCryptocurrencyRateFromCoinLayer,
   fetchUsdToCurrencyRateFromCurrencyLayer,
-} from "../server/valuation/providers";
-import { PROVIDER_USAGE_WRITE_DEADLINE_MS } from "../server/valuation/provider-usage";
+} from "../server/valuation/providers.server";
+import { PROVIDER_USAGE_WRITE_DEADLINE_MS } from "../server/valuation/provider-usage.server";
 
 const execute = promisify(execFile);
 const adminUrl = new URL(

@@ -16,7 +16,7 @@ import {
   vi,
 } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
-import { SESSION_COOKIE, hashSessionToken } from "./session-policy";
+import { SESSION_COOKIE, hashSessionToken } from "./session-policy.server";
 import { hashAuthSubject } from "./subject-revocation.server";
 import {
   closeTestProviders,
@@ -38,7 +38,7 @@ vi.mock("@tanstack/react-start/server", () => ({
   },
 }));
 vi.mock("./logto-management.server", () => ({ deleteLogtoUser }));
-vi.mock("../server/user-deletion-redis", () => ({
+vi.mock("../server/user-deletion-redis.server", () => ({
   deleteBookScopedRedisDataForAccountBooks: vi.fn(),
 }));
 

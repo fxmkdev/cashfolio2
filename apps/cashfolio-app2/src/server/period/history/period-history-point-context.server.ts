@@ -3,12 +3,12 @@ import { prisma } from "../../../prisma.server";
 import {
   classificationOptions,
   type ClassificationNode,
-} from "../../../shared/asset-class";
+} from "../../../shared/classification/asset-class";
 import { startOfUtcDay } from "../../../shared/date";
 import {
   getLegacyHoldingGainLossScope,
   type HistoryScopeOption,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import { buildNetWorthHistoryScopeOptions } from "./period-history-scopes.server";
 

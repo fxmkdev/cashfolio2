@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedAccountBookMutation } from "../../mutation-guard.server";
 import { withAccountBookMutation } from "../../account-book-mutation.server";
-import { withDatabaseConflictRetry } from "../../database-conflict-retry";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "../../period/cache/period-base-data-cache";
-import { readOrganizeSnapshot } from "../organize/data";
+import { withDatabaseConflictRetry } from "../../database-conflict-retry.server";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "../../period/cache/period-base-data-cache.server";
+import { readOrganizeSnapshot } from "../organize/data.server";
 import { planBulkLifecycle } from "../../../shared/hierarchy-organize/lifecycle";
 import { validateAccountTreeBatch } from "../organize/input";
 import {
@@ -11,9 +11,12 @@ import {
   archiveAccountGroupOperation,
   unarchiveAccountOperation,
   unarchiveAccountGroupOperation,
-} from "./status";
-import { deleteAccountOperation, deleteAccountGroupOperation } from "./delete";
-import type { OrganizeLifecycleAction } from "../../../shared/account-organize/types";
+} from "./status.server";
+import {
+  deleteAccountOperation,
+  deleteAccountGroupOperation,
+} from "./delete.server";
+import type { OrganizeLifecycleAction } from "../../../shared/accounts/organize/types";
 
 const operations = {
   archive: {

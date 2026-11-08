@@ -17,7 +17,7 @@ import {
   type HistoryPeriodMode,
   type HistoryViewSelection,
 } from "./-page-types";
-import { isHistoryScopedMetric } from "@/shared/history-scope";
+import { isHistoryScopedMetric } from "@/shared/reporting/history-scope";
 import { HistoryViewSelect } from "./-view-select";
 import {
   resolveHistoryAccountDrillTarget,

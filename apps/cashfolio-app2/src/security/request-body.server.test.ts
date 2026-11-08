@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 import { readBoundedRequest } from "./request-body.server";
 
 function request(body: BodyInit, headers?: HeadersInit, signal?: AbortSignal) {

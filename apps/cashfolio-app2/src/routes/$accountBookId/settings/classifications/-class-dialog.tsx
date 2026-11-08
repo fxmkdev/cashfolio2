@@ -1,8 +1,8 @@
 import { Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 import { useState } from "react";
-import type { ClassificationNode } from "@/shared/asset-class";
+import type { ClassificationNode } from "@/shared/classification/asset-class";
 import { AssetClassTreeSelect } from "@/components/controls/asset-class-tree-select";
-import { validateClassificationChange } from "@/shared/classification-rules";
+import { validateClassificationChange } from "@/shared/classification/classification-rules";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 export type ManagedClass = ClassificationNode & {

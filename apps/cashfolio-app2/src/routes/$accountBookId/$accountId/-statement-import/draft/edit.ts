@@ -1,7 +1,7 @@
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type { BookingValues } from "@/components/transaction-editor/edit-transaction-modal-types";
 import { createBookingUnitDefaults } from "@/components/transaction-editor/edit-transaction-modal-unit-defaults";
-import { getUnitIdentifier } from "@/shared/account-utils";
+import { getUnitIdentifier } from "@/shared/accounts/account-utils";
 import { toMoney } from "@/shared/money";
 import type { TransactionMutationValues } from "../../-ledger/page-view";
 import type { StatementImportDraft } from "../types";

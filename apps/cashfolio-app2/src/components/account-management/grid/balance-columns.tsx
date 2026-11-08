@@ -1,7 +1,7 @@
 import { Loader } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
-import { getCurrencyDecimals } from "@/shared/unit-format";
+import { getCurrencyDecimals } from "@/shared/units/unit-format";
 import type { GroupBalanceAggregation } from "./reference-balance-aggregation";
 import {
   isReferenceCurrencyTotalFooterRow,

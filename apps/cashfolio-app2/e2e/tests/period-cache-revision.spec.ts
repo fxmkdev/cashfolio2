@@ -1,13 +1,13 @@
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../src/server/classification-data";
-import { defaultAssetClassIds } from "../../src/shared/asset-class";
+} from "../../src/server/classification-data.server";
+import { defaultAssetClassIds } from "../../src/shared/classification/asset-class";
 import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "@playwright/test";
 import type { Prisma } from "../../src/.prisma-client/client";
 import { AccountType, Unit } from "../../src/.prisma-client/enums";
-import { withDatabaseConflictRetry } from "../../src/server/database-conflict-retry";
+import { withDatabaseConflictRetry } from "../../src/server/database-conflict-retry.server";
 import { prisma } from "../support/db-client";
 
 let bookId: string;

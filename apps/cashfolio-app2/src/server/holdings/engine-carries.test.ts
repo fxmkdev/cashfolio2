@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Money } from "../../shared/money";
 import { toMoney } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
-import { computeHoldingGainLossSplit } from "./engine";
+import { computeHoldingGainLossSplit } from "./engine.server";
 import {
   createHoldingBooking,
   HOLDING_ACCOUNT_ID,

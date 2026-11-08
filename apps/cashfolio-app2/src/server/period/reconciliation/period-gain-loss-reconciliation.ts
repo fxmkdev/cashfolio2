@@ -1,7 +1,7 @@
 import { startReadBudget } from "../../resource-context.server";
 import type { Money } from "../../../shared/money";
-import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache";
-import { loadAccountGainLossSources } from "./period-account-gain-loss-sources";
+import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache.server";
+import { loadAccountGainLossSources } from "./period-account-gain-loss-sources.server";
 import { toNumericMoney } from "../../money-boundary";
 import { formatUnitLabel } from "../period-unit-format";
 import { Unit } from "../../../.prisma-client/enums";
@@ -11,14 +11,14 @@ import { startOfUtcDay } from "../../../shared/date";
 import {
   formatMonthPeriodLabel,
   normalizePeriodValue,
-} from "../../../shared/period";
-import { buildRealAccountReconciliation } from "./period-gain-loss-reconciliation-real-account";
+} from "../../../shared/reporting/period";
+import { buildRealAccountReconciliation } from "./period-gain-loss-reconciliation-real-account.server";
 import { VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX } from "./period-gain-loss-reconciliation-shared";
-import { buildTransferClearingReconciliation } from "./period-gain-loss-reconciliation-transfer-clearing";
+import { buildTransferClearingReconciliation } from "./period-gain-loss-reconciliation-transfer-clearing.server";
 import type {
   GainLossReconciliationDiagnostic,
   PeriodGainLossReconciliation,
-} from "../../../shared/gain-loss-reconciliation";
+} from "../../../shared/reporting/gain-loss-reconciliation";
 import {
   normalizeUserLocaleInput,
   type UserLocale,

@@ -1,10 +1,10 @@
 import { planBulkLifecycle } from "@/shared/hierarchy-organize/lifecycle";
-import { planAccountMove } from "@/shared/account-organize/move";
+import { planAccountMove } from "@/shared/accounts/organize/move";
 import type {
   OrganizeNode,
   OrganizeSnapshot,
-} from "@/shared/account-organize/types";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
+} from "@/shared/accounts/organize/types";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/resources/mutation-errors";
 import type { OrganizerApi } from "./use-organizer";
 
 export const organizeStoryNodes: OrganizeNode[] = [

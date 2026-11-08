@@ -1,6 +1,6 @@
 import { Button, Card, Stack, Table, Text, Title } from "@mantine/core";
 import { formatLocalDate } from "@/shared/date";
-import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
+import type { PeriodGainLossReconciliation } from "@/shared/reporting/gain-loss-reconciliation";
 
 export function GainLossSourceDetails({
   sources,

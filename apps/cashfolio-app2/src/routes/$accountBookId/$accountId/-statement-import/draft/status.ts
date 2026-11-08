@@ -1,14 +1,14 @@
 import { isBeforeDate } from "@/shared/date";
 import { Unit } from "@/.prisma-client/enums";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import {
   getUnitIdentifier,
   isExpenseAccount,
   isIncomeAccount,
   isOpeningBalancesAccount,
-} from "@/shared/account-utils";
+} from "@/shared/accounts/account-utils";
 import { formatUtcDate, parseUtcDayDate, startOfUtcDay } from "@/shared/date";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import type {
   StatementImportDraft,
   StatementImportDraftStatus,

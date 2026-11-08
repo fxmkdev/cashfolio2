@@ -2,7 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserDeletionPreview } from "@/server/user-deletion-plan";
+import type { UserDeletionPreview } from "@/shared/users/user-deletion";
 
 type PageData = { deleted: boolean; preview: UserDeletionPreview | null };
 type RouteOptions = {

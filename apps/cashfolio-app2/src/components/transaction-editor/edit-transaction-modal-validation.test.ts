@@ -4,9 +4,12 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../../shared/gain-loss-transaction-invariant";
-import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
-import type { AccountOption } from "@/shared/account-options";
+import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../../shared/transactions/gain-loss-transaction-invariant";
+import {
+  validateEditTransactionBookingsRoot,
+  validateEditTransactionDate,
+} from "./edit-transaction-modal-validation";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import type { BookingValues } from "./edit-transaction-modal-types";
 
 function account(
@@ -216,5 +219,34 @@ describe("validateEditTransactionBookingsRoot", () => {
     );
 
     expect(result).toBeNull();
+  });
+});
+
+describe("split transaction date validation", () => {
+  test.each([
+    [undefined, "Date is required"],
+    [null, "Date is required"],
+    ["", "Date is required"],
+    ["invalid", "Date is invalid"],
+    ["2026-01-03", "Date cannot be before account book start date (1/4/2026)."],
+    ["2026-01-04", null],
+    ["2026-02-01", null],
+  ])("validates %s at the account book boundary", (value, expected) => {
+    expect(
+      validateEditTransactionDate({
+        value,
+        accountBookStartDay: new Date("2026-01-04T00:00:00.000Z"),
+        locale: "en-US",
+      }),
+    ).toBe(expected);
+  });
+  test("uses the active locale for input and the start-date error label", () => {
+    expect(
+      validateEditTransactionDate({
+        value: "03.01.2026",
+        accountBookStartDay: new Date("2026-01-04T00:00:00.000Z"),
+        locale: "de-CH",
+      }),
+    ).toBe("Date cannot be before account book start date (4.1.2026).");
   });
 });

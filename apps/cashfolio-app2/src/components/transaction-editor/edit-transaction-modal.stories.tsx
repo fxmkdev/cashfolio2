@@ -150,3 +150,88 @@ export const PendingSubmitDisablesActions: Story = {
     await expect(saveButton).not.toHaveAttribute("data-loading");
   },
 };
+
+export const SubmitCommitsActiveCell: Story = {
+  args: { initialValues: editTransactionInitialValues, onDirtyChange: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const row = (await canvas.findByText("Groceries (Expense)")).closest(
+      ".ag-row",
+    );
+    const cell = row?.querySelector<HTMLElement>('[col-id="description"]');
+    if (!cell) throw new Error("Missing booking description cell");
+    await userEvent.click(cell);
+    const input = await within(cell).findByRole("textbox");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Pending booking note");
+    await waitFor(() =>
+      expect(args.onDirtyChange).toHaveBeenLastCalledWith(true),
+    );
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bookings: expect.arrayContaining([
+            expect.objectContaining({
+              accountId: "account-groceries",
+              description: "Pending booking note",
+            }),
+          ]),
+        }),
+      ),
+    );
+  },
+};
+
+export const ProvisionalDateDirtyState: Story = {
+  args: { onDirtyChange: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(args.onDirtyChange).toHaveBeenLastCalledWith(false),
+    );
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Date" }),
+      "invalid",
+    );
+    await waitFor(() =>
+      expect(args.onDirtyChange).toHaveBeenLastCalledWith(true),
+    );
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(args.onDirtyChange).toHaveBeenLastCalledWith(false),
+    );
+  },
+};
+
+export const FailedSubmitRetainsDraft: Story = {
+  args: {
+    initialValues: editTransactionInitialValues,
+    onSubmit: fn(async () => {
+      throw new Error("Draft could not be saved.");
+    }),
+    onRefreshConstraints: fn(async () => undefined),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const description = canvas.getByRole("textbox", { name: "Description" });
+    await userEvent.clear(description);
+    await userEvent.type(description, "Retained draft");
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "Draft could not be saved.",
+    );
+    await waitFor(() =>
+      expect(args.onRefreshConstraints).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled(),
+    );
+    await expect(description).toHaveValue("Retained draft");
+    await expect(canvas.getByText("Groceries (Expense)")).toBeVisible();
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Retained draft" }),
+    );
+  },
+};

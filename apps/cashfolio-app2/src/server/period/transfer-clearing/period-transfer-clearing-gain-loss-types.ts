@@ -1,5 +1,5 @@
 import type { Unit } from "../../../.prisma-client/enums";
-import type { HoldingGainLossSkippedReason } from "../../../shared/gain-loss-reconciliation";
+import type { HoldingGainLossSkippedReason } from "../../../shared/reporting/gain-loss-reconciliation";
 import type { Money } from "../../../shared/money";
 import type {
   HoldingExecutionLotMatch,

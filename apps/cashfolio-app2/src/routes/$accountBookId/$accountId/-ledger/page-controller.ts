@@ -3,7 +3,7 @@ import { useRefreshAssetClasses } from "@/classification-context";
 import {
   getAccountConstraintMessage,
   getAccountManagementContext,
-} from "@/shared/account-presentation";
+} from "@/shared/accounts/account-presentation";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import { deleteTransactions, rebookBookings } from "@/server/transactions";
@@ -15,11 +15,11 @@ import {
   type TransformedFormValues,
 } from "@/components/account-editor/edit-account-modal";
 import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
-import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
+import { createAccountBookUnitUsage } from "@/shared/accounts/account-book-unit-usage";
 import {
   getSystemManagedAccountSubtypeMessage,
   isSystemManagedEquitySubtype,
-} from "@/shared/system-managed-equity-subtypes";
+} from "@/shared/accounts/system-managed-equity-subtypes";
 import { useLedgerColumnDefs } from "./page-columns";
 import { useLedgerAccountOptions } from "./page-account-options";
 import { getUnitLabel } from "./page-data";

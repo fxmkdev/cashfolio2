@@ -1,5 +1,5 @@
 import { isPersistedTreeRow, isPersistedGroupRow } from "../grid/rows";
-import { getManagementTabs } from "@/shared/account-tabs";
+import { getManagementTabs } from "@/shared/accounts/account-tabs";
 import type { AccountsPageViewProps } from "../view-types";
 import { isVirtualArchivedGroup } from "../grid/archived-rows";
 import { accountGroups, existingNodes } from "./fixtures";

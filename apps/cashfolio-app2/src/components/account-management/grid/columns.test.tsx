@@ -1,10 +1,10 @@
 import { buildAccountFilterContext } from "./filter-context";
-import { defaultAssetClassIds } from "@/shared/asset-class";
+import { defaultAssetClassIds } from "@/shared/classification/asset-class";
 import { describe, expect, it, vi } from "vitest";
 import { type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { toAccountGridTreeRow, type AccountsGridRow } from "./rows";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import { useAccountTreeColumnDefs } from "./columns";
 import {
   createAccountRow,

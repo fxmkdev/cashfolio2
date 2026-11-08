@@ -26,7 +26,7 @@ export const Route = createFileRoute("/$accountBookId")({
       },
       { getCurrentUserCanAccessAdmin },
     ] = await Promise.all([
-      import("@/account-books/options"),
+      import("@/components/account-book-navigation/options"),
       import("@/server/app-version"),
       import("@/server/user-profile"),
       import("@/server/admin-users"),

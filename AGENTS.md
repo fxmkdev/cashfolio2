@@ -87,6 +87,11 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## cashfolio-app2 Working Conventions
 
+- Follow
+  [module ownership and import boundaries](apps/cashfolio-app2/docs/module-boundaries.md)
+  for shared contracts, pure logic, shared UI, route privacy, server facades,
+  server-only filenames, and test/story support. Run the app lint command to
+  check import boundaries and eager runtime cycles.
 - Follow the
   [UI capitalization guidelines](apps/cashfolio-app2/docs/ui-patterns.md#capitalization):
   use Title Case for short UI labels and titles, sentence case for prose,
@@ -168,6 +173,7 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## Architecture References
 
+- [Module ownership and import boundaries](apps/cashfolio-app2/docs/module-boundaries.md)
 - [Routing](apps/cashfolio-app2/docs/routing.md)
 - [Server functions](apps/cashfolio-app2/docs/server-functions.md)
 - [Account list valuation and reference balances](apps/cashfolio-app2/docs/valuation-reference-balances.md)

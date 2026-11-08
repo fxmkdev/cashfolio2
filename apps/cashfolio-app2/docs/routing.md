@@ -5,6 +5,7 @@ paths are relative to that app directory.
 
 Related docs:
 
+- [Module ownership and import boundaries](module-boundaries.md)
 - [Server functions](server-functions.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)
 - [Valuation caching](valuation-caching.md)
@@ -336,9 +337,10 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
 
 ### Shared Route Dependencies
 
-Production code shared across routes belongs outside `src/routes/`, including
-helpers reused by child routes. Do not import another route's private
-implementation or add route-private compatibility re-exports. Keep route
+Production code shared across route owners belongs outside `src/routes/`.
+Route-private helpers may serve descendants within their owner's subtree; move
+them to shared owners when needed elsewhere. Do not import a sibling route's
+private implementation or add route-private compatibility re-exports. Keep route
 registration, navigation callbacks, and invalidation wiring in the routes;
 colocate tests and stories with their shared implementation. Test and story
 fixtures may still use route-local helpers or shell decoration.
@@ -349,16 +351,16 @@ fixtures may still use route-local helpers or shell decoration.
 - The user menu lives in `src/components/navigation/user-menu.tsx` and is shared
   by the account-book and Admin shells.
 - Account-book options loading and browser caching belong to
-  `src/account-books/options.ts`. `loadUserAccountBooks` serves the shell's
-  switcher, sharing in-flight and completed requests in the browser and clearing
-  rejected requests so later calls can retry. SSR calls always fetch
-  independently. Creation and Settings use the same invalidation function after
-  successful creation, update, and deletion, before their existing navigation or
-  router invalidation. Creation's loader continues to fetch options directly
-  from the server function.
+  `src/components/account-book-navigation/options.ts`. `loadUserAccountBooks`
+  serves the shell's switcher, sharing in-flight and completed requests in the
+  browser and clearing rejected requests so later calls can retry. SSR calls
+  always fetch independently. Creation and Settings use the same invalidation
+  function after successful creation, update, and deletion, before their
+  existing navigation or router invalidation. Creation's loader continues to
+  fetch options directly from the server function.
 - Report and reconciliation share the pure period-search contract in
-  `src/shared/report-period-search.ts`. Period constants are imported directly
-  from `src/shared/period.ts`.
+  `src/shared/reporting/report-period-search.ts`. Period constants are imported
+  directly from `src/shared/reporting/period.ts`.
 
 ### Shared Account Management
 
@@ -390,11 +392,11 @@ rendering, and keyboard handling while retaining live refs and memoized inputs.
 Routes own search registration, redirects, loader dependencies, document heads,
 navigation callbacks, ledger navigation state, and invalidation wiring. Pure
 search parsing and legacy URL normalization live in
-`src/shared/account-management-search.ts`; common tab definitions and types live
-in `src/shared/account-tabs.ts`. The feature retains typed navigation links and
-the existing shared hierarchy navigation/session helpers. Production feature
-modules do not import route-private modules; the story harness alone includes
-the Settings navigation shell as a fixture.
+`src/shared/accounts/account-management-search.ts`; common tab definitions and
+types live in `src/shared/accounts/account-tabs.ts`. The feature retains typed
+navigation links and the existing shared hierarchy navigation/session helpers.
+Production feature modules do not import route-private modules; the story
+harness alone includes the Settings navigation shell as a fixture.
 
 ### Search Parameters
 

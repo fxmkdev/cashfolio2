@@ -10,8 +10,8 @@ import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
   isBookingValueCompatibleWithAccountType,
-} from "../../shared/account-utils";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
+} from "../../shared/accounts/account-utils";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/accounts/opening-balances";
 
 export type RebookBookingValidationInput = {
   accountId: string;

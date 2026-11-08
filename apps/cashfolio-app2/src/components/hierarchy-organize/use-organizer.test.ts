@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock(
   "react",
-  async () => (await import("./organizer-hook-harness")).reactHooksMock,
+  async () => (await import("./organizer-test-hook-harness")).reactHooksMock,
 );
 import {
   render,
@@ -11,8 +11,8 @@ import {
   setupOrganizerTests,
 } from "./organizer-test-support";
 import { createOrganizerStoryApi, organizeStoryNodes } from "./story-fixtures";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
-import { harness } from "./organizer-hook-harness";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/resources/mutation-errors";
+import { harness } from "./organizer-test-hook-harness";
 
 setupOrganizerTests();
 

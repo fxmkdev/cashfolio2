@@ -1,6 +1,6 @@
 import { Anchor, Group } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { getAccountEntityLabel } from "@/shared/account-presentation";
+import { getAccountEntityLabel } from "@/shared/accounts/account-presentation";
 import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
 import {
   BulkTransactionToolbar,

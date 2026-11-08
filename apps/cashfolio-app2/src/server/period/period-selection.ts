@@ -15,7 +15,7 @@ import {
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
-} from "../../shared/period";
+} from "../../shared/reporting/period";
 import { addUtcDays, startOfUtcDay, startOfUtcMonth } from "../../shared/date";
 import { DEFAULT_USER_LOCALE, type UserLocale } from "../../user-locale";
 

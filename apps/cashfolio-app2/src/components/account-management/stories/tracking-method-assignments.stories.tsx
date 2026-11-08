@@ -1,4 +1,4 @@
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/resources/mutation-errors";
 import { Box } from "@mantine/core";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Unit } from "@/.prisma-client/enums";

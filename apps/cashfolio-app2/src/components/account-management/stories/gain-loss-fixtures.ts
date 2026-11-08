@@ -1,4 +1,4 @@
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import type { TreeRow } from "../grid/rows";
 import type { AccountsStoryOptions } from "./types";
 export function getStoryGainLossData(

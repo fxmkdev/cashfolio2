@@ -4,11 +4,11 @@ import {
   getGroupArchiveAvailability,
   getGroupDeleteAvailability,
   type ActionAvailability,
-} from "../account-tree-rules";
+} from "../accounts/account-tree-rules";
 import type {
   OrganizeNode as AccountNode,
   OrganizeNodeRef as AccountNodeRef,
-} from "../account-organize/types";
+} from "../accounts/organize/types";
 import type {
   OrganizeLifecycleAction,
   OrganizeActionAvailability,

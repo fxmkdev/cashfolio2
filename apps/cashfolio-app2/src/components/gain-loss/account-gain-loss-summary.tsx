@@ -12,13 +12,13 @@ import {
 import type {
   AccountGainLossDetails,
   AccountGainLossSummary as Summary,
-} from "@/shared/account-gain-loss";
+} from "@/shared/accounts/account-gain-loss";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 
 export function GainLossSummaryValues({
   summary,

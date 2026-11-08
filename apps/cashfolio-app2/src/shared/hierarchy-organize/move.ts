@@ -1,5 +1,5 @@
-import { planAccountMove } from "../account-organize/move";
-import { validateClassificationChange } from "../classification-rules";
+import { planAccountMove } from "../accounts/organize/move";
+import { validateClassificationChange } from "../classification/classification-rules";
 import { planStructuralMove } from "./structure";
 import type {
   AssetClassOrganizeNode,

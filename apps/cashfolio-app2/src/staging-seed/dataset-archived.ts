@@ -1,4 +1,4 @@
-import { defaultAssetClassIds } from "../shared/asset-class";
+import { defaultAssetClassIds } from "../shared/classification/asset-class";
 import Decimal from "decimal.js";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";

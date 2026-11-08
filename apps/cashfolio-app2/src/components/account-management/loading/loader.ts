@@ -1,6 +1,6 @@
 import { getAccountsPageData } from "@/server/accounts";
-import type { AccountsMode, TabValue } from "@/shared/account-tabs";
-import { getTabDefinition } from "@/shared/account-tabs";
+import type { AccountsMode, TabValue } from "@/shared/accounts/account-tabs";
+import { getTabDefinition } from "@/shared/accounts/account-tabs";
 
 export async function loadAccountsPageData(args: {
   accountBookId: string;

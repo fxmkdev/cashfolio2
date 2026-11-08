@@ -194,9 +194,9 @@ describe("period read consistency against disposable PostgreSQL", () => {
   });
 
   it("keeps account-page metadata, selectors, and balances in the same snapshot", async () => {
-    const treeData = await import("../../accounts/queries/tree-data");
+    const treeData = await import("../../accounts/queries/tree-data.server");
     const { queryAccountsPageData } =
-      await import("../../accounts/queries/page");
+      await import("../../accounts/queries/page.server");
     let started!: () => void;
     let release!: () => void;
     const ready = new Promise<void>((resolve) => {

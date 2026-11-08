@@ -10,12 +10,12 @@ import { LinkAnchor } from "@/components/navigation/link-anchor";
 import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import {
   getUniqueMultiValueFilterLabels,
   multiValueSetFilterColumn,
 } from "@/components/grid/multi-value-set-filter";
-import { isReferenceCurrencyUnit } from "@/shared/reference-currency-display";
+import { isReferenceCurrencyUnit } from "@/shared/units/reference-currency-display";
 import type { LedgerRow } from "./page-types";
 import { LedgerActionsCell } from "./actions-cell";
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";

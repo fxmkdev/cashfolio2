@@ -1,7 +1,7 @@
 import {
   defaultAssetClassNodes,
   type ClassificationNode,
-} from "../../../shared/asset-class";
+} from "../../../shared/classification/asset-class";
 import type { PeriodGroupNode } from "./period-breakdown-state";
 export const UNATTRIBUTED_GROUP_ID = "virtual:gain-loss-unattributed";
 export function buildAssetClassGroups(

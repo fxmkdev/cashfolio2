@@ -11,7 +11,7 @@ import {
   deleteAssetClass,
 } from "@/server/classifications";
 import { ClassificationsPageView } from "./-page-view";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 export const Route = createFileRoute(
   "/$accountBookId/settings/classifications",
 )({

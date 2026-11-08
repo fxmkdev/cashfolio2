@@ -1,4 +1,4 @@
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import {
   useCallback,
   useMemo,
@@ -7,7 +7,7 @@ import {
   type MouseEvent,
 } from "react";
 import { getReportNodeLabel } from "./-account-label";
-import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import {
   getBreakdownDrillState,

@@ -9,9 +9,9 @@ const cache = vi.hoisted(() => ({
   storeMissedAttemptForSeriesTimestamp: vi.fn(),
   clearMissedAttemptForSeriesTimestamp: vi.fn(),
 }));
-vi.mock("./cache", () => cache);
-vi.mock("./provider-usage", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./provider-usage")>()),
+vi.mock("./cache.server", () => cache);
+vi.mock("./provider-usage.server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./provider-usage.server")>()),
   recordValuationProviderRequest: vi.fn().mockResolvedValue(undefined),
 }));
 import {
@@ -20,12 +20,12 @@ import {
   checkResourceBudget,
   withResourceRequest,
 } from "../resource-context.server";
-import { fetchProviderResponse } from "./providers/request";
-import { getRateWithBacktracking } from "./backtracking";
+import { fetchProviderResponse } from "./providers/request.server";
+import { getRateWithBacktracking } from "./backtracking.server";
 import { deferred } from "../test-support/deferred";
 import { withUserResourceRequest } from "../test-support/resource-request";
-import { recordValuationProviderRequest } from "./provider-usage";
-import { fetchSecurityPriceFromMarketstack } from "./providers/marketstack";
+import { recordValuationProviderRequest } from "./provider-usage.server";
+import { fetchSecurityPriceFromMarketstack } from "./providers/marketstack.server";
 import { getHistoryWindow } from "../period/history/history-window";
 import { loadCompleteHistory } from "@/routes/$accountBookId/history/-history-loading";
 

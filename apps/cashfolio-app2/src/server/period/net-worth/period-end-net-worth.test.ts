@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const convertBookingValueToReference = vi.hoisted(() => vi.fn());
 
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReference,
 }));
 
 import { loadPeriodEndNetWorth } from "./period-end-net-worth.server";
-import { type PeriodBaseData } from "../cache/period-base-data-cache";
+import { type PeriodBaseData } from "../cache/period-base-data-cache.server";
 
 function createBaseData(input: {
   endOfPeriodRawBalances: Array<{ accountId: string; rawBalance: number }>;

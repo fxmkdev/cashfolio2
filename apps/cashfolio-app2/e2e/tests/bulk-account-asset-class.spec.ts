@@ -5,8 +5,8 @@ import {
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../src/server/classification-data";
-import { defaultAssetClassIds } from "../../src/shared/asset-class";
+} from "../../src/server/classification-data.server";
+import { defaultAssetClassIds } from "../../src/shared/classification/asset-class";
 import { createId } from "@paralleldrive/cuid2";
 import { AccountType, Unit } from "../../src/.prisma-client/enums";
 import { prisma } from "../support/db-client";

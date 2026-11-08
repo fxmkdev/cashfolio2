@@ -1,12 +1,11 @@
 import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
-import type { UserDeletionPreview } from "./user-deletion-plan";
+import type { UserDeletionPreview } from "../shared/users/user-deletion";
 
 export type {
   UserDeletionAccountBook,
   UserDeletionPreview,
-  DeletionPlan,
-  LinkedAccountBook,
-} from "./user-deletion-plan";
+} from "../shared/users/user-deletion";
+export type { DeletionPlan, LinkedAccountBook } from "./user-deletion-plan";
 export { planUserDeletionFromLinks } from "./user-deletion-plan";
 
 export const getUserDeletionPreview = createServerFn({

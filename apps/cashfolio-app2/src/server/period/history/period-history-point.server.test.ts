@@ -17,7 +17,7 @@ vi.mock("../../../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("../cache/period-history-metrics-cache", () => ({
+vi.mock("../cache/period-history-metrics-cache.server", () => ({
   getOrLoadPeriodHistoryPointMetrics,
 }));
 

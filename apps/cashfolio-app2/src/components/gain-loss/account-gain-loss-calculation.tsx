@@ -1,13 +1,13 @@
 import { Alert, Stack, Text, Title } from "@mantine/core";
 import { useMemo, useState } from "react";
-import type { AccountGainLossDetails } from "@/shared/account-gain-loss";
+import type { AccountGainLossDetails } from "@/shared/accounts/account-gain-loss";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
   getUnitDisplayDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { DataGrid } from "@/components/grid/data-grid";
 import {
   buildOpenLotColumns,

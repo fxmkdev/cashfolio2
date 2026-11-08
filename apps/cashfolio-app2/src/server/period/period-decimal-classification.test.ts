@@ -4,7 +4,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { defaultAssetClassIds } from "../../shared/asset-class";
+import { defaultAssetClassIds } from "../../shared/classification/asset-class";
 import { toMoney } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
 import type { PeriodBaseData } from "./base-data/period-base-data-types";

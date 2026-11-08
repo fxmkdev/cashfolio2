@@ -1,6 +1,6 @@
 import type { TreeNodeData } from "@mantine/core";
 import { AccountType } from "@/.prisma-client/enums";
-import { sortAccountHierarchyNodes } from "@/shared/account-hierarchy-order";
+import { sortAccountHierarchyNodes } from "@/shared/accounts/account-hierarchy-order";
 
 type NavigationAccount = {
   id: string;

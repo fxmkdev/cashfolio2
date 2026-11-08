@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 import { ResourceLimitError } from "./resource-error";
 
 export type ResourceContext = {

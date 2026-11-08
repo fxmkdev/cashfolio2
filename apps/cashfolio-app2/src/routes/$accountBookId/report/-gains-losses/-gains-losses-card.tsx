@@ -10,7 +10,7 @@ import {
 } from "../-selector/-chart-type-segmented-control";
 import { DrilldownCardShell } from "../-breakdown/-drilldown-card-shell";
 import { GainsLossesTable } from "./-gains-losses-table";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 
 type GainsLossesCardProps = {
   grouping?: ReportingGrouping;

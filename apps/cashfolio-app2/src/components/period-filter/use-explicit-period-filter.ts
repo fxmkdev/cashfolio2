@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,
@@ -7,7 +7,7 @@ import {
   getPeriodStepValue,
   getYearPickerValue,
   type PeriodMode,
-} from "@/shared/period-selector-model";
+} from "@/shared/reporting/period-selector-model";
 import type { UserLocale } from "@/user-locale";
 import type { PeriodFilterActionProps } from "./period-filter-action";
 

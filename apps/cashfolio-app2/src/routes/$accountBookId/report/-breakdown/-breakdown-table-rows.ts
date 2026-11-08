@@ -1,4 +1,4 @@
-import type { BreakdownNodeKind } from "@/shared/breakdown-hierarchy";
+import type { BreakdownNodeKind } from "@/shared/reporting/breakdown-hierarchy";
 import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 
 export const BREAKDOWN_TOTAL_FOOTER_ROW_ID = "__breakdown_total_footer__";

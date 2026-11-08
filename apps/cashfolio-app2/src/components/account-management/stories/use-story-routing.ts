@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { tabs, type TabValue, type AccountsMode } from "@/shared/account-tabs";
+import {
+  tabs,
+  type TabValue,
+  type AccountsMode,
+} from "@/shared/accounts/account-tabs";
 import type { AccountsStoryOptions } from "./types";
 
 export function useStoryRouting({

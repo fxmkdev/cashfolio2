@@ -6,7 +6,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { RowActionsMenu } from "@/components/grid/row-actions-menu";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import type { LedgerRow } from "./page-types";
 import type { useLedgerColumnDefs } from "./page-columns";
 

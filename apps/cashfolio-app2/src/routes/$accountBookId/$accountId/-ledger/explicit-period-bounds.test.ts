@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import {
   buildPeriodSelectorModel,
   getPeriodStepValue,
-} from "@/shared/period-selector-model";
+} from "@/shared/reporting/period-selector-model";
 import { clampLedgerExplicitPeriodToBounds } from "./explicit-period-bounds";
 import { parseLedgerExplicitPeriod } from "./page-types";
 

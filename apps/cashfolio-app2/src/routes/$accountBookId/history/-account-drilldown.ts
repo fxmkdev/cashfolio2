@@ -2,8 +2,8 @@ import {
   isHistoryScopedMetric,
   type HistoryScopeOption,
   type HistoryScopeSelection,
-} from "@/shared/history-scope";
-import { parseExplicitPeriodSelection } from "@/shared/period";
+} from "@/shared/reporting/history-scope";
+import { parseExplicitPeriodSelection } from "@/shared/reporting/period";
 import type { HistoryMetric } from "./-page-types";
 
 export type HistoryAccountDrillTarget = {

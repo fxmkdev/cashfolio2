@@ -1,15 +1,15 @@
-import { normalizePeriodValue } from "../../../shared/period";
+import { normalizePeriodValue } from "../../../shared/reporting/period";
 import { resolvePeriodSelection } from "../period-selection";
 import {
   loadPeriodHistoryPointContext,
   type PeriodHistoryPointContext,
 } from "./period-history-point-context.server";
-import { getOrLoadPeriodHistoryPointMetrics } from "../cache/period-history-metrics-cache";
+import { getOrLoadPeriodHistoryPointMetrics } from "../cache/period-history-metrics-cache.server";
 import type { HistoryValuationContext } from "./period-history-point-metrics.server";
 import type {
   HistoryScopeSelection,
   HistoryScopedMetric,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import type { UserLocale } from "../../../user-locale";
 
 export { loadPeriodHistoryPointContext };

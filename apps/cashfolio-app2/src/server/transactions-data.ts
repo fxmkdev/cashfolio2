@@ -9,10 +9,10 @@ import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelectionFromUnknown,
   type ExplicitPeriodSelection,
-} from "../shared/period";
+} from "../shared/reporting/period";
 
-import { mapWithConcurrencyLimit } from "./concurrency";
-import { convertBookingValueToReference } from "./period/period-conversion";
+import { mapWithConcurrencyLimit } from "./concurrency.server";
+import { convertBookingValueToReference } from "./period/period-conversion.server";
 import { deriveTransactionsRows } from "./transactions-data-derivation";
 
 const TRANSACTIONS_REFERENCE_CONVERSION_CONCURRENCY = 12;

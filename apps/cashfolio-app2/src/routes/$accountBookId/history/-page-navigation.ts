@@ -15,7 +15,7 @@ import {
   isHistoryScopedMetric,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
-} from "@/shared/history-scope";
+} from "@/shared/reporting/history-scope";
 
 type HistoryNavigationSearch = Record<string, unknown>;
 

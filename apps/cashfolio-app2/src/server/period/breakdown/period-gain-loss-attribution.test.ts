@@ -1,4 +1,4 @@
-import { defaultAssetClassIds } from "../../../shared/asset-class";
+import { defaultAssetClassIds } from "../../../shared/classification/asset-class";
 import {
   accumulateGainLossContribution,
   type GainLossContributionAccumulator,
@@ -15,7 +15,7 @@ import {
 import {
   normalizeGainLossScope,
   parseHistoryScopeSelection,
-} from "../../../shared/history-scope";
+} from "../../../shared/reporting/history-scope";
 import { buildHistoryGainLossScopeOptions } from "../history/period-history-scopes.server";
 
 const account = (id: string, assetClassId: string | null) => ({

@@ -6,7 +6,7 @@ import {
 } from "../../.prisma-client/enums";
 import { moneySum, toMoney } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
-import { computeHoldingGainLossSplit } from "./engine";
+import { computeHoldingGainLossSplit } from "./engine.server";
 import type {
   HoldingAccountExecutionEvent,
   HoldingAccountOpenLotValuation,

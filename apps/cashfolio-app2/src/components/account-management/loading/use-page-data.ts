@@ -6,7 +6,7 @@ import { useCallback } from "react";
 import { useAccountsReferenceBalanceRows } from "./reference-balances";
 import { loadAccountsPageData } from "./loader";
 import type { AccountsPageViewProps } from "../view-types";
-import { type AccountManagementContext } from "@/shared/account-presentation";
+import { type AccountManagementContext } from "@/shared/accounts/account-presentation";
 export type AccountsPageDataOptions = {
   managementContext?: AccountManagementContext;
   loaderData: Awaited<ReturnType<typeof loadAccountsPageData>>;

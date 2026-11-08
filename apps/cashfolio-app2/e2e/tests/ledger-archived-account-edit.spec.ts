@@ -5,7 +5,7 @@ import {
 import {
   assetClassSelection,
   withAssetClassId,
-} from "../../src/server/classification-data";
+} from "../../src/server/classification-data.server";
 import { createId } from "@paralleldrive/cuid2";
 import { seedDatabase, type SeededData } from "../support/db";
 import { prisma } from "../support/db-client";

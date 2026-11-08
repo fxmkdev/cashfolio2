@@ -7,7 +7,7 @@ import {
 } from "../../shared/money";
 import { type AccountType, type Unit } from "../../.prisma-client/enums";
 
-import { isBalanceAccount } from "../../shared/account-presentation";
+import { isBalanceAccount } from "../../shared/accounts/account-presentation";
 import { classifyBalanceAccount } from "./balance-classification";
 
 export type EndOfPeriodBalanceAccount = {

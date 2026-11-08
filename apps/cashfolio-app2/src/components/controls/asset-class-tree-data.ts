@@ -2,7 +2,7 @@ import type { TreeNodeData } from "@mantine/core";
 import {
   classificationOptions,
   type ClassificationNode,
-} from "../../shared/asset-class";
+} from "../../shared/classification/asset-class";
 
 export function buildAssetClassTreeData(
   nodes: readonly ClassificationNode[],

@@ -1,4 +1,4 @@
-import { defaultAssetClassIds } from "../../shared/asset-class";
+import { defaultAssetClassIds } from "../../shared/classification/asset-class";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AccountType,
@@ -86,8 +86,10 @@ vi.mock("../../security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext,
 }));
 
-vi.mock("../../shared/account-validation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../shared/account-validation")>()),
+vi.mock("../../shared/accounts/account-validation", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../shared/accounts/account-validation")
+  >()),
   validateAccountInput,
   validateAccountGroupInput,
 }));
@@ -96,7 +98,7 @@ vi.mock("../../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("../period/cache/period-base-data-cache", () => ({
+vi.mock("../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook,
 }));
 
@@ -488,8 +490,8 @@ describe("updateAccount opening balance management", () => {
 
   it("ignores stale submitted unit identity fields when updating unitless equity accounts", async () => {
     const actual = await vi.importActual<
-      typeof import("../../shared/account-validation")
-    >("../../shared/account-validation");
+      typeof import("../../shared/accounts/account-validation")
+    >("../../shared/accounts/account-validation");
     validateAccountInput.mockImplementationOnce(actual.validateAccountInput);
     tx.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.EQUITY,
@@ -557,8 +559,8 @@ describe("updateAccount opening balance management", () => {
 
   it("stores newly created equity accounts without hidden unit identity fields", async () => {
     const actual = await vi.importActual<
-      typeof import("../../shared/account-validation")
-    >("../../shared/account-validation");
+      typeof import("../../shared/accounts/account-validation")
+    >("../../shared/accounts/account-validation");
     validateAccountInput.mockImplementationOnce(actual.validateAccountInput);
     tx.account.create.mockResolvedValueOnce({
       id: "account-2",

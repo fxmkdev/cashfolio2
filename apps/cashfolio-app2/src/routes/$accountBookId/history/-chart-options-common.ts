@@ -7,7 +7,7 @@ import {
   getHistoryRangeButtons,
   getHistoryRangeControlStyles,
 } from "./-range-controls";
-import { parseExplicitPeriodSelection } from "@/shared/period";
+import { parseExplicitPeriodSelection } from "@/shared/reporting/period";
 
 export function createHistorySeriesContext(args: HistoryChartOptionsArgs) {
   const positiveFillColor = args.isDarkMode

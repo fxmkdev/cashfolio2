@@ -1,5 +1,5 @@
 import { ResourceLimitError } from "./resource-error";
-import { RESOURCE_ERROR_HEADER } from "../shared/resource-error";
+import { RESOURCE_ERROR_HEADER } from "../shared/resources/resource-error";
 import {
   checkResourceBudget,
   closeResourceContext,

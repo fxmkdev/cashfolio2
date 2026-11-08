@@ -1,4 +1,4 @@
 export type {
   AccountGroupInput,
   AccountInput,
-} from "../../shared/account-validation-types";
+} from "../../shared/accounts/account-validation-types";

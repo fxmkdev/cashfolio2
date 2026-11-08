@@ -25,7 +25,7 @@ vi.mock("../../prisma.server", () => ({
 vi.mock("../mutation-guard.server", () => ({
   ensureAuthorizedAccountBookMutation: mocks.authorize,
 }));
-vi.mock("../period/cache/period-base-data-cache", () => ({
+vi.mock("../period/cache/period-base-data-cache.server", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: mocks.invalidate,
 }));
 vi.mock("@tanstack/react-start", () => ({

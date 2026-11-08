@@ -1,5 +1,5 @@
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { getAccountConstraintMessage } from "@/shared/accounts/account-presentation";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import {
   ActiveAccountTreeActionsCell,

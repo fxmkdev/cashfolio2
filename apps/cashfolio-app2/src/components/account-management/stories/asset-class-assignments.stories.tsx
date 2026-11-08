@@ -1,4 +1,4 @@
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/resources/mutation-errors";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { bulkRows, groupSelectionRows } from "./assignment-fixtures";
 import {

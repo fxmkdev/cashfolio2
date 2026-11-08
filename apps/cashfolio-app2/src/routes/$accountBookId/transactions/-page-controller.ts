@@ -13,7 +13,7 @@ import { createCopyTransactionInitialValues } from "@/components/transaction-edi
 import {
   getBookingPeriodValue,
   getLatestBookingDate,
-} from "@/shared/transaction-period";
+} from "@/shared/transactions/transaction-period";
 import { useTransactionsAccountOptions } from "./-account-options";
 import { useTransactionsColumnDefs } from "./-page-columns";
 import { loadTransactionsPageData } from "./-page-loader";

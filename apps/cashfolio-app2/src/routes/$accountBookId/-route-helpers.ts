@@ -1,6 +1,9 @@
-import { isBalanceAccount } from "@/shared/account-presentation";
+import { isBalanceAccount } from "@/shared/accounts/account-presentation";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { type AccountsMode, type TabValue } from "@/shared/account-tabs";
+import {
+  type AccountsMode,
+  type TabValue,
+} from "@/shared/accounts/account-tabs";
 
 export type AccountBookSection =
   | "transactions"

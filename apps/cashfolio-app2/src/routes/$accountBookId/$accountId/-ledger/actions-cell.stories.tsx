@@ -4,7 +4,7 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { Unit } from "@/.prisma-client/enums";
 import { DataGrid } from "@/components/grid/data-grid";
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import { LedgerActionsCell } from "./actions-cell";
 import type { LedgerRow } from "./page-types";
 

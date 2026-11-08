@@ -6,7 +6,7 @@ import {
 import {
   getSimpleTransactionUnitIdentifier,
   isOpeningBalancesAccount,
-} from "@/shared/account-utils";
+} from "@/shared/accounts/account-utils";
 import type { StatementImportCsvFormat } from "@/shared/statement-import-csv-format";
 
 export function getStatementImportDisabledReason(account: {

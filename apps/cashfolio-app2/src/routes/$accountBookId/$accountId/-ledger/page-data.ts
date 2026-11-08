@@ -7,13 +7,13 @@ import {
   getUnitIdentifier,
   getSimpleTransactionUnitIdentifier,
   getTypeLabel,
-} from "@/shared/account-utils";
-import { isSystemManagedEquitySubtype } from "@/shared/system-managed-equity-subtypes";
+} from "@/shared/accounts/account-utils";
+import { isSystemManagedEquitySubtype } from "@/shared/accounts/system-managed-equity-subtypes";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
   getUnitDisplayDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 import {
   createDateInputValueFromUtcDay,

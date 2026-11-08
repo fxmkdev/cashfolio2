@@ -5,7 +5,7 @@ const getRateWithBacktracking = vi.hoisted(() => vi.fn());
 const getRateWithBacktrackingDetails = vi.hoisted(() => vi.fn());
 const getLatestAssumedAvailableHistoricalUtcDay = vi.hoisted(() => vi.fn());
 
-vi.mock("./backtracking", () => ({
+vi.mock("./backtracking.server", () => ({
   getRateWithBacktracking,
   getRateWithBacktrackingDetails,
 }));

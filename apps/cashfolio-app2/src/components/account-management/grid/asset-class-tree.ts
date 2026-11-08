@@ -1,8 +1,8 @@
 import {
   classificationOptions,
   type ClassificationNode,
-} from "@/shared/asset-class";
-import { getGainLossInvestmentGroup } from "@/shared/investment-group";
+} from "@/shared/classification/asset-class";
+import { getGainLossInvestmentGroup } from "@/shared/classification/investment-group";
 import type { TreeRow } from "./rows";
 
 export const assetClassRowId = (id: string) => `__asset_class__:${id}`;

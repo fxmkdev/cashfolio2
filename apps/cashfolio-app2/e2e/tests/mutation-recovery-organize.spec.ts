@@ -4,7 +4,7 @@ import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
 import { withBookLock } from "../support/book-lock";
 import { selectSegmentedControlOption } from "../support/segmented-control";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/mutation-errors";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/resources/mutation-errors";
 
 test("a rejected organizer move restores saved order and can be explicitly retried", async ({
   page,

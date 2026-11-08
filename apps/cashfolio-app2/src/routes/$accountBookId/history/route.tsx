@@ -19,7 +19,7 @@ import { useUserLocale } from "@/user-locale-context";
 import { useHistoryLoading } from "./-use-history-loading";
 import { HistoryLoadingView, HistoryLoadError } from "./-loading-view";
 import type { PeriodHistoryResponse } from "@/server/period-history";
-import { createDocumentTitleHead } from "@/shared/document-title";
+import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import {
   buildHistorySearchNavigation,

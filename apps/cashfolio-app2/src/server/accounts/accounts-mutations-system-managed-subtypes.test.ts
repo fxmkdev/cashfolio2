@@ -62,7 +62,7 @@ vi.mock("../../security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext,
 }));
 
-vi.mock("../../shared/account-validation", () => ({
+vi.mock("../../shared/accounts/account-validation", () => ({
   validateAccountInput,
   validateAccountGroupInput,
 }));

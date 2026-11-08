@@ -1,6 +1,6 @@
 import { getUnitFilterValue } from "@/components/grid/unit-filter-value";
-import type { ClassificationNode } from "@/shared/asset-class";
-import { getAccountTrackingMethodLabel } from "@/shared/account-tracking-method";
+import type { ClassificationNode } from "@/shared/classification/asset-class";
+import { getAccountTrackingMethodLabel } from "@/shared/accounts/account-tracking-method";
 import {
   addSetFilterOption,
   buildHierarchySetFilterOptions,

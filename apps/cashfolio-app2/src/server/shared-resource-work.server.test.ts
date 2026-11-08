@@ -9,7 +9,7 @@ import {
 } from "./resource-context.server";
 import { deferred } from "./test-support/deferred";
 import { withUserResourceRequest } from "./test-support/resource-request";
-import { RESOURCE_LIMITS } from "../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../shared/resources/resource-limits";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());

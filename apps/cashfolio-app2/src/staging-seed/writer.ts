@@ -7,7 +7,7 @@ import {
   UserRole,
 } from "../.prisma-client/enums";
 import { GAIN_LOSS_ACCOUNT_KEY, type SeedDataset } from "./dataset";
-import { validateAccountInput } from "../shared/account-validation";
+import { validateAccountInput } from "../shared/accounts/account-validation";
 import {
   SeedSafetyError,
   verifyServerIdentity,

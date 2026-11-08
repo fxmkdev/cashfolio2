@@ -2,7 +2,7 @@ import { formatUtcDateForLocale } from "@/shared/date";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 export { getGridUserLocale } from "@/components/grid/grid-locale";
 import type { EventSide, RealizedEventRow } from "./types";

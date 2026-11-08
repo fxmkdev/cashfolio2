@@ -1,4 +1,4 @@
-import { ResourceLimitError } from "../shared/resource-error";
+import { ResourceLimitError } from "../shared/resources/resource-error";
 export { ResourceLimitError };
 
 export function rethrowResourceError(error: unknown) {

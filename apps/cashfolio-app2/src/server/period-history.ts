@@ -10,4 +10,4 @@ export type {
   HistoryScopeOption,
   HistoryScopeSelection,
   HistoryScopedMetric,
-} from "../shared/history-scope";
+} from "../shared/reporting/history-scope";

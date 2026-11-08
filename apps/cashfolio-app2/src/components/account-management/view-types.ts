@@ -1,10 +1,10 @@
 import type { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import type { OrganizeNode } from "@/shared/hierarchy-organize/types";
-import { type ReportingGrouping } from "@/shared/reporting-grouping";
+import { type ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import type { OrganizerApi } from "@/components/hierarchy-organize/use-organizer";
 import type { BulkAccountActions } from "./assignments/use-bulk-actions";
-import { type AccountManagementContext } from "@/shared/account-presentation";
-import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import { type AccountManagementContext } from "@/shared/accounts/account-presentation";
+import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import { type AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
@@ -16,7 +16,7 @@ import type {
   ReferenceCurrencyTotalFooterRow,
   AccountGridTreeRow,
 } from "./grid/rows";
-import type { AccountsMode, TabValue } from "@/shared/account-tabs";
+import type { AccountsMode, TabValue } from "@/shared/accounts/account-tabs";
 import type { loadAccountsPageData } from "./loading/loader";
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {

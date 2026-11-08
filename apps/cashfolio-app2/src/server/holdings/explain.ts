@@ -2,7 +2,7 @@ import type {
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
   GainLossReconciliationRealizedEventLotMatch,
-} from "../../shared/gain-loss-reconciliation";
+} from "../../shared/reporting/gain-loss-reconciliation";
 import {
   moneyAdd,
   moneyRound2 as round2,

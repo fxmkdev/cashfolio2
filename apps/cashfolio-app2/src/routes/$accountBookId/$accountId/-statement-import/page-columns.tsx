@@ -8,8 +8,8 @@ import {
   FORMATTED_NUMERIC_COLUMN,
   TEXT_COLUMN,
 } from "@/components/grid/column-types";
-import type { AccountOption } from "@/shared/account-options";
-import { getUnitDisplayDecimals } from "@/shared/unit-format";
+import type { AccountOption } from "@/shared/accounts/account-options";
+import { getUnitDisplayDecimals } from "@/shared/units/unit-format";
 import type { LedgerAccount } from "../-ledger/page-types";
 import type { StatementImportDraftStatus } from "./index";
 import { hasStatementImportSingleCounterBooking } from "./index";

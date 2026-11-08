@@ -4,7 +4,7 @@ import { UserRole } from "../../.prisma-client/enums";
 import {
   isValuationUnitTab,
   type ValuationUnitTab,
-} from "../../shared/valuation-unit-tabs";
+} from "../../shared/units/valuation-unit-tabs";
 import { getRedisClient } from "../../redis.server";
 import { ensureUserHasRole } from "../../users/functions.server";
 import { assertRecord } from "../input-validation";

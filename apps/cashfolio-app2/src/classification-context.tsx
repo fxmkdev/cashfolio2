@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import {
   defaultAssetClassNodes,
   type ClassificationNode,
-} from "./shared/asset-class";
+} from "./shared/classification/asset-class";
 export const AssetClassContext = createContext<readonly ClassificationNode[]>(
   defaultAssetClassNodes,
 );

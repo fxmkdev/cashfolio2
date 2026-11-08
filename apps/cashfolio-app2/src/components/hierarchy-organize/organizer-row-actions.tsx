@@ -1,4 +1,4 @@
-import { getAccountConstraintMessage } from "@/shared/account-presentation";
+import { getAccountConstraintMessage } from "@/shared/accounts/account-presentation";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
   IconArchive,

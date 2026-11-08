@@ -1,4 +1,4 @@
-import { readHistoryPageSize } from "../../../shared/history-window-policy";
+import { readHistoryPageSize } from "../../../shared/reporting/history-window-policy";
 import { Temporal } from "../../../shared/temporal";
 import { toUtcPlainDate } from "../../../shared/temporal-adapters";
 

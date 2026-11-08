@@ -3,7 +3,7 @@ import {
   EMPTY_GAIN_LOSS_SUMMARY,
   type AccountGainLossSummaries,
   type AccountGainLossResult,
-} from "@/shared/account-gain-loss";
+} from "@/shared/accounts/account-gain-loss";
 import { toMoneyNumber, type MoneyInput } from "@/shared/money";
 import type { TreeRow } from "../grid/rows";
 

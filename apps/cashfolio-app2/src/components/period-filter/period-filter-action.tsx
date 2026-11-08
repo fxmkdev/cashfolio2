@@ -13,7 +13,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { SplitButtonGroup } from "@/components/controls/split-button";
-import type { PeriodMode } from "@/shared/period-selector-model";
+import type { PeriodMode } from "@/shared/reporting/period-selector-model";
 import { useUserLocale } from "@/user-locale-context";
 import classes from "./period-filter-action.module.css";
 

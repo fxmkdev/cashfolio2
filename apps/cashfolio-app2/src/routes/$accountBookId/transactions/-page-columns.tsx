@@ -13,11 +13,11 @@ import {
   getUniqueMultiValueFilterLabels,
   multiValueSetFilterColumn,
 } from "@/components/grid/multi-value-set-filter";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/accounts/opening-balances";
 import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
-} from "@/shared/unit-format";
+} from "@/shared/units/unit-format";
 import type { TransactionsBookingRow, TransactionsRow } from "./-page-types";
 
 type RebookClickArgs = {

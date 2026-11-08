@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { SimpleTransactionModal } from "./simple-transaction-modal";
 import { accountOptions } from "../testing/storybook-fixtures";
-import { RESOURCE_LIMITS } from "../../shared/resource-limits";
+import { RESOURCE_LIMITS } from "../../shared/resources/resource-limits";
 
 const meta = {
   title: "Components/SimpleTransactionModal",

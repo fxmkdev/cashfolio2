@@ -1,4 +1,4 @@
-import { defaultAssetClassIds } from "../../src/shared/asset-class";
+import { defaultAssetClassIds } from "../../src/shared/classification/asset-class";
 import { createId } from "@paralleldrive/cuid2";
 import {
   AccountType,

@@ -2,7 +2,7 @@ import { Modal } from "@mantine/core";
 import { SimpleTransactionModal } from "@/components/transactions/simple-transaction-modal";
 import { EditTransactionModal } from "@/components/transaction-editor/edit-transaction-modal";
 import { getTransactionCreateDialogText } from "@/components/transactions/transaction-create-dialog-text";
-import { getAccountEntityLabel } from "@/shared/account-presentation";
+import { getAccountEntityLabel } from "@/shared/accounts/account-presentation";
 import type { LedgerTransactionCreateDialogsProps } from "./transaction-dialog.types";
 export type { LedgerTransactionCreateDialogsProps } from "./transaction-dialog.types";
 function SimpleCreateDialog({

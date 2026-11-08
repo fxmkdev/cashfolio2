@@ -3,7 +3,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "@/.prisma-client/enums";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import {
   getStatementImportDraftStatus,
   type StatementImportCsvRow,

@@ -3,8 +3,8 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Prisma } from "../.prisma-client/client";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { ASSET_CLASS_SCHEME_ID } from "../shared/asset-class";
-import { validateClassificationChange } from "../shared/classification-rules";
+import { ASSET_CLASS_SCHEME_ID } from "../shared/classification/asset-class";
+import { validateClassificationChange } from "../shared/classification/classification-rules";
 import {
   assertRecord,
   requireStringField,
@@ -12,12 +12,12 @@ import {
 } from "./input-validation";
 import { ensureAuthorizedAccountBookMutation } from "./mutation-guard.server";
 import { withAccountBookMutation } from "./account-book-mutation.server";
-import { withDatabaseConflictRetry } from "./database-conflict-retry";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "./period/cache/period-base-data-cache";
+import { withDatabaseConflictRetry } from "./database-conflict-retry.server";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "./period/cache/period-base-data-cache.server";
 import {
   readManagedAssetClasses,
   writeAssetClass,
-} from "./classification-data";
+} from "./classification-data.server";
 
 function bookInput(value: unknown) {
   assertRecord(value);

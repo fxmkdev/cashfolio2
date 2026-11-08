@@ -12,7 +12,7 @@ import {
   type TransactionsGridProps,
 } from "./-details/transactions-grid";
 import type { TransactionActions } from "./-details/booking-details";
-import type { AccountOption } from "@/shared/account-options";
+import type { AccountOption } from "@/shared/accounts/account-options";
 import {
   EditTransactionModal,
   type BookingValues,

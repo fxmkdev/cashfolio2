@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock(
   "react",
-  async () => (await import("./organizer-hook-harness")).reactHooksMock,
+  async () => (await import("./organizer-test-hook-harness")).reactHooksMock,
 );
 import {
   render,

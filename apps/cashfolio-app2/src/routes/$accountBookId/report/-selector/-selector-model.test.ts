@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatMonthPeriodValue } from "@/shared/period";
+import { formatMonthPeriodValue } from "@/shared/reporting/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,

@@ -10,7 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
-import type { UserDeletionPreview } from "@/server/user-deletion-plan";
+import type { UserDeletionPreview } from "@/shared/users/user-deletion";
 
 export type UserDeletePageViewProps = {
   deleted: boolean;

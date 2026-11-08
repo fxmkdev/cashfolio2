@@ -6,7 +6,7 @@ import {
   nextIdleDeadline,
   SESSION_COOKIE,
   sessionDeadlines,
-} from "./session-policy";
+} from "./session-policy.server";
 import {
   closeTestProviders,
   createTestProvider,

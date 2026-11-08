@@ -20,10 +20,10 @@ vi.mock("../../../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("../period-conversion", () => ({
+vi.mock("../period-conversion.server", () => ({
   convertBookingValueToReference,
 }));
-vi.mock("../transfer-clearing/period-transfer-clearing-buckets", () => ({
+vi.mock("../transfer-clearing/period-transfer-clearing-buckets.server", () => ({
   loadTransferClearingUnitBuckets,
 }));
 vi.mock("../../.prisma-client/enums", () => ({
