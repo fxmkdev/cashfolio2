@@ -1,321 +1,320 @@
 import {
+  moneyAdd,
+  moneyDivide,
+  moneyIsFinite,
+  moneySubtract,
+  moneySum,
   toMoney,
   type Money,
-  moneyAdd,
-  moneySubtract,
-  moneyMultiply,
-  moneyDivide,
-  moneyAbs,
-  moneySum,
-  moneyIsFinite,
 } from "../../../shared/money";
-import { Unit } from "../../../.prisma-client/enums";
+import type {
+  TransferClearingGainLossArgs,
+  TransferClearingTotals,
+  TransferClearingUnitState,
+} from "./period-transfer-clearing-gain-loss-types";
+import { valueTransferClearingUnit } from "./period-transfer-clearing-valuation";
 
-import type { HoldingGainLossSkippedReason } from "../../../shared/gain-loss-reconciliation";
-import type { HoldingExecutionLotMatch } from "../holdings/period-overview-holdings-types";
-import {
-  applyExecutionToLots,
-  isNearZero,
-  QUANTITY_EPSILON,
-} from "../holdings/period-overview-holdings-common";
+import { applyExecutionToLots } from "../../holdings/lots";
+import { isNearZero } from "../../holdings/quantity-policy";
+import type { HoldingExecutionLotMatch } from "../../holdings/types";
 import {
   toTransferClearingLotSortKey,
   type TransferClearingBooking,
   type TransferClearingUnitBucket,
 } from "./period-transfer-clearing-types";
 
-type TransferClearingGainLossSkippedReason = HoldingGainLossSkippedReason;
-
-export async function computeTransferClearingGainLossSplit(args: {
-  unitBuckets: TransferClearingUnitBucket[];
-  periodStart: Date;
-  periodEndExclusive: Date;
-  initialRateDate: Date;
-  periodEnd: Date;
-  resolveRate: (input: {
-    unit: Unit;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-    date: Date;
-  }) => Promise<Money | null>;
-  convertBookingToReference: (
-    booking: TransferClearingBooking,
-  ) => Promise<Money | null>;
-  onUnitGainLoss?: (gainLossByUnit: {
-    unitKey: TransferClearingUnitBucket["unitKey"];
-    unitLabel: TransferClearingUnitBucket["unitLabel"];
-    unit: TransferClearingUnitBucket["unit"];
-    currency: TransferClearingUnitBucket["currency"];
-    cryptocurrency: TransferClearingUnitBucket["cryptocurrency"];
-    symbol: TransferClearingUnitBucket["symbol"];
-    tradeCurrency: TransferClearingUnitBucket["tradeCurrency"];
-    realizedGainLoss: Money;
-    unrealizedGainLoss: Money;
-  }) => void;
-  onUnitExecutionEvent?: (event: {
-    unitKey: TransferClearingUnitBucket["unitKey"];
-    bookingId: string;
-    bookingDescription?: string | null;
-    transactionDescription?: string | null;
-    transactionId: string | null;
-    date: Date;
-    quantity: Money;
-    pricingSource: "directConversion";
-    marketReferenceAmount: Money;
-    residualAllocationAmount: Money;
-    effectiveReferenceAmount: Money;
-    executionUnitPriceInReference: Money;
-    realizedGainLossDelta: Money;
-    runningRealizedGainLoss: Money;
-    lotMatches: HoldingExecutionLotMatch[];
-  }) => void;
-  onUnitOpenLotValuation?: (lot: {
-    unitKey: TransferClearingUnitBucket["unitKey"];
-    acquisitionSortKey: string;
-    quantity: Money;
-    unitCostInReference: Money;
-    periodEndRate: Money;
-    unrealizedGainLoss: Money;
-  }) => void;
-  onSkippedItem?: (item: {
-    unitKey: TransferClearingUnitBucket["unitKey"];
-    bookingId?: string;
-    bookingDescription?: string | null;
-    transactionDescription?: string | null;
-    transactionId?: string | null;
-    reason: TransferClearingGainLossSkippedReason;
-    date: Date;
-  }) => void;
-}) {
-  let realizedGainLoss: Money = toMoney(0);
-  let unrealizedGainLoss: Money = toMoney(0);
-  let convertedCount = 0;
-  let skippedCount = 0;
-
+export async function computeTransferClearingGainLossSplit(
+  args: TransferClearingGainLossArgs,
+) {
+  const totals: TransferClearingTotals = {
+    realizedGainLoss: toMoney(0),
+    unrealizedGainLoss: toMoney(0),
+    convertedCount: 0,
+    skippedCount: 0,
+  };
   for (const unitBucket of args.unitBuckets) {
-    if (!unitBucket.isNonReferenceUnit) {
-      continue;
-    }
-    let unitRealizedGainLoss: Money = toMoney(0);
-    let unitUnrealizedGainLoss: Money = toMoney(0);
-
-    const lots: Array<{
-      quantity: Money;
-      unitCostInReference: Money;
-      acquisitionSortKey: string;
-    }> = [];
-
-    const openingPostedBalance = unitBucket.bookings
-      .filter((booking) => booking.date < args.periodStart)
-      .map((booking) => booking.value);
-    const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
-
-    if (!isNearZero(openingBalance)) {
-      const initialRate = await args.resolveRate({
-        unit: unitBucket.unit,
-        currency: unitBucket.currency,
-        cryptocurrency: unitBucket.cryptocurrency,
-        symbol: unitBucket.symbol,
-        tradeCurrency: unitBucket.tradeCurrency,
-        date: args.initialRateDate,
-      });
-      if (initialRate == null) {
-        skippedCount += 1;
-        args.onSkippedItem?.({
-          unitKey: unitBucket.unitKey,
-          reason: "missingInitialRate",
-          date: args.initialRateDate,
-        });
-        continue;
-      }
-
-      lots.push({
-        quantity: openingBalance,
-        unitCostInReference: initialRate,
-        acquisitionSortKey: toTransferClearingLotSortKey({
-          date: args.initialRateDate,
-          bookingId: `opening:${unitBucket.unitKey}`,
-        }),
-      });
-    }
-
-    const inPeriodBookings = unitBucket.bookings
-      .filter(
-        (booking) =>
-          booking.date >= args.periodStart &&
-          booking.date < args.periodEndExclusive,
-      )
-      .sort((left, right) => {
-        const dateDiff = left.date.getTime() - right.date.getTime();
-        if (dateDiff !== 0) {
-          return dateDiff;
-        }
-        return left.id.localeCompare(right.id, "en");
-      });
-
-    const convertibleInPeriodBookings = inPeriodBookings.filter(
-      (booking) => !isNearZero(booking.value),
-    );
-    const convertedValues = await Promise.all(
-      convertibleInPeriodBookings.map((booking) =>
-        args.convertBookingToReference(booking),
-      ),
-    );
-
+    if (!unitBucket.isNonReferenceUnit) continue;
+    const lots = await initializeTransferClearingLots(args, unitBucket, totals);
+    if (!lots) continue;
+    const unitState: TransferClearingUnitState = {
+      lots,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
+    };
+    const { convertibleInPeriodBookings, convertedValues } =
+      await convertTransferClearingBookings(args, unitBucket);
     for (
       let bookingIndex = 0;
       bookingIndex < convertibleInPeriodBookings.length;
       bookingIndex += 1
     ) {
-      const booking = convertibleInPeriodBookings[bookingIndex]!;
-      const convertedValue = convertedValues[bookingIndex];
-      if (convertedValue == null) {
-        skippedCount += 1;
-        args.onSkippedItem?.({
-          unitKey: unitBucket.unitKey,
-          bookingId: booking.id,
-          bookingDescription: booking.description,
-          transactionDescription: booking.transactionDescription,
-          transactionId: booking.transactionId ?? null,
-          reason: "missingConversion",
-          date: booking.date,
-        });
-        continue;
-      }
-
-      const clearingQuantity = toMoney(booking.value).neg();
-      const clearingReferenceAmount = toMoney(convertedValue).neg();
-      const executionUnitPriceInReference = toMoney(
-        moneyDivide(clearingReferenceAmount, clearingQuantity),
+      applyTransferClearingExecution(
+        args,
+        unitBucket,
+        unitState,
+        totals,
+        convertibleInPeriodBookings[bookingIndex]!,
+        convertedValues[bookingIndex],
       );
-      if (!moneyIsFinite(executionUnitPriceInReference)) {
-        skippedCount += 1;
-        args.onSkippedItem?.({
-          unitKey: unitBucket.unitKey,
-          bookingId: booking.id,
-          bookingDescription: booking.description,
-          transactionDescription: booking.transactionDescription,
-          transactionId: booking.transactionId ?? null,
-          reason: "invalidExecutionPrice",
-          date: booking.date,
-        });
-        continue;
-      }
-      convertedCount += 1;
+    }
+    await valueTransferClearingUnit(args, unitBucket, unitState, totals);
+    emitTransferClearingUnitGainLoss(args, unitBucket, unitState);
+  }
+  return totals;
+}
 
-      let lotMatches: HoldingExecutionLotMatch[] | undefined;
-      const bookingRealizedGainLoss = applyExecutionToLots({
-        lots,
-        quantity: clearingQuantity,
-        executionUnitPriceInReference,
-        acquisitionSortKey: toTransferClearingLotSortKey({
-          date: booking.date,
-          bookingId: booking.id,
-        }),
-        ...(args.onUnitExecutionEvent
-          ? {
-              onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
-                if (!lotMatches) {
-                  lotMatches = [];
-                }
-                lotMatches.push(lotMatch);
-              },
-            }
-          : {}),
-      });
-      realizedGainLoss = moneyAdd(realizedGainLoss, bookingRealizedGainLoss);
-      unitRealizedGainLoss = moneyAdd(
-        unitRealizedGainLoss,
-        bookingRealizedGainLoss,
-      );
-      args.onUnitExecutionEvent?.({
+async function initializeTransferClearingLots(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+  totals: TransferClearingTotals,
+) {
+  const lots: Array<{
+    quantity: Money;
+    unitCostInReference: Money;
+    acquisitionSortKey: string;
+  }> = [];
+
+  const openingPostedBalance = unitBucket.bookings
+    .filter((booking) => booking.date < args.periodStart)
+    .map((booking) => booking.value);
+  const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
+
+  if (!isNearZero(openingBalance)) {
+    const initialRate = await args.resolveRate({
+      unit: unitBucket.unit,
+      currency: unitBucket.currency,
+      cryptocurrency: unitBucket.cryptocurrency,
+      symbol: unitBucket.symbol,
+      tradeCurrency: unitBucket.tradeCurrency,
+      date: args.initialRateDate,
+    });
+    if (initialRate == null) {
+      totals.skippedCount += 1;
+      args.onSkippedItem?.({
         unitKey: unitBucket.unitKey,
-        bookingId: booking.id,
-        bookingDescription: booking.description,
-        transactionDescription: booking.transactionDescription,
-        transactionId: booking.transactionId ?? null,
-        date: booking.date,
-        quantity: clearingQuantity,
-        pricingSource: "directConversion",
-        marketReferenceAmount: clearingReferenceAmount,
-        residualAllocationAmount: toMoney(0),
-        effectiveReferenceAmount: clearingReferenceAmount,
-        executionUnitPriceInReference,
-        realizedGainLossDelta: bookingRealizedGainLoss,
-        runningRealizedGainLoss: unitRealizedGainLoss,
-        lotMatches: lotMatches ?? [],
+        reason: "missingInitialRate",
+        date: args.initialRateDate,
       });
+      return null;
     }
 
-    const openQuantity = lots.reduce(
-      (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
-      toMoney(0),
-    );
-    if (toMoney(openQuantity).comparedTo(QUANTITY_EPSILON) > 0) {
-      const periodEndRate = await args.resolveRate({
-        unit: unitBucket.unit,
-        currency: unitBucket.currency,
-        cryptocurrency: unitBucket.cryptocurrency,
-        symbol: unitBucket.symbol,
-        tradeCurrency: unitBucket.tradeCurrency,
-        date: args.periodEnd,
-      });
-      if (periodEndRate == null) {
-        skippedCount += 1;
-        args.onSkippedItem?.({
-          unitKey: unitBucket.unitKey,
-          reason: "missingPeriodEndRate",
-          date: args.periodEnd,
-        });
-      } else {
-        let unitUnrealized: Money = toMoney(0);
-        for (const lot of lots) {
-          const lotUnrealizedGainLoss = moneyMultiply(
-            lot.quantity,
-            moneySubtract(periodEndRate, lot.unitCostInReference),
-          );
-          unitUnrealized = moneyAdd(unitUnrealized, lotUnrealizedGainLoss);
-          args.onUnitOpenLotValuation?.({
-            unitKey: unitBucket.unitKey,
-            acquisitionSortKey: lot.acquisitionSortKey,
-            quantity: lot.quantity,
-            unitCostInReference: lot.unitCostInReference,
-            periodEndRate,
-            unrealizedGainLoss: lotUnrealizedGainLoss,
-          });
-        }
-        unrealizedGainLoss = moneyAdd(unrealizedGainLoss, unitUnrealized);
-        unitUnrealizedGainLoss = moneyAdd(
-          unitUnrealizedGainLoss,
-          unitUnrealized,
-        );
-      }
-    }
-
-    if (
-      args.onUnitGainLoss &&
-      (!isNearZero(unitRealizedGainLoss) || !isNearZero(unitUnrealizedGainLoss))
-    ) {
-      args.onUnitGainLoss({
-        unitKey: unitBucket.unitKey,
-        unitLabel: unitBucket.unitLabel,
-        unit: unitBucket.unit,
-        currency: unitBucket.currency,
-        cryptocurrency: unitBucket.cryptocurrency,
-        symbol: unitBucket.symbol,
-        tradeCurrency: unitBucket.tradeCurrency,
-        realizedGainLoss: unitRealizedGainLoss,
-        unrealizedGainLoss: unitUnrealizedGainLoss,
-      });
-    }
+    lots.push({
+      quantity: openingBalance,
+      unitCostInReference: initialRate,
+      acquisitionSortKey: toTransferClearingLotSortKey({
+        date: args.initialRateDate,
+        bookingId: `opening:${unitBucket.unitKey}`,
+      }),
+    });
   }
 
+  return lots;
+}
+
+async function convertTransferClearingBookings(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+) {
+  const inPeriodBookings = unitBucket.bookings
+    .filter(
+      (booking) =>
+        booking.date >= args.periodStart &&
+        booking.date < args.periodEndExclusive,
+    )
+    .sort((left, right) => {
+      const dateDiff = left.date.getTime() - right.date.getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+      return left.id.localeCompare(right.id, "en");
+    });
+
+  const convertibleInPeriodBookings = inPeriodBookings.filter(
+    (booking) => !isNearZero(booking.value),
+  );
+  const convertedValues = await Promise.all(
+    convertibleInPeriodBookings.map((booking) =>
+      args.convertBookingToReference(booking),
+    ),
+  );
+
+  return { convertibleInPeriodBookings, convertedValues };
+}
+
+function applyTransferClearingExecution(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+  unitState: TransferClearingUnitState,
+  totals: TransferClearingTotals,
+  booking: TransferClearingBooking,
+  convertedValue: Money | null,
+) {
+  const { lots } = unitState;
+  const price = priceTransferClearingExecution(
+    args,
+    unitBucket,
+    totals,
+    booking,
+    convertedValue,
+  );
+  if (!price) return;
+  const {
+    clearingQuantity,
+    clearingReferenceAmount,
+    executionUnitPriceInReference,
+  } = price;
+  totals.convertedCount += 1;
+
+  let lotMatches: HoldingExecutionLotMatch[] | undefined;
+  const bookingRealizedGainLoss = applyExecutionToLots({
+    lots,
+    quantity: clearingQuantity,
+    executionUnitPriceInReference,
+    acquisitionSortKey: toTransferClearingLotSortKey({
+      date: booking.date,
+      bookingId: booking.id,
+    }),
+    ...(args.onUnitExecutionEvent
+      ? {
+          onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+            if (!lotMatches) {
+              lotMatches = [];
+            }
+            lotMatches.push(lotMatch);
+          },
+        }
+      : {}),
+  });
+  totals.realizedGainLoss = moneyAdd(
+    totals.realizedGainLoss,
+    bookingRealizedGainLoss,
+  );
+  unitState.realizedGainLoss = moneyAdd(
+    unitState.realizedGainLoss,
+    bookingRealizedGainLoss,
+  );
+  emitTransferClearingExecution(
+    args,
+    unitBucket,
+    booking,
+    unitState.realizedGainLoss,
+    {
+      clearingQuantity,
+      clearingReferenceAmount,
+      executionUnitPriceInReference,
+      bookingRealizedGainLoss,
+      lotMatches,
+    },
+  );
+}
+
+type TransferClearingExecution = {
+  clearingQuantity: Money;
+  clearingReferenceAmount: Money;
+  executionUnitPriceInReference: Money;
+  bookingRealizedGainLoss: Money;
+  lotMatches: HoldingExecutionLotMatch[] | undefined;
+};
+
+function emitTransferClearingExecution(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+  booking: TransferClearingBooking,
+  unitRealizedGainLoss: Money,
+  execution: TransferClearingExecution,
+) {
+  const {
+    clearingQuantity,
+    clearingReferenceAmount,
+    executionUnitPriceInReference,
+    bookingRealizedGainLoss,
+    lotMatches,
+  } = execution;
+  args.onUnitExecutionEvent?.({
+    unitKey: unitBucket.unitKey,
+    bookingId: booking.id,
+    bookingDescription: booking.description,
+    transactionDescription: booking.transactionDescription,
+    transactionId: booking.transactionId ?? null,
+    date: booking.date,
+    quantity: clearingQuantity,
+    pricingSource: "directConversion",
+    marketReferenceAmount: clearingReferenceAmount,
+    residualAllocationAmount: toMoney(0),
+    effectiveReferenceAmount: clearingReferenceAmount,
+    executionUnitPriceInReference,
+    realizedGainLossDelta: bookingRealizedGainLoss,
+    runningRealizedGainLoss: unitRealizedGainLoss,
+    lotMatches: lotMatches ?? [],
+  });
+}
+
+function emitTransferClearingUnitGainLoss(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+  unitState: TransferClearingUnitState,
+) {
+  if (
+    args.onUnitGainLoss &&
+    (!isNearZero(unitState.realizedGainLoss) ||
+      !isNearZero(unitState.unrealizedGainLoss))
+  ) {
+    args.onUnitGainLoss({
+      unitKey: unitBucket.unitKey,
+      unitLabel: unitBucket.unitLabel,
+      unit: unitBucket.unit,
+      currency: unitBucket.currency,
+      cryptocurrency: unitBucket.cryptocurrency,
+      symbol: unitBucket.symbol,
+      tradeCurrency: unitBucket.tradeCurrency,
+      realizedGainLoss: unitState.realizedGainLoss,
+      unrealizedGainLoss: unitState.unrealizedGainLoss,
+    });
+  }
+}
+
+function priceTransferClearingExecution(
+  args: TransferClearingGainLossArgs,
+  unitBucket: TransferClearingUnitBucket,
+  totals: TransferClearingTotals,
+  booking: TransferClearingBooking,
+  convertedValue: Money | null,
+) {
+  if (convertedValue == null) {
+    totals.skippedCount += 1;
+    args.onSkippedItem?.({
+      unitKey: unitBucket.unitKey,
+      bookingId: booking.id,
+      bookingDescription: booking.description,
+      transactionDescription: booking.transactionDescription,
+      transactionId: booking.transactionId ?? null,
+      reason: "missingConversion",
+      date: booking.date,
+    });
+    return null;
+  }
+
+  const clearingQuantity = toMoney(booking.value).neg();
+  const clearingReferenceAmount = toMoney(convertedValue).neg();
+  const executionUnitPriceInReference = toMoney(
+    moneyDivide(clearingReferenceAmount, clearingQuantity),
+  );
+  if (!moneyIsFinite(executionUnitPriceInReference)) {
+    totals.skippedCount += 1;
+    args.onSkippedItem?.({
+      unitKey: unitBucket.unitKey,
+      bookingId: booking.id,
+      bookingDescription: booking.description,
+      transactionDescription: booking.transactionDescription,
+      transactionId: booking.transactionId ?? null,
+      reason: "invalidExecutionPrice",
+      date: booking.date,
+    });
+    return null;
+  }
   return {
-    realizedGainLoss,
-    unrealizedGainLoss,
-    convertedCount,
-    skippedCount,
+    clearingQuantity,
+    clearingReferenceAmount,
+    executionUnitPriceInReference,
   };
 }

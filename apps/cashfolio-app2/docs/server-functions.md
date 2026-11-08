@@ -272,8 +272,9 @@ Period implementation modules are grouped by concern under `src/server/period/`:
 - `base-data/`: database-derived period inputs, loaders, queries, and types
 - `cache/`: shared cache generation/key helpers, base-data cache, and History
   metrics cache
-- `holdings/`: lot/FIFO gain/loss calculation, holding transfers, and execution
-  residuals
+- `holdings/`: period adapters for real/synthetic holdings, batching, report
+  contributions, and execution-residual attribution; reusable FIFO belongs to
+  the independent `src/server/holdings/` domain
 - `history/`: History loading, point metrics, scopes, and opening-balance points
 - `reconciliation/`: gain/loss reconciliation and event-level explain data
 - `breakdown/`: gain/loss breakdowns and contribution attribution
@@ -308,8 +309,9 @@ the extracted helpers:
 - `breakdown/period-breakdown-hierarchy.ts` and
   `period-signed-breakdown-hierarchy.ts`: positive and signed hierarchy builders
   with their respective pruning/discrepancy rules
-- `holdings/period-holding-events.ts`: event-series gain/loss, date grouping,
-  ordering, and convertible account selection
+
+Reusable holding-event and eligibility helpers live in the independent holdings
+domain and are imported directly from `holdings/events.ts`.
 
 Extracted breakdown builders use the shared money rounding primitive directly;
 they do not import back through `period-helpers.ts`. Breakdown and holding-event
@@ -321,23 +323,78 @@ keep their import paths stable.
 
 ### Holding Gain/Loss Engine
 
-`holdings/period-overview-holdings.ts` keeps the public initialization,
-transaction-processing, finalization, and combined calculation exports. It owns
-transfer classification and cross-account aggregation, and delegates to:
+The independent server domain at `src/server/holdings/` owns reusable holding
+pricing, transfers, chronological replay, FIFO matching, and open-lot valuation.
+Account gain/loss, Period overview, History, and reconciliation consume its
+explicit internal entrypoints:
 
-- `period-holding-execution-pricing.ts`: booking conversions, conversion
-  counters and missing-conversion callbacks, counterpart pricing, residual
-  allocation, and execution-event creation for non-transfer transactions
-- `period-holding-account-finalization.ts`: one account's deterministic
-  execution order, FIFO lot matching, realized gains, and period-end open-lot
-  valuation
-- `period-overview-holdings-types.ts`: shared state, callback payloads, and
-  skipped-reason types; existing public type exports remain available through
-  the engine entrypoint
+- `engine.ts`: initialize, apply transactions, replay pending executions without
+  closing valuation, finalize, combined calculation, and open-lot inspection
+- `transactions.ts`: transaction decomposition, prefetch classification, unit
+  identity, multi-unit detection, and date-window membership
+- `types.ts`: named operation inputs, Decimal state/results, conversion/rate
+  callbacks, and explain payload contracts
+- `lots.ts` and `quantity-policy.ts`: priced FIFO execution for the synthetic
+  transfer-clearing adapter and the shared quantity threshold/near-zero policy
+- `events.ts`: event-series calculation, grouping, ordering, and convertible
+  holding selection
+- `explain.ts`: acquisition-key parsing, realized-event/open-lot mapping, and
+  running unrealized totals, retaining rounded and unrounded modes
 
-Accounts and transactions retain their existing processing order. Decimal
-precision, thresholds, missing-rate behavior, and reconciliation explain
-callbacks are shared by Period overview, History, and reconciliation.
+Pricing, transfer receipts, replay scheduling, account finalization, and
+matching helpers are private implementation modules. Consumers use the
+entrypoints above; there is no general barrel. The domain depends on shared
+money/date/contracts, Prisma enums, and server resource-budget checks, never on
+Period or Accounts. Caller-supplied converters/resolvers retain valuation
+scheduling and memoization.
+
+Calculation entrypoints sequence private stages rather than combining their
+mechanics. Execution pricing separates ordered conversion and counters, pricing
+strategy, residual allocation, and event construction. Account finalization
+separates replayed-event emission from closing valuation. Replay scheduling,
+quantity simulation, and rescheduling have separate owners; transaction matching
+separates graph construction, augmenting paths, and match assembly. Transfer
+receipts separately select carried lots, close opposite positions, insert the
+remaining basis, and assemble explain events. Mixed-period transfers prepare
+conversions once before applying their dated carry legs.
+
+`period/holdings/period-holding-gain-loss.ts` remains the period adapter. It
+prepares opening balances and virtual transfer-clearing accounts, batches
+synthetic transactions, accumulates report contributions, and combines holding
+results with period execution-residual realization. Residual attribution,
+loaders, and report assembly stay in Period. Account gain/loss owns its
+basis/summary caches, availability propagation, diagnostic presentation, and
+private-copy revaluation.
+
+Within Accounts, `gain-loss/basis-diagnostics.ts` owns affected-account indexing
+and propagation of unavailable basis. `valuation-state.ts` owns private copies,
+closing-rate warmup, and availability assembly; `valuation-details.ts` collects
+unrounded detail callbacks. The calculation entrypoint retains basis publication
+and phase sequencing. Period holding orchestration similarly delegates opening
+balances, synthetic batches, and contribution callbacks. Execution residuals
+separate selection, conversion, and attribution; transfer-clearing calculation
+separates opening basis, execution pricing, and closing valuation. Global
+transfer-clearing totals are updated in execution order, not recomputed from
+per-unit totals, because regrouping Decimal additions can change cancellation.
+
+Accounts and transactions retain their existing processing order, Decimal
+precision, quantity threshold, pricing fallbacks, counters, and explain callback
+order. Reusable explain mapping does not force rounding: account details retain
+full precision while period reconciliation keeps its existing rounded amounts
+and running totals. Period-specific summaries, diagnostics, and virtual-account
+IDs stay in reconciliation. Public server facades retain their exports; internal
+consumers import their actual owner directly. Working-state cache shapes,
+codecs, keys, and publication boundaries remain unchanged.
+
+Holding and consumer tests are grouped by behavior, with colocated typed
+`*.test-support.ts` fixtures. Fixtures create mutable state per case. Mocked
+prefetch, Decimal-pipeline, and reconciliation suites use feature-local
+harnesses that register hoisted mocks before dynamically importing the tested
+modules; they export local module bindings rather than direct re-exports that
+could load dependencies before mock registration. Each suite explicitly installs
+its reset, fake-timer, and cleanup hooks. Parameterized cases, concurrency
+gates, snapshot no-reread assertions, and full test names remain intact when
+suites are split.
 
 ## Concurrent Account-Book Mutations
 
@@ -593,8 +650,7 @@ single tracked-account flow:
   - non-reference real holding accounts
   - non-reference virtual transfer-clearing holding accounts
 - Both real transactions and synthetic transfer-clearing transactions flow
-  through the same lot/FIFO pipeline in
-  `src/server/period/holdings/period-overview-holdings.ts`
+  through the same lot/FIFO pipeline in `src/server/holdings/engine.ts`
 - Each transaction is decomposed by holding identity into maximum cross-account
   transfer quantities and residual executions, regardless of additional fee or
   other bookings. Transfers carry FIFO cost and acquisition order; residual

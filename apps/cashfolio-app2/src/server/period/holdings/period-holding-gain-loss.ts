@@ -1,35 +1,40 @@
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 import {
-  toMoney,
-  type Money,
   moneyAdd,
   moneySubtract,
   moneySum,
+  toMoney,
+  type Money,
 } from "../../../shared/money";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
-import {
-  accumulateGainLossContribution,
-  type GainLossContributionAccumulator,
-} from "../breakdown/period-gains-losses-contributions";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
-} from "./period-overview-holdings";
+} from "../../holdings/engine";
+import type {
+  HoldingAccountGainLoss,
+  HoldingGainLossWorkingState,
+  HoldingTransactionBooking,
+} from "../../holdings/types";
+import {
+  accumulateGainLossContribution,
+  type GainLossContributionAccumulator,
+} from "../breakdown/period-gains-losses-contributions";
 
-import { isNearZero } from "./period-overview-holdings-common";
+import { isNearZero } from "../../holdings/quantity-policy";
 import type {
   HoldingRateConvertibleAccount,
   HoldingTransaction,
-} from "./period-overview-holdings-types";
+} from "../../holdings/types";
+import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 import {
   computeExecutionResidualRealization,
   type ExecutionResidualContribution,
 } from "./period-execution-residuals";
-import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 
 import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
 
-export async function computePeriodHoldingGainLoss(args: {
+type PeriodHoldingGainLossArgs = {
   periodStart: Date;
   periodEndExclusive: Date;
   periodEnd: Date;
@@ -69,7 +74,11 @@ export async function computePeriodHoldingGainLoss(args: {
     tradeCurrency: string | null;
     date: Date;
   }) => Promise<Money | null>;
-}) {
+};
+
+export async function computePeriodHoldingGainLoss(
+  args: PeriodHoldingGainLossArgs,
+) {
   const holdingAccountIds = args.holdingAccounts.map((account) => account.id);
   const holdingAccountIdSet = new Set(holdingAccountIds);
   const trackedHoldingAccounts = [
@@ -85,137 +94,11 @@ export async function computePeriodHoldingGainLoss(args: {
   };
 
   if (trackedHoldingAccounts.length > 0) {
-    const initialHoldingBalanceByAccountId = new Map<string, Money>();
-    for (const balance of args.initialHoldingBalances) {
-      initialHoldingBalanceByAccountId.set(
-        balance.accountId,
-        balance.rawBalance,
-      );
-    }
-
-    for (const unitBucket of args.transferClearingUnitBuckets) {
-      if (!unitBucket.isNonReferenceUnit) {
-        continue;
-      }
-
-      const openingPostedBalance = unitBucket.bookings
-        .filter((booking) => booking.date < args.periodStart)
-        .map((booking) => booking.value);
-      const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
-      if (isNearZero(openingBalance)) {
-        continue;
-      }
-
-      initialHoldingBalanceByAccountId.set(
-        `virtual:transfer-clearing:account:${unitBucket.unitKey}`,
-        openingBalance,
-      );
-    }
-
-    const holdingGainLossState = await initializeHoldingGainLossState({
-      holdingAccounts: trackedHoldingAccounts,
-      initialBalanceByAccountId: initialHoldingBalanceByAccountId,
-      initialRateDate: args.initialHoldingDate,
-      resolveRate: args.resolveRate,
-    });
-
-    await applyHoldingTransactionsToGainLossState({
-      state: holdingGainLossState,
-      transactions: args.holdingTransactions.map((transaction) => ({
-        bookings: transaction.bookings,
-      })),
-      periodStart: args.periodStart,
-      periodEndExclusive: args.periodEndExclusive,
-      convertBookingToReference: ({ id: _id, ...booking }) =>
-        args.convertBookingToReference(booking),
-    });
-
-    const transferClearingTransactionBatch: HoldingTransaction[] = [];
-    const flushTransferClearingTransactionBatch = async () => {
-      if (transferClearingTransactionBatch.length === 0) {
-        return;
-      }
-
-      await applyHoldingTransactionsToGainLossState({
-        state: holdingGainLossState,
-        transactions: transferClearingTransactionBatch,
-        periodStart: args.periodStart,
-        periodEndExclusive: args.periodEndExclusive,
-        convertBookingToReference: ({ id: _id, ...booking }) =>
-          args.convertBookingToReference(booking),
-      });
-      transferClearingTransactionBatch.length = 0;
-    };
-
-    for (const unitBucket of args.transferClearingUnitBuckets) {
-      if (!unitBucket.isNonReferenceUnit) {
-        continue;
-      }
-
-      const transferClearingHoldingAccountId = `virtual:transfer-clearing:account:${unitBucket.unitKey}`;
-      for (const booking of unitBucket.bookings) {
-        if (
-          booking.date < args.periodStart ||
-          booking.date >= args.periodEndExclusive ||
-          isNearZero(booking.value)
-        ) {
-          continue;
-        }
-
-        transferClearingTransactionBatch.push({
-          bookings: [
-            {
-              id: booking.id,
-              accountId: transferClearingHoldingAccountId,
-              date: booking.date,
-              value: toMoney(booking.value).neg(),
-              unit: booking.unit,
-              currency: booking.currency,
-              cryptocurrency: booking.cryptocurrency,
-              symbol: booking.symbol,
-              tradeCurrency: booking.tradeCurrency,
-              accountType: AccountType.BALANCE,
-              equityAccountSubtype: null,
-            },
-          ],
-        });
-
-        if (
-          transferClearingTransactionBatch.length >=
-          args.transferClearingBatchSize
-        ) {
-          await flushTransferClearingTransactionBatch();
-        }
-      }
-    }
-
-    await flushTransferClearingTransactionBatch();
-
-    holdingGainLossSplit = await finalizeHoldingGainLossState({
-      state: holdingGainLossState,
-      periodEnd: args.periodEnd,
-      resolveRate: args.resolveRate,
-      onAccountGainLoss: (gainLossByAccount) => {
-        accumulateGainLossContribution({
-          byKey: args.gainsLossesContributionByKey,
-          sourceKind: "HOLDING",
-          accountId: gainLossByAccount.accountId,
-          accountName:
-            args.assetLiabilityAccountNameById.get(
-              gainLossByAccount.accountId,
-            ) ?? "Unknown account",
-          unit: gainLossByAccount.unit,
-          currency: gainLossByAccount.currency,
-          cryptocurrency: gainLossByAccount.cryptocurrency,
-          symbol: gainLossByAccount.symbol,
-          tradeCurrency: gainLossByAccount.tradeCurrency,
-          realizedGainLoss: gainLossByAccount.realizedGainLoss,
-          unrealizedGainLoss: gainLossByAccount.unrealizedGainLoss,
-        });
-      },
-    });
+    holdingGainLossSplit = await computeTrackedPeriodHoldings(
+      args,
+      trackedHoldingAccounts,
+    );
   }
-
   const executionResidualRealization =
     await computeExecutionResidualRealization({
       transactions: args.executionResidualTransactions,
@@ -227,23 +110,7 @@ export async function computePeriodHoldingGainLoss(args: {
         args.assetLiabilityAccountNameById.keys(),
       ),
       convertBookingToReference: args.convertBookingToReference,
-      onContribution: (contribution) => {
-        args.onExecutionResidual?.(contribution);
-        accumulateGainLossContribution({
-          byKey: args.gainsLossesContributionByKey,
-          sourceKind: "HOLDING",
-          accountId: contribution.accountId,
-          accountName: contribution.accountName,
-          originatingAccountIds: contribution.originatingAccountIds,
-          unit: contribution.unit,
-          currency: contribution.currency,
-          cryptocurrency: contribution.cryptocurrency,
-          symbol: contribution.symbol,
-          tradeCurrency: contribution.tradeCurrency,
-          realizedGainLoss: contribution.realizedGainLoss,
-          unrealizedGainLoss: toMoney(0),
-        });
-      },
+      onContribution: createPeriodResidualContribution(args),
     });
 
   return {
@@ -259,4 +126,185 @@ export async function computePeriodHoldingGainLoss(args: {
       holdingGainLossSplit.skippedCount +
       executionResidualRealization.skippedCount,
   };
+}
+
+function buildInitialPeriodHoldingBalances(args: PeriodHoldingGainLossArgs) {
+  const initialHoldingBalanceByAccountId = new Map<string, Money>();
+  for (const balance of args.initialHoldingBalances) {
+    initialHoldingBalanceByAccountId.set(balance.accountId, balance.rawBalance);
+  }
+
+  for (const unitBucket of args.transferClearingUnitBuckets) {
+    if (!unitBucket.isNonReferenceUnit) {
+      continue;
+    }
+
+    const openingPostedBalance = unitBucket.bookings
+      .filter((booking) => booking.date < args.periodStart)
+      .map((booking) => booking.value);
+    const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
+    if (isNearZero(openingBalance)) {
+      continue;
+    }
+
+    initialHoldingBalanceByAccountId.set(
+      `virtual:transfer-clearing:account:${unitBucket.unitKey}`,
+      openingBalance,
+    );
+  }
+
+  return initialHoldingBalanceByAccountId;
+}
+
+async function applyTransferClearingTransactions(
+  args: PeriodHoldingGainLossArgs,
+  holdingGainLossState: HoldingGainLossWorkingState,
+) {
+  const transferClearingTransactionBatch: HoldingTransaction[] = [];
+  const flushTransferClearingTransactionBatch = async () => {
+    if (transferClearingTransactionBatch.length === 0) {
+      return;
+    }
+
+    await applyHoldingTransactionsToGainLossState({
+      state: holdingGainLossState,
+      transactions: transferClearingTransactionBatch,
+      periodStart: args.periodStart,
+      periodEndExclusive: args.periodEndExclusive,
+      convertBookingToReference: ({ id: _id, ...booking }) =>
+        args.convertBookingToReference(booking),
+    });
+    transferClearingTransactionBatch.length = 0;
+  };
+
+  for (const unitBucket of args.transferClearingUnitBuckets) {
+    if (!unitBucket.isNonReferenceUnit) {
+      continue;
+    }
+
+    const transferClearingHoldingAccountId = `virtual:transfer-clearing:account:${unitBucket.unitKey}`;
+    for (const booking of unitBucket.bookings) {
+      if (
+        booking.date < args.periodStart ||
+        booking.date >= args.periodEndExclusive ||
+        isNearZero(booking.value)
+      ) {
+        continue;
+      }
+
+      transferClearingTransactionBatch.push({
+        bookings: [
+          toTransferClearingHoldingBooking(
+            transferClearingHoldingAccountId,
+            booking,
+          ),
+        ],
+      });
+
+      if (
+        transferClearingTransactionBatch.length >=
+        args.transferClearingBatchSize
+      ) {
+        await flushTransferClearingTransactionBatch();
+      }
+    }
+  }
+
+  await flushTransferClearingTransactionBatch();
+}
+
+function createPeriodHoldingContribution(
+  args: PeriodHoldingGainLossArgs,
+): (gainLossByAccount: HoldingAccountGainLoss) => void {
+  return (gainLossByAccount) => {
+    accumulateGainLossContribution({
+      byKey: args.gainsLossesContributionByKey,
+      sourceKind: "HOLDING",
+      accountId: gainLossByAccount.accountId,
+      accountName:
+        args.assetLiabilityAccountNameById.get(gainLossByAccount.accountId) ??
+        "Unknown account",
+      unit: gainLossByAccount.unit,
+      currency: gainLossByAccount.currency,
+      cryptocurrency: gainLossByAccount.cryptocurrency,
+      symbol: gainLossByAccount.symbol,
+      tradeCurrency: gainLossByAccount.tradeCurrency,
+      realizedGainLoss: gainLossByAccount.realizedGainLoss,
+      unrealizedGainLoss: gainLossByAccount.unrealizedGainLoss,
+    });
+  };
+}
+
+function createPeriodResidualContribution(
+  args: PeriodHoldingGainLossArgs,
+): (contribution: ExecutionResidualContribution) => void {
+  return (contribution) => {
+    args.onExecutionResidual?.(contribution);
+    accumulateGainLossContribution({
+      byKey: args.gainsLossesContributionByKey,
+      sourceKind: "HOLDING",
+      accountId: contribution.accountId,
+      accountName: contribution.accountName,
+      originatingAccountIds: contribution.originatingAccountIds,
+      unit: contribution.unit,
+      currency: contribution.currency,
+      cryptocurrency: contribution.cryptocurrency,
+      symbol: contribution.symbol,
+      tradeCurrency: contribution.tradeCurrency,
+      realizedGainLoss: contribution.realizedGainLoss,
+      unrealizedGainLoss: toMoney(0),
+    });
+  };
+}
+
+function toTransferClearingHoldingBooking(
+  transferClearingHoldingAccountId: string,
+  booking: TransferClearingUnitBucket["bookings"][number],
+): HoldingTransactionBooking {
+  return {
+    id: booking.id,
+    accountId: transferClearingHoldingAccountId,
+    date: booking.date,
+    value: toMoney(booking.value).neg(),
+    unit: booking.unit,
+    currency: booking.currency,
+    cryptocurrency: booking.cryptocurrency,
+    symbol: booking.symbol,
+    tradeCurrency: booking.tradeCurrency,
+    accountType: AccountType.BALANCE,
+    equityAccountSubtype: null,
+  };
+}
+
+async function computeTrackedPeriodHoldings(
+  args: PeriodHoldingGainLossArgs,
+  trackedHoldingAccounts: HoldingRateConvertibleAccount[],
+) {
+  const initialHoldingBalanceByAccountId =
+    buildInitialPeriodHoldingBalances(args);
+  const holdingGainLossState = await initializeHoldingGainLossState({
+    holdingAccounts: trackedHoldingAccounts,
+    initialBalanceByAccountId: initialHoldingBalanceByAccountId,
+    initialRateDate: args.initialHoldingDate,
+    resolveRate: args.resolveRate,
+  });
+
+  await applyHoldingTransactionsToGainLossState({
+    state: holdingGainLossState,
+    transactions: args.holdingTransactions.map((transaction) => ({
+      bookings: transaction.bookings,
+    })),
+    periodStart: args.periodStart,
+    periodEndExclusive: args.periodEndExclusive,
+    convertBookingToReference: ({ id: _id, ...booking }) =>
+      args.convertBookingToReference(booking),
+  });
+
+  await applyTransferClearingTransactions(args, holdingGainLossState);
+  return finalizeHoldingGainLossState({
+    state: holdingGainLossState,
+    periodEnd: args.periodEnd,
+    resolveRate: args.resolveRate,
+    onAccountGainLoss: createPeriodHoldingContribution(args),
+  });
 }

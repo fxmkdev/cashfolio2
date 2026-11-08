@@ -1,15 +1,15 @@
+import { AccountType } from "../../../.prisma-client/enums";
+import { prisma } from "../../../prisma.server";
 import {
   classificationOptions,
   type ClassificationNode,
 } from "../../../shared/asset-class";
+import { startOfUtcDay } from "../../../shared/date";
 import {
   getLegacyHoldingGainLossScope,
   type HistoryScopeOption,
 } from "../../../shared/history-scope";
-import { AccountType } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
-import { startOfUtcDay } from "../../../shared/date";
-import { filterConvertibleHoldingAccounts } from "../period-helpers";
+import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import { buildNetWorthHistoryScopeOptions } from "./period-history-scopes.server";
 
 export type PeriodHistoryPointContext = {

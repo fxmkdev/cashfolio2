@@ -15,11 +15,11 @@ import {
 import {
   buildBreakdownHierarchy as buildBreakdownHierarchyDecimal,
   buildBreakdownItems as buildBreakdownItemsDecimal,
-  computeHoldingGainLossForEventSeries as computeHoldingGainLossForEventSeriesDecimal,
   createBreakdownBucket,
-  isMultiUnitTransaction,
   shouldIncludeTransactionForPeriod,
 } from "./period/period-helpers";
+import { computeHoldingGainLossForEventSeries as computeHoldingGainLossForEventSeriesDecimal } from "./holdings/events";
+import { isMultiUnitTransaction } from "./holdings/transactions";
 import {
   getPeriodEndExclusive,
   resolvePeriodSelection,

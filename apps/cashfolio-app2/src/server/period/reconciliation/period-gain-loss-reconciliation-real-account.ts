@@ -1,39 +1,45 @@
+import { moneyAdd, toMoney, type Money } from "../../../shared/money";
+import { computeHoldingGainLossSplit } from "../../holdings/engine";
+import type {
+  HoldingGainLossFinalizationCallbacks,
+  HoldingRateConvertibleAccount,
+} from "../../holdings/types";
 import { toNumericMoney } from "../../money-boundary";
-import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 
-import {
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
-} from "../period-conversion";
-import {
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-  initializeHoldingGainLossState,
-} from "../holdings/period-overview-holdings";
-import {
-  addRunningUnrealizedGainLoss,
-  pushDiagnostic,
-  toEmptySummary,
-  toRoundedOpenLot,
-  toRoundedRealizedEvent,
-  toSummary,
-} from "./period-gain-loss-reconciliation-shared";
 import type {
   GainLossReconciliationDetails,
   GainLossReconciliationDiagnostic,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
 } from "../../../shared/gain-loss-reconciliation";
+import {
+  addRunningUnrealizedGainLoss,
+  toRoundedOpenLot,
+  toRoundedRealizedEvent,
+} from "../../holdings/explain";
+import {
+  convertBookingValueToReference,
+  getUnitToReferenceExchangeRate,
+} from "../period-conversion";
 import { formatUnitLabel, normalizeUppercaseCode } from "../period-unit-format";
+import {
+  pushDiagnostic,
+  toEmptySummary,
+  toSummary,
+} from "./period-gain-loss-reconciliation-shared";
 
-export async function buildRealAccountReconciliation(args: {
+type RealAccountReconciliationArgs = {
   baseData: PeriodBaseData;
   accountId: string;
   exchangeRateByKey?: Map<string, Promise<Money | null>>;
-}): Promise<GainLossReconciliationDetails | null> {
+};
+
+export async function buildRealAccountReconciliation(
+  args: RealAccountReconciliationArgs,
+): Promise<GainLossReconciliationDetails | null> {
   const { baseData } = args;
-  const { selection, referenceCurrency } = baseData;
+  const { selection } = baseData;
   const account = baseData.baseAssetLiabilityAccounts.find(
     (account) => account.id === args.accountId,
   );
@@ -55,17 +61,7 @@ export async function buildRealAccountReconciliation(args: {
 
   if (selection.isBeforeAccountBookStart) {
     return toNumericMoney({
-      target: {
-        accountId: targetAccount.id,
-        accountName: account.name,
-        isVirtual: false,
-        unit: targetAccount.unit,
-        unitLabel: formatUnitLabel(targetAccount),
-        currency: normalizeUppercaseCode(targetAccount.currency),
-        cryptocurrency: normalizeUppercaseCode(targetAccount.cryptocurrency),
-        symbol: normalizeUppercaseCode(targetAccount.symbol),
-        tradeCurrency: normalizeUppercaseCode(targetAccount.tradeCurrency),
-      },
+      target: toRealReconciliationTarget(account, targetAccount),
       summary: toEmptySummary(),
       skippedCount: 0,
       realizedEvents,
@@ -74,6 +70,101 @@ export async function buildRealAccountReconciliation(args: {
     });
   }
 
+  const collector = await collectRealAccountReconciliation(
+    args,
+    targetAccount,
+    diagnostics,
+    realizedEvents,
+    unrealizedOpenLots,
+  );
+
+  return toNumericMoney({
+    target: toRealReconciliationTarget(account, targetAccount),
+    summary: toSummary({
+      realizedGainLoss: collector.values.targetRealizedGainLoss,
+      unrealizedGainLoss: collector.values.targetUnrealizedGainLoss,
+    }),
+    skippedCount: collector.values.targetSkippedCount,
+    realizedEvents,
+    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
+    diagnostics,
+  });
+}
+
+function toRealReconciliationTarget(
+  account: { name: string },
+  targetAccount: HoldingRateConvertibleAccount,
+) {
+  return {
+    accountId: targetAccount.id,
+    accountName: account.name,
+    isVirtual: false,
+    unit: targetAccount.unit,
+    unitLabel: formatUnitLabel(targetAccount),
+    currency: normalizeUppercaseCode(targetAccount.currency),
+    cryptocurrency: normalizeUppercaseCode(targetAccount.cryptocurrency),
+    symbol: normalizeUppercaseCode(targetAccount.symbol),
+    tradeCurrency: normalizeUppercaseCode(targetAccount.tradeCurrency),
+  };
+}
+
+function createRealAccountExplainCollector(
+  targetAccountId: string,
+  diagnostics: GainLossReconciliationDiagnostic[],
+  realizedEvents: GainLossReconciliationRealizedEvent<Money>[],
+  unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[],
+) {
+  const values = {
+    targetSkippedCount: 0,
+    targetRealizedGainLoss: toMoney(0),
+    targetUnrealizedGainLoss: toMoney(0),
+  };
+  const callbacks: HoldingGainLossFinalizationCallbacks = {
+    onAccountGainLoss: (gainLossByAccount) => {
+      if (gainLossByAccount.accountId !== targetAccountId) {
+        return;
+      }
+      values.targetRealizedGainLoss = moneyAdd(
+        values.targetRealizedGainLoss,
+        gainLossByAccount.realizedGainLoss,
+      );
+      values.targetUnrealizedGainLoss = moneyAdd(
+        values.targetUnrealizedGainLoss,
+        gainLossByAccount.unrealizedGainLoss,
+      );
+    },
+    onAccountExecutionEvent: (event) => {
+      if (event.accountId !== targetAccountId) {
+        return;
+      }
+      realizedEvents.push(toRoundedRealizedEvent(event));
+    },
+    onAccountOpenLotValuation: (lot) => {
+      if (lot.accountId !== targetAccountId) {
+        return;
+      }
+      unrealizedOpenLots.push(toRoundedOpenLot(lot));
+    },
+    onSkippedItem: (item) => {
+      if (item.accountId !== targetAccountId) {
+        return;
+      }
+      values.targetSkippedCount += 1;
+      pushDiagnostic(diagnostics, item);
+    },
+  };
+  return { values, callbacks };
+}
+
+async function collectRealAccountReconciliation(
+  args: RealAccountReconciliationArgs,
+  targetAccount: HoldingRateConvertibleAccount,
+  diagnostics: GainLossReconciliationDiagnostic[],
+  realizedEvents: GainLossReconciliationRealizedEvent<Money>[],
+  unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[],
+) {
+  const { baseData } = args;
+  const { selection, referenceCurrency } = baseData;
   const initialHoldingBalanceByAccountId = new Map(
     baseData.initialHoldingBalances.map((balance) => [
       balance.accountId,
@@ -83,49 +174,19 @@ export async function buildRealAccountReconciliation(args: {
 
   const exchangeRateByKey =
     args.exchangeRateByKey ?? new Map<string, Promise<Money | null>>();
-  let targetSkippedCount = 0;
-  let targetRealizedGainLoss: Money = toMoney(0);
-  let targetUnrealizedGainLoss: Money = toMoney(0);
-
-  const state = await initializeHoldingGainLossState({
+  const collector = createRealAccountExplainCollector(
+    targetAccount.id,
+    diagnostics,
+    realizedEvents,
+    unrealizedOpenLots,
+  );
+  await computeHoldingGainLossSplit({
     holdingAccounts: baseData.holdingAccountsResolved,
     initialBalanceByAccountId: initialHoldingBalanceByAccountId,
     initialRateDate: selection.initialHoldingDate,
-    resolveRate: (input) =>
-      getUnitToReferenceExchangeRate({
-        ...input,
-        referenceCurrency,
-        exchangeRateByKey,
-      }),
-    onSkippedItem: (item) => {
-      if (item.accountId !== targetAccount.id) {
-        return;
-      }
-      targetSkippedCount += 1;
-      pushDiagnostic(diagnostics, item);
-    },
-  });
-
-  await applyHoldingTransactionsToGainLossState({
-    state,
     transactions: baseData.holdingTransactions,
     periodStart: selection.from,
     periodEndExclusive: selection.queryEndExclusive,
-    convertBookingToReference: (booking) =>
-      convertBookingValueToReference({
-        ...booking,
-        referenceCurrency,
-        exchangeRateByKey,
-      }),
-    onSkippedItem: (item) => {
-      if (item.accountId !== targetAccount.id) return;
-      targetSkippedCount += 1;
-      pushDiagnostic(diagnostics, item);
-    },
-  });
-
-  await finalizeHoldingGainLossState({
-    state,
     periodEnd: selection.to,
     resolveRate: (input) =>
       getUnitToReferenceExchangeRate({
@@ -133,59 +194,13 @@ export async function buildRealAccountReconciliation(args: {
         referenceCurrency,
         exchangeRateByKey,
       }),
-    onAccountGainLoss: (gainLossByAccount) => {
-      if (gainLossByAccount.accountId !== targetAccount.id) {
-        return;
-      }
-      targetRealizedGainLoss = moneyAdd(
-        targetRealizedGainLoss,
-        gainLossByAccount.realizedGainLoss,
-      );
-      targetUnrealizedGainLoss = moneyAdd(
-        targetUnrealizedGainLoss,
-        gainLossByAccount.unrealizedGainLoss,
-      );
-    },
-    onAccountExecutionEvent: (event) => {
-      if (event.accountId !== targetAccount.id) {
-        return;
-      }
-      realizedEvents.push(toRoundedRealizedEvent(event));
-    },
-    onAccountOpenLotValuation: (lot) => {
-      if (lot.accountId !== targetAccount.id) {
-        return;
-      }
-      unrealizedOpenLots.push(toRoundedOpenLot(lot));
-    },
-    onSkippedItem: (item) => {
-      if (item.accountId !== targetAccount.id) {
-        return;
-      }
-      targetSkippedCount += 1;
-      pushDiagnostic(diagnostics, item);
-    },
+    convertBookingToReference: (booking) =>
+      convertBookingValueToReference({
+        ...booking,
+        referenceCurrency,
+        exchangeRateByKey,
+      }),
+    ...collector.callbacks,
   });
-
-  return toNumericMoney({
-    target: {
-      accountId: targetAccount.id,
-      accountName: account.name,
-      isVirtual: false,
-      unit: targetAccount.unit,
-      unitLabel: formatUnitLabel(targetAccount),
-      currency: normalizeUppercaseCode(targetAccount.currency),
-      cryptocurrency: normalizeUppercaseCode(targetAccount.cryptocurrency),
-      symbol: normalizeUppercaseCode(targetAccount.symbol),
-      tradeCurrency: normalizeUppercaseCode(targetAccount.tradeCurrency),
-    },
-    summary: toSummary({
-      realizedGainLoss: targetRealizedGainLoss,
-      unrealizedGainLoss: targetUnrealizedGainLoss,
-    }),
-    skippedCount: targetSkippedCount,
-    realizedEvents,
-    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
-    diagnostics,
-  });
+  return collector;
 }

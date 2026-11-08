@@ -1,7 +1,9 @@
+import { getHoldingTransactionContext } from "../../holdings/transactions";
+import type {
+  ApplyHoldingTransactionsArgs,
+  HoldingBookingConverter,
+} from "../../holdings/types";
 import type { ValuationLookupScheduler } from "../../period/period-conversion";
-import { getHoldingTransactionContext } from "../../period/holdings/holding-transaction-context";
-import type { applyHoldingTransactionsToGainLossState } from "../../period/holdings/period-overview-holdings";
-import type { HoldingBookingConverter } from "../../period/holdings/period-overview-holdings-types";
 
 export const ACCOUNT_GAIN_LOSS_LOOKUP_CONCURRENCY = 4;
 
@@ -28,7 +30,7 @@ export function createAccountGainLossLookupScheduler(): ValuationLookupScheduler
 
 /** Warm conversions without changing lots, counters, or ordered diagnostic callbacks. */
 export async function prefetchAccountGainLossConversions(
-  args: Parameters<typeof applyHoldingTransactionsToGainLossState>[0],
+  args: ApplyHoldingTransactionsArgs,
 ) {
   const convertedByBookingId = new Map<
     string,

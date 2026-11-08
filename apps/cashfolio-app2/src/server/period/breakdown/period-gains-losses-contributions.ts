@@ -1,6 +1,6 @@
-import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import { Unit } from "../../../.prisma-client/enums";
-import { isNearZero } from "../holdings/period-overview-holdings-common";
+import { moneyAdd, toMoney, type Money } from "../../../shared/money";
+import { isNearZero } from "../../holdings/quantity-policy";
 
 export type GainLossContributionAccumulator = {
   sourceKind: "HOLDING" | "EXPLICIT";

@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { moneyIsFinite, toMoney, type Money } from "../../../shared/money";
-import { filterConvertibleHoldingAccounts } from "../../period/period-helpers";
+import { filterConvertibleHoldingAccounts } from "../../holdings/events";
 import type { AccountGainLossBasisRange } from "./range.server";
 
 /** Only complete replay state is persisted; explanations and closing prices are excluded. */

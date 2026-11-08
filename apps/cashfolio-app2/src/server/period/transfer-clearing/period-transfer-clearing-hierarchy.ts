@@ -1,6 +1,6 @@
-import { toMoney, type Money } from "../../../shared/money";
 import { AccountType } from "../../../.prisma-client/enums";
-import { isNearZero } from "../holdings/period-overview-holdings-common";
+import { toMoney, type Money } from "../../../shared/money";
+import { isNearZero } from "../../holdings/quantity-policy";
 import {
   TRANSFER_CLEARING_CRYPTOCURRENCY_GROUP_ID,
   TRANSFER_CLEARING_CURRENCY_GROUP_ID,
