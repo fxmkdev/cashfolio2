@@ -140,7 +140,9 @@ vi.mock("../period-conversion.server", () => ({
 }));
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 const loadAccountGainLossSources = vi.hoisted(() => vi.fn());
-vi.mock("../cache/period-base-data-cache.server", () => ({ getOrLoadPeriodBaseData }));
+vi.mock("../cache/period-base-data-cache.server", () => ({
+  getOrLoadPeriodBaseData,
+}));
 vi.mock("./period-account-gain-loss-sources.server", () => ({
   loadAccountGainLossSources,
 }));

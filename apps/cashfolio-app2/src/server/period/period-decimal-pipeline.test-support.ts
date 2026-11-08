@@ -14,7 +14,9 @@ const prisma = vi.hoisted(() => ({
 }));
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 vi.mock("../../prisma.server", () => ({ prisma }));
-vi.mock("./cache/period-base-data-cache.server", () => ({ getOrLoadPeriodBaseData }));
+vi.mock("./cache/period-base-data-cache.server", () => ({
+  getOrLoadPeriodBaseData,
+}));
 vi.mock("../valuation.server", () => ({
   getCurrencyExchangeRate: async ({ date }: { date: Date }) =>
     toMoney(date.getUTCMonth() === 0 ? "0.8" : "0.9"),

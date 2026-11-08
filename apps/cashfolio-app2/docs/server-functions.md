@@ -337,8 +337,9 @@ pricing, transfers, chronological replay, FIFO matching, and open-lot valuation.
 Account gain/loss, Period overview, History, and reconciliation consume its
 explicit internal entrypoints:
 
-- `engine.ts`: initialize, apply transactions, replay pending executions without
-  closing valuation, finalize, combined calculation, and open-lot inspection
+- `engine.server.ts`: initialize, apply transactions, replay pending executions
+  without closing valuation, finalize, combined calculation, and open-lot
+  inspection
 - `transactions.ts`: transaction decomposition, prefetch classification, unit
   identity, multi-unit detection, and date-window membership
 - `types.ts`: named operation inputs, Decimal state/results, conversion/rate
@@ -367,8 +368,8 @@ receipts separately select carried lots, close opposite positions, insert the
 remaining basis, and assemble explain events. Mixed-period transfers prepare
 conversions once before applying their dated carry legs.
 
-`period/holdings/period-holding-gain-loss.ts` remains the period adapter. It
-prepares opening balances and virtual transfer-clearing accounts, batches
+`period/holdings/period-holding-gain-loss.server.ts` remains the period adapter.
+It prepares opening balances and virtual transfer-clearing accounts, batches
 synthetic transactions, accumulates report contributions, and combines holding
 results with period execution-residual realization. Residual attribution,
 loaders, and report assembly stay in Period. Account gain/loss owns its
@@ -376,15 +377,16 @@ basis/summary caches, availability propagation, diagnostic presentation, and
 private-copy revaluation.
 
 Within Accounts, `gain-loss/basis-diagnostics.server.ts` owns affected-account
-indexing and propagation of unavailable basis. `valuation-state.server.ts` owns private copies,
-closing-rate warmup, and availability assembly; `valuation-details.ts` collects
-unrounded detail callbacks. The calculation entrypoint retains basis publication
-and phase sequencing. Period holding orchestration similarly delegates opening
-balances, synthetic batches, and contribution callbacks. Execution residuals
-separate selection, conversion, and attribution; transfer-clearing calculation
-separates opening basis, execution pricing, and closing valuation. Global
-transfer-clearing totals are updated in execution order, not recomputed from
-per-unit totals, because regrouping Decimal additions can change cancellation.
+indexing and propagation of unavailable basis. `valuation-state.server.ts` owns
+private copies, closing-rate warmup, and availability assembly;
+`valuation-details.ts` collects unrounded detail callbacks. The calculation
+entrypoint retains basis publication and phase sequencing. Period holding
+orchestration similarly delegates opening balances, synthetic batches, and
+contribution callbacks. Execution residuals separate selection, conversion, and
+attribution; transfer-clearing calculation separates opening basis, execution
+pricing, and closing valuation. Global transfer-clearing totals are updated in
+execution order, not recomputed from per-unit totals, because regrouping Decimal
+additions can change cancellation.
 
 Accounts and transactions retain their existing processing order, Decimal
 precision, quantity threshold, pricing fallbacks, counters, and explain callback
