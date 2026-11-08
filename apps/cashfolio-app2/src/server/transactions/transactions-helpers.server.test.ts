@@ -781,7 +781,7 @@ describe("exact monetary transaction validation", () => {
         unit: Unit.CURRENCY,
       })),
       thousandSeparator: "'",
-      decimalSeparator: "../transactions",
+      decimalSeparator: ".",
     });
     if (uiError === null) {
       expect(() => validateCreateTransaction(input)).not.toThrow();
