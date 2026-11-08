@@ -43,10 +43,10 @@ file and the linked docs are for `apps/cashfolio-app2`.
 - TanStack Start route filenames often contain `$` (for route params). In shell
   commands, always treat these paths as literals to avoid variable expansion.
   - Prefer wrapping such paths in single quotes, e.g.
-    `cat 'apps/cashfolio-app2/src/routes/$accountBookId/$accountId.tsx'`.
+    `cat 'apps/cashfolio-app2/src/routes/$accountBookId/$accountId/index.tsx'`.
   - Or escape the `$` as `\$` when quoting is awkward.
   - For git commands, use `--` before paths, e.g.
-    `git add -- 'apps/cashfolio-app2/src/routes/$accountBookId/$accountId.tsx'`.
+    `git add -- 'apps/cashfolio-app2/src/routes/$accountBookId/$accountId/index.tsx'`.
 - Pull request titles must follow Conventional Commits because GitHub squash
   merge is configured to use the PR title as the commit on `main`.
   - Format: `<type>(optional-scope): <description>`
@@ -93,12 +93,12 @@ pnpm lint:workflows                           # actionlint check for GitHub work
   server-only filenames, and test/story support. Run the app lint command to
   check import boundaries and eager runtime cycles.
 - Follow the
-  [UI capitalization guidelines](apps/cashfolio-app2/docs/ui-patterns.md#capitalization):
+  [UI capitalization guidelines](apps/cashfolio-app2/docs/ui/copy-and-formatting.md#capitalization):
   use Title Case for short UI labels and titles, sentence case for prose,
   instructions, and status messages. Review visible copy and accessible names
   together.
 - Follow the
-  [slash-spacing guidelines](apps/cashfolio-app2/docs/ui-patterns.md#slashes):
+  [slash-spacing guidelines](apps/cashfolio-app2/docs/ui/copy-and-formatting.md#slashes):
   use no spaces between single-word terms (`Gain/Loss`), spaces on both sides
   when either alternative is multiword (`Income Category / Expense Category`),
   and spaced separators for displayed hierarchy paths (`Assets / Cash`). Exclude
@@ -109,20 +109,20 @@ pnpm lint:workflows                           # actionlint check for GitHub work
   for customer-facing identity references and "user" in admin actions, applying
   the general capitalization policy to labels. Explicit provider terms and
   documented legacy URLs are exceptions. See
-  [Identity and financial-account terminology](apps/cashfolio-app2/docs/ui-patterns.md#identity-and-financial-account-terminology).
+  [Identity and financial-account terminology](apps/cashfolio-app2/docs/ui/copy-and-formatting.md#identity-and-financial-account-terminology).
 - Use the shared AG Grid `DataGrid` for all tables, including small, read-only,
   and modal tables. See the
-  [table guidelines](apps/cashfolio-app2/docs/ui-patterns.md#tables).
+  [table guidelines](apps/cashfolio-app2/docs/ui/grids-and-hierarchies.md#tables).
 - Use tree selectors for hierarchical choices, following the
-  [hierarchical selection pattern](apps/cashfolio-app2/docs/ui-patterns.md#hierarchical-selection).
+  [hierarchical selection pattern](apps/cashfolio-app2/docs/ui/grids-and-hierarchies.md#hierarchical-selection).
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).
 - Use `@tabler/icons-react` for icons. Follow the shared
-  [action icon reference](apps/cashfolio-app2/docs/ui-patterns.md#action-icons),
-  [contextual child creation](apps/cashfolio-app2/docs/ui-patterns.md#contextual-child-creation),
+  [action icon reference](apps/cashfolio-app2/docs/ui/grids-and-hierarchies.md#action-icons),
+  [contextual child creation](apps/cashfolio-app2/docs/ui/grids-and-hierarchies.md#contextual-child-creation),
   and
-  [hierarchy organization pattern](apps/cashfolio-app2/docs/ui-patterns.md#hierarchy-organize-mode)
+  [hierarchy organization pattern](apps/cashfolio-app2/docs/ui/grids-and-hierarchies.md#hierarchy-organize-mode)
   for hierarchy management, including row-action order and submission feedback.
 - Use `@paralleldrive/cuid2` for unique IDs.
 - Use Temporal through `src/shared/temporal.ts` for calendar operations on the
@@ -173,6 +173,7 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## Architecture References
 
+- [Architecture and ownership map](apps/cashfolio-app2/docs/architecture.md)
 - [Module ownership and import boundaries](apps/cashfolio-app2/docs/module-boundaries.md)
 - [Routing](apps/cashfolio-app2/docs/routing.md)
 - [Server functions](apps/cashfolio-app2/docs/server-functions.md)

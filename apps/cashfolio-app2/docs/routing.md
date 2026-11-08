@@ -119,8 +119,9 @@ checkpoints, quota waits, backoff timers, or automatic revision restarts.
   `/user/delete`. The UI calls the identity a "Cashfolio account" and previews
   affected books. Configure Logto Account Center with `/user/delete`; POST
   submits deletion and redirects to `/user/delete?deleted=1` after success. See
-  [terminology](ui-patterns.md#identity-and-financial-account-terminology) and
-  [deletion behavior](server-functions.md#auth-and-authorization).
+  [terminology](ui/copy-and-formatting.md#identity-and-financial-account-terminology)
+  and
+  [deletion behavior](server/authentication-and-users.md#auth-and-authorization).
   `UserDeletePageView` renders the affected-book preview, empty lists, and
   deleted success state from typed props. The route retains search parsing,
   preview loading, and POST handling. The success query skips authenticated
@@ -376,7 +377,7 @@ Both routes import `loading/loader.ts`, `controller.ts`, and the lazy-loaded
 `view.tsx` directly from that feature. Root modules compose the page; concern
 folders own loading, grid presentation, dialogs, assignments, management, and
 gain/loss. See
-[Shared Component Organization](ui-patterns.md#shared-component-organization)
+[Shared Component Organization](ui/layout-and-navigation.md#shared-component-organization)
 for the ownership map. Route adapters do not duplicate these implementations.
 
 The controller composes a data/presentation model, management actions, grid

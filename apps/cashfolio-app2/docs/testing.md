@@ -49,6 +49,9 @@ intentional coverage-baseline updates.
 - Framework: **Vitest** (`vitest.unit.config.ts`)
 - Test files: `src/**/*.test.ts`
 - Runtime: Node test environment
+- Node unit discovery includes `src/**/*.test.ts`, `src/**/*.test.tsx`, and
+  `eslint-rules/**/*.test.ts`; browser-only tests retain their separate
+  projects.
 - Prisma client is generated before unit test runs via `pretest:unit`.
 - Coverage output is published as CI artifacts, and a baseline ratchet prevents
   regressions versus the current baseline.
@@ -88,6 +91,29 @@ pnpm --filter cashfolio-app2 coverage:ratchet
 
 ## Concurrent Mutation and Snapshot Integration Tests
 
+Integration discovery uses the shared patterns in
+`vitest.integration-suites.ts`:
+
+| Command                       | Automatically discovered files                                            | Environment                                                          |
+| ----------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `test:mutations`              | All `src/**/*.integration.ts` outside the two standalone tool directories | Disposable migrated PostgreSQL databases; mutation/snapshot settings |
+| `test:staging-seed`           | `src/staging-seed/**/*.integration.ts`                                    | Staging-seed database contract and timeouts                          |
+| `test:provider-usage-cleanup` | `src/provider-usage-cleanup/**/*.integration.ts`                          | Provider-cleanup database contract, standalone build, and timeouts   |
+
+New files and nested folders are discovered without editing filename lists. The
+database-free discovery guard in `src/testing/integration-discovery.test.ts`
+requires every integration file to belong to exactly one suite. Keep the three
+configs and CI commands separate: their prerequisites and database contracts
+differ. All three disable file parallelism.
+
+Split large suites by behavior while preserving test names, parameterized cases,
+assertions, and concurrency gates. Keep fixtures beside the feature in typed
+`*.test-support.ts` modules; fixture factories create mutable state per case.
+Mocked harnesses register hoisted mocks before dynamically importing tested
+modules and export local bindings. Each suite explicitly installs reset,
+fake-timer, database setup, and cleanup hooks as appropriate. Integration
+harnesses keep their disposable database safety checks and teardown.
+
 `pnpm --filter cashfolio-app2 test:mutations` exercises public mutation handlers
 against real PostgreSQL with only request authentication and Redis mocked. The
 suites create and drop their own migrated disposable databases; they never
@@ -122,8 +148,8 @@ guards against slow subtype-exclusion query plans before the next automatic
 archived selections, archive/delete confirmation errors, account/group edits,
 and import review/inclusion preservation after a constraint refresh. The real
 PostgreSQL busy-rollback scenarios live separately in
-`mutation-recovery-reorder.spec.ts` and `mutation-recovery-unarchive.spec.ts` so
-workers can schedule each lock wait independently. `withBookLock` always
+`mutation-recovery-organize.spec.ts` and `mutation-recovery-unarchive.spec.ts`
+so workers can schedule each lock wait independently. `withBookLock` always
 releases the book lock, including when assertions fail; production lock-wait and
 retry timing remains unchanged.
 

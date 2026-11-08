@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { integrationSuites } from "./vitest.integration-suites.ts";
 
 export default defineConfig({
   resolve: {
@@ -9,7 +10,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/staging-seed/writer.integration.ts"],
+    ...integrationSuites.stagingSeed,
     fileParallelism: false,
     hookTimeout: 120_000,
     testTimeout: 120_000,
