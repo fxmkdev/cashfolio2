@@ -233,7 +233,10 @@ race image preparation. The Machine has one shared CPU, 512 MB RAM, no HTTP
 services, and no restart. Its command overrides the web-server entrypoint. An
 eight-minute runner budget allows startup, the five-minute cleanup budget, and
 log delivery. The runner checks the process exit event, not merely a stopped
-state. It destroys the Machine after success, and attempts stop plus
+state. Fly uses `-1` for no terminating signal; only positive host or guest
+signal numbers indicate signal termination. Success still requires zero host and
+guest exit codes (which Fly may omit), no OOM or requested stop, and completed
+cleanup metrics. It destroys the Machine after success, and attempts stop plus
 force-destruction after failure, timeout, or cancellation. Lost creation
 responses are recovered by unique name. An API outage can prevent destruction; a
 visible workflow failure then requires an operator to inspect/remove any
@@ -252,6 +255,15 @@ field remain supported. No connection strings, raw driver errors, or arbitrary
 remote logs are printed. Machines API HTTP errors identify the method,
 operation, and status without including the response body. There is no
 additional notification service.
+
+Workflow logs and summaries also include the observed host/guest exit codes,
+host/guest signals, OOM flag, and requested-stop flag. These diagnostics come
+from the same exit event used to classify the process result. Only safe integer
+codes/signals and boolean flags are reported; numeric `0`/`1` flags are
+converted to booleans. Missing or invalid fields appear as `unavailable`. Raw
+Fly error strings and other event fields are excluded. A completed cleanup
+status with a nonzero process exit remains a failure, including a failure while
+disconnecting the database client after cleanup completes.
 
 CI exercises the runner with mocked Fly responses and the database cleanup in a
 fresh, isolated PostgreSQL database, including the bundled CLI. Run locally with
