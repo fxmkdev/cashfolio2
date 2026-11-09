@@ -2,6 +2,8 @@
 
 Architecture and implementation patterns for `apps/cashfolio-app2`.
 
+- [Architecture and ownership map](architecture.md)
+- [Module ownership and import boundaries](module-boundaries.md)
 - [Routing](routing.md)
 - [Server functions](server-functions.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)

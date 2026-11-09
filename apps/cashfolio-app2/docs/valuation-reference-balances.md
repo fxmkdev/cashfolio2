@@ -290,7 +290,7 @@ History, and reconciliation. The domain has no dependency on period
 orchestration. Period retains synthetic transfer-clearing construction,
 batching, residual attribution, and report assembly; Accounts retains
 basis/summary caching and diagnostic availability policy. See the
-[holding engine boundary](server-functions.md#holding-gainloss-engine).
+[holding engine boundary](server/holdings-and-gain-loss.md#holding-gainloss-engine).
 Executions and transfers are ordered by booking date and booking ID. Each
 transaction is decomposed into same-unit transfer quantities and remaining
 executions. Opposite quantities in different Asset/Liability accounts are
@@ -388,7 +388,7 @@ force a rebuild. Only complete bases from stable historical valuation sources
 persist; recent non-identity execution prices cannot persist until their
 valuation dates pass the publication cutoff. Cache failures fall back to full
 calculation. See
-[Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
+[Accumulated G/L historical basis cache](server/holdings-and-gain-loss.md#accumulated-gl-historical-basis-cache)
 for limits, snapshot validation, and cleanup behavior.
 
 ### Concurrent account G/L valuation

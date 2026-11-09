@@ -150,7 +150,7 @@ database level.
 Monetary server calculations normalize Prisma Decimal values directly into the
 shared `MoneyDecimal` (40-digit precision, half-even rounding), and persist
 calculated booking values as decimal strings. API amounts remain numeric. See
-[Monetary calculation boundaries](server-functions.md#monetary-calculation-boundaries)
+[Monetary calculation boundaries](server/request-boundaries.md#monetary-calculation-boundaries)
 for validation, report rounding, and cache representation.
 
 ## Pending user deletion
@@ -160,4 +160,4 @@ before removing their Logto identity. Pending users retain their stored roles
 for diagnostics, but are excluded from active-Admin checks and cannot change
 roles. A failed cleanup is resumed by retrying deletion, rather than clearing
 the flag. See
-[Admin membership and user deletion](server-functions.md#admin-membership-and-user-deletion).
+[Admin membership and user deletion](server/authentication-and-users.md#admin-membership-and-user-deletion).

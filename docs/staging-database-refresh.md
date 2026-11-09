@@ -150,7 +150,7 @@ In `1. Swiss Household Demo`, open `Investments → Managed Portfolio CHF`. This
 non-cash CHF asset account tracks the reported total value of a discretionary
 portfolio. It has no individual security or crypto holdings and requires no
 market quotes. See the
-[manual Gain/Loss workflow](../apps/cashfolio-app2/docs/ui-patterns.md#explicit-gainloss-for-manually-valued-accounts).
+[manual Gain/Loss workflow](../apps/cashfolio-app2/docs/ui/accounts-and-classification.md#explicit-gainloss-for-manually-valued-accounts).
 
 The portfolio starts with CHF 50,000 on the book's opening-balance date and
 includes three years of cash flows and monthly statement valuations:
