@@ -7,6 +7,7 @@ import {
   runCleanupJob,
   selectWebImage,
   summaryMarkdown,
+  type CleanupExitDiagnostics,
   type CleanupJobOptions,
   type CleanupSummary,
   type ExitEvent,
@@ -30,8 +31,20 @@ const log = (value: unknown = metrics) =>
   JSON.stringify({
     message: `PROVIDER_USAGE_CLEANUP ${JSON.stringify(value)}`,
   });
+// The November 9 production and staging Machines both reported this clean exit.
+const cleanExitDiagnostics = {
+  exit_code: 0,
+  guest_exit_code: 0,
+  signal: -1,
+  guest_signal: -1,
+  oom_killed: false,
+  requested_stop: false,
+};
 const stopped = (
-  exit: ExitEvent = { exited_at: "2026-10-10T12:00:00Z" },
+  exit: ExitEvent = {
+    exited_at: "2026-11-09T12:07:23.322Z",
+    ...cleanExitDiagnostics,
+  },
 ): Machine => ({
   state: "stopped",
   events: [{ timestamp: 1, request: { exit_event: exit } }],
@@ -144,6 +157,31 @@ test("verifies Fly exit events including omitted zero code and MonitorEvent", ()
   );
 });
 
+for (const nested of [false, true]) {
+  for (const codes of [{ exit_code: 0, guest_exit_code: 0 }, {}]) {
+    test(`accepts -1 signals with ${Object.keys(codes).length ? "explicit" : "omitted"} zero codes in ${nested ? "MonitorEvent" : "direct"} exits`, () => {
+      const exit: ExitEvent = {
+        exited_at: "2026-11-09T12:07:23.322Z",
+        signal: -1,
+        guest_signal: -1,
+        ...codes,
+      };
+      assert.equal(
+        processExit({
+          events: [
+            {
+              request: nested
+                ? { MonitorEvent: { exit_event: exit } }
+                : { exit_event: exit },
+            },
+          ],
+        }),
+        0,
+      );
+    });
+  }
+}
+
 test("handles a cleanup that exits before the first poll and destroys the Machine", async () => {
   const { args, calls, reports } = fixture();
   assert.deepEqual(await runCleanupJob(args), metrics);
@@ -169,7 +207,7 @@ test("handles a cleanup that exits before the first poll and destroys the Machin
   });
   assert.equal(calls.at(-1)?.[0], "DELETE");
   assert.ok(!calls.some(([, path]) => /\/(start|stop)$/.test(path)));
-  assert.deepEqual(reports, [[metrics, true]]);
+  assert.deepEqual(reports, [[metrics, true, cleanExitDiagnostics]]);
 });
 
 test("waits through asynchronous image preparation without an explicit start", async () => {
@@ -190,8 +228,56 @@ test("waits through asynchronous image preparation without an explicit start", a
     1,
   );
   assert.equal(calls.at(-1)?.[0], "DELETE");
-  assert.deepEqual(reports, [[metrics, true]]);
+  assert.deepEqual(reports, [[metrics, true, cleanExitDiagnostics]]);
 });
+
+test("classification and diagnostics select the same newest completed exit", async () => {
+  const { args, reports } = fixture({
+    state: {
+      state: "stopped",
+      events: [
+        {
+          timestamp: 1,
+          request: { exit_event: { exited_at: "older", exit_code: 2 } },
+        },
+        {
+          timestamp: 3,
+          request: { exit_event: { exit_code: 3 } },
+        },
+        {
+          timestamp: 2,
+          request: {
+            MonitorEvent: {
+              exit_event: { exited_at: "newer", ...cleanExitDiagnostics },
+            },
+          },
+        },
+      ],
+    },
+  });
+  assert.deepEqual(await runCleanupJob(args), metrics);
+  assert.deepEqual(reports, [[metrics, true, cleanExitDiagnostics]]);
+});
+
+for (const failure of [
+  { exit_code: 2 },
+  { guest_exit_code: 3 },
+  { signal: 15 },
+  { guest_signal: 9 },
+  { oom_killed: true },
+  { requested_stop: true },
+]) {
+  test(`completed cleanup metrics cannot override ${Object.keys(failure)[0]}`, async () => {
+    const diagnostics = { ...cleanExitDiagnostics, ...failure };
+    const { args, calls, reports } = fixture({
+      state: stopped({ exited_at: "date", ...diagnostics }),
+    });
+    await assert.rejects(runCleanupJob(args), /exited unsuccessfully/);
+    assert.deepEqual(reports, [[metrics, false, diagnostics]]);
+    assert.ok(calls.some(([, path]) => path === "/temporary/stop"));
+    assert.equal(calls.at(-1)?.[0], "DELETE");
+  });
+}
 
 test("mixed deployed images fail before creating a Machine", async () => {
   const { args, calls } = fixture({ machines: [web(), web("other")] });
@@ -339,11 +425,76 @@ test("includes only allowlisted cleanup failure reasons in workflow reports", as
     logs: log(failed),
   });
   await assert.rejects(runCleanupJob(args), /exited unsuccessfully/);
-  assert.deepEqual(reports, [[failed, false]]);
+  assert.deepEqual(reports, [[failed, false, { exit_code: 1 }]]);
 
   const parsed = parseCleanupLogs(log({ ...metrics, failureReason: "secret" }));
   assert.deepEqual(parsed, metrics);
   assert.ok(!summaryMarkdown("staging", parsed, false).includes("secret"));
+});
+
+test("reports allowlisted exit numbers and booleans without raw Fly errors", async () => {
+  const { args, reports } = fixture({
+    state: stopped({
+      exited_at: "date",
+      ...cleanExitDiagnostics,
+      oom_killed: 0,
+      requested_stop: 1,
+      error: "access_key=secret",
+      guest_error: "database credentials",
+    } as ExitEvent),
+  });
+  await assert.rejects(runCleanupJob(args), /exited unsuccessfully/);
+  const diagnostics = { ...cleanExitDiagnostics, requested_stop: true };
+  assert.deepEqual(reports, [[metrics, false, diagnostics]]);
+  const markdown = summaryMarkdown("prod", metrics, false, reports[0][2]);
+  for (const row of [
+    "| Host exit code | 0 |",
+    "| Guest exit code | 0 |",
+    "| Host signal | -1 |",
+    "| Guest signal | -1 |",
+    "| OOM killed | false |",
+    "| Requested stop | true |",
+  ])
+    assert.ok(markdown.includes(row));
+  assert.ok(!JSON.stringify(reports).includes("secret"));
+  assert.ok(!markdown.includes("credentials"));
+});
+
+test("invalid exit diagnostics are unavailable and never interpolated into reports", async () => {
+  const invalidExit = {
+    exited_at: "date",
+    exit_code: "access_key=secret",
+    guest_exit_code: Number.NaN,
+    signal: Number.POSITIVE_INFINITY,
+    guest_signal: 1.5,
+    oom_killed: "secret",
+    requested_stop: 2,
+    error: "secret",
+  } as unknown as ExitEvent;
+  const { args, reports } = fixture({ state: stopped(invalidExit) });
+  await assert.rejects(runCleanupJob(args), /exited unsuccessfully/);
+  assert.deepEqual(reports, [[metrics, false, {}]]);
+  for (const exit of [
+    undefined,
+    invalidExit as unknown as CleanupExitDiagnostics,
+  ]) {
+    const markdown = summaryMarkdown("prod", metrics, false, exit);
+    for (const label of [
+      "Host exit code",
+      "Guest exit code",
+      "Host signal",
+      "Guest signal",
+      "OOM killed",
+      "Requested stop",
+    ])
+      assert.ok(markdown.includes(`| ${label} | unavailable |`));
+    assert.ok(!markdown.includes("secret"));
+  }
+  assert.ok(
+    summaryMarkdown("prod", metrics, false, {
+      exit_code: Number.MAX_SAFE_INTEGER + 1,
+    }).includes("| Host exit code | unavailable |"),
+  );
 });
 
 test("lost create response recovers and destroys by unique name", async () => {

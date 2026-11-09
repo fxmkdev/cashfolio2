@@ -24,6 +24,15 @@ export interface ExitEvent {
   guest_signal?: number;
 }
 
+export interface CleanupExitDiagnostics {
+  exit_code?: number;
+  guest_exit_code?: number;
+  signal?: number;
+  guest_signal?: number;
+  oom_killed?: boolean;
+  requested_stop?: boolean;
+}
+
 export interface Machine {
   id?: string;
   name?: string;
@@ -62,6 +71,7 @@ export interface CleanupJobOptions {
   report: (
     summary: CleanupSummary | undefined,
     succeeded: boolean,
+    exit?: CleanupExitDiagnostics,
   ) => Promise<void>;
   region: string;
   clock?: () => number;
@@ -90,25 +100,51 @@ export function selectWebImage(machines: Machine[]) {
   return images[0];
 }
 
-export function processExit(machine: Machine) {
+function latestExitEvent(machine: Machine) {
   const events = [...(machine.events ?? [])].sort(
     (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
   );
   for (const event of events) {
     const exit =
       event.request?.MonitorEvent?.exit_event ?? event.request?.exit_event;
-    if (!exit?.exited_at) continue;
-    // Fly omits exit_code when it is zero. A stopped state alone is not proof.
-    if (
-      exit.oom_killed ||
-      exit.requested_stop ||
-      exit.signal ||
-      exit.guest_signal
-    )
-      return 1;
-    return exit.exit_code || exit.guest_exit_code || 0;
+    if (exit?.exited_at) return exit;
   }
-  return null;
+}
+
+export function processExit(machine: Machine) {
+  const exit = latestExitEvent(machine);
+  if (!exit) return null;
+  // Fly uses -1 for no signal and omits zero exit codes. A stopped state alone
+  // is not proof of a successful process exit.
+  if (
+    exit.oom_killed ||
+    exit.requested_stop ||
+    (exit.signal ?? 0) > 0 ||
+    (exit.guest_signal ?? 0) > 0
+  )
+    return 1;
+  return exit.exit_code || exit.guest_exit_code || 0;
+}
+
+function projectExitDiagnostics(exit: ExitEvent | undefined) {
+  if (!exit) return undefined;
+  const diagnostics: CleanupExitDiagnostics = {};
+  for (const key of [
+    "exit_code",
+    "guest_exit_code",
+    "signal",
+    "guest_signal",
+  ] as const) {
+    const value = exit[key];
+    if (typeof value === "number" && Number.isSafeInteger(value))
+      diagnostics[key] = value;
+  }
+  for (const key of ["oom_killed", "requested_stop"] as const) {
+    const value = exit[key];
+    if (typeof value === "boolean") diagnostics[key] = value;
+    else if (value === 0 || value === 1) diagnostics[key] = value === 1;
+  }
+  return diagnostics;
 }
 
 export function parseCleanupLogs(output: string) {
@@ -166,7 +202,9 @@ export function summaryMarkdown(
   environment: string,
   summary: CleanupSummary | undefined,
   succeeded: boolean,
+  exit?: CleanupExitDiagnostics,
 ) {
+  const diagnostics = projectExitDiagnostics(exit);
   return [
     `### Provider usage cleanup: ${environment}`,
     `Result: ${succeeded ? "success" : "failure"}`,
@@ -180,6 +218,12 @@ export function summaryMarkdown(
     `| Committed batches | ${summary?.batchCount ?? "unavailable"} |`,
     `| Elapsed milliseconds | ${summary?.elapsedMs ?? "unavailable"} |`,
     `| Table + indexes (bytes) | ${summary?.tableBytes ?? "unavailable"} |`,
+    `| Host exit code | ${diagnostics?.exit_code ?? "unavailable"} |`,
+    `| Guest exit code | ${diagnostics?.guest_exit_code ?? "unavailable"} |`,
+    `| Host signal | ${diagnostics?.signal ?? "unavailable"} |`,
+    `| Guest signal | ${diagnostics?.guest_signal ?? "unavailable"} |`,
+    `| OOM killed | ${diagnostics?.oom_killed ?? "unavailable"} |`,
+    `| Requested stop | ${diagnostics?.requested_stop ?? "unavailable"} |`,
     "",
   ].join("\n");
 }
@@ -199,6 +243,7 @@ export async function runCleanupJob({
   let machineId: string | undefined;
   let createAttempted = false;
   let summary: CleanupSummary | undefined;
+  let exit: CleanupExitDiagnostics | undefined;
   let succeeded = false;
   let failure: CleanupJobError | undefined;
   const checkDeadline = () => {
@@ -241,7 +286,10 @@ export async function runCleanupJob({
       const state = (await api("GET", `/${machineId}`)) as Machine;
       if (state.state === "stopped") {
         exitCode = processExit(state);
-        if (exitCode !== null) break;
+        if (exitCode !== null) {
+          exit = projectExitDiagnostics(latestExitEvent(state));
+          break;
+        }
       }
       if (["destroyed", "failed", "launch_failed"].includes(state.state ?? ""))
         throw new CleanupJobError(
@@ -310,7 +358,7 @@ export async function runCleanupJob({
         succeeded = false;
       }
     }
-    await report(summary, succeeded && !failure);
+    await report(summary, succeeded && !failure, exit);
   }
   if (failure) throw failure;
   return summary;
@@ -358,13 +406,18 @@ async function main() {
     FLY_PRIMARY_REGION: region,
     CLEANUP_ENVIRONMENT: environment,
   } = process.env;
-  const report: CleanupJobOptions["report"] = async (summary, succeeded) => {
+  const report: CleanupJobOptions["report"] = async (
+    summary,
+    succeeded,
+    exit,
+  ) => {
     const markdown = summaryMarkdown(
       environment === "prod" || environment === "staging"
         ? environment
         : "unconfigured",
       summary,
       succeeded,
+      exit,
     );
     console.log(markdown);
     if (process.env.GITHUB_STEP_SUMMARY)
