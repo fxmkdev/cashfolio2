@@ -1,4 +1,5 @@
 import { readBoundedRequest } from "./security/request-body.server";
+import { applyResponseCachePolicy } from "./security/response-cache-policy.server";
 import { withResourceRequest } from "./server/resource-context.server";
 import {
   createStartHandler,
@@ -20,10 +21,12 @@ function createServerEntry(entry: { fetch: typeof fetch }) {
       try {
         if (!request) return await entry.fetch(...args);
         const bounded = await readBoundedRequest(request);
-        if (bounded instanceof Response) return bounded;
-        return await withResourceRequest(bounded.signal, () =>
+        if (bounded instanceof Response)
+          return applyResponseCachePolicy(request, bounded);
+        const response = await withResourceRequest(bounded.signal, () =>
           entry.fetch(bounded, args[1]),
         );
+        return applyResponseCachePolicy(request, response);
       } catch (error) {
         if (shouldLogServerRequestError(error)) {
           await logServerError("Server request failed.", error, {
