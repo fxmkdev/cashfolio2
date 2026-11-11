@@ -7,6 +7,23 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 
 ## Authentication sessions
 
+### HTTP response caching
+
+The server entry point sets `Cache-Control: no-store` on all dynamic redirects
+(301, 302, 303, 307, and 308), all home (`/`) responses, and all `/api/logto/`
+responses, including errors and early request-validation failures. This prevents
+browsers from replaying an outdated authentication decision or a one-time
+authorization URL. Other responses retain their cache policy; static asset
+serving is unchanged.
+
+After deployment, affected browsers may need to clear cached files for
+`cashfolio.app` and `auth.cashfolio.app` once: new response headers cannot
+invalidate redirects the browser reuses without contacting the server. Logto
+Cloud controls caching on its own origin, including its consent redirect; the
+Cashfolio response policy does not change those headers.
+
+### Session storage
+
 Production authentication uses PostgreSQL-backed sessions, independent of Redis.
 The `__Host-cashfolio-session` cookie contains a random 256-bit bearer and uses
 Secure, HttpOnly, SameSite=Lax, and Path=/. Only its SHA-256 hash is stored in
