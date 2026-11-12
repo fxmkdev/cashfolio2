@@ -1,4 +1,4 @@
-import { Button, Tooltip } from "@mantine/core";
+import { Button } from "@mantine/core";
 import { GridCellLoading } from "@/components/grid/grid-cell-loading";
 import type { ColGroupDef, ICellRendererParams } from "ag-grid-enterprise";
 import type {
@@ -60,38 +60,31 @@ export function buildAccountReturnColumns(args: {
         if (!data || !result?.applicable) return "—";
         const value = result[metric];
         return (
-          <Tooltip
-            label={accountReturnExplanation(result, metric)}
-            multiline
-            w={320}
-            events={{ hover: true, focus: true, touch: false }}
+          <Button
+            variant="transparent"
+            size="compact-sm"
+            color={
+              value == null || value === 0
+                ? "gray"
+                : value > 0
+                  ? "green"
+                  : "red"
+            }
+            aria-label={`View ${metric.toUpperCase()} calculation for ${data.name}: ${value == null ? accountReturnExplanation(result, metric) : formatter.format(value)}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              args.onOpen?.(
+                isReferenceCurrencyTotalFooterRow(data)
+                  ? { kind: "total" }
+                  : {
+                      kind: data.nodeType === "account" ? "account" : "group",
+                      id: data.id,
+                    },
+              );
+            }}
           >
-            <Button
-              variant="transparent"
-              size="compact-sm"
-              color={
-                value == null || value === 0
-                  ? "gray"
-                  : value > 0
-                    ? "green"
-                    : "red"
-              }
-              aria-label={`View ${metric.toUpperCase()} calculation for ${data.name}: ${value == null ? accountReturnExplanation(result, metric) : formatter.format(value)}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                args.onOpen?.(
-                  isReferenceCurrencyTotalFooterRow(data)
-                    ? { kind: "total" }
-                    : {
-                        kind: data.nodeType === "account" ? "account" : "group",
-                        id: data.id,
-                      },
-                );
-              }}
-            >
-              {valueFormatted ?? "—"}
-            </Button>
-          </Tooltip>
+            {valueFormatted ?? "—"}
+          </Button>
         );
       },
     })),

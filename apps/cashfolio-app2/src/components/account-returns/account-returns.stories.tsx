@@ -207,7 +207,23 @@ function ReturnGridExample({
     startDate: data.startDate,
     asOfDate: data.asOfDate,
     rows: [
-      { id: "a", ...data, ...(unavailable ? { twr: null, mwr: null } : {}) },
+      {
+        id: "a",
+        ...data,
+        ...(unavailable
+          ? {
+              twr: null,
+              mwr: null,
+              diagnostics: [
+                {
+                  metric: "both" as const,
+                  message:
+                    "Returns are unavailable because a closing valuation is missing.",
+                },
+              ],
+            }
+          : {}),
+      },
       { id: "group", ...data },
     ],
     total: data,
@@ -225,6 +241,8 @@ function ReturnGridExample({
   return (
     <>
       <DataGrid
+        tooltipShowDelay={650}
+        tooltipHideDelay={10000}
         onGridReady={(event) => {
           grid.current = event.api;
         }}
@@ -271,6 +289,82 @@ export const AccountAndGroupGrid: Story = {
         }),
       ).toBeVisible(),
     );
+  },
+};
+
+async function checkGridTooltips(
+  canvasElement: HTMLElement,
+  unavailable: boolean,
+) {
+  const canvas = within(canvasElement);
+  const body = within(document.body);
+  for (const metric of ["TWR", "MWR"] as const) {
+    const button = await canvas.findByRole("button", {
+      name: new RegExp(`View ${metric} calculation for Investment Account:`),
+    });
+    const explanation = unavailable
+      ? "Returns are unavailable because a closing valuation is missing."
+      : metric === "TWR"
+        ? "Time-weighted return: linked performance excluding capital movements."
+        : "Money-weighted return: performance reflecting the timing and size of capital movements.";
+    if (unavailable) {
+      await expect(button).toHaveTextContent("—");
+      await expect(button).toHaveAccessibleName(
+        `View ${metric} calculation for Investment Account: ${explanation}`,
+      );
+    }
+    await userEvent.hover(button);
+    // Wait for AG Grid, whose delay exceeds Mantine's global 500ms delay,
+    // so a second tooltip cannot pass unnoticed before it opens.
+    await waitFor(
+      async () => {
+        const tooltip = canvasElement.querySelector(".ag-tooltip");
+        await expect(tooltip).toBeVisible();
+        await expect(tooltip).toHaveTextContent(explanation);
+        await expect(body.queryAllByRole("tooltip")).toHaveLength(1);
+      },
+      { timeout: 3000 },
+    );
+    await userEvent.unhover(button);
+    await waitFor(() => expect(body.queryAllByRole("tooltip")).toHaveLength(0));
+  }
+}
+
+export const GridTooltips: Story = {
+  render: () => <ReturnGridExample />,
+  play: ({ canvasElement }) => checkGridTooltips(canvasElement, false),
+};
+
+export const UnavailableGridTooltips: Story = {
+  render: () => <ReturnGridExample unavailable />,
+  play: ({ canvasElement }) => checkGridTooltips(canvasElement, true),
+};
+
+export const GridKeyboardCalculation: Story = {
+  render: () => <ReturnGridExample unavailable />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const [metric, key] of [
+      ["TWR", "{Enter}"],
+      ["MWR", " "],
+    ] as const) {
+      const button = await canvas.findByRole("button", {
+        name: new RegExp(`View ${metric} calculation for Investment Account:`),
+      });
+      button.focus();
+      await expect(button).toHaveFocus();
+      await userEvent.keyboard(key);
+      const dialog = await within(document.body).findByRole("dialog", {
+        name: "Return Calculation",
+      });
+      await waitFor(() => expect(dialog).toBeVisible());
+      await expect(selected).toHaveBeenLastCalledWith({
+        kind: "account",
+        id: "a",
+      });
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    }
   },
 };
 

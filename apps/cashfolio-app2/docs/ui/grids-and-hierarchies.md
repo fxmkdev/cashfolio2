@@ -13,6 +13,12 @@ read-only, and modal tables. This keeps theme, locale, scrolling, resizing, and
 row actions consistent. Apply this guideline when adding or changing tables;
 existing tables elsewhere can be migrated in focused follow-ups.
 
+Use AG Grid tooltips for cell explanations, with one tooltip owner per
+explanation. Do not wrap cell content in a Mantine tooltip repeating the
+column's tooltip. Preserve accessible labels and keyboard activation for
+interactive cells. Mantine tooltips remain appropriate outside grids and for
+distinct actions within cells, such as **More Actions**.
+
 Use native tree data for hierarchical records, with stable row IDs. Keep stored
 manual ordering authoritative in hierarchy management and Organize mode. Follow
 the shared column and actions-cell conventions below.
