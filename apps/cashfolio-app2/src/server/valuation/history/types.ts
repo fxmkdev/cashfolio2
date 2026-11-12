@@ -1,7 +1,7 @@
 import type { Unit } from "../../../.prisma-client/enums";
 import type { Money } from "../../../shared/money";
 import type { ValuationRateSource } from "../types";
-import type { ValuationProviderName } from "../provider-usage";
+import type { ValuationProviderName } from "../provider-usage.server";
 import {
   getCurrencyRedisSeriesKey,
   getCryptocurrencyRedisSeriesKey,

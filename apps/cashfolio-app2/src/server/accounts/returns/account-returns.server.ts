@@ -4,19 +4,19 @@ import type {
   AccountReturnSummaries,
   AccountReturnTarget,
   AccountReturnWorkResponse,
-} from "../../../shared/account-returns";
-import { emptyAccountReturnResult } from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
+import { emptyAccountReturnResult } from "../../../shared/accounts/account-returns";
 import {
   checkResourceBudget,
   createUserScopedSharedWork,
 } from "../../resource-context.server";
-import { getPeriodCacheGeneration } from "../../period/cache/period-cache";
+import { getPeriodCacheGeneration } from "../../period/cache/period-cache.server";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
-import { createHistoricalLoader } from "../../valuation/history/loader";
+import { createHistoricalLoader } from "../../valuation/history/loader.server";
 import { HistoryPending } from "../../valuation/history/types";
 import { resolveAccountGainLossDate } from "../gain-loss/range.server";
 import { loadAccountReturnInputs } from "./return-inputs.server";
-import { createReturnEngine, rateInput } from "./return-engine";
+import { createReturnEngine, rateInput } from "./return-engine.server";
 import { getOrLoadAccountReturnSummaries } from "./return-cache.server";
 import {
   returnWorkStore,
@@ -33,7 +33,7 @@ import {
   returnProgress,
   scopeResultId,
   type ReturnScopeResult,
-} from "./return-work-results";
+} from "./return-work-results.server";
 export type ReturnWorkArgs = AccountReturnScope & {
   continuation?: string;
   batchSize?: number;

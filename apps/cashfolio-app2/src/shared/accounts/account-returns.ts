@@ -1,4 +1,4 @@
-import type { ReportingGrouping } from "./reporting-grouping";
+import type { ReportingGrouping } from "../reporting/reporting-grouping";
 
 export type AccountReturnMetric = "twr" | "mwr";
 export type AccountReturnDiagnostic = {

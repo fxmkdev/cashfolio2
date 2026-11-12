@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { loadCompleteReturnWork } from "./load-return-work";
-import { ResourceLimitError } from "./resource-error";
+import { ResourceLimitError } from "../resources/resource-error";
 
 it("continues pending batches and publishes only the final result", async () => {
   const fetch = vi

@@ -1,5 +1,5 @@
-import { fetchWithResourceErrors } from "@/shared/resource-fetch";
-import { loadCompleteReturnWork } from "@/shared/load-return-work";
+import { fetchWithResourceErrors } from "@/shared/resources/resource-fetch";
+import { loadCompleteReturnWork } from "@/shared/accounts/load-return-work";
 import { useCallback, useMemo, useState } from "react";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import { getAccountReturnDetails } from "@/server/account-returns";

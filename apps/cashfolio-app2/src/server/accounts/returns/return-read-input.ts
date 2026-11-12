@@ -1,4 +1,4 @@
-import type { AccountReturnTarget } from "../../../shared/account-returns";
+import type { AccountReturnTarget } from "../../../shared/accounts/account-returns";
 import {
   assertRecord,
   optionalField,
@@ -9,7 +9,7 @@ import {
   requireTextField,
 } from "../../input-validation";
 import { readAccountBookInput } from "../../read-input-validation";
-import { assertLength } from "../../../shared/resource-limits";
+import { assertLength } from "../../../shared/resources/resource-limits";
 
 function readGroupId(data: Record<string, unknown>): string {
   if (typeof data.id !== "string" || !data.id.trim())

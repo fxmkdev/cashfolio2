@@ -2,16 +2,16 @@ import type {
   AccountReturnDetails,
   AccountReturnScope,
   AccountReturnTarget,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 import {
   buildAccountReturnGroups,
   type ReturnAccount,
-} from "../../../shared/account-return-groups";
+} from "../../../shared/accounts/account-return-groups";
 import { toMoney } from "../../../shared/money";
-import type { HoldingRateResolver } from "../../period/holdings/period-overview-holdings-types";
+import type { HoldingRateResolver } from "../../holdings/types";
 import type { loadAccountReturnInputs } from "./return-inputs.server";
-import { prepareReturnTransactions } from "./return-transactions";
-import { calculateAccountReturns } from "./return-calculation";
+import { prepareReturnTransactions } from "./return-transactions.server";
+import { calculateAccountReturns } from "./return-calculation.server";
 
 export type ReturnInputs = Omit<
   Awaited<ReturnType<typeof loadAccountReturnInputs>>,

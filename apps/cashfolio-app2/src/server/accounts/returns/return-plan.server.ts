@@ -3,7 +3,7 @@ import { toMoney } from "../../../shared/money";
 import type {
   AccountReturnScope,
   AccountReturnTarget,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 import { loadAccountReturnInputs } from "./return-inputs.server";
 import { returnArtifacts, returnArtifactId } from "./return-artifacts.server";
 import {
@@ -15,7 +15,7 @@ import {
   rateRequest,
   type ReturnInputs,
   type ReturnRateRequest,
-} from "./return-engine";
+} from "./return-engine.server";
 
 export type ReturnScopePlan = {
   key: string;

@@ -1,11 +1,11 @@
-import type { ReturnAccount } from "../../../shared/account-return-groups";
+import type { ReturnAccount } from "../../../shared/accounts/account-return-groups";
 import { toMoney } from "../../../shared/money";
 import type {
   HoldingTransactionBooking,
   HoldingRateResolver,
-} from "../../period/holdings/period-overview-holdings-types";
-import { prepareReturnTransactions } from "./return-transactions";
-import { calculateAccountReturns } from "./return-calculation";
+} from "../../holdings/types";
+import { prepareReturnTransactions } from "./return-transactions.server";
+import { calculateAccountReturns } from "./return-calculation.server";
 
 export const account = (
   id = "a",

@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 import {
   getAccountGainLossCacheEntryKey,
+  getAccountReturnCacheEntryKey,
+  getAccountReturnWorkKey,
   getAccountGainLossBasisCacheEntryKey,
   getPeriodBaseCacheEntryKey,
   getPeriodBaseCacheIndexKey,
@@ -43,4 +45,20 @@ it("preserves deployed cache key formats and versions", () => {
   ).toBe(
     "period:history:metrics:v15:local:book-1:revision-1:2026-01:cashFlow:account:asset-1",
   );
+});
+
+it("keeps return summary and temporary work versions app-owned", () => {
+  expect(
+    getAccountReturnCacheEntryKey({
+      ...scope,
+      asOfDate: "2026-05-11",
+      latestFetchableDate: "2026-05-10",
+      scopeKey: "accountStructure:all",
+    }),
+  ).toBe(
+    "account:returns:v4:local:book-1:revision-1:2026-05-11:2026-05-10:accountStructure:all",
+  );
+  expect(
+    getAccountReturnWorkKey({ ...scope, userId: "user-1", id: "work-1" }),
+  ).toBe("account:returns-work:v4:local:book-1:user-1:work-1");
 });

@@ -1,6 +1,6 @@
-import { fetchWithResourceErrors } from "@/shared/resource-fetch";
-import { mergeAccountReturnProgress } from "@/shared/account-return-progress";
-import { loadCompleteReturnWork } from "@/shared/load-return-work";
+import { fetchWithResourceErrors } from "@/shared/resources/resource-fetch";
+import { mergeAccountReturnProgress } from "@/shared/accounts/account-return-progress";
+import { loadCompleteReturnWork } from "@/shared/accounts/load-return-work";
 import { useCallback, useEffect, useState } from "react";
 import { getAccountReturnSummaries } from "@/server/account-returns";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
@@ -9,8 +9,8 @@ import {
   type AccountReturnProgress,
   type AccountReturnSummaries,
   type AccountReturnTarget,
-} from "@/shared/account-returns";
-import type { ReportingGrouping } from "@/shared/reporting-grouping";
+} from "@/shared/accounts/account-returns";
+import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 
 export function useAccountReturns(args: {
   accountBookId: string;

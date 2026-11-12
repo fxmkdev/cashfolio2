@@ -1,14 +1,16 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { HistoryTask } from "./types";
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), record: vi.fn() }));
-vi.mock("../provider-api-key", () => ({
+vi.mock("../provider-api-key.server", () => ({
   getProviderApiKey: async () => "test",
 }));
-vi.mock("../providers/request", () => ({ fetchProviderResponse: mocks.fetch }));
-vi.mock("../provider-usage", () => ({
+vi.mock("../providers/request.server", () => ({
+  fetchProviderResponse: mocks.fetch,
+}));
+vi.mock("../provider-usage.server", () => ({
   recordValuationProviderRequest: mocks.record,
 }));
-import { fetchHistory } from "./provider";
+import { fetchHistory } from "./provider.server";
 import { HistoryFeatureUnavailable } from "./types";
 const stock: HistoryTask = {
   mode: "range",

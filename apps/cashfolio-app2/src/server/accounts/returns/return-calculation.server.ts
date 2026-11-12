@@ -4,13 +4,13 @@ import {
   emptyAccountReturnResult,
   type AccountReturnDetails,
   type AccountReturnCashFlow,
-} from "../../../shared/account-returns";
-import type { ReturnAccount } from "../../../shared/account-return-groups";
-import type { HoldingRateResolver } from "../../period/holdings/period-overview-holdings-types";
-import type { PreparedReturnTransactions } from "./return-transactions";
-import { calculateMoneyWeightedReturn } from "./return-irr";
+} from "../../../shared/accounts/account-returns";
+import type { ReturnAccount } from "../../../shared/accounts/account-return-groups";
+import type { HoldingRateResolver } from "../../holdings/types";
+import type { PreparedReturnTransactions } from "./return-transactions.server";
+import { calculateMoneyWeightedReturn } from "./return-irr.server";
 import { ResourceLimitError } from "../../resource-error";
-import { createReturnScopeValuer } from "./return-valuation";
+import { createReturnScopeValuer } from "./return-valuation.server";
 
 const addDays = (date: string, days: number) =>
   Temporal.PlainDate.from(date).add({ days }).toString();

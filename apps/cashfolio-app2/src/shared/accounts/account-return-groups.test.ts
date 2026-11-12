@@ -5,7 +5,7 @@ import {
   unitRowId,
   archivedClassRowId,
 } from "./account-return-groups";
-import { account } from "../server/accounts/returns/return-test-support";
+import { account } from "../../server/accounts/returns/return-test-support";
 
 const classes = [
   { id: "assets", name: "Assets", parentId: null, sortOrder: 0 },

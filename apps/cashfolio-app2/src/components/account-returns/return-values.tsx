@@ -3,7 +3,7 @@ import { useUserLocale } from "@/user-locale-context";
 import {
   accountReturnExplanation,
   type AccountReturnResult,
-} from "@/shared/account-returns";
+} from "@/shared/accounts/account-returns";
 
 export function ReturnValues({
   data,

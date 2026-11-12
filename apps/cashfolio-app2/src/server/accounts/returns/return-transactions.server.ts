@@ -1,14 +1,16 @@
 import { type Money, MoneyDecimal } from "../../../shared/money";
-import type { ReturnAccount } from "../../../shared/account-return-groups";
+import type { ReturnAccount } from "../../../shared/accounts/account-return-groups";
 import type {
   HoldingTransaction,
   HoldingTransactionBooking,
   HoldingGainLossWorkingState,
   HoldingBookingConverter,
-} from "../../period/holdings/period-overview-holdings-types";
-import { decomposeHoldingTransaction } from "../../period/holdings/holding-transaction-decomposition";
-import { applyHoldingTransactionExecutionPricing } from "../../period/holdings/period-holding-execution-pricing";
-import { toHoldingUnitIdentifier } from "../../period/holdings/period-overview-holdings-transfer";
+} from "../../holdings/types";
+import {
+  decomposeHoldingTransaction,
+  applyHoldingTransactionExecutionPricing,
+  toHoldingUnitIdentifier,
+} from "../../holdings/transactions";
 import { checkResourceBudget } from "../../resource-context.server";
 
 type UnitIdentity = Pick<

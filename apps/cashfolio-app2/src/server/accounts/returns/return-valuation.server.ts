@@ -1,8 +1,11 @@
 import { toMoney, type Money } from "../../../shared/money";
-import type { ReturnAccount } from "../../../shared/account-return-groups";
-import type { HoldingRateResolver } from "../../period/holdings/period-overview-holdings-types";
+import type { ReturnAccount } from "../../../shared/accounts/account-return-groups";
+import type { HoldingRateResolver } from "../../holdings/types";
 import { checkResourceBudget } from "../../resource-context.server";
-import type { ReturnPositionChange, ReturnBridge } from "./return-transactions";
+import type {
+  ReturnPositionChange,
+  ReturnBridge,
+} from "./return-transactions.server";
 
 /** Prefix quantities and shared rate promises avoid replaying lots or re-fetching prices. */
 export function createReturnScopeValuer(args: {

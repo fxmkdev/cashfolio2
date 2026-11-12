@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toMoney } from "../../../shared/money";
-import { calculateMoneyWeightedReturn } from "./return-irr";
+import { calculateMoneyWeightedReturn } from "./return-irr.server";
 
 function irr(flows: [number, string][], duration = 365) {
   return calculateMoneyWeightedReturn(
