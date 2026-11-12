@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { UserLocaleProvider } from "@/user-locale-context";
 import { SecuritySearchHarness } from "./harness";
+import { selectListing } from "./interaction-helpers";
 
 const meta = {
   title: "Prototypes/Security Search",
@@ -12,7 +13,7 @@ const meta = {
       description: {
         component: `Frontend-only UX prototype. All listings, symbol/exchange combinations and prices are illustrative local fixtures, not live Marketstack data or verified coverage.
 
-Open **Prototypes / Security Search / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open details below. Explore price ranges and Copy Symbol. Page changes and new searches clear selection; sorting retains it.
+Open **Prototypes / Security Search / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages, sorting and filters retain selection; a new search clears selection and filters. Close Details restores the full-width grid. Use the column filter menus (or focus a header and press Ctrl+Enter) to filter the results, and Clear Filters to reset them. Exchange, Country and Historical Prices use set filters; Name and Symbol use text filters. Explore price ranges and Copy Symbol.
 
 No routes, account creation, backend, persistence or provider connections are included. Loading/error stories are fixed scenarios; Retry Search and Retry Price History recover locally. Clipboard feedback is simulated in the copy-specific stories. Other stories use the browser clipboard.
 
@@ -25,21 +26,6 @@ Run locally with Node 26: pnpm --filter cashfolio-app2 storybook.`,
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-async function selectListing(canvasElement: HTMLElement, id: string) {
-  // Row IDs disambiguate the same symbol/name on multiple exchanges in AG Grid.
-  let cell: HTMLElement | null = null;
-  await waitFor(() => {
-    cell = canvasElement.querySelector(`[row-id="${id}"] [col-id="name"]`);
-    expect(cell).toBeVisible();
-  });
-  await userEvent.click(cell!);
-  return within(
-    await within(canvasElement).findByRole("region", {
-      name: "Security Details",
-    }),
-  );
-}
 
 export const Default: Story = {};
 
@@ -60,10 +46,14 @@ export const SearchAndFilter: Story = {
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "Results for “aLpInE”",
     );
-    await expect(canvas.getByRole("status")).toHaveTextContent("8 listings");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 8 of 8 listings",
+    );
     await userEvent.clear(input);
     await userEvent.type(input, "Harbor");
-    await expect(canvas.getByRole("status")).toHaveTextContent("8 listings");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 8 of 8 listings",
+    );
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "aLpInE",
     );
@@ -77,9 +67,13 @@ export const SearchAndFilter: Story = {
         name: "SIX Swiss Exchange (XSWX)",
       }),
     );
-    await expect(canvas.getByRole("status")).toHaveTextContent("8 listings");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 8 of 8 listings",
+    );
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("1 listing");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 1 of 1 listing",
+    );
     const details = await selectListing(canvasElement, "HBR:XSWX");
     await expect(
       details.getByLabelText("Latest Closing Price"),
@@ -97,9 +91,13 @@ export const BrowseAndSelect: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("31 listings");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 31 of 31 listings",
+    );
     const details = await selectListing(canvasElement, "ALP:XSWX");
-    await expect(details.getByText("XSWX", { exact: true })).toBeVisible();
+    await expect(
+      details.getByText("SIX Swiss Exchange (XSWX)", { exact: true }),
+    ).toBeVisible();
     await expect(
       details.getByRole("img", {
         name: "Alpine Technologies closing price chart",
@@ -113,8 +111,8 @@ export const BrowseAndSelect: Story = {
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: /Next page/i }));
     await expect(
-      canvas.queryByRole("region", { name: "Security Details" }),
-    ).not.toBeInTheDocument();
+      canvas.getByRole("region", { name: "Security Details" }),
+    ).toBeVisible();
     await waitFor(() =>
       expect(
         canvasElement.querySelectorAll('.ag-row[row-index="20"]'),
@@ -126,6 +124,10 @@ export const BrowseAndSelect: Story = {
 export const SelectedListing: Story = {
   args: { initialSearch: "ready", initialSelectedId: "ALP:XNAS" },
   parameters: { colorScheme: "light" },
+};
+
+export const LongName: Story = {
+  args: { initialSearch: "ready", initialSelectedId: "RIV:XETR" },
 };
 
 export const ChartAndCopy: Story = {
@@ -188,7 +190,9 @@ export const SearchError: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Retry Search" }));
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    await expect(canvas.getByRole("status")).toHaveTextContent("8 listings");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Showing 8 of 8 listings",
+    );
   },
 };
 
@@ -298,6 +302,9 @@ export const NarrowViewport: Story = {
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
         window.innerWidth,
       ),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Back to Results" }),
     );
     const viewport =
       canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!;

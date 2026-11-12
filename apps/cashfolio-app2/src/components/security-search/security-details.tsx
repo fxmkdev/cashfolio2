@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  ActionIcon,
   Badge,
   Button,
   Group,
@@ -10,10 +11,12 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { IconCopy } from "@tabler/icons-react";
+import { IconArrowLeft, IconCopy, IconX } from "@tabler/icons-react";
 import { useUserLocale } from "@/user-locale-context";
 import { SecurityPriceChart } from "./price-chart";
+import { getExchangeLabel } from "./exchange-label";
 import type { HistoryState, PriceRange, SecurityListing } from "./types";
 import classes from "./security-search.module.css";
 
@@ -24,6 +27,7 @@ export function SecurityDetails({
   onRangeChange,
   onRetryHistory,
   onCopySymbol,
+  onClose,
 }: {
   listing: SecurityListing;
   history: HistoryState;
@@ -31,16 +35,20 @@ export function SecurityDetails({
   onRangeChange: (range: PriceRange) => void;
   onRetryHistory: () => void;
   onCopySymbol: (symbol: string) => Promise<void>;
+  onClose: () => void;
 }) {
   const locale = useUserLocale();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   const [copyState, setCopyState] = useState<
     "idle" | "copying" | "copied" | "error"
   >("idle");
   const latest = history.status === "ready" ? history.points.at(-1) : undefined;
   const fields = [
     ["Symbol", listing.symbol],
-    ["Exchange", listing.exchange],
-    ["MIC", listing.mic],
+    ["Exchange", getExchangeLabel(listing)],
     ["Country", listing.country],
     ["Security Type", listing.securityType],
     ["Quote Currency", listing.currency],
@@ -58,16 +66,43 @@ export function SecurityDetails({
   }
 
   return (
-    <Paper component="section" aria-label="Security Details" withBorder p="lg">
+    <Paper
+      component="section"
+      aria-label="Security Details"
+      withBorder
+      p="md"
+      className={classes.detailsPane}
+    >
       <Stack gap="lg">
+        <Button
+          variant="subtle"
+          leftSection={<IconArrowLeft size={16} />}
+          onClick={onClose}
+          className={classes.backButton}
+        >
+          Back to Results
+        </Button>
         <Group justify="space-between" align="start">
-          <Stack gap={4}>
-            <Title order={2}>{listing.name}</Title>
+          <Stack gap={4} className={classes.detailsHeading}>
+            <Title order={2} ref={heading} tabIndex={-1}>
+              {listing.name}
+            </Title>
             <Text c="dimmed" size="sm">
-              {listing.symbol} · {listing.exchange ?? "Unknown exchange"}
-              {listing.mic ? ` (${listing.mic})` : ""}
+              {listing.symbol} · {getExchangeLabel(listing)}
             </Text>
           </Stack>
+          <Tooltip label="Close Details">
+            <ActionIcon
+              variant="subtle"
+              aria-label="Close Details"
+              onClick={onClose}
+              className={classes.closeButton}
+            >
+              <IconX size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+        <Group>
           <Button
             variant="light"
             leftSection={<IconCopy size={16} />}

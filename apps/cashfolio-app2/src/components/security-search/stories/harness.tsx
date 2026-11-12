@@ -86,10 +86,8 @@ export function SecuritySearchHarness({
       history={history}
       range={range}
       onSearch={runSearch}
-      onPageChange={(nextPage) => {
-        setPage(nextPage);
-        setSelectedId(null);
-      }}
+      onPageChange={setPage}
+      onCloseDetails={() => setSelectedId(null)}
       onSelect={(id) => {
         setSelectedId(id);
         setRange("1Y");

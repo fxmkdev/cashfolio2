@@ -1,5 +1,6 @@
 import { Temporal } from "@/shared/temporal";
 import type { PricePoint, PriceRange, SecurityListing } from "../types";
+import { getExchangeLabel } from "../exchange-label";
 
 // Illustrative listings only: these symbols, MIC combinations and prices do not
 // assert Marketstack coverage. Keep all fixtures out of production imports.
@@ -84,7 +85,7 @@ listings.push(
 
 export const exchangeOptions = exchanges.map(({ mic, exchange }) => ({
   value: mic,
-  label: `${exchange} (${mic})`,
+  label: getExchangeLabel({ exchange, mic }),
 }));
 
 const end = Temporal.PlainDate.from("2026-10-30");
