@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   emptyAccountReturnResult,
   type AccountReturnSummaries,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 
 const mocks = vi.hoisted(() => ({
   redis: vi.fn(),
@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   cutoff: vi.fn(),
 }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("../../period/cache/period-cache", () => ({
+vi.mock("../../period/cache/period-cache.server", () => ({
   PERIOD_CACHE_TTL_SECONDS: 86400,
   getPeriodCacheEnvOrThrowWhenRedisAvailable: () => "test",
   getPeriodCacheGeneration: mocks.revision,

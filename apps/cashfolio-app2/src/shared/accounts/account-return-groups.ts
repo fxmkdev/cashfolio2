@@ -1,8 +1,8 @@
-import type { Unit, AccountTrackingMethod } from "../.prisma-client/enums";
-import type { ClassificationNode } from "./asset-class";
+import type { Unit, AccountTrackingMethod } from "../../.prisma-client/enums";
+import type { ClassificationNode } from "../classification/asset-class";
 import { projectArchivedAccountHierarchy } from "./archived-account-hierarchy";
-import { getGainLossInvestmentGroup } from "./investment-group";
-import type { ReportingGrouping } from "./reporting-grouping";
+import { getGainLossInvestmentGroup } from "../classification/investment-group";
+import type { ReportingGrouping } from "../reporting/reporting-grouping";
 
 export const assetClassRowId = (id: string) => `__asset_class__:${id}`;
 export const UNCLASSIFIED_ROW_ID = "__asset_class_unclassified__";

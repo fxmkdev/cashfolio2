@@ -6,7 +6,7 @@ import type {
   AccountReturnCashFlow,
   AccountReturnDetails,
   AccountReturnValuation,
-} from "@/shared/account-returns";
+} from "@/shared/accounts/account-returns";
 import { useUserLocale } from "@/user-locale-context";
 import { ReturnValues } from "./return-values";
 

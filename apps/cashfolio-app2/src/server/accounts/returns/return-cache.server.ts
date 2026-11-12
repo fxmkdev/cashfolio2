@@ -1,10 +1,10 @@
 import { getRedisClient } from "../../../redis.server";
-import { getAccountReturnCacheEntryKey } from "../../../shared/book-cache-keys";
+import { getAccountReturnCacheEntryKey } from "../../../shared/accounts/book-cache-keys";
 import type {
   AccountReturnResult,
   AccountReturnScope,
   AccountReturnSummaries,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 import {
   createCacheFailureReporter,
   readValidatedMoneyCache,
@@ -18,7 +18,7 @@ import {
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
   formatUtcDateKey,
-} from "../../period/cache/period-cache";
+} from "../../period/cache/period-cache.server";
 import { createValuationLookupContext } from "../../valuation/lookup-context";
 import { startOfUtcDay } from "../../../shared/date";
 

@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { getRedisClient } from "../../../redis.server";
-import { getProviderApiKey } from "../provider-api-key";
+import { getProviderApiKey } from "../provider-api-key.server";
 import { rethrowResourceError } from "../../resource-error";
-import type { ValuationProviderName } from "../provider-usage";
+import type { ValuationProviderName } from "../provider-usage.server";
 const local = new Map<string, { supported: boolean; expires: number }>();
 export async function historyCapability(provider: ValuationProviderName) {
   const secret = await getProviderApiKey({

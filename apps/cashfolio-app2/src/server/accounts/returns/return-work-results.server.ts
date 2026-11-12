@@ -1,10 +1,10 @@
 import type {
   AccountReturnDetails,
   AccountReturnProgress,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 import { isAccountReturnResult } from "./return-cache.server";
 import { returnArtifactId, returnArtifacts } from "./return-artifacts.server";
-import { stripReturnDetails } from "./return-engine";
+import { stripReturnDetails } from "./return-engine.server";
 import type { ReturnPlan } from "./return-plan.server";
 import type { ReturnWorkState } from "./return-work-store.server";
 export type ReturnScopeResult = {

@@ -110,7 +110,7 @@ it.each(["swiss", "equities", null])(
   "matches return memberships to every displayed heading for %s",
   async (assetClassId) => {
     const { buildAccountReturnGroups } =
-      await import("@/shared/account-return-groups");
+      await import("@/shared/accounts/account-return-groups");
     for (const isActive of [false, true]) {
       const leaves = [
         account("usd-a", { assetClassId, currency: "USD", isActive }),

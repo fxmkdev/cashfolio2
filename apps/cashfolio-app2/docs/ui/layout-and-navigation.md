@@ -96,6 +96,7 @@ feature contracts. Concern folders own the implementation:
 | `assignments/` | Assignment forms, frozen bulk targets, submission, and toolbar                                                    |
 | `management/`  | Mutation payloads, management actions, organizer API, and guarded hierarchy callbacks                             |
 | `gain-loss/`   | Gain/loss columns, header, and asset-class projection                                                             |
+| `returns/`     | Return columns and resumable, progressive return-request state                                                    |
 
 Import row contracts from `grid/rows.ts` and view contracts from `view-types.ts`
 directly. Shared page/entity copy belongs in `labels.ts`. Tests, component

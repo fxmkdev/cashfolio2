@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { getRedisClient } from "../../../redis.server";
-import { getAccountReturnWorkKey } from "../../../shared/book-cache-keys";
-import { getPeriodCacheEnvOrThrowWhenRedisAvailable } from "../../period/cache/period-cache";
+import { getAccountReturnWorkKey } from "../../../shared/accounts/book-cache-keys";
+import { getPeriodCacheEnvOrThrowWhenRedisAvailable } from "../../period/cache/period-cache.server";
 import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
 import { rethrowResourceError } from "../../resource-error";
 export const returnArtifactId = (value: unknown) =>

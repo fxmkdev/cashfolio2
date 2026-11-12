@@ -4,7 +4,7 @@ Private, dependency-free workspace package shared by `cashfolio-app2` and the
 workspace CLI. Import named exports from `@cashfolio/book-cache-contracts`;
 source, build, and manifest subpaths are private.
 
-The package owns the six book-cache family constants, version-independent
+The package owns the eight book-cache family constants, version-independent
 cleanup patterns, and book-ownership checks. Add new shared families here so
 restore and user-deletion cleanup stay aligned. The app owns payload versions,
 key builders, Redis clients, and cache behavior; the CLI owns restore scanning

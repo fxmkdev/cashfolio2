@@ -1,7 +1,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { ResourceLimitError } from "../../resource-error";
 const solver = vi.hoisted(() => vi.fn());
-vi.mock("./return-irr", () => ({ calculateMoneyWeightedReturn: solver }));
+vi.mock("./return-irr.server", () => ({
+  calculateMoneyWeightedReturn: solver,
+}));
 import { returns } from "./return-test-support";
 beforeEach(() => {
   solver.mockReset();

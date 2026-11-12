@@ -5,7 +5,7 @@ import type { AccountFilterContext } from "./filter-context";
 import type {
   AccountReturnSummaries,
   AccountReturnTarget,
-} from "@/shared/account-returns";
+} from "@/shared/accounts/account-returns";
 import {
   type RowTarget,
   type TreeRow,

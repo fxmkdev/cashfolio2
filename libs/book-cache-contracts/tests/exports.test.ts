@@ -39,6 +39,8 @@ test("compiled public exports run without workspace source or TypeScript support
   assert.deepEqual(actual.exports, [
     "ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY",
     "ACCOUNT_GAIN_LOSS_CACHE_FAMILY",
+    "ACCOUNT_RETURN_CACHE_FAMILY",
+    "ACCOUNT_RETURN_WORK_FAMILY",
     "PERIOD_BASE_CACHE_FAMILY",
     "PERIOD_BASE_CACHE_INDEX_FAMILY",
     "PERIOD_CACHE_GENERATION_FAMILY",
@@ -55,6 +57,8 @@ test("compiled public exports run without workspace source or TypeScript support
     "period:history:metrics:v*:*:*:*",
     "account:gain-loss:v*:*:*:*",
     "account:gain-loss-basis:v*:*:*:*",
+    "account:returns:v*:*:*:*",
+    "account:returns-work:v*:*:*:*",
   ]);
 });
 

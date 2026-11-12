@@ -1,4 +1,4 @@
-import { ResourceLimitError } from "./resource-error";
+import { ResourceLimitError } from "../resources/resource-error";
 import type {
   AccountReturnWorkResponse,
   AccountReturnProgress,

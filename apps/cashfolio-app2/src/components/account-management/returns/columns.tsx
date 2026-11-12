@@ -4,8 +4,8 @@ import type { ColGroupDef, ICellRendererParams } from "ag-grid-enterprise";
 import type {
   AccountReturnSummaries,
   AccountReturnTarget,
-} from "@/shared/account-returns";
-import { accountReturnExplanation } from "@/shared/account-returns";
+} from "@/shared/accounts/account-returns";
+import { accountReturnExplanation } from "@/shared/accounts/account-returns";
 import { rowActionsColumnProps } from "@/components/grid/row-actions-menu";
 import {
   isReferenceCurrencyTotalFooterRow,

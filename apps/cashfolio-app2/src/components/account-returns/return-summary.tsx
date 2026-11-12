@@ -7,7 +7,7 @@ import {
   Stack,
   Title,
 } from "@mantine/core";
-import type { AccountReturnResult } from "@/shared/account-returns";
+import type { AccountReturnResult } from "@/shared/accounts/account-returns";
 import { ReturnValues } from "./return-values";
 
 export function AccountReturnSummaryView(args: {

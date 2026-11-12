@@ -1,8 +1,8 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ redis: vi.fn(), key: vi.fn() }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("../provider-api-key", () => ({ getProviderApiKey: mocks.key }));
-import { historyCapability } from "./capability";
+vi.mock("../provider-api-key.server", () => ({ getProviderApiKey: mocks.key }));
+import { historyCapability } from "./capability.server";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();

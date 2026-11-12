@@ -4,11 +4,11 @@ import {
   stagingReturnRate,
   groupingReturnInputs,
 } from "./return-staging-test-support";
-import { loadCompleteReturnWork } from "../../../shared/load-return-work";
+import { loadCompleteReturnWork } from "../../../shared/accounts/load-return-work";
 import type {
   AccountReturnSummaries,
   AccountReturnProgress,
-} from "../../../shared/account-returns";
+} from "../../../shared/accounts/account-returns";
 import { toMoney } from "../../../shared/money";
 import { HistoryPending } from "../../valuation/history/types";
 const mocks = vi.hoisted(() => ({
@@ -25,14 +25,14 @@ vi.mock("./return-inputs.server", () => ({
   loadAccountReturnInputs: mocks.inputs,
 }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("../../period/cache/period-cache", () => ({
+vi.mock("../../period/cache/period-cache.server", () => ({
   getPeriodCacheGeneration: mocks.revision,
   getPeriodCacheEnvOrThrowWhenRedisAvailable: () => "test",
 }));
 vi.mock("../../valuation/lookup-context", () => ({
   createValuationLookupContext: () => ({ latestFetchableDate: mocks.cutoff() }),
 }));
-vi.mock("../../valuation/history/loader", () => ({
+vi.mock("../../valuation/history/loader.server", () => ({
   createHistoricalLoader: mocks.history,
 }));
 vi.mock("./return-cache.server", async (original) => ({

@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { emptyAccountReturnResult } from "../shared/account-returns";
+import { emptyAccountReturnResult } from "../shared/accounts/account-returns";
 import {
   unitRowId,
   assetClassRowId,
   archivedClassRowId,
-} from "../shared/account-return-groups";
+} from "../shared/accounts/account-return-groups";
 const mocks = vi.hoisted(() => ({
   authorize: vi.fn(),
   work: vi.fn(),

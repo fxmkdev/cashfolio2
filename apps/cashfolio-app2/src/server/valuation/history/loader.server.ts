@@ -3,13 +3,13 @@ import { toMoney } from "../../../shared/money";
 import { checkResourceBudget } from "../../resource-context.server";
 import { rethrowResourceError } from "../../resource-error";
 import { combineValuationRateSources } from "../lookup-context";
-import { fetchHistory } from "./provider";
+import { fetchHistory } from "./provider.server";
 import {
   readHistorySeries,
   storeHistorySeries,
   HISTORY_COVERAGE_MS,
-} from "./cache";
-import { historyCapability } from "./capability";
+} from "./cache.server";
+import { historyCapability } from "./capability.server";
 import { coveredUntil, resolveHistoricalRate } from "./resolve";
 import {
   HistoryPending,

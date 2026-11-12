@@ -1,8 +1,8 @@
 import { prisma } from "../../../prisma.server";
 import { toMoney } from "../../../shared/money";
-import { ASSET_CLASS_SCHEME_ID } from "../../../shared/asset-class";
+import { ASSET_CLASS_SCHEME_ID } from "../../../shared/classification/asset-class";
 import { addUtcDays, startOfUtcDay } from "../../../shared/date";
-import type { HoldingTransaction } from "../../period/holdings/period-overview-holdings-types";
+import type { HoldingTransaction } from "../../holdings/types";
 import { checkResourceBudget } from "../../resource-context.server";
 
 /** Read all required business data at one revision; future peers remain available for settlement bridges. */

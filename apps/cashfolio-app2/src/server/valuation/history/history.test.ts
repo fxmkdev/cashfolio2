@@ -7,10 +7,10 @@ const mocks = vi.hoisted(() => ({
   capability: vi.fn(),
 }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("./provider", () => ({ fetchHistory: mocks.fetch }));
-vi.mock("./capability", () => ({ historyCapability: mocks.capability }));
-import { createHistoricalLoader } from "./loader";
-import { clearHistorySeries, historyCoverageKey } from "./cache";
+vi.mock("./provider.server", () => ({ fetchHistory: mocks.fetch }));
+vi.mock("./capability.server", () => ({ historyCapability: mocks.capability }));
+import { createHistoricalLoader } from "./loader.server";
+import { clearHistorySeries, historyCoverageKey } from "./cache.server";
 import { resolveHistoricalRate } from "./resolve";
 const time = (date: string) => Date.parse(`${date}T00:00:00Z`);
 const request = (symbol: string, date = "2026-11-01") => ({

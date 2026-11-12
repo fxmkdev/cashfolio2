@@ -1,7 +1,7 @@
 import { generateStagingDataset } from "../../../staging-seed/dataset";
-import { defaultAssetClassNodes } from "../../../shared/asset-class";
+import { defaultAssetClassNodes } from "../../../shared/classification/asset-class";
 import { toMoney } from "../../../shared/money";
-import type { ReturnInputs, ReturnRateInput } from "./return-engine";
+import type { ReturnInputs, ReturnRateInput } from "./return-engine.server";
 
 export function stagingReturnInputs(
   asOf = new Date("2026-11-07Z"),

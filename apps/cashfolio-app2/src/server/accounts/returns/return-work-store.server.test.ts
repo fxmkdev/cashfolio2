@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ redis: vi.fn() }));
 vi.mock("../../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("../../period/cache/period-cache", () => ({
+vi.mock("../../period/cache/period-cache.server", () => ({
   getPeriodCacheEnvOrThrowWhenRedisAvailable: () => "test",
 }));
 import {

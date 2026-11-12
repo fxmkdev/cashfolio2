@@ -9,13 +9,13 @@ import {
   UNCLASSIFIED_ROW_ID,
   unitRowId,
   archivedUnitGroupRowId,
-} from "@/shared/account-return-groups";
+} from "@/shared/accounts/account-return-groups";
 export {
   assetClassRowId,
   UNCLASSIFIED_ROW_ID,
   unitRowId,
   archivedClassRowId,
-} from "@/shared/account-return-groups";
+} from "@/shared/accounts/account-return-groups";
 
 function heading(
   id: string,

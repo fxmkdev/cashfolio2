@@ -1,5 +1,5 @@
-import { fetchWithResourceErrors } from "@/shared/resource-fetch";
-import { loadCompleteReturnWork } from "@/shared/load-return-work";
+import { fetchWithResourceErrors } from "@/shared/resources/resource-fetch";
+import { loadCompleteReturnWork } from "@/shared/accounts/load-return-work";
 import { Alert, Button, Drawer, Loader } from "@mantine/core";
 import { useCallback } from "react";
 import { getAccountReturnDetails } from "@/server/account-returns";
@@ -7,7 +7,7 @@ import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import type {
   AccountReturnScope,
   AccountReturnTarget,
-} from "@/shared/account-returns";
+} from "@/shared/accounts/account-returns";
 import { ReturnCalculation } from "./return-calculation";
 
 export function AccountReturnDrawer(

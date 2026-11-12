@@ -224,6 +224,22 @@ sign; debt amounts are positive magnitudes in those reports.
   cells must also be right-aligned (for example dotted loaders in
   `Balance (<referenceCurrency>)` cells).
 
+## Account Return Percentages
+
+Accounts shows a separate **Returns Since Start** column group with **TWR** and
+**MWR**. Values use the active locale and two percentage decimal places; raw
+fractional values remain available for numeric sorting. Individual eligibility
+matches G/L, while group/footer returns also include idle cash and archived
+descendants. Group percentages are calculated from combined capital movements.
+
+Return cells open **Return Calculation** for the account, displayed group, or
+footer, with the shared grid button keyboard/mouse handling. Unavailable values
+show a dash and an accessible explanation, with metric-specific diagnostics in
+the drawer. Ledger return cards load independently from G/L and use their own
+retry action. Calculation details distinguish reporting dates from the effective
+investment span and show annualized equivalents only for spans of at least a
+year. All calculation tables use `DataGrid`.
+
 ## Deletion Pattern
 
 - Add `deletable` and `deleteDisabledReason` fields to data returned from the

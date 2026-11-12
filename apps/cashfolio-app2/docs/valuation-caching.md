@@ -499,7 +499,6 @@ cannot enable mock keys or provider interception in normal builds.
   - this document
   - tests in `src/server/valuation/backtracking.server.test.ts` as needed
 
-
 ## Historical series loading for account returns
 
 `src/server/valuation/history/` plans raw series across composite conversions
