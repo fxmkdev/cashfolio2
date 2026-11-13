@@ -18,10 +18,11 @@ export function useAccountsControllerGrid({
   const grid = useAccountsGrid({
     ...options,
     shouldShowReferenceBalancesLoading: data.shouldShowReferenceBalancesLoading,
-    returnCellVersion: returns.cellVersion,
+    returnCellVersion: `${returns.cellVersion}:${model.returnBasis.basis}`,
   });
   const columnDefs = useAccountTreeColumnDefs({
     filterContext: presentation.filterContext,
+    returnBasis: model.returnBasis.basis,
     returnData: returns.data,
     isReturnLoading: returns.loading,
     completedReturnIds: returns.completedIds,

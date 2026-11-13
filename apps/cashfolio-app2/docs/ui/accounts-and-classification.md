@@ -227,10 +227,25 @@ sign; debt amounts are positive magnitudes in those reports.
 ## Account Return Percentages
 
 Accounts shows a separate **Returns Since Start** column group with **TWR** and
-**MWR**. Values use the active locale and two percentage decimal places; raw
-fractional values remain available for numeric sorting. Individual eligibility
-matches G/L, while group/footer returns also include idle cash and archived
-descendants. Group percentages are calculated from combined capital movements.
+**MWR**. A **Return Basis** selector beside **Group By** selects **Annualized**
+(the default) or **Cumulative**; the column-group title includes the selected
+basis. Ledger return cards use the same selector and title. Controls wrap on
+narrow screens; the Accounts selector is hidden during Organize mode and in
+views without return columns. The preference is shared per book for the current
+browser-tab session, including navigation between Accounts and ledgers.
+
+Switching basis selects the existing response fields without new requests, cache
+invalidation, or resetting progressive results. Refresh return cells even when
+both values are null. Annualized results require at least 365 inclusive
+accounting days in the effective investment span; shorter spans show a dash
+explaining that cumulative returns remain available. Never substitute a
+cumulative percentage under an annualized heading. Metric-specific failures
+retain their explanations.
+
+Values use the active locale and two percentage decimal places; raw fractional
+values remain available for numeric sorting. Individual eligibility matches G/L,
+while group/footer returns also include idle cash and archived descendants.
+Group percentages are calculated from combined capital movements.
 
 Return cells open **Return Calculation** for the account, displayed group, or
 footer, with the shared grid button keyboard/mouse handling. Unavailable values
@@ -238,7 +253,8 @@ show a dash and an accessible explanation, with metric-specific diagnostics in
 the drawer. Ledger return cards load independently from G/L and use their own
 retry action. Calculation details distinguish reporting dates from the effective
 investment span and show annualized equivalents only for spans of at least a
-year. All calculation tables use `DataGrid`.
+year. Both measures are explicitly labeled Cumulative or Annualized. All
+calculation tables use `DataGrid`.
 
 ## Deletion Pattern
 

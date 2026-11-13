@@ -1,16 +1,20 @@
 import { SimpleGrid, Stack, Text, Tooltip } from "@mantine/core";
 import { useUserLocale } from "@/user-locale-context";
-import {
-  accountReturnExplanation,
-  type AccountReturnResult,
+import type {
+  AccountReturnBasis,
+  AccountReturnResult,
 } from "@/shared/accounts/account-returns";
+import {
+  accountReturnBasisLabels,
+  getAccountReturnDisplay,
+} from "@/shared/accounts/account-return-display";
 
 export function ReturnValues({
   data,
-  annualized = false,
+  basis,
 }: {
   data: AccountReturnResult;
-  annualized?: boolean;
+  basis: AccountReturnBasis;
 }) {
   const locale = useUserLocale();
   const formatter = new Intl.NumberFormat(locale, {
@@ -21,19 +25,18 @@ export function ReturnValues({
   return (
     <SimpleGrid cols={2}>
       {(["twr", "mwr"] as const).map((metric) => {
-        const value = annualized
-          ? metric === "twr"
-            ? data.annualizedTwr
-            : data.annualizedMwr
-          : data[metric];
+        const { value, explanation } = getAccountReturnDisplay(
+          data,
+          metric,
+          basis,
+        );
         return (
           <Stack gap={2} key={metric}>
             <Text size="sm" c="dimmed">
-              {metric.toUpperCase()}
-              {annualized ? " Annualized" : ""}
+              {`${metric.toUpperCase()} ${accountReturnBasisLabels[basis]}`}
             </Text>
             <Tooltip
-              label={accountReturnExplanation(data, metric)}
+              label={explanation}
               multiline
               w={320}
               events={{ hover: true, focus: true, touch: false }}
@@ -41,8 +44,8 @@ export function ReturnValues({
               <Text
                 tabIndex={0}
                 fw={700}
-                data-testid={`account-return-${annualized ? "annualized-" : ""}${metric}`}
-                aria-label={`${metric.toUpperCase()}${annualized ? " Annualized" : ""}: ${value == null ? accountReturnExplanation(data, metric) : formatter.format(value)}`}
+                data-testid={`account-return-${basis}-${metric}`}
+                aria-label={`${metric.toUpperCase()} ${accountReturnBasisLabels[basis]}: ${value == null ? explanation : formatter.format(value)}`}
                 c={
                   value == null || value === 0
                     ? undefined
