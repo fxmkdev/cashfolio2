@@ -1,5 +1,7 @@
 import { useAssetClasses } from "@/classification-context";
 import { buildAccountGainLossColumns } from "../gain-loss/columns";
+import { buildAccountReturnColumns } from "../returns/columns";
+import { useUserLocale } from "@/user-locale-context";
 import { useMemo, useRef } from "react";
 import { type ColDef, type ColGroupDef } from "ag-grid-enterprise";
 import { type AccountsGridRow } from "./rows";
@@ -39,6 +41,7 @@ function buildAccountTreeColumns(
   params: ColumnOptions,
   balanceColumns: ColDef<AccountsGridRow>[],
   metadataColumns: ColDef<AccountsGridRow>[],
+  locale: string,
 ): ColumnDefs {
   const { isEquityTab, referenceCurrency, gainLossData, isGainLossLoading } =
     params;
@@ -51,6 +54,14 @@ function buildAccountTreeColumns(
             data: gainLossData,
             loading: isGainLossLoading ?? false,
           }),
+          buildAccountReturnColumns({
+            basis: params.returnBasis,
+            data: params.returnData,
+            loading: params.isReturnLoading,
+            completedIds: params.completedReturnIds,
+            onOpen: params.onOpenReturn,
+            locale,
+          }),
           ...metadataColumns,
         ]
       : []),
@@ -62,6 +73,11 @@ function useAccountColumnOptions(params: AccountTreeColumnParams) {
     grouping = "accountStructure",
     gainLossData,
     isGainLossLoading,
+    returnBasis,
+    returnData,
+    isReturnLoading,
+    completedReturnIds,
+    onOpenReturn,
     isEquityTab,
     categoryType,
     referenceCurrency,
@@ -78,6 +94,11 @@ function useAccountColumnOptions(params: AccountTreeColumnParams) {
       grouping,
       gainLossData,
       isGainLossLoading,
+      returnBasis,
+      returnData,
+      isReturnLoading,
+      completedReturnIds,
+      onOpenReturn,
       isEquityTab,
       categoryType,
       referenceCurrency,
@@ -93,6 +114,11 @@ function useAccountColumnOptions(params: AccountTreeColumnParams) {
       grouping,
       gainLossData,
       isGainLossLoading,
+      returnBasis,
+      returnData,
+      isReturnLoading,
+      completedReturnIds,
+      onOpenReturn,
       isEquityTab,
       categoryType,
       referenceCurrency,
@@ -111,6 +137,7 @@ export function useAccountTreeColumnDefs(
   params: AccountTreeColumnParams,
 ): ColumnDefs {
   const assetClasses = useAssetClasses();
+  const locale = useUserLocale();
   const filters = useAccountSetFilters(params.filterContext);
   const refs = useReferenceBalanceColumnRefs(params);
   const options = useAccountColumnOptions(params);
@@ -133,7 +160,8 @@ export function useAccountTreeColumnDefs(
     [options.grouping, assetClasses, filters],
   );
   return useMemo(
-    () => buildAccountTreeColumns(options, balanceColumns, metadataColumns),
-    [options, balanceColumns, metadataColumns],
+    () =>
+      buildAccountTreeColumns(options, balanceColumns, metadataColumns, locale),
+    [options, balanceColumns, metadataColumns, locale],
   );
 }

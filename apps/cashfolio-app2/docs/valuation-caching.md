@@ -498,3 +498,59 @@ cannot enable mock keys or provider interception in normal builds.
   - `src/server/valuation/constants.ts`
   - this document
   - tests in `src/server/valuation/backtracking.server.test.ts` as needed
+
+## Historical series loading for account returns
+
+`src/server/valuation/history/` plans raw series across composite conversions
+and canonical account/group/footer memberships. Each batch reads one `TS.RANGE`,
+one predecessor `TS.REVRANGE`, and one coverage key per distinct raw
+series/window, then performs binary searches and Decimal conversion in memory.
+USD/CHF is shared by security, crypto, and foreign-currency conversions. No
+per-date `EXISTS` or fallback-key traffic is needed.
+
+Missing history uses bounded provider ranges: Marketstack paginated EOD and the
+Currencylayer/Coinlayer timeframe APIs where the existing subscription permits.
+An explicit unsupported-feature response caches capability by provider/API-key
+fingerprint for 24 hours and selects grouped per-date requests. Authentication,
+quota, HTTP, and transient failures remain failures, with bounded retries; no
+subscription upgrade is requested. Requests retain cancellation, timeout,
+provider-attempt budgets, and four-task concurrency.
+
+Coverage proofs in a bounded sorted set
+(`valuation:coverage:v2:<raw-series-key>`) identify symbol, currency, inclusive
+dates and publication cutoff. They are written only after all pages, currencies,
+symbols, dates, prices, and pagination are validated and every quote write
+completes. Atomic `ZADD`/`ZREM` operations need only the existing read/write
+Redis ACL; no Lua, transactions, or permission changes are required. Truncation
+and failed pages create no proof. A proof lets backtracking skip verified empty
+dates without guessing from weekdays. Exact quotes remain stable TimeSeries
+dependencies; carried quotes are `covered` dependencies whose validity includes
+the proof expiry. Explicit provider no-data retains the existing
+security-versus-FX/crypto behavior. Coverage lasts at most 24 hours (explicit
+no-data one hour), with a bounded 15-minute process-local fallback.
+
+Operational clearing must call `clearHistorySeries`, which removes the raw price
+series, its coverage proof, and local fallback together. A whole valuation-cache
+clear must include `valuation:coverage:*` and restart processes to discard local
+fallbacks; never clear prices while leaving their gap proofs behind. Book/user
+deletion keeps these global valuation keys and removes all book-scoped return
+summary/work/artifact versions. Restored books receive fresh revision-bound
+work.
+
+Return summary v4 retains stable results for 24 hours. Temporary complete
+results expire no later than their earliest dependency or the original 15-minute
+work lifetime. Cache reads do not extend expiry. Missing quotes and request
+failures cannot establish successful long-lived summary entries. Mutable work
+envelopes, immutable transaction/planning artifacts, and completed membership
+results use separate bounded entries, so resuming does not serialize accumulated
+prices.
+
+Nullable stock closes in otherwise complete range pages are unproven dates.
+Valid quotes and coverage of the other dates remain reusable, while those dates
+switch to grouped single-day probes. A null close from a single-day probe
+follows the existing one-hour miss cooldown/backtracking convention: its marker
+is explicitly `temporary`, never a confirmed gap, and any dependent summary
+expires within the 15-minute work lifetime. Quotes in another currency remain
+unproven and are checked individually; malformed responses remain failures.
+Range incompleteness cannot establish a successful long-lived no-quote cache
+entry.

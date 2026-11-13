@@ -66,6 +66,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
 
   it("deletes only requested books across versions, environments and scan pages", async () => {
     const target = [
+      "account:returns-work:v1:preview:book-1:user:checkpoint",
       "period:base:v1:local:book-1:revision:2026-01",
       "period:base:v8:preview:book-1:revision:2026-01",
       "period:base:v99:local:book-1:revision:2026-01",
@@ -77,8 +78,11 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "account:gain-loss:v99:local:book-2:revision:2026-05-11:2026-05-10",
       "account:gain-loss-basis:v3:local:book-1:revision:empty",
       "account:gain-loss-basis:v99:preview:book-2:revision:2026-05-11",
+      "account:returns:v1:preview:book-1:revision:2026-05-11:2026-05-10:accountStructure:all",
+      "account:returns:v99:local:book-2:revision:2026-05-11:2026-05-10:assetClass:all",
     ];
     const preserved = [
+      "account:returns-work:v1:local:book-3:user:book-1:checkpoint",
       "period:base:v8:local:book-10:revision:2026-01",
       "period:history:metrics:v6:local:book-3:revision:2026-01:total",
       "period:history:metrics:v6:local:book-3:revision:2026-01:scope:book-1:child",
@@ -87,6 +91,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "account:gain-loss:v1:local:book-3:revision:2026-05-11:2026-05-10",
       "account:gain-loss:v1:local:book-3:revision:scope:book-1:child",
       "account:gain-loss-basis:v3:local:book-3:revision:empty",
+      "account:returns:v1:local:book-3:revision:2026-05-11:2026-05-10:scope:book-1:child",
     ];
     const keys = new Set([...target, ...preserved]);
     redis.scanIterator.mockImplementation(async function* ({ MATCH }) {

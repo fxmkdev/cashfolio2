@@ -1,6 +1,7 @@
 import type { HoldingRateConvertibleAccount } from "./types";
 import { toHoldingUnitIdentifier } from "./unit-identity";
 
+export { applyHoldingTransactionExecutionPricing } from "./execution-pricing";
 export { isWithinPeriod } from "./common";
 export { getHoldingTransactionContext } from "./transaction-context";
 export { decomposeHoldingTransaction } from "./transaction-decomposition";

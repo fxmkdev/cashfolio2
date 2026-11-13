@@ -1,3 +1,4 @@
+import { useAccountReturnBasis } from "@/hooks/use-account-return-basis";
 import { useMemo, useRef, useState } from "react";
 import type { GridApi } from "ag-grid-enterprise";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
@@ -16,6 +17,7 @@ import { useStoryModals } from "./use-story-modals";
 import type { AccountsStoryOptions } from "./types";
 
 export function useAccountsStoryModel(options: AccountsStoryOptions) {
+  const returnBasis = useAccountReturnBasis("storybook-book");
   const routing = useStoryRouting(options);
   const { tab, mode, showArchived, isEquityTab } = routing;
   const assignments = useStoryAssignments(options.assignmentFailsOnce);
@@ -73,6 +75,7 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
   });
   const columnDefs = useAccountTreeColumnDefs({
     filterContext: presentation.filterContext,
+    returnBasis: returnBasis.basis,
     grouping,
     gainLossData:
       isEquityTab || gainLossState === "loading" || gainLossState === "error"
@@ -99,6 +102,7 @@ export function useAccountsStoryModel(options: AccountsStoryOptions) {
   });
   return {
     routing,
+    returnBasis,
     assignments,
     modalState,
     grouping,

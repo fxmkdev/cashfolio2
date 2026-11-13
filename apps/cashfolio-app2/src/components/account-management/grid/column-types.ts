@@ -2,6 +2,11 @@ import type { ReportingGrouping } from "@/shared/reporting/reporting-grouping";
 import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-loss";
 import type { GroupBalanceAggregation } from "./reference-balance-aggregation";
 import type { AccountFilterContext } from "./filter-context";
+import type {
+  AccountReturnBasis,
+  AccountReturnSummaries,
+  AccountReturnTarget,
+} from "@/shared/accounts/account-returns";
 import {
   type RowTarget,
   type TreeRow,
@@ -12,6 +17,11 @@ export type AccountTreeColumnParams = {
   filterContext: AccountFilterContext;
   grouping?: ReportingGrouping;
   gainLossData?: AccountGainLossSummaries;
+  returnBasis?: AccountReturnBasis;
+  returnData?: AccountReturnSummaries;
+  isReturnLoading?: boolean;
+  completedReturnIds?: Set<string>;
+  onOpenReturn?: (target: AccountReturnTarget) => void;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;
   categoryType?: "INCOME" | "EXPENSE";

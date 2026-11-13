@@ -96,6 +96,7 @@ feature contracts. Concern folders own the implementation:
 | `assignments/` | Assignment forms, frozen bulk targets, submission, and toolbar                                                    |
 | `management/`  | Mutation payloads, management actions, organizer API, and guarded hierarchy callbacks                             |
 | `gain-loss/`   | Gain/loss columns, header, and asset-class projection                                                             |
+| `returns/`     | Return columns and resumable, progressive return-request state                                                    |
 
 Import row contracts from `grid/rows.ts` and view contracts from `view-types.ts`
 directly. Shared page/entity copy belongs in `labels.ts`. Tests, component
@@ -297,6 +298,13 @@ viewport and its tree scrollable on narrow layouts.
   shape.
 
 ## Session Storage for UI State
+
+Return-basis preferences use `cashfolio:returnBasis:${accountBookId}` through
+`useAccountReturnBasis` (`src/hooks/use-account-return-basis.ts`), backed by
+Mantine's `useSessionStorage`. Accounts and ledger summaries share the same
+preference. Fresh sessions and invalid stored values default to Annualized;
+storage failures leave controls usable without persistence. This display-only
+preference is independent of return-request scopes and caches.
 
 Expanded group IDs are persisted in sessionStorage with the key
 `cashfolio:expandedGroups:${accountBookId}:${tab}`. This is encapsulated in

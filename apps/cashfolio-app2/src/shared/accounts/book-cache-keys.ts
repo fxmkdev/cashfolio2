@@ -5,6 +5,8 @@ import {
   ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY,
   ACCOUNT_GAIN_LOSS_CACHE_FAMILY,
   PERIOD_HISTORY_METRICS_CACHE_FAMILY,
+  ACCOUNT_RETURN_CACHE_FAMILY,
+  ACCOUNT_RETURN_WORK_FAMILY,
 } from "@cashfolio/book-cache-contracts";
 
 // Cache payload versions and key builders remain owned by the app.
@@ -51,4 +53,20 @@ export function getAccountGainLossBasisCacheEntryKey(
   args: BookCacheGenerationScope & { watermark: string },
 ): string {
   return `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.watermark}`;
+}
+
+export function getAccountReturnCacheEntryKey(
+  args: BookCacheGenerationScope & {
+    asOfDate: string;
+    latestFetchableDate: string;
+    scopeKey: string;
+  },
+): string {
+  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
+}
+
+export function getAccountReturnWorkKey(
+  args: BookCacheScope & { userId: string; id: string },
+): string {
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }

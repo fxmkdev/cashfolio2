@@ -13,9 +13,30 @@ read-only, and modal tables. This keeps theme, locale, scrolling, resizing, and
 row actions consistent. Apply this guideline when adding or changing tables;
 existing tables elsewhere can be migrated in focused follow-ups.
 
+Use AG Grid tooltips for cell explanations, with one tooltip owner per
+explanation. Do not wrap cell content in a Mantine tooltip repeating the
+column's tooltip. Preserve accessible labels and keyboard activation for
+interactive cells. Mantine tooltips remain appropriate outside grids and for
+distinct actions within cells, such as **More Actions**.
+
 Use native tree data for hierarchical records, with stable row IDs. Keep stored
 manual ordering authoritative in hierarchy management and Organize mode. Follow
 the shared column and actions-cell conventions below.
+
+- Use `GridCellLoading` from `src/components/grid/grid-cell-loading.tsx` for
+  asynchronous numeric-cell loading, including reference balances, G/L, TWR, and
+  MWR. It renders the existing Mantine `dots` loader at `xs`, right-aligned and
+  vertically centered within the full cell. Do not use the default spinner or
+  duplicate loader markup in cell renderers.
+- Supply a sentence-case accessible loading label. Keep the cell dimensions,
+  existing delay/eligibility rules, and numeric placeholder alignment stable.
+  For progressive tables, track completion by displayed row ID. Completed rows
+  leave loading immediately, including null/inapplicable results; slow totals
+  must not hold completed account rows behind a global flag. Explicitly refresh
+  cells when status changes even if the numeric value remains null. Preserve
+  completed rows during retries in the same context and clear them immediately
+  on scope/revision changes. Show actionable errors separately. Page-level
+  loading still uses the global progress bar.
 
 ## Hierarchical Selection
 
