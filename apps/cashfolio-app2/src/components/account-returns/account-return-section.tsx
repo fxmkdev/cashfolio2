@@ -1,3 +1,4 @@
+import { useAccountReturnBasis } from "@/hooks/use-account-return-basis";
 import { fetchWithResourceErrors } from "@/shared/resources/resource-fetch";
 import { loadCompleteReturnWork } from "@/shared/accounts/load-return-work";
 import { useCallback, useMemo, useState } from "react";
@@ -13,6 +14,7 @@ export function AccountReturnSection(args: {
   refreshKey: unknown;
   onOpenTransaction: (id: string) => void;
 }) {
+  const { basis, setBasis } = useAccountReturnBasis(args.accountBookId);
   const [opened, setOpened] = useState(false);
   const { accountBookId, accountId, period } = args;
   const target = useMemo(
@@ -51,6 +53,8 @@ export function AccountReturnSection(args: {
     <>
       <AccountReturnSummaryView
         {...request}
+        basis={basis}
+        onBasisChange={setBasis}
         onRetry={request.retry}
         onViewCalculation={() => setOpened(true)}
       />

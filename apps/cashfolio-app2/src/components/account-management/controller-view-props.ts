@@ -45,6 +45,8 @@ export function getAccountsControllerViewProps({
     managementContext: options.managementContext ?? "accounts",
     gainLoss: { ...data.gainLoss, data: presentation.gainLossData },
     returns,
+    returnBasis: model.returnBasis.basis,
+    onReturnBasisChange: model.returnBasis.setBasis,
     returnCalculation: {
       target: returns.target,
       onClose: returns.onClose,

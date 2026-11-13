@@ -299,6 +299,13 @@ viewport and its tree scrollable on narrow layouts.
 
 ## Session Storage for UI State
 
+Return-basis preferences use `cashfolio:returnBasis:${accountBookId}` through
+`useAccountReturnBasis` (`src/hooks/use-account-return-basis.ts`), backed by
+Mantine's `useSessionStorage`. Accounts and ledger summaries share the same
+preference. Fresh sessions and invalid stored values default to Annualized;
+storage failures leave controls usable without persistence. This display-only
+preference is independent of return-request scopes and caches.
+
 Expanded group IDs are persisted in sessionStorage with the key
 `cashfolio:expandedGroups:${accountBookId}:${tab}`. This is encapsulated in
 `useExpandedGroups` (`src/hooks/use-expanded-groups.ts`):

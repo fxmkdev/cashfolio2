@@ -712,6 +712,7 @@ test("Accounts progressively renders staging returns, retains completed rows on 
   const household = seededBook("household");
   // Isolate this lifecycle from earlier tests' complete summary cache.
   await prisma.$executeRaw`UPDATE "AccountBook" SET "periodCacheRevision" = gen_random_uuid() WHERE id = ${household.id}`;
+  let summaryRequests = 0;
   let responses = 0,
     held = false,
     failNext = false;
@@ -728,6 +729,7 @@ test("Accounts progressively renders staging returns, retains completed rows on 
       await route.continue();
       return;
     }
+    summaryRequests++;
     const response = await route.fetch();
     const body = await response.text();
     if (body.includes('"workId"') && body.includes('"pending"')) {
@@ -760,13 +762,36 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     await expect(
       page.getByRole("status", { name: "Loading TWR" }).first(),
     ).toBeVisible();
+    const basis = page.getByRole("combobox", {
+      name: "Return Basis",
+      exact: true,
+    });
+    const chooseBasis = async (name: "Annualized" | "Cumulative") => {
+      await basis.click();
+      await page.getByRole("option", { name, exact: true }).click();
+      await expect(basis).toHaveValue(name);
+    };
+    await expect(basis).toHaveValue("Annualized");
     const completedText = await managed.innerText();
+    const heldRequestCount = summaryRequests;
+    await chooseBasis("Cumulative");
+    await expect(managed).toContainText("%");
+    await expect(managed.getByRole("status")).toHaveCount(0);
+    await chooseBasis("Annualized");
+    await expect(managed).toHaveText(completedText);
+    expect(summaryRequests).toBe(heldRequestCount);
     failNext = true;
     release();
     await expect(
       page.getByText("Returns could not be loaded. Please try again."),
     ).toBeVisible();
     await expect(managed).toHaveText(completedText);
+    const failedRequestCount = summaryRequests;
+    await chooseBasis("Cumulative");
+    await expect(managed).toContainText("%");
+    await chooseBasis("Annualized");
+    await expect(managed).toHaveText(completedText);
+    expect(summaryRequests).toBe(failedRequestCount);
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(
       page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
@@ -801,11 +826,37 @@ test("Accounts progressively renders staging returns, retains completed rows on 
       calculation.getByRole("heading", { name: "Valuations and TWR Factors" }),
     ).toBeVisible({ timeout: 60_000 });
     await page.keyboard.press("Escape");
+    await expect(calculation).not.toBeVisible();
+    const completeRequestCount = summaryRequests;
+    await chooseBasis("Cumulative");
+    await expect(footer).toContainText("%");
+    const cumulativeTotal = await footer.innerText();
+    expect(summaryRequests).toBe(completeRequestCount);
     await page.reload();
+    await expect(basis).toHaveValue("Cumulative");
     await scrollGridToRight(page);
     await expect(
       page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
     ).toHaveCount(0);
+    await expect(
+      agGridCellByColId(agGridPinnedBottomRow(page), "return-twr"),
+    ).toHaveText(cumulativeTotal);
+    const managedAccount = await prisma.account.findFirstOrThrow({
+      where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
+      select: { id: true },
+    });
+    await page.goto(`/${household.id}/${managedAccount.id}`);
+    await expect(basis).toHaveValue("Cumulative");
+    await expect(
+      page.getByRole("heading", { name: "Returns Since Start (Cumulative)" }),
+    ).toBeVisible();
+    await chooseBasis("Annualized");
+    await expect(
+      page.getByRole("heading", { name: "Returns Since Start (Annualized)" }),
+    ).toBeVisible();
+    await page.goto(`/${household.id}/accounts?grouping=assetClass`);
+    await expect(basis).toHaveValue("Annualized");
+    await scrollGridToRight(page);
     await expect(
       agGridCellByColId(agGridPinnedBottomRow(page), "return-twr"),
     ).toHaveText(total);

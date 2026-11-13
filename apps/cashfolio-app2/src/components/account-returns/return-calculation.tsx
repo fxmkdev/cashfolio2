@@ -113,9 +113,9 @@ export function ReturnCalculation({
           {date(data.effectiveEndDate)}
         </Text>
       ) : null}
-      <ReturnValues data={data} />
+      <ReturnValues data={data} basis="cumulative" />
       {data.annualizedTwr !== null || data.annualizedMwr !== null ? (
-        <ReturnValues data={data} annualized />
+        <ReturnValues data={data} basis="annualized" />
       ) : null}
       {data.diagnostics.length ? (
         <Alert title="Return Calculation Notes" color="yellow">

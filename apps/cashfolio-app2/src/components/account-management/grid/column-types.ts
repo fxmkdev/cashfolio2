@@ -3,6 +3,7 @@ import type { AccountGainLossSummaries } from "@/shared/accounts/account-gain-lo
 import type { GroupBalanceAggregation } from "./reference-balance-aggregation";
 import type { AccountFilterContext } from "./filter-context";
 import type {
+  AccountReturnBasis,
   AccountReturnSummaries,
   AccountReturnTarget,
 } from "@/shared/accounts/account-returns";
@@ -16,6 +17,7 @@ export type AccountTreeColumnParams = {
   filterContext: AccountFilterContext;
   grouping?: ReportingGrouping;
   gainLossData?: AccountGainLossSummaries;
+  returnBasis?: AccountReturnBasis;
   returnData?: AccountReturnSummaries;
   isReturnLoading?: boolean;
   completedReturnIds?: Set<string>;

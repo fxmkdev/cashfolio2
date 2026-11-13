@@ -1,6 +1,7 @@
 import type { ReportingGrouping } from "../reporting/reporting-grouping";
 
 export type AccountReturnMetric = "twr" | "mwr";
+export type AccountReturnBasis = "annualized" | "cumulative";
 export type AccountReturnDiagnostic = {
   metric: AccountReturnMetric | "both";
   date?: string;
