@@ -541,10 +541,25 @@ test("archived seed hierarchies are available in Accounts and Categories", async
         .locator(".ag-group-contracted")
         .click();
     if (!isCategory) {
-      await expect(
-        page.locator('[row-id^="__archived__:"]').first(),
-      ).toBeVisible();
-      await expandArchivedGroups(page);
+      if (groups.length === 0) {
+        // The root archive follows all real roots and may be virtualised out
+        // of the DOM. Reveal it before querying or expanding its children.
+        await page
+          .locator(".ag-grid-viewport")
+          .first()
+          .evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+        const archive = page.locator('[row-id="__archived__:root"]');
+        await expect(archive).toBeVisible();
+        const expander = archive.locator(".ag-group-contracted");
+        if (await expander.isVisible()) await expander.click();
+      } else {
+        await expect(
+          page.locator('[row-id^="__archived__:"]').first(),
+        ).toBeVisible();
+        await expandArchivedGroups(page);
+      }
     }
     if (tab !== "BALANCE")
       for (const name of groups) {
