@@ -500,14 +500,19 @@ data groups them hierarchically. Fields that don't apply to a node type are
 AG Grid 36 uses `.ag-grid-viewport` for native horizontal and vertical
 scrolling. Rendered body rows are direct children of
 `.ag-grid-scrolling-container`, with scrolling, left-pinned, and right-pinned
-cell sections inside each row. Pinned bottom rows are in
-`.ag-grid-pinned-bottom-rows`. Avoid selectors using the old center-column,
-pinned-column, or floating-bottom containers. Scope row actions to their row and
-modal editing locators to their dialog. Transactions list and bookings grids
-have independent row indices; scope booking queries to the named details region
-or drawer. Both grids use constrained heights with independent scrolling.
-Loading and empty overlays are siblings of the viewport in v36; do not depend on
-them being viewport children.
+cell sections inside each row. Scrolling descendants into view can move group
+ancestors into `.ag-grid-sticky-top-rows-container` or
+`.ag-grid-sticky-bottom-rows-container`. Data-row and action helpers must also
+recognize those sticky rows; do not assume an actionable group remains in the
+scrolling container. Off-screen rows may not exist in the DOM: scroll the
+viewport to reveal a known target before querying or expanding it. Pinned bottom
+rows are in `.ag-grid-pinned-bottom-rows`. Avoid selectors using the old
+center-column, pinned-column, or floating-bottom containers. Scope row actions
+to their row and modal editing locators to their dialog. Transactions list and
+bookings grids have independent row indices; scope booking queries to the named
+details region or drawer. Both grids use constrained heights with independent
+scrolling. Loading and empty overlays are siblings of the viewport in v36; do
+not depend on them being viewport children.
 
 `ensureGridModulesRegistered` supplies the same selective feature modules in the
 application and Storybook. Development registers `ValidationModule` with
