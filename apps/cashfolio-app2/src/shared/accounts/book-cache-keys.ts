@@ -62,11 +62,11 @@ export function getAccountReturnCacheEntryKey(
     scopeKey: string;
   },
 ): string {
-  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
+  return `${ACCOUNT_RETURN_CACHE_FAMILY}:v5:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}:${args.scopeKey}`;
 }
 
 export function getAccountReturnWorkKey(
   args: BookCacheScope & { userId: string; id: string },
 ): string {
-  return `${ACCOUNT_RETURN_WORK_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v5:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }

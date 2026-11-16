@@ -56,9 +56,9 @@ it("keeps return summary and temporary work versions app-owned", () => {
       scopeKey: "accountStructure:all",
     }),
   ).toBe(
-    "account:returns:v4:local:book-1:revision-1:2026-05-11:2026-05-10:accountStructure:all",
+    "account:returns:v5:local:book-1:revision-1:2026-05-11:2026-05-10:accountStructure:all",
   );
   expect(
     getAccountReturnWorkKey({ ...scope, userId: "user-1", id: "work-1" }),
-  ).toBe("account:returns-work:v4:local:book-1:user-1:work-1");
+  ).toBe("account:returns-work:v5:local:book-1:user-1:work-1");
 });

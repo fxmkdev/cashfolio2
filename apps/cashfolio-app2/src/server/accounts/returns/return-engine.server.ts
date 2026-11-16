@@ -128,7 +128,7 @@ export async function createReturnEngine(
   const calculate = (
     target: ReturnType<typeof returnTargets>[number],
     rate = resolveRate,
-    valuationOnly = false,
+    options: { valuationOnly?: boolean; includeDetails?: boolean } = {},
   ) =>
     calculateAccountReturns({
       ...inputs,
@@ -137,7 +137,7 @@ export async function createReturnEngine(
       applicable: [...target.accountIds].some(eligible),
       prepared,
       resolveRate: rate,
-      valuationOnly,
+      ...options,
     });
   return { calculate };
 }

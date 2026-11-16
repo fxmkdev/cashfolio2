@@ -1,17 +1,13 @@
 import type { ReportingGrouping } from "../reporting/reporting-grouping";
 
-export type AccountReturnMetric = "twr" | "mwr";
 export type AccountReturnBasis = "annualized" | "cumulative";
 export type AccountReturnDiagnostic = {
-  metric: AccountReturnMetric | "both";
   date?: string;
   message: string;
 };
 export type AccountReturnResult = {
   applicable: boolean;
-  twr: number | null;
   mwr: number | null;
-  annualizedTwr: number | null;
   annualizedMwr: number | null;
   effectiveStartDate: string | null;
   effectiveEndDate: string | null;
@@ -35,13 +31,9 @@ export type AccountReturnSummaries = {
 };
 export type AccountReturnValuation = {
   id: string;
-  startDate: string;
   date: string;
-  openingValue: number | null;
-  contributions: number;
-  withdrawals: number;
-  closingValue: number | null;
-  factor: number | null;
+  kind: "opening" | "intermediate" | "closing";
+  value: number | null;
 };
 export type AccountReturnCashFlow = {
   id: string;
@@ -65,9 +57,7 @@ export function emptyAccountReturnResult(
 ): AccountReturnResult {
   return {
     applicable,
-    twr: null,
     mwr: null,
-    annualizedTwr: null,
     annualizedMwr: null,
     effectiveStartDate: null,
     effectiveEndDate: null,
@@ -77,19 +67,12 @@ export function emptyAccountReturnResult(
 
 export function accountReturnExplanation(
   result: AccountReturnResult | undefined,
-  metric: AccountReturnMetric,
 ): string {
-  if (!result) return "Returns are unavailable.";
-  if (!result.applicable)
-    return "Returns are shown for accounts reporting G/L.";
+  if (!result) return "Return is unavailable.";
+  if (!result.applicable) return "Return is shown for accounts reporting G/L.";
   return (
-    result.diagnostics
-      .filter((item) => item.metric === metric || item.metric === "both")
-      .map((item) => item.message)
-      .join(" ") ||
-    (metric === "twr"
-      ? "Time-weighted return: linked performance excluding capital movements."
-      : "Money-weighted return: performance reflecting the timing and size of capital movements.")
+    result.diagnostics.map((item) => item.message).join(" ") ||
+    "Money-weighted return reflects how your money performed, accounting for the amounts and dates invested or withdrawn."
   );
 }
 

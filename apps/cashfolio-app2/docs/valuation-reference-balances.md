@@ -371,17 +371,17 @@ accumulated realised/unrealised values are not sums of period splits. Opening an
 event in the ledger closes the calculation drawer before navigating to the
 transaction and clearing the ledger's period filter.
 
-### Time-Weighted and Money-Weighted Returns
+### Money-Weighted Return
 
-Accounts and eligible ledgers show cumulative TWR and MWR independently of G/L
-loading. Accounts uses book start through today; ledger month/year selections
-cap the as-of date at today. Amounts and capital movements use the book's
-reference currency. Individual eligibility follows G/L, including recorded
-adjustments that net to zero. Group and footer returns include all descendant
-balance accounts, including idle reference-currency cash and archived accounts.
-Both grouping modes calculate returns from their combined capital; percentages
-are never summed or averaged. Filtering and collapsing rows do not affect
-totals.
+Accounts and eligible ledgers show one money-weighted Return independently of
+G/L loading, with an Annualized/Cumulative selector defaulting to Annualized.
+Accounts uses book start through today; ledger month/year selections cap the
+as-of date at today. Amounts and capital movements use the book's reference
+currency. Individual eligibility follows G/L, including recorded adjustments
+that net to zero. Group and footer returns include all descendant balance
+accounts, including idle reference-currency cash and archived accounts. Both
+grouping modes calculate returns from their combined capital; percentages are
+never summed or averaged. Filtering and collapsing rows do not affect totals.
 
 Returns measure price/FX performance and recorded G/L adjustments, excluding
 dividends, interest, and separately booked fees. Excluded income and expenses
@@ -397,37 +397,44 @@ and partially posted executions produce diagnostics instead of guessed returns.
 Total value accounts use their recorded balances without interpolated
 valuations.
 
-TWR links `(closing value + withdrawals) / (opening value + contributions)`.
-Contributions occur at day start and withdrawals at day end. Intervals without
-capital movements telescope between required valuation dates rather than
-requesting every calendar day's price. Opening holdings use the valuation on the
-day before book start. The convention follows the
-[Portfolio Performance daily-return explanation](https://help.portfolio-performance.info/en/concepts/performance/time-weighted/).
+Opening holdings use the valuation on the day before book start. Return uses the
+money-weighted method: it reflects how the user's money performed, accounting
+for the amounts and dates invested or withdrawn. It is not a comprehensive total
+investment return because dividends, interest, and separately booked fees remain
+excluded.
 
-MWR solves dated investor cash flows and terminal value with Decimal arithmetic,
-using actual days/365. Contributions and opening capital use day-start
-boundaries; withdrawals and terminal value use the following day boundary. The
-solver evaluates integer-day cash-flow polynomials using Decimal Horner
-arithmetic. Adaptive bracketing and safeguarded Decimal secant/bisection avoid
-global root-bound construction when a fast path certifies global uniqueness
-using discounted cumulative cash flows outside the candidate bracket and a
-derivative bound inside it. Uncertified cases use derivative isolation,
+The calculation solves dated investor cash flows and terminal value with Decimal
+arithmetic, using actual days/365. Contributions and opening capital use
+day-start boundaries; withdrawals and terminal value use the following day
+boundary. The solver evaluates integer-day cash-flow polynomials using Decimal
+Horner arithmetic. Adaptive bracketing and safeguarded Decimal secant/bisection
+avoid global root-bound construction when a fast path certifies global
+uniqueness using discounted cumulative cash flows outside the candidate bracket
+and a derivative bound inside it. Uncertified cases use derivative isolation,
 including tangent and close roots; multiple roots are rejected. Budget checks
 cover bound construction and isolation. A deterministic solver work limit makes
-only MWR unavailable, preserving TWR; request-wide cancellation/resource errors
-still propagate. Cumulative MWR uses the effective investment span, starting at
-book start for opening holdings or first funding otherwise, and ending at the
+Return unavailable with a diagnostic; request-wide cancellation/resource errors
+still propagate. Cumulative Return uses the effective investment span, starting
+at book start for opening holdings or first funding otherwise, and ending at the
 as-of date for open capital or final withdrawal for closed accounts. Empty gaps
 between investment episodes remain in the span. Calculation details show these
-dates, cash flows, TWR factors, and annualized equivalents for spans of at least
-365 days. This implements the
+dates, dated capital movements and transaction references,
+opening/intermediate/closing valuation snapshots, and explicitly labeled
+cumulative/annualized values. Annualized figures require at least 365 inclusive
+effective investment days; shorter spans show an explanatory dash and retain
+their cumulative figures. This implements the
 [dated cash-flow formulation](https://help.portfolio-performance.info/en/concepts/performance/money-weighted/).
 
 Negative invested value, unfunded performance, missing valuations, and undefined
-or ambiguous MWR show a dash with a reason. Missing intermediate prices can
-withhold TWR while leaving MWR available. Complete losses remain −100%.
+or ambiguous money-weighted returns show a dash with a reason. Missing
+intermediate prices do not withhold Return when its required inputs are
+sufficient. Event-boundary valuations still determine effective dates, closure,
+and negative invested value; removing linked-factor calculations does not remove
+those checks. Complete losses remain −100%. Summary/planning calls do not
+construct detail records; detail calls reuse the same memoized valuations and
+preserve missing snapshots.
 
-Return summaries use version 4 of the revision-scoped cache, including grouping,
+Return summaries use version 5 of the revision-scoped cache, including grouping,
 account state, UTC as-of day, and publication cutoff. Stable complete results
 last 24 hours. Temporary complete results expire by the earliest dependency or
 15-minute work lifetime; reads do not renew them. Missing prices are never a

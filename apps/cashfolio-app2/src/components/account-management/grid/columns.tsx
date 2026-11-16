@@ -1,6 +1,6 @@
 import { useAssetClasses } from "@/classification-context";
 import { buildAccountGainLossColumns } from "../gain-loss/columns";
-import { buildAccountReturnColumns } from "../returns/columns";
+import { buildAccountReturnColumn } from "../returns/columns";
 import { useUserLocale } from "@/user-locale-context";
 import { useMemo, useRef } from "react";
 import { type ColDef, type ColGroupDef } from "ag-grid-enterprise";
@@ -54,7 +54,7 @@ function buildAccountTreeColumns(
             data: gainLossData,
             loading: isGainLossLoading ?? false,
           }),
-          buildAccountReturnColumns({
+          buildAccountReturnColumn({
             basis: params.returnBasis,
             data: params.returnData,
             loading: params.isReturnLoading,

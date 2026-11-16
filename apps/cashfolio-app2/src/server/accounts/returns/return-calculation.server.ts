@@ -31,6 +31,7 @@ export async function calculateAccountReturns(args: {
   asOfDate: string;
   referenceCurrency: string;
   resolveRate: HoldingRateResolver;
+  includeDetails?: boolean;
   /** Discover valuation dependencies without solving metrics or publishing values. */
   valuationOnly?: boolean;
 }): Promise<AccountReturnDetails> {
@@ -47,7 +48,6 @@ export async function calculateAccountReturns(args: {
   if (!args.applicable) return result;
   if (asOfDate < startDate) {
     result.diagnostics.push({
-      metric: "both",
       message: "The as-of date is before book start.",
     });
     return result;
@@ -58,7 +58,6 @@ export async function calculateAccountReturns(args: {
   ];
   if (failures.length) {
     result.diagnostics = failures.map((message) => ({
-      metric: "both",
       message,
     }));
     return result;
@@ -92,10 +91,11 @@ export async function calculateAccountReturns(args: {
   const capital = [...netFlows.values()]
     .filter((flow) => !flow.exact.isZero())
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  result.cashFlows = capital.map(({ exact, ...flow }) => ({
-    ...flow,
-    amount: exact.toNumber(),
-  }));
+  if (args.includeDetails && !args.valuationOnly)
+    result.cashFlows = capital.map(({ exact, ...flow }) => ({
+      ...flow,
+      amount: exact.toNumber(),
+    }));
   const valueAt = createReturnScopeValuer({ ...args, changes, bridges });
   const dates = new Set([
     asOfDate,
@@ -110,90 +110,64 @@ export async function calculateAccountReturns(args: {
   const opening = await valueAt(previousDate);
   const closing = await valueAt(asOfDate);
   let previous = opening;
-  let twrFactor = toMoney(1);
-  let twrAvailable = true;
   let negative = false;
   let effectiveStart: string | null = opening?.gt(0) ? startDate : null;
   let effectiveEnd: string | null = null;
-  const append = (
-    from: string,
+  const snapshots = new Map<
+    string,
+    AccountReturnDetails["valuations"][number]
+  >();
+  const snapshot = (date: string, value: Money | null) => {
+    if (args.includeDetails && !args.valuationOnly)
+      snapshots.set(date, {
+        id: date,
+        date,
+        kind:
+          date === addDays(startDate, -1)
+            ? "opening"
+            : date === asOfDate
+              ? "closing"
+              : "intermediate",
+        value: numeric(value),
+      });
+  };
+  snapshot(previousDate, opening);
+  snapshot(asOfDate, closing);
+  const observe = (
     date: string,
     begin: Money | null,
     end: Money | null,
-    contributions: Money,
-    withdrawals: Money,
+    hasMovement: boolean,
   ) => {
-    let factor: Money | null = null;
-    if (begin?.gt(0) || end?.gt(0) || contributions.gt(0) || withdrawals.gt(0))
-      effectiveEnd = date;
+    if (begin?.gt(0) || end?.gt(0) || hasMovement) effectiveEnd = date;
     if (begin?.lt(0) || end?.lt(0)) negative = true;
-    if (begin === null || end === null) {
-      twrAvailable = false;
-      result.diagnostics.push({
-        metric: "twr",
-        date,
-        message: "An intermediate valuation is unavailable.",
-      });
-    } else {
-      const denominator = begin.plus(contributions);
-      const numerator = end.plus(withdrawals);
-      if (denominator.gt(0) && numerator.gte(0))
-        factor = numerator.div(denominator);
-      else if (!denominator.isZero() || !numerator.isZero()) {
-        twrAvailable = false;
-        result.diagnostics.push({
-          metric: "twr",
-          date,
-          message:
-            "Time-weighted return has no positive invested-capital denominator.",
-        });
-      }
-      if (factor !== null) twrFactor = twrFactor.mul(factor);
-    }
-    result.valuations.push({
-      id: `${from}:${date}`,
-      startDate: from,
-      date,
-      openingValue: numeric(begin),
-      closingValue: numeric(end),
-      contributions: contributions.toNumber(),
-      withdrawals: withdrawals.toNumber(),
-      factor: numeric(factor),
-    });
+    snapshot(date, end);
   };
   for (const date of eventDays) {
     const before = addDays(date, -1);
     if (before > previousDate) {
       const end = await valueAt(before);
-      append(
-        addDays(previousDate, 1),
-        before,
-        previous,
-        end,
-        toMoney(0),
-        toMoney(0),
-      );
+      observe(before, previous, end, false);
       previous = end;
     }
-    let contributions = toMoney(0);
-    let withdrawals = toMoney(0);
-    for (const flow of capital.filter((flow) => flow.date === date)) {
-      if (flow.exact.gt(0)) contributions = contributions.plus(flow.exact);
-      else withdrawals = withdrawals.minus(flow.exact);
-    }
+    const movements = capital.filter((flow) => flow.date === date);
     const end = await valueAt(date);
-    if (!effectiveStart && contributions.gt(0)) effectiveStart = date;
-    append(date, date, previous, end, contributions, withdrawals);
+    if (!effectiveStart && movements.some((flow) => flow.exact.gt(0)))
+      effectiveStart = date;
+    observe(date, previous, end, movements.length > 0);
     previous = end;
     previousDate = date;
   }
+  if (args.includeDetails && !args.valuationOnly)
+    result.valuations = [...snapshots.values()].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
   result.effectiveStartDate = effectiveStart;
   result.effectiveEndDate = closing?.gt(0) ? asOfDate : effectiveEnd;
   if (args.valuationOnly) return result;
   if (negative) {
     result.diagnostics = [
       {
-        metric: "both",
         message:
           "Returns are unavailable when invested value becomes negative.",
       },
@@ -202,7 +176,6 @@ export async function calculateAccountReturns(args: {
   }
   if (!effectiveStart || !result.effectiveEndDate) {
     result.diagnostics.push({
-      metric: opening === null || closing === null ? "mwr" : "both",
       message:
         opening === null || closing === null
           ? "Opening or terminal valuation is unavailable."
@@ -214,24 +187,8 @@ export async function calculateAccountReturns(args: {
     effectiveStart,
     addDays(result.effectiveEndDate, 1),
   );
-  if (twrAvailable) {
-    const total = twrFactor.minus(1);
-    if (Number.isFinite(total.toNumber())) {
-      result.twr = total.toNumber();
-      if (duration >= 365)
-        result.annualizedTwr = twrFactor
-          .pow(toMoney(365).div(duration))
-          .minus(1)
-          .toNumber();
-    } else
-      result.diagnostics.push({
-        metric: "twr",
-        message: "Time-weighted return exceeds the display range.",
-      });
-  }
   if (opening === null || closing === null) {
     result.diagnostics.push({
-      metric: "mwr",
       message: "Opening or terminal valuation is unavailable.",
     });
     return result;
@@ -258,7 +215,6 @@ export async function calculateAccountReturns(args: {
   } catch (error) {
     if (error instanceof ResourceLimitError) throw error;
     result.diagnostics.push({
-      metric: "mwr",
       message:
         error instanceof Error
           ? error.message

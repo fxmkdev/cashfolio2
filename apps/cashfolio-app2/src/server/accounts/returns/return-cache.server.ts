@@ -2,6 +2,7 @@ import { getRedisClient } from "../../../redis.server";
 import { getAccountReturnCacheEntryKey } from "../../../shared/accounts/book-cache-keys";
 import type {
   AccountReturnResult,
+  AccountReturnDetails,
   AccountReturnScope,
   AccountReturnSummaries,
 } from "../../../shared/accounts/account-returns";
@@ -46,16 +47,16 @@ export function isAccountReturnResult(
   return (
     record(value) &&
     typeof value.applicable === "boolean" &&
-    [value.twr, value.mwr, value.annualizedTwr, value.annualizedMwr].every(
-      rate,
-    ) &&
+    !("twr" in value) &&
+    !("annualizedTwr" in value) &&
+    [value.mwr, value.annualizedMwr].every(rate) &&
     (value.effectiveStartDate === null || date(value.effectiveStartDate)) &&
     (value.effectiveEndDate === null || date(value.effectiveEndDate)) &&
     Array.isArray(value.diagnostics) &&
     value.diagnostics.every(
       (item: unknown) =>
         record(item) &&
-        ["both", "twr", "mwr"].includes(String(item.metric)) &&
+        !("metric" in item) &&
         typeof item.message === "string" &&
         (item.date === undefined || date(item.date)),
     )
@@ -77,6 +78,41 @@ export function isAccountReturnSummaries(
         typeof item.id === "string" &&
         isAccountReturnResult(item),
     )
+  );
+}
+
+export function isAccountReturnDetails(
+  value: unknown,
+): value is AccountReturnDetails {
+  return (
+    record(value) &&
+    typeof value.name === "string" &&
+    typeof value.referenceCurrency === "string" &&
+    date(value.startDate) &&
+    date(value.asOfDate) &&
+    Array.isArray(value.valuations) &&
+    value.valuations.every(
+      (item: unknown) =>
+        record(item) &&
+        typeof item.id === "string" &&
+        date(item.date) &&
+        ["opening", "intermediate", "closing"].includes(String(item.kind)) &&
+        !("factor" in item) &&
+        (item.value === null ||
+          (typeof item.value === "number" && Number.isFinite(item.value))),
+    ) &&
+    Array.isArray(value.cashFlows) &&
+    value.cashFlows.every(
+      (item: unknown) =>
+        record(item) &&
+        typeof item.id === "string" &&
+        date(item.date) &&
+        typeof item.amount === "number" &&
+        Number.isFinite(item.amount) &&
+        typeof item.description === "string" &&
+        (item.transactionId === null || typeof item.transactionId === "string"),
+    ) &&
+    isAccountReturnResult(value)
   );
 }
 

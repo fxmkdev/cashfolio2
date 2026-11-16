@@ -18,11 +18,9 @@ export const Summary: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByTestId("account-return-annualized-twr"),
+      canvas.getByTestId("account-return-annualized"),
     ).toHaveTextContent("10.00%");
-    await expect(
-      canvas.getByTestId("account-return-annualized-mwr"),
-    ).toHaveTextContent("10.00%");
+    await expect(canvas.queryByText(/\b(TWR|MWR)\b/)).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "View Return Calculation" }),
     );
@@ -33,7 +31,7 @@ export const Loading: Story = { args: { data: undefined, loading: true } };
 export const RequestFailure: Story = {
   args: {
     data: undefined,
-    error: "Returns could not be loaded. Please try again.",
+    error: "Return could not be loaded. Please try again.",
   },
   play: async ({ canvasElement, args }) => {
     await userEvent.click(
@@ -42,7 +40,7 @@ export const RequestFailure: Story = {
     await expect(args.onRetry).toHaveBeenCalled();
   },
 };
-export const AmbiguousMwr: Story = {
+export const AmbiguousReturn: Story = {
   args: {
     data: {
       ...data,
@@ -50,7 +48,6 @@ export const AmbiguousMwr: Story = {
       annualizedMwr: null,
       diagnostics: [
         {
-          metric: "mwr",
           message:
             "Multiple money-weighted returns are possible for these cash flows.",
         },
@@ -60,12 +57,9 @@ export const AmbiguousMwr: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByTestId("account-return-annualized-twr"),
-    ).toHaveTextContent("10.00%");
-    await expect(
-      canvas.getByTestId("account-return-annualized-mwr"),
+      canvas.getByTestId("account-return-annualized"),
     ).toHaveTextContent("—");
-    await userEvent.hover(canvas.getByTestId("account-return-annualized-mwr"));
+    await userEvent.hover(canvas.getByTestId("account-return-annualized"));
     await expect(
       await within(document.body).findByRole("tooltip"),
     ).toHaveTextContent("Multiple money-weighted");
@@ -75,13 +69,12 @@ export const NegativeCapital: Story = {
   args: {
     data: {
       ...data,
-      twr: null,
+
       mwr: null,
-      annualizedTwr: null,
+
       annualizedMwr: null,
       diagnostics: [
         {
-          metric: "both",
           message:
             "Returns are unavailable when invested value becomes negative.",
         },
@@ -99,7 +92,7 @@ export const SwissLocale: Story = {
   ],
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByTestId("account-return-annualized-twr"),
+      within(canvasElement).getByTestId("account-return-annualized"),
     ).toHaveTextContent(
       new Intl.NumberFormat("de-CH", {
         style: "percent",
@@ -117,13 +110,24 @@ export const Calculation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByTestId("account-return-annualized-twr"),
+      canvas.getByTestId("account-return-annualized"),
     ).toHaveTextContent("10.00%");
     await expect(
-      canvas.getByTestId("account-return-cumulative-twr"),
+      canvas.getByTestId("account-return-cumulative"),
     ).toHaveTextContent("21.00%");
     await expect(
-      canvas.getByRole("heading", { name: "Valuations and TWR Factors" }),
+      canvas.getByRole("heading", { name: "Valuations" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("columnheader", { name: /TWR Factor/ }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByText(/Return uses the money-weighted method/),
+    ).toBeVisible();
+    await expect(
+      canvas.getByText(
+        /excluding dividends, interest, and separately booked fees/,
+      ),
     ).toBeVisible();
     await userEvent.click(
       await canvas.findByRole("button", { name: "Open Transaction" }),
@@ -141,7 +145,7 @@ export const AccountAndGroupGrid: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Group/,
+        name: /View Return Calculation for Group/,
       }),
     );
     await expect(selected).toHaveBeenCalledWith({ kind: "group", id: "group" });
@@ -161,38 +165,31 @@ async function checkGridTooltips(
 ) {
   const canvas = within(canvasElement);
   const body = within(document.body);
-  for (const metric of ["TWR", "MWR"] as const) {
-    const button = await canvas.findByRole("button", {
-      name: new RegExp(
-        `View ${metric} calculation for Investment Account \\(Annualized\\):`,
-      ),
-    });
-    const explanation = unavailable
-      ? "Returns are unavailable because a closing valuation is missing."
-      : metric === "TWR"
-        ? "Annualized time-weighted return: compound annual performance excluding capital movements."
-        : "Annualized money-weighted return: annual performance reflecting the timing and size of capital movements.";
-    if (unavailable) {
-      await expect(button).toHaveTextContent("—");
-      await expect(button).toHaveAccessibleName(
-        `View ${metric} calculation for Investment Account (Annualized): ${explanation}`,
-      );
-    }
-    await userEvent.hover(button);
-    // Wait for AG Grid, whose delay exceeds Mantine's global 500ms delay,
-    // so a second tooltip cannot pass unnoticed before it opens.
-    await waitFor(
-      async () => {
-        const tooltip = canvasElement.querySelector(".ag-tooltip");
-        await expect(tooltip).toBeVisible();
-        await expect(tooltip).toHaveTextContent(explanation);
-        await expect(body.queryAllByRole("tooltip")).toHaveLength(1);
-      },
-      { timeout: 3000 },
+  const button = await canvas.findByRole("button", {
+    name: /View Return Calculation for Investment Account/,
+  });
+  const explanation = unavailable
+    ? "Return is unavailable because a closing valuation is missing."
+    : "Annualized money-weighted return reflects how your money performed per year, accounting for the amounts and dates invested or withdrawn.";
+  if (unavailable) {
+    await expect(button).toHaveTextContent("—");
+    await expect(button).toHaveAccessibleName(
+      `View Return Calculation for Investment Account (Annualized): ${explanation}`,
     );
-    await userEvent.unhover(button);
-    await waitFor(() => expect(body.queryAllByRole("tooltip")).toHaveLength(0));
   }
+  await userEvent.hover(button);
+  // Wait beyond Mantine's global delay as well as AG Grid's delay to catch duplicates.
+  await waitFor(
+    async () => {
+      const tooltip = canvasElement.querySelector(".ag-tooltip");
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveTextContent(explanation);
+      await expect(body.queryAllByRole("tooltip")).toHaveLength(1);
+    },
+    { timeout: 3000 },
+  );
+  await userEvent.unhover(button);
+  await waitFor(() => expect(body.queryAllByRole("tooltip")).toHaveLength(0));
 }
 
 export const GridTooltips: Story = {
@@ -209,14 +206,9 @@ export const GridKeyboardCalculation: Story = {
   render: () => <ReturnGridExample unavailable />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    for (const [metric, key] of [
-      ["TWR", "{Enter}"],
-      ["MWR", " "],
-    ] as const) {
+    for (const key of ["{Enter}", " "]) {
       const button = await canvas.findByRole("button", {
-        name: new RegExp(
-          `View ${metric} calculation for Investment Account \\(Annualized\\):`,
-        ),
+        name: /View Return Calculation for Investment Account/,
       });
       button.focus();
       await expect(button).toHaveFocus();
@@ -240,7 +232,7 @@ export const GridLoading: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const indicators = await canvas.findAllByRole("status", {
-      name: "Loading TWR",
+      name: "Loading return",
     });
     await expect(indicators).toHaveLength(3);
     for (const indicator of indicators) {
@@ -252,9 +244,6 @@ export const GridLoading: Story = {
         indicator.querySelector(".mantine-Loader-root")?.children,
       ).toHaveLength(3);
     }
-    await expect(
-      canvas.getAllByRole("status", { name: "Loading MWR" }),
-    ).toHaveLength(3);
   },
 };
 
@@ -271,17 +260,17 @@ export const GridLoadingCompletes: Story = {
   render: () => <GridLoadingCompletion />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findAllByRole("status", { name: "Loading TWR" });
+    await canvas.findAllByRole("status", { name: "Loading return" });
     await userEvent.click(
       canvas.getByRole("button", { name: "Complete Loading" }),
     );
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account \(Annualized\): 10.00%/,
+        name: /View Return Calculation for Investment Account \(Annualized\): 10.00%/,
       }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("status", { name: "Loading TWR" }),
+      canvas.queryByRole("status", { name: "Loading return" }),
     ).not.toBeInTheDocument();
   },
 };
@@ -308,24 +297,24 @@ export const ProgressiveUnavailableRows: Story = {
   render: () => <ProgressiveGridExample />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findAllByRole("status", { name: "Loading TWR" });
+    await canvas.findAllByRole("status", { name: "Loading return" });
     await userEvent.click(
       canvas.getByRole("button", { name: "Complete Account" }),
     );
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account \(Annualized\):/,
+        name: /View Return Calculation for Investment Account \(Annualized\):/,
       }),
     ).toHaveTextContent("—");
     await expect(
-      canvas.getAllByRole("status", { name: "Loading TWR" }),
+      canvas.getAllByRole("status", { name: "Loading return" }),
     ).toHaveLength(2);
     await userEvent.click(canvas.getByRole("button", { name: "Complete All" }));
     await expect(
-      canvas.queryByRole("status", { name: "Loading TWR" }),
+      canvas.queryByRole("status", { name: "Loading return" }),
     ).not.toBeInTheDocument();
     await expect(
-      canvas.queryByRole("status", { name: "Loading MWR" }),
+      canvas.queryByRole("status", { name: "Loading return" }),
     ).not.toBeInTheDocument();
   },
 };

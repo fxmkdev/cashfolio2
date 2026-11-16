@@ -8,7 +8,7 @@ import type {
   AccountReturnValuation,
 } from "@/shared/accounts/account-returns";
 import { useUserLocale } from "@/user-locale-context";
-import { ReturnValues } from "./return-values";
+import { ReturnValue } from "./return-values";
 
 export function ReturnCalculation({
   data,
@@ -28,38 +28,25 @@ export function ReturnCalculation({
     value == null ? "—" : money.format(value);
   const valuationColumns: ColDef<AccountReturnValuation>[] = [
     {
-      field: "startDate",
-      headerName: "From",
+      field: "date",
+      headerName: "Date",
       valueFormatter: ({ value }) => date(value),
     },
     {
-      field: "date",
-      headerName: "Through",
-      valueFormatter: ({ value }) => date(value),
+      field: "kind",
+      headerName: "Purpose",
+      valueFormatter: ({ value }) =>
+        ({
+          opening: "Opening Value",
+          intermediate: "Valuation",
+          closing: "Closing Value",
+        })[value as AccountReturnValuation["kind"]],
     },
-    ...(
-      [
-        ["openingValue", "Opening Value"],
-        ["contributions", "Contributions"],
-        ["withdrawals", "Withdrawals"],
-        ["closingValue", "Closing Value"],
-      ] as const
-    ).map(([field, headerName]) => ({
-      field,
-      headerName,
+    {
+      field: "value",
+      headerName: `Value (${data.referenceCurrency})`,
       valueFormatter: amount,
       type: "numericColumn",
-    })),
-    {
-      field: "factor",
-      headerName: "TWR Factor",
-      type: "numericColumn",
-      valueFormatter: ({ value }) =>
-        value == null
-          ? "—"
-          : new Intl.NumberFormat(locale, { maximumFractionDigits: 8 }).format(
-              value,
-            ),
     },
   ];
   const flowColumns: ColDef<AccountReturnCashFlow>[] = [
@@ -113,17 +100,16 @@ export function ReturnCalculation({
           {date(data.effectiveEndDate)}
         </Text>
       ) : null}
-      <ReturnValues data={data} basis="cumulative" />
-      {data.annualizedTwr !== null || data.annualizedMwr !== null ? (
-        <ReturnValues data={data} basis="annualized" />
-      ) : null}
+      <ReturnValue data={data} basis="cumulative" />
+      <ReturnValue data={data} basis="annualized" />
       {data.diagnostics.length ? (
         <Alert title="Return Calculation Notes" color="yellow">
           {[
             ...new Set(
-              data.diagnostics.map(
-                (item) =>
-                  `${item.metric === "both" ? "TWR/MWR" : item.metric.toUpperCase()}: ${item.message}`,
+              data.diagnostics.map((item) =>
+                item.date
+                  ? `${date(item.date)}: ${item.message}`
+                  : item.message,
               ),
             ),
           ].map((message) => (
@@ -134,21 +120,23 @@ export function ReturnCalculation({
         </Alert>
       ) : null}
       <Text size="sm">
-        TWR links valuation factors, treating contributions at day start and
-        withdrawals at day end. MWR reflects the timing and size of capital
-        movements using actual days/365; day-end withdrawals and terminal value
-        use the following day boundary. Annualized figures are available for
-        investment spans of at least 365 days.
+        Return uses the money-weighted method, accounting for the amounts and
+        dates invested or withdrawn. The calculation uses actual days/365:
+        contributions and opening capital enter at day start; withdrawals and
+        terminal value use the following day boundary. Valuations show
+        accounting-day closing values; opening holdings use the day before book
+        start. Annualized figures require an effective investment span of at
+        least 365 days.
       </Text>
       <Text size="sm">
-        Returns include price/FX performance and recorded G/L adjustments,
+        Return includes price/FX performance and recorded G/L adjustments,
         excluding dividends, interest, and separately booked fees. Transfers use
         market value. Group returns include idle cash and holdings in transit,
         and cancel internal movements. FIFO G/L retains acquisition costs and
         can differ from performance during ownership. Total value accounts use
         recorded balances.
       </Text>
-      <Title order={5}>Valuations and TWR Factors</Title>
+      <Title order={5}>Valuations</Title>
       <DataGrid
         containerStyle={{ height: 320 }}
         rowData={data.valuations}

@@ -762,6 +762,9 @@ test("Accounts progressively renders staging returns, retains completed rows on 
   });
   try {
     await page.goto(`/${household.id}/accounts`);
+    await expect(
+      page.getByRole("columnheader", { name: /^(TWR|MWR)$/ }),
+    ).toHaveCount(0);
     const investments = agGridRowByText(page, "Investments");
     await expect(investments).toBeVisible();
     const expander = investments.locator(".ag-group-contracted");
@@ -770,12 +773,12 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     await expect.poll(() => held).toBe(true);
     const managed = agGridCellByColId(
       agGridRowByText(page, "Managed Portfolio CHF"),
-      "return-twr",
+      "account-return",
     );
     await expect(managed).toContainText("%");
     await expect(managed.getByRole("status")).toHaveCount(0);
     await expect(
-      page.getByRole("status", { name: "Loading TWR" }).first(),
+      page.getByRole("status", { name: "Loading return" }).first(),
     ).toBeVisible();
     const basis = page.getByRole("combobox", {
       name: "Return Basis",
@@ -798,7 +801,7 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     failNext = true;
     release();
     await expect(
-      page.getByText("Returns could not be loaded. Please try again."),
+      page.getByText("Return could not be loaded. Please try again."),
     ).toBeVisible();
     await expect(managed).toHaveText(completedText);
     const failedRequestCount = summaryRequests;
@@ -809,12 +812,15 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     expect(summaryRequests).toBe(failedRequestCount);
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(
-      page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
+      page.getByRole("status", { name: "Loading return" }),
     ).toHaveCount(0, { timeout: 60_000 });
     await expect(
-      page.getByText("Returns could not be loaded. Please try again."),
+      page.getByText("Return could not be loaded. Please try again."),
     ).toHaveCount(0);
-    const footer = agGridCellByColId(agGridPinnedBottomRow(page), "return-twr");
+    const footer = agGridCellByColId(
+      agGridPinnedBottomRow(page),
+      "account-return",
+    );
     await expect(footer).toContainText("%");
     const total = await footer.innerText();
     const grouping = page.getByRole("combobox", {
@@ -827,10 +833,10 @@ test("Accounts progressively renders staging returns, retains completed rows on 
       .click();
     await expect(grouping).toHaveValue("Asset Class");
     await expect(
-      page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
+      page.getByRole("status", { name: "Loading return" }),
     ).toHaveCount(0, { timeout: 60_000 });
     await expect(
-      agGridCellByColId(agGridPinnedBottomRow(page), "return-twr"),
+      agGridCellByColId(agGridPinnedBottomRow(page), "account-return"),
     ).toHaveText(total);
     await footer.getByRole("button").click();
     const calculation = page.getByRole("dialog", {
@@ -838,8 +844,14 @@ test("Accounts progressively renders staging returns, retains completed rows on 
       exact: true,
     });
     await expect(
-      calculation.getByRole("heading", { name: "Valuations and TWR Factors" }),
+      calculation.getByRole("heading", { name: "Valuations" }),
     ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      calculation.getByRole("columnheader", { name: "TWR Factor" }),
+    ).toHaveCount(0);
+    await expect(
+      calculation.getByText(/Return uses the money-weighted method/),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(calculation).not.toBeVisible();
     const completeRequestCount = summaryRequests;
@@ -851,10 +863,10 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     await expect(basis).toHaveValue("Cumulative");
     await scrollGridToRight(page);
     await expect(
-      page.getByRole("status", { name: /Loading (TWR|MWR)/ }),
+      page.getByRole("status", { name: "Loading return" }),
     ).toHaveCount(0);
     await expect(
-      agGridCellByColId(agGridPinnedBottomRow(page), "return-twr"),
+      agGridCellByColId(agGridPinnedBottomRow(page), "account-return"),
     ).toHaveText(cumulativeTotal);
     const managedAccount = await prisma.account.findFirstOrThrow({
       where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
@@ -863,17 +875,17 @@ test("Accounts progressively renders staging returns, retains completed rows on 
     await page.goto(`/${household.id}/${managedAccount.id}`);
     await expect(basis).toHaveValue("Cumulative");
     await expect(
-      page.getByRole("heading", { name: "Returns Since Start (Cumulative)" }),
+      page.getByRole("heading", { name: "Return Since Start (Cumulative)" }),
     ).toBeVisible();
     await chooseBasis("Annualized");
     await expect(
-      page.getByRole("heading", { name: "Returns Since Start (Annualized)" }),
+      page.getByRole("heading", { name: "Return Since Start (Annualized)" }),
     ).toBeVisible();
     await page.goto(`/${household.id}/accounts?grouping=assetClass`);
     await expect(basis).toHaveValue("Annualized");
     await scrollGridToRight(page);
     await expect(
-      agGridCellByColId(agGridPinnedBottomRow(page), "return-twr"),
+      agGridCellByColId(agGridPinnedBottomRow(page), "account-return"),
     ).toHaveText(total);
   } finally {
     release();

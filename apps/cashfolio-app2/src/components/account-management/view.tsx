@@ -90,7 +90,7 @@ function AccountsGridFeedback({
         </Alert>
       ) : null}
       {props.returns?.error ? (
-        <Alert color="red" title="Returns Unavailable" mb="sm">
+        <Alert color="red" title="Return Unavailable" mb="sm">
           {props.returns.error}
           <Button variant="subtle" size="xs" onClick={props.returns.retry}>
             Retry

@@ -24,6 +24,7 @@ vi.mock("../../valuation/lookup-context", () => ({
 import {
   getOrLoadAccountReturnSummaries,
   isAccountReturnSummaries,
+  isAccountReturnDetails,
 } from "./return-cache.server";
 import { ResourceLimitError } from "../../resource-error";
 
@@ -33,7 +34,7 @@ const scope = {
   accountState: "all" as const,
 };
 const key =
-  "account:returns:v4:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
+  "account:returns:v5:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
 function data(): AccountReturnSummaries {
   return {
     referenceCurrency: "CHF",
@@ -93,6 +94,61 @@ describe("account return cache", () => {
     );
     expect(calculate).not.toHaveBeenCalled();
     expect(mocks.get).toHaveBeenCalledWith(key);
+  });
+  it("ignores legacy namespaces and rejects legacy dual-method payloads", async () => {
+    mocks.get.mockImplementation(async (requested) =>
+      requested === key.replace(":v5:", ":v4:") ? JSON.stringify(data()) : null,
+    );
+    const calculate = load();
+    await getOrLoadAccountReturnSummaries(scope, calculate);
+    expect(calculate).toHaveBeenCalledOnce();
+    expect(mocks.get).not.toHaveBeenCalledWith(key.replace(":v5:", ":v4:"));
+    expect(
+      isAccountReturnSummaries({
+        ...data(),
+        total: { ...data().total, twr: null, annualizedTwr: null },
+      }),
+    ).toBe(false);
+  });
+  it("validates snapshot and capital-movement detail records", () => {
+    const details = {
+      ...data().total,
+      name: "Account",
+      referenceCurrency: "CHF",
+      startDate: "2026-01-01",
+      asOfDate: "2026-05-11",
+      valuations: [
+        { id: "opening", date: "2025-12-31", kind: "opening", value: 100 },
+      ],
+      cashFlows: [
+        {
+          id: "flow",
+          date: "2026-03-01",
+          amount: -10,
+          description: "Withdrawal",
+          transactionId: "tx",
+        },
+      ],
+    };
+    expect(isAccountReturnDetails(details)).toBe(true);
+    expect(
+      isAccountReturnDetails({
+        ...details,
+        valuations: [{ ...details.valuations[0], value: null }],
+      }),
+    ).toBe(true);
+    for (const valuations of [
+      [{ ...details.valuations[0], kind: "factor" }],
+      [{ ...details.valuations[0], value: Infinity }],
+      [{ ...details.valuations[0], factor: 1 }],
+    ])
+      expect(isAccountReturnDetails({ ...details, valuations })).toBe(false);
+    expect(
+      isAccountReturnDetails({
+        ...details,
+        cashFlows: [{ ...details.cashFlows[0], date: "wrong" }],
+      }),
+    ).toBe(false);
   });
   it("persists only complete stable-valuation results with a committed matching revision", async () => {
     await getOrLoadAccountReturnSummaries(scope, load());

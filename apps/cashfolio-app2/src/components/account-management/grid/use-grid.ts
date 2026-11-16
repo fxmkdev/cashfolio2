@@ -44,7 +44,7 @@ export function useAccountsGrid({
 
   useEffect(() => {
     gridApiRef.current?.refreshCells({
-      columns: ["return-twr", "return-mwr"],
+      columns: ["account-return"],
       force: true,
     });
   }, [returnCellVersion]);

@@ -49,7 +49,7 @@ export function AccountReturnDrawer(
     scopeKey: `${accountBookId}:${grouping}:${accountState}:${JSON.stringify(target)}:${period ?? "today"}`,
     refreshKey: args.refreshKey,
     load,
-    errorMessage: "Returns could not be loaded. Please try again.",
+    errorMessage: "Return could not be loaded. Please try again.",
   });
   return (
     <Drawer
@@ -63,7 +63,7 @@ export function AccountReturnDrawer(
         <Loader aria-label="Loading return calculation" />
       ) : null}
       {request.error ? (
-        <Alert color="red" title="Returns Unavailable">
+        <Alert color="red" title="Return Unavailable">
           {request.error}
           <Button onClick={request.retry}>Retry</Button>
         </Alert>

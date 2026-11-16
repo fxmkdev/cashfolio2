@@ -101,13 +101,13 @@ export const SharedSessionPreference: Story = {
     ).toHaveValue("Annualized");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account/,
+        name: /View Return Calculation for Investment Account/,
       }),
     ).toHaveTextContent("10.00%");
     await chooseBasis(canvasElement, "Cumulative");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account/,
+        name: /View Return Calculation for Investment Account/,
       }),
     ).toHaveTextContent("21.00%");
     await userEvent.click(canvas.getByRole("button", { name: "Reload View" }));
@@ -118,18 +118,18 @@ export const SharedSessionPreference: Story = {
     );
     await userEvent.click(canvas.getByRole("button", { name: "Open Ledger" }));
     await expect(
-      await canvas.findByTestId("account-return-cumulative-twr"),
+      await canvas.findByTestId("account-return-cumulative"),
     ).toHaveTextContent("21.00%");
     await chooseBasis(canvasElement, "Annualized");
     await expect(
-      await canvas.findByTestId("account-return-annualized-twr"),
+      await canvas.findByTestId("account-return-annualized"),
     ).toHaveTextContent("10.00%");
     await userEvent.click(
       canvas.getByRole("button", { name: "Open Accounts" }),
     );
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account/,
+        name: /View Return Calculation for Investment Account/,
       }),
     ).toHaveTextContent("10.00%");
     await chooseBasis(canvasElement, "Cumulative");
@@ -162,7 +162,7 @@ export const InvalidPreference: Story = {
     await chooseBasis(canvasElement, "Cumulative");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account/,
+        name: /View Return Calculation for Investment Account/,
       }),
     ).toHaveTextContent("21.00%");
   },
@@ -204,7 +204,7 @@ export const StorageUnavailable: Story = {
     await chooseBasis(canvasElement, "Cumulative");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account/,
+        name: /View Return Calculation for Investment Account/,
       }),
     ).toHaveTextContent("21.00%");
   },
@@ -235,33 +235,33 @@ export const SwitchDuringProgress: Story = {
     const canvas = within(canvasElement);
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account \(Annualized\)/,
+        name: /View Return Calculation for Investment Account \(Annualized\)/,
       }),
     ).toHaveTextContent("—");
     await chooseBasis(canvasElement, "Cumulative");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account \(Cumulative\)/,
+        name: /View Return Calculation for Investment Account \(Cumulative\)/,
       }),
     ).toHaveTextContent("—");
     await expect(
-      canvas.getAllByRole("status", { name: "Loading TWR" }),
+      canvas.getAllByRole("status", { name: "Loading return" }),
     ).toHaveLength(2);
     await chooseBasis(canvasElement, "Annualized");
     await expect(
       await canvas.findByRole("button", {
-        name: /View TWR calculation for Investment Account \(Annualized\)/,
+        name: /View Return Calculation for Investment Account \(Annualized\)/,
       }),
     ).toHaveTextContent("—");
     await expect(
-      canvas.getAllByRole("status", { name: "Loading TWR" }),
+      canvas.getAllByRole("status", { name: "Loading return" }),
     ).toHaveLength(2);
     await userEvent.click(canvas.getByRole("button", { name: "Complete All" }));
     await waitFor(() =>
       expect(canvas.queryAllByRole("status")).toHaveLength(0),
     );
     await expect(
-      canvas.getByRole("button", { name: /View TWR calculation for Group/ }),
+      canvas.getByRole("button", { name: /View Return Calculation for Group/ }),
     ).toHaveTextContent("10.00%");
   },
 };
@@ -274,7 +274,7 @@ function ShortInvestmentView() {
       onBasisChange={setBasis}
       data={{
         ...data,
-        annualizedTwr: null,
+
         annualizedMwr: null,
         effectiveStartDate: "2026-12-01",
         effectiveEndDate: "2026-12-31",
@@ -290,7 +290,7 @@ export const ShortInvestment: Story = {
   render: () => <ShortInvestmentView />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const value = await canvas.findByTestId("account-return-annualized-twr");
+    const value = await canvas.findByTestId("account-return-annualized");
     await expect(value).toHaveTextContent("—");
     await expect(value).toHaveAccessibleName(/365 days.*Switch to Cumulative/);
     await userEvent.hover(value);
@@ -300,11 +300,11 @@ export const ShortInvestment: Story = {
     await userEvent.unhover(value);
     await chooseBasis(canvasElement, "Cumulative");
     await expect(
-      await canvas.findByTestId("account-return-cumulative-twr"),
+      await canvas.findByTestId("account-return-cumulative"),
     ).toHaveTextContent("21.00%");
     await chooseBasis(canvasElement, "Annualized");
     await expect(
-      await canvas.findByTestId("account-return-annualized-twr"),
+      await canvas.findByTestId("account-return-annualized"),
     ).toHaveTextContent("—");
   },
 };

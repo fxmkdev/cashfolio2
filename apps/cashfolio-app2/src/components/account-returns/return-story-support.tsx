@@ -9,14 +9,14 @@ import type {
   AccountReturnSummaries,
   AccountReturnTarget,
 } from "@/shared/accounts/account-returns";
-import { buildAccountReturnColumns } from "@/components/account-management/returns/columns";
+import { buildAccountReturnColumn } from "@/components/account-management/returns/columns";
 import { ReturnCalculation } from "./return-calculation";
 
 export const data: AccountReturnDetails = {
   applicable: true,
-  twr: 0.21,
+
   mwr: 0.21,
-  annualizedTwr: 0.1,
+
   annualizedMwr: 0.1,
   effectiveStartDate: "2025-01-01",
   effectiveEndDate: "2026-12-31",
@@ -26,26 +26,9 @@ export const data: AccountReturnDetails = {
   referenceCurrency: "CHF",
   name: "Investments",
   valuations: [
-    {
-      id: "year",
-      startDate: "2025-01-01",
-      date: "2025-12-31",
-      openingValue: 1000,
-      closingValue: 1100,
-      contributions: 0,
-      withdrawals: 0,
-      factor: 1.1,
-    },
-    {
-      id: "second",
-      startDate: "2026-01-01",
-      date: "2026-12-31",
-      openingValue: 1100,
-      closingValue: 2310,
-      contributions: 1000,
-      withdrawals: 0,
-      factor: 1.1,
-    },
+    { id: "opening", date: "2024-12-31", kind: "opening", value: 1000 },
+    { id: "year", date: "2025-12-31", kind: "intermediate", value: 1100 },
+    { id: "closing", date: "2026-12-31", kind: "closing", value: 2310 },
   ],
   cashFlows: [
     {
@@ -72,7 +55,7 @@ export function ReturnGridExample({
   const grid = useRef<GridApi | null>(null);
   useEffect(() => {
     grid.current?.refreshCells({
-      columns: ["return-twr", "return-mwr"],
+      columns: ["account-return"],
       force: true,
     });
   }, [basis, loading, completedIds]);
@@ -87,15 +70,13 @@ export function ReturnGridExample({
         ...data,
         ...(unavailable
           ? {
-              twr: null,
               mwr: null,
-              annualizedTwr: null,
+
               annualizedMwr: null,
               diagnostics: [
                 {
-                  metric: "both" as const,
                   message:
-                    "Returns are unavailable because a closing valuation is missing.",
+                    "Return is unavailable because a closing valuation is missing.",
                 },
               ],
             }
@@ -105,7 +86,7 @@ export function ReturnGridExample({
     ],
     total: data,
   };
-  const columns = buildAccountReturnColumns({
+  const columns = buildAccountReturnColumn({
     basis,
     data: summary,
     loading,
