@@ -24,7 +24,7 @@ import {
 } from "./refresh.server";
 const execute = promisify(execFile);
 const maintenance = new URL(
-  process.env.SECURITIES_TEST_DATABASE_URL ??
+  process.env.MUTATION_TEST_ADMIN_DATABASE_URL ??
     "postgresql://postgres:postgres@127.0.0.1:5433/postgres",
 );
 if (
@@ -193,7 +193,7 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     });
     const holding = db.$transaction(
       async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(${CATALOGUE_LOCK})`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${CATALOGUE_LOCK})`;
         ready();
         await gate;
       },
