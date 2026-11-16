@@ -34,6 +34,8 @@ export function getStoryViewProps(
       if (kind === "account") modalState.openCreateAccount(row.id);
       else modalState.openCreateGroup(row.id);
     },
+    returnBasis: model.returnBasis.basis,
+    onReturnBasisChange: model.returnBasis.setBasis,
     grouping: model.grouping,
     organize: routing.routeSearch.organize === true,
     onGroupingChange: model.setGrouping,

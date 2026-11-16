@@ -13,9 +13,30 @@ read-only, and modal tables. This keeps theme, locale, scrolling, resizing, and
 row actions consistent. Apply this guideline when adding or changing tables;
 existing tables elsewhere can be migrated in focused follow-ups.
 
+Use AG Grid tooltips for cell explanations, with one tooltip owner per
+explanation. Do not wrap cell content in a Mantine tooltip repeating the
+column's tooltip. Preserve accessible labels and keyboard activation for
+interactive cells. Mantine tooltips remain appropriate outside grids and for
+distinct actions within cells, such as **More Actions**.
+
 Use native tree data for hierarchical records, with stable row IDs. Keep stored
 manual ordering authoritative in hierarchy management and Organize mode. Follow
 the shared column and actions-cell conventions below.
+
+- Use `GridCellLoading` from `src/components/grid/grid-cell-loading.tsx` for
+  asynchronous numeric-cell loading, including reference balances, G/L, and
+  Return. It renders the existing Mantine `dots` loader at `xs`, right-aligned
+  and vertically centered within the full cell. Do not use the default spinner
+  or duplicate loader markup in cell renderers.
+- Supply a sentence-case accessible loading label. Keep the cell dimensions,
+  existing delay/eligibility rules, and numeric placeholder alignment stable.
+  For progressive tables, track completion by displayed row ID. Completed rows
+  leave loading immediately, including null/inapplicable results; slow totals
+  must not hold completed account rows behind a global flag. Explicitly refresh
+  cells when status changes even if the numeric value remains null. Preserve
+  completed rows during retries in the same context and clear them immediately
+  on scope/revision changes. Show actionable errors separately. Page-level
+  loading still uses the global progress bar.
 
 ## Hierarchical Selection
 
@@ -479,14 +500,19 @@ data groups them hierarchically. Fields that don't apply to a node type are
 AG Grid 36 uses `.ag-grid-viewport` for native horizontal and vertical
 scrolling. Rendered body rows are direct children of
 `.ag-grid-scrolling-container`, with scrolling, left-pinned, and right-pinned
-cell sections inside each row. Pinned bottom rows are in
-`.ag-grid-pinned-bottom-rows`. Avoid selectors using the old center-column,
-pinned-column, or floating-bottom containers. Scope row actions to their row and
-modal editing locators to their dialog. Transactions list and bookings grids
-have independent row indices; scope booking queries to the named details region
-or drawer. Both grids use constrained heights with independent scrolling.
-Loading and empty overlays are siblings of the viewport in v36; do not depend on
-them being viewport children.
+cell sections inside each row. Scrolling descendants into view can move group
+ancestors into `.ag-grid-sticky-top-rows-container` or
+`.ag-grid-sticky-bottom-rows-container`. Data-row and action helpers must also
+recognize those sticky rows; do not assume an actionable group remains in the
+scrolling container. Off-screen rows may not exist in the DOM: scroll the
+viewport to reveal a known target before querying or expanding it. Pinned bottom
+rows are in `.ag-grid-pinned-bottom-rows`. Avoid selectors using the old
+center-column, pinned-column, or floating-bottom containers. Scope row actions
+to their row and modal editing locators to their dialog. Transactions list and
+bookings grids have independent row indices; scope booking queries to the named
+details region or drawer. Both grids use constrained heights with independent
+scrolling. Loading and empty overlays are siblings of the viewport in v36; do
+not depend on them being viewport children.
 
 `ensureGridModulesRegistered` supplies the same selective feature modules in the
 application and Storybook. Development registers `ValidationModule` with

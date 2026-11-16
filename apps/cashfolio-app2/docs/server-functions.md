@@ -13,6 +13,7 @@ Start with the [architecture and ownership map](architecture.md) and
 - [Account and Transaction Mutations](server/account-mutations.md)
 - [Reporting](server/reporting.md)
 - [Holdings and Gain/Loss](server/holdings-and-gain-loss.md)
+- [Account Returns](server/account-returns.md)
 - [Period Caching](server/caching.md)
 
 Related: [resource limits](resource-limits.md),
@@ -55,3 +56,4 @@ topic pages.
 - <a id="accumulated-gl-historical-basis-cache"></a>[Accumulated G/L historical basis cache](server/holdings-and-gain-loss.md#accumulated-gl-historical-basis-cache)
 - <a id="balance-based-asset-and-liability-reporting"></a>[Balance-based Asset and Liability Reporting](server/reporting.md#balance-based-asset-and-liability-reporting)
 - <a id="unified-account-management-queries"></a>[Unified account management queries](server/account-mutations.md#unified-account-management-queries)
+- <a id="account-returns"></a>[Account returns](server/account-returns.md#account-returns)

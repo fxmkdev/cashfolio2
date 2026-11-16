@@ -1,8 +1,13 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
+// Group ancestors can move into sticky containers when a descendant is scrolled
+// into view. They remain actionable data rows, unlike pinned summary rows.
+const dataRowContainers =
+  ":is(.ag-grid-scrolling-container, .ag-grid-sticky-top-rows-container, .ag-grid-sticky-bottom-rows-container)";
+
 export function agGridRowByText(page: Page, text: string): Locator {
   return page
-    .locator(".ag-grid-scrolling-container > .ag-row:not(.ag-full-width-row)")
+    .locator(`${dataRowContainers} > .ag-row:not(.ag-full-width-row)`)
     .filter({ hasText: text })
     .first();
 }
@@ -44,7 +49,7 @@ export async function revealRowActions(row: Locator) {
   const stableRow = row
     .page()
     .locator(
-      `.ag-grid-scrolling-container > .ag-row:not(.ag-opacity-zero)[row-id=${JSON.stringify(rowId)}]`,
+      `${dataRowContainers} > .ag-row:not(.ag-opacity-zero)[row-id=${JSON.stringify(rowId)}]`,
     );
   await stableRow.hover();
   // Virtualised action columns are only mounted after scrolling into view.

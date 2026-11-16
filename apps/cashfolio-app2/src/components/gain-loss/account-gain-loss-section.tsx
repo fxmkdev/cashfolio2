@@ -4,6 +4,7 @@ import { getAccountGainLoss } from "@/server/account-gain-loss";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import { AccountGainLossSummaryView } from "./account-gain-loss-summary";
 import { AccountGainLossCalculation } from "./account-gain-loss-calculation";
+import { AccountReturnSection } from "../account-returns/account-return-section";
 export function AccountGainLossSection(args: {
   accountBookId: string;
   accountId: string;
@@ -81,6 +82,7 @@ export function AccountGainLossSection(args: {
           />
         ) : null}
       </Drawer>
+      <AccountReturnSection {...args} />
     </>
   );
 }

@@ -90,3 +90,4 @@ topic pages.
 - <a id="balance-based-report-and-history-allocation"></a>[Balance-based Report and History Allocation](ui/reporting.md#balance-based-report-and-history-allocation)
 - <a id="calendar-dates-and-temporal"></a>[Calendar Dates and Temporal](ui/copy-and-formatting.md#calendar-dates-and-temporal)
 - <a id="classification-management"></a>[Classification Management](ui/accounts-and-classification.md#classification-management)
+- <a id="account-return-percentages"></a>[Account Return Percentages](ui/accounts-and-classification.md#account-return-percentages)

@@ -12,6 +12,7 @@ import {
   chooseAccountGrouping,
   selectAssignmentAccount,
   expandAssignmentGroup,
+  showAccountColumn,
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -53,6 +54,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
     const standardRowHeight = checkingName()!
       .closest<HTMLElement>(".ag-row")!
       .getBoundingClientRect().height;
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(
       canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
     ).toBeVisible();
@@ -90,6 +92,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
     await expect(
       canvas.queryByRole("button", { name: "Add Group" }),
     ).not.toBeInTheDocument();
+    await showAccountColumn(canvasElement, "path");
     await waitFor(() =>
       expect(
         canvasElement.querySelector(
@@ -174,6 +177,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
       checkingName()!.closest<HTMLElement>(".ag-row")!.getBoundingClientRect()
         .height,
     ).toBe(standardRowHeight);
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(
       canvas.getByRole("columnheader", { name: /^Asset Class$/ }),
     ).toBeVisible();
@@ -247,6 +251,7 @@ export const AssetClassFilteredBulkAssignment: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Account Filters" }),
     );
+    await showAccountColumn(canvasElement, "path");
     await waitFor(() =>
       expect(
         canvasElement.querySelector(
@@ -321,6 +326,7 @@ export const AssetClassTrackingMethodRegrouping: Story = {
     await expect(
       balance(REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID),
     ).toHaveTextContent(totalBefore!);
+    await showAccountColumn(canvasElement, "path");
     await expect(
       canvasElement.querySelector(
         '[row-id="account-checking"] [col-id="path"]',
