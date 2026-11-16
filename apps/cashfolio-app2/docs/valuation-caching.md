@@ -534,10 +534,12 @@ series, its coverage proof, and local fallback together. A whole valuation-cache
 clear must include `valuation:coverage:*` and restart processes to discard local
 fallbacks; never clear prices while leaving their gap proofs behind. Book/user
 deletion keeps these global valuation keys and removes all book-scoped return
-summary/work/artifact versions. Restored books receive fresh revision-bound
-work.
+summary/work/artifact versions. Version 5 isolates money-weighted-only results
+and work; plan/result artifact schemas are v2 while the transaction basis stays
+v1. Global historical quotes and coverage proofs are not cleared by this change.
+Restored books receive fresh revision-bound work.
 
-Return summary v4 retains stable results for 24 hours. Temporary complete
+Return summary v5 retains stable results for 24 hours. Temporary complete
 results expire no later than their earliest dependency or the original 15-minute
 work lifetime. Cache reads do not extend expiry. Missing quotes and request
 failures cannot establish successful long-lived summary entries. Mutable work

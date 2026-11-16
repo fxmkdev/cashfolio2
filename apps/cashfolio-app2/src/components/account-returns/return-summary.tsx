@@ -13,7 +13,7 @@ import type {
   AccountReturnBasis,
   AccountReturnResult,
 } from "@/shared/accounts/account-returns";
-import { ReturnValues } from "./return-values";
+import { ReturnValue } from "./return-values";
 
 export function AccountReturnSummaryView(args: {
   basis?: AccountReturnBasis;
@@ -31,7 +31,7 @@ export function AccountReturnSummaryView(args: {
       <Stack gap="sm">
         <Group justify="space-between">
           <Title order={4}>
-            Returns Since Start ({accountReturnBasisLabels[basis]})
+            Return Since Start ({accountReturnBasisLabels[basis]})
           </Title>
           {args.onBasisChange && (
             <ReturnBasisSelect value={basis} onChange={args.onBasisChange} />
@@ -45,16 +45,14 @@ export function AccountReturnSummaryView(args: {
             View Return Calculation
           </Button>
         </Group>
-        {args.loading ? (
-          <Loader size="sm" aria-label="Loading returns" />
-        ) : null}
+        {args.loading ? <Loader size="sm" aria-label="Loading return" /> : null}
         {args.error ? (
-          <Alert color="red" title="Returns Unavailable">
+          <Alert color="red" title="Return Unavailable">
             {args.error}
             <Button onClick={args.onRetry}>Retry</Button>
           </Alert>
         ) : null}
-        {args.data ? <ReturnValues data={args.data} basis={basis} /> : null}
+        {args.data ? <ReturnValue data={args.data} basis={basis} /> : null}
       </Stack>
     </Card>
   );

@@ -9,15 +9,14 @@ Scope: `apps/cashfolio-app2`; source paths are relative to that app.
 
 `getAccountReturnSummaries` accepts an account-book ID, `accountState`
 (`active`, `inactive`, or `all`), and `grouping` (`accountStructure` or
-`assetClass`). It returns cumulative/annualized TWR and MWR, effective
-investment dates, and metric-specific diagnostics for account leaves, displayed
-group IDs, and the footer. Group returns use all descendant balances, including
-cash.
+`assetClass`). It returns cumulative/annualized money-weighted Return, effective
+investment dates, and diagnostics for account leaves, displayed group IDs, and
+the footer. Group returns use all descendant balances, including cash.
 
 `getAccountReturnDetails` accepts the same scope plus `target`: an account or
 group with an `id`, or `{ kind: "total" }`. Individual targets optionally accept
 the ledger's `period`. `includeDetails` defaults to false; true includes dated
-valuation/TWR-factor and capital-movement tables with transaction references.
+valuation snapshots and capital-movement tables with transaction references.
 Both functions authorize book access on every request before starting their
 bounded read. Responses are
 `{ status: "pending", continuation, progress, retryAfterMs }`,
@@ -45,15 +44,18 @@ mismatched work requests a restart; repeated invalidations restart at most
 twice. Every request authorizes book access again. Account details load relevant
 transactions with their complete peers.
 
-`account:returns-work:v4` stores small mutable envelopes (256 KiB limit), with a
+`account:returns-work:v5` stores small mutable envelopes (256 KiB limit), with a
 15-minute lifetime. Separate immutable artifacts hold a coherent transaction
 basis, canonical membership plans, and individual scope results (8 MiB each).
 Account indexes retain complete transaction peers. Distinct memberships
 calculate once and attach all displayed IDs/names; both grouping modes share
-matching results. Process-local artifacts are bounded to 64 MiB/4096 entries and
-15 minutes, checkpoints to 16 entries, and work indexes to 64. Redis artifacts
-last at most 24 hours. These keys participate in existing book/user deletion and
-restore cleanup. Each batch rechecks revision, reporting day, and cutoff before
+matching results. Plan/result artifact IDs use `plan-v2`/`result-v2`; the
+unchanged transaction basis remains `basis-v1`. Versioned calculation contexts
+restart incompatible old continuations, including locally retained work.
+Process-local artifacts are bounded to 64 MiB/4096 entries and 15 minutes,
+checkpoints to 16 entries, and work indexes to 64. Redis artifacts last at most
+24 hours. These keys participate in existing book/user deletion and restore
+cleanup. Each batch rechecks revision, reporting day, and cutoff before
 publishing.
 
 The shared historical-series loader reads each raw Redis series/window plus its
@@ -63,8 +65,17 @@ grouped per-date fallback on explicit subscription restrictions. Provider/auth/
 quota/transient failures do not prove historical gaps. See
 [historical series caching](../valuation-caching.md#historical-series-loading-for-account-returns).
 
+Result contracts retain `mwr` and `annualizedMwr` as internal method names; no
+time-weighted fields or diagnostic method selectors are returned. Detail
+valuations are deduplicated `{ id, date, kind, value }` snapshots with opening,
+intermediate, or closing purposes; capital movements retain transaction
+references. Cache validators reject legacy method/interval payloads. Summary and
+planning calls do not build detail tables. Raw historical-series and coverage
+caches are unchanged, and all return-cache versions remain covered by
+deletion/restore cleanup.
+
 Implementations live under `src/server/accounts/returns/`. Return summaries use
-`account:returns:v4` with revision, date, cutoff, grouping, and account-state
+`account:returns:v5` with revision, date, cutoff, grouping, and account-state
 keys. Stable complete results retain the 24-hour TTL. Complete results with
 temporary dependencies expire no later than their earliest dependency or the
 work's 15-minute lifetime; reads never extend validity. Missing-price results
@@ -73,6 +84,6 @@ fall back to calculation, while resource errors propagate. Balances and G/L
 remain usable independently.
 
 See
-[return calculation behavior](../valuation-reference-balances.md#time-weighted-and-money-weighted-returns)
+[return calculation behavior](../valuation-reference-balances.md#money-weighted-return)
 for timing, attribution, in-transit balances, unavailable values, and
 annualization.

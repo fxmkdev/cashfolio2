@@ -167,7 +167,7 @@ export async function getReturnPlan(
 ) {
   const artifacts = await returnArtifacts(args.accountBookId);
   const id = returnArtifactId([
-    "plan-v1",
+    "plan-v2",
     revision,
     asOfDate,
     publication,
@@ -221,7 +221,7 @@ export async function getReturnPlan(
           requests.set(returnRateKey(input), rateRequest(input));
         return toMoney(1);
       },
-      true,
+      { valuationOnly: true },
     );
     scopes.set(key, {
       key,

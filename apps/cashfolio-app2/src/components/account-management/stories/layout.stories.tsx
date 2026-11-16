@@ -186,7 +186,9 @@ export const ConstrainedWidthWithGainLoss: Story = {
         0,
       );
       expect(canvas.getByText("Household current account")).toBeVisible();
-      expect(canvas.getByRole("columnheader", { name: "MWR" })).toBeVisible();
+      expect(
+        canvas.getByRole("columnheader", { name: "Return (Annualized)" }),
+      ).toBeVisible();
     });
     await userEvent.hover(nameCell);
     await waitFor(() => expect(actionsCell).toHaveStyle({ opacity: "1" }));

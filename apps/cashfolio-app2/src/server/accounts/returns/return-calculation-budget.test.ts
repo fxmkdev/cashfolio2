@@ -8,18 +8,17 @@ import { returns } from "./return-test-support";
 beforeEach(() => {
   solver.mockReset();
 });
-it("retains TWR when MWR exceeds its deterministic solver workload", async () => {
+it("explains an unavailable return when the solver exceeds its deterministic workload", async () => {
   solver.mockImplementation(() => {
     throw new Error(
       "Money-weighted return is too complex to resolve uniquely.",
     );
   });
   const { result } = await returns({ initial: { a: "100" } });
-  expect(result.twr).toBe(0);
   expect(result.mwr).toBeNull();
+  expect(result.valuations.length).toBeGreaterThan(0);
   expect(result.diagnostics).toEqual([
     {
-      metric: "mwr",
       message: "Money-weighted return is too complex to resolve uniquely.",
     },
   ]);

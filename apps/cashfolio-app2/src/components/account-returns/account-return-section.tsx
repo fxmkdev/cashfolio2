@@ -47,7 +47,7 @@ export function AccountReturnSection(args: {
     scopeKey: `${accountBookId}:${accountId}:${period ?? "today"}`,
     refreshKey: args.refreshKey,
     load,
-    errorMessage: "Returns could not be loaded. Please try again.",
+    errorMessage: "Return could not be loaded. Please try again.",
   });
   return (
     <>

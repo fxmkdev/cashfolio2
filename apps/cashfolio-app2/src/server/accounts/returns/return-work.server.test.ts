@@ -11,6 +11,8 @@ import type {
 } from "../../../shared/accounts/account-returns";
 import { toMoney } from "../../../shared/money";
 import { HistoryPending } from "../../valuation/history/types";
+import { returnWorkStore } from "./return-work-store.server";
+import { returnArtifactId } from "./return-artifacts.server";
 const mocks = vi.hoisted(() => ({
   inputs: vi.fn(),
   revision: vi.fn(),
@@ -113,7 +115,7 @@ it("finishes the full staging fixture, publishes cheap rows first, and computes 
   expect(
     structure.rows.find((r) => r.id === "managed-portfolio")?.mwr,
   ).toBeCloseTo(0.15298365839474282, 10);
-  expect(structure.total.twr).toBeCloseTo(0.004536284711657982, 10);
+  expect(structure.total.mwr).toBeCloseTo(0.005382085122974442, 10);
   expect(
     progress.every((p, i) => !i || p.completed >= progress[i - 1]!.completed),
   ).toBe(true);
@@ -142,7 +144,7 @@ it("publishes available rows while providers are pending and preserves them acro
   const first = await queryAccountReturnWork(scope, "user");
   if (first.status !== "pending") throw new Error("Expected pending");
   expect(
-    first.progress?.rows.find((r) => r.id === "managed-portfolio")?.twr,
+    first.progress?.rows.find((r) => r.id === "managed-portfolio")?.mwr,
   ).not.toBeNull();
   const values = await complete(scope);
   expect(
@@ -187,6 +189,26 @@ it("restarts unknown, mismatched-user, scope, revision and publication continuat
     status: "restart",
   });
 });
+it("restarts a locally retained continuation from the previous calculation schema", async () => {
+  const first = await queryAccountReturnWork(scope, "user");
+  if (first.status !== "pending") throw new Error("Expected pending");
+  const store = await returnWorkStore(scope.accountBookId, "user");
+  const previous = await store.read(first.continuation);
+  if (!previous) throw new Error("Expected checkpoint");
+  previous.context = returnArtifactId([
+    previous.binding,
+    previous.revision,
+    previous.asOfDate,
+    previous.publication,
+  ]);
+  await store.save(first.continuation, previous);
+  expect(
+    await queryAccountReturnWork(
+      { ...scope, continuation: first.continuation },
+      "user",
+    ),
+  ).toEqual({ status: "restart" });
+});
 it("bounds temporary summary validity by the earliest dependency expiry", async () => {
   const snapshot = groupingReturnInputs();
   mocks.inputs.mockResolvedValue(snapshot);
@@ -222,7 +244,7 @@ it("matches leaf G/L eligibility and includes idle cash plus archived holdings i
   const data = (await complete(scope)) as AccountReturnSummaries;
   expect(data.rows.find((r) => r.id === "cash")?.applicable).toBe(false);
   expect(data.rows.find((r) => r.id === "archived")?.applicable).toBe(true);
-  expect(data.total.twr).toBeCloseTo(0.1, 12);
+  expect(data.total.mwr).toBeCloseTo(0.1, 12);
   const active = (await complete({
     ...scope,
     accountState: "active",
@@ -272,7 +294,7 @@ it("publishes recovered completed rows before waiting on a failed provider again
   if (recovered.status !== "pending")
     throw new Error("Expected recovered progress");
   expect(
-    recovered.progress?.rows.find((row) => row.id === "managed-portfolio")?.twr,
+    recovered.progress?.rows.find((row) => row.id === "managed-portfolio")?.mwr,
   ).not.toBeNull();
   expect(mocks.pump).not.toHaveBeenCalled();
 }, 30_000);

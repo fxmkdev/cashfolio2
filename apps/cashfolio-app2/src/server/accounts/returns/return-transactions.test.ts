@@ -17,7 +17,7 @@ describe("performance capital movement normalization", () => {
       rate: async ({ date }) =>
         toMoney(date.toISOString().startsWith("2025") ? 1 : 1.1),
     });
-    expect(result.twr).toBeCloseTo(0.1, 12);
+
     expect(result.mwr).toBeCloseTo(0.1, 12);
     expect(result.cashFlows).toEqual([]);
   });
@@ -58,8 +58,14 @@ describe("performance capital movement normalization", () => {
       ],
     });
     expect(prepared.recordedAccountIds.has("a")).toBe(true);
-    expect(result.twr).toBeCloseTo(0.1, 12);
+
     expect(result.cashFlows.map((flow) => flow.amount)).toEqual([50, -10]);
+    expect(
+      -1000 -
+        50 / (1 + result.mwr!) ** (59 / 365) +
+        10 / (1 + result.mwr!) ** (91 / 365) +
+        1140 / (1 + result.mwr!),
+    ).toBeCloseTo(0, 10);
     expect(result.mwr).not.toBeNull();
   });
   it("recognizes a recorded adjustment on its equity date despite a later counterpart date", async () => {
@@ -78,7 +84,7 @@ describe("performance capital movement normalization", () => {
         ],
       ],
     });
-    expect(result.twr).toBeCloseTo(0.1, 12);
+
     expect(result.mwr).toBeCloseTo(0.1, 12);
     expect(result.cashFlows).toEqual([]);
   });
@@ -98,7 +104,7 @@ describe("performance capital movement normalization", () => {
       rate: async ({ date }) =>
         toMoney(date.toISOString().startsWith("2025") ? 1 : 1.2),
     });
-    expect(result.twr).toBeCloseTo(0.32, 12);
+
     expect(result.mwr).toBeCloseTo(0.32, 12);
   });
   it.each([false, true])(
@@ -131,7 +137,7 @@ describe("performance capital movement normalization", () => {
         transactions,
         rate,
       });
-      expect(result.twr).toBeCloseTo(0.3, 12);
+
       expect(result.mwr).toBeCloseTo(0.3, 12);
       expect(result.cashFlows).toHaveLength(0);
       const destination = await returns({
@@ -141,7 +147,7 @@ describe("performance capital movement normalization", () => {
         transactions,
         rate,
       });
-      expect(destination.result.twr).toBeCloseTo(
+      expect(destination.result.mwr).toBeCloseTo(
         1.3 / (receiptFirst ? 1.1 : 1.2) - 1,
         12,
       );
@@ -164,8 +170,9 @@ describe("performance capital movement normalization", () => {
         ],
       ],
     });
-    expect(result.twr).toBeCloseTo(0.1, 12);
+
     expect(result.cashFlows).toEqual([]);
+    expect(result.mwr).toBeCloseTo(0.1, 12);
   });
   it("cancels internal execution consideration while neutralizing separately booked fees", async () => {
     const accounts = [
@@ -200,7 +207,7 @@ describe("performance capital movement normalization", () => {
       transactions,
       rate: async ({ unit }) => toMoney(unit === "SECURITY" ? 10 : 1),
     });
-    expect(result.twr).toBeCloseTo(0, 12);
+
     expect(result.mwr).toBeCloseTo(0, 12);
     expect(result.cashFlows.map((flow) => flow.amount)).toEqual([-5]);
   });
@@ -231,8 +238,9 @@ describe("performance capital movement normalization", () => {
       ],
       rate: async ({ unit }) => toMoney(unit === "SECURITY" ? 10 : 1),
     });
-    expect(result.twr).toBeCloseTo(0, 12);
+
     expect(result.cashFlows).toEqual([]);
+    expect(result.mwr).toBeCloseTo(0, 12);
   });
   it("withholds ambiguous recorded adjustments and partially posted executions", async () => {
     const ambiguous = await returns({
@@ -261,7 +269,6 @@ describe("performance capital movement normalization", () => {
       ],
     });
     expect(partial.result).toMatchObject({
-      twr: null,
       mwr: null,
       diagnostics: [
         expect.objectContaining({

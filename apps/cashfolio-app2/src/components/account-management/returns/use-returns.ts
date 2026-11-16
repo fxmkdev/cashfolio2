@@ -66,7 +66,7 @@ export function useAccountReturns(args: {
     ...args,
     load,
     scopeKey,
-    errorMessage: "Returns could not be loaded. Please try again.",
+    errorMessage: "Return could not be loaded. Please try again.",
   });
   const [selection, setSelection] = useState<{
     scopeKey: string;

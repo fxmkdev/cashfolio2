@@ -67,6 +67,7 @@ export async function returns(args: {
   rate?: HoldingRateResolver;
   startDate?: string;
   asOfDate?: string;
+  includeDetails?: boolean;
 }) {
   const accounts = args.accounts ?? [account()];
   const resolveRate = args.rate ?? defaultRate;
@@ -90,6 +91,7 @@ export async function returns(args: {
       (item) => !args.ids || args.ids.includes(item.id),
     ),
     name: "Test",
+    includeDetails: args.includeDetails ?? true,
     applicable: true,
     prepared,
     resolveRate,

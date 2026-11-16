@@ -2,7 +2,7 @@ import type {
   AccountReturnDetails,
   AccountReturnProgress,
 } from "../../../shared/accounts/account-returns";
-import { isAccountReturnResult } from "./return-cache.server";
+import { isAccountReturnDetails } from "./return-cache.server";
 import { returnArtifactId, returnArtifacts } from "./return-artifacts.server";
 import { stripReturnDetails } from "./return-engine.server";
 import type { ReturnPlan } from "./return-plan.server";
@@ -19,21 +19,15 @@ export const validScopeResult = (v: unknown): v is ReturnScopeResult =>
   typeof v.validUntil === "number" &&
   v.validUntil > Date.now() &&
   typeof v.missing === "boolean" &&
-  record(v.data) &&
-  typeof v.data.name === "string" &&
-  typeof v.data.referenceCurrency === "string" &&
-  typeof v.data.startDate === "string" &&
-  typeof v.data.asOfDate === "string" &&
-  Array.isArray(v.data.valuations) &&
-  Array.isArray(v.data.cashFlows) &&
-  isAccountReturnResult(v.data);
+  isAccountReturnDetails(v.data);
+
 export const scopeResultId = (
   state: ReturnWorkState,
   key: string,
   includeDetails: boolean,
 ) =>
   returnArtifactId([
-    "result-v1",
+    "result-v2",
     state.revision,
     state.asOfDate,
     state.publication,

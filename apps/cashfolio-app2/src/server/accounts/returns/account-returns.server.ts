@@ -80,7 +80,13 @@ async function advance(
         args.target?.kind === "account" ? args.target.id : undefined,
       )
     ).revision;
-  const context = returnArtifactId([binding, revision, asOfDate, publication]);
+  const context = returnArtifactId([
+    "money-weighted-v5",
+    binding,
+    revision,
+    asOfDate,
+    publication,
+  ]);
   const store = await returnWorkStore(args.accountBookId, userId);
   if (!args.continuation && !args.target) {
     const data = await cachedSummary(args);
@@ -209,17 +215,19 @@ async function advance(
               scopeInputs(inputs, new Set(scope.accountIds)),
               async (input) => (await loader!.lookup(input)).rate,
             );
-            data = await engine.calculate({
-              ...target,
-              accountIds: new Set(scope.accountIds),
-            });
+            data = await engine.calculate(
+              {
+                ...target,
+                accountIds: new Set(scope.accountIds),
+              },
+              undefined,
+              { includeDetails: args.includeDetails ?? false },
+            );
           } catch (error) {
             if (error instanceof HistoryPending) continue;
             throw error;
           }
         }
-        if (!args.includeDetails)
-          data = { ...data, valuations: [], cashFlows: [] };
         if (missing)
           validUntil = Math.min(validUntil, current.createdAt + 15 * 60 * 1000);
         const result: ReturnScopeResult = { data, validUntil, missing };

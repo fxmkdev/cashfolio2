@@ -33,9 +33,9 @@ it("merges by displayed ID across resumptions and a retry in the same context", 
   const updated = mergeAccountReturnProgress(next, {
     ...progress(1, ["a"]),
     workId: "retry",
-    rows: [{ id: "a", ...emptyAccountReturnResult(), twr: 0.1 }],
+    rows: [{ id: "a", ...emptyAccountReturnResult(), mwr: 0.1 }],
   });
-  expect(updated.rows.find((r) => r.id === "a")?.twr).toBe(0.1);
+  expect(updated.rows.find((r) => r.id === "a")?.mwr).toBe(0.1);
 });
 it("rejects older sequences and clears previous rows for a changed revision/date/scope context", () => {
   const previous = progress(3, ["a"]);

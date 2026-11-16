@@ -226,35 +226,41 @@ sign; debt amounts are positive magnitudes in those reports.
 
 ## Account Return Percentages
 
-Accounts shows a separate **Returns Since Start** column group with **TWR** and
-**MWR**. A **Return Basis** selector beside **Group By** selects **Annualized**
-(the default) or **Cumulative**; the column-group title includes the selected
-basis. Ledger return cards use the same selector and title. Controls wrap on
-narrow screens; the Accounts selector is hidden during Organize mode and in
-views without return columns. The preference is shared per book for the current
-browser-tab session, including navigation between Accounts and ledgers.
+Accounts shows one **Return (Annualized)** or **Return (Cumulative)** numeric
+column. A **Return Basis** selector beside **Group By** selects **Annualized**
+(the default) or **Cumulative**; ledger cards use the same selector under
+**Return Since Start**, identifying the selected basis. Controls wrap on narrow
+screens and are hidden in Organize mode or views without return columns. The
+per-book session preference remains shared between Accounts and ledgers.
 
-Switching basis selects the existing response fields without new requests, cache
-invalidation, or resetting progressive results. Refresh return cells even when
-both values are null. Annualized results require at least 365 inclusive
-accounting days in the effective investment span; shorter spans show a dash
-explaining that cumulative returns remain available. Never substitute a
-cumulative percentage under an annualized heading. Metric-specific failures
-retain their explanations.
+Return uses the money-weighted method, accounting for the amounts and dates
+invested or withdrawn. Tooltips explain the method without requiring acronym
+knowledge. The methodology explicitly excludes dividends, interest, and
+separately booked fees; Return covers price/FX performance and recorded G/L
+adjustments.
+
+Switching basis selects existing response fields without new requests, cache
+invalidation, or resetting progressive results. Refresh `account-return` even
+when both values are null. Annualized values require at least 365 inclusive
+effective investment days; shorter spans show an explanatory dash and retain
+cumulative figures. Never substitute a cumulative percentage under an annualized
+heading. Solver/input failures retain their explanations.
 
 Values use the active locale and two percentage decimal places; raw fractional
-values remain available for numeric sorting. Individual eligibility matches G/L,
-while group/footer returns also include idle cash and archived descendants.
-Group percentages are calculated from combined capital movements.
+values remain available for sorting. Individual eligibility matches G/L.
+Group/footer returns include idle cash and archived descendants and use combined
+capital movements, never sums or averages of percentages.
 
 Return cells open **Return Calculation** for the account, displayed group, or
 footer, with the shared grid button keyboard/mouse handling. Unavailable values
-show a dash and an accessible explanation, with metric-specific diagnostics in
-the drawer. Ledger return cards load independently from G/L and use their own
-retry action. Calculation details distinguish reporting dates from the effective
-investment span and show annualized equivalents only for spans of at least a
-year. Both measures are explicitly labeled Cumulative or Annualized. All
-calculation tables use `DataGrid`.
+show a dash and an accessible explanation, with diagnostics in the drawer.
+Ledger return cards load independently from G/L and use their own retry action.
+Calculation details distinguish reporting dates from the effective investment
+span and show explicitly labeled Cumulative and Annualized figures, including an
+explanatory dash when annualization is unavailable. **Valuations** shows Date,
+Purpose, and reference-currency Value; **Capital Movements** retains dates,
+amounts, descriptions, and transaction navigation. All calculation tables use
+`DataGrid`.
 
 ## Deletion Pattern
 

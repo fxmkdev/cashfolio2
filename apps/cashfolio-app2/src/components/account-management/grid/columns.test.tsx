@@ -50,7 +50,7 @@ describe("account classification columns", () => {
       { field: "balance" },
       { field: "balanceInReferenceCurrency" },
       { groupId: "holding-gain-loss" },
-      { groupId: "account-returns" },
+      { colId: "account-return" },
       { colId: "assetClass" },
       { colId: "trackingMethod" },
       { colId: "actions", pinned: "right" },
@@ -78,7 +78,7 @@ describe("account classification columns", () => {
   it("replaces Asset Class with Account Group in the same position and keeps neighboring columns", () => {
     const columns = readColumns(false, "assetClass");
     expect(columns[3]).toMatchObject({ groupId: "holding-gain-loss" });
-    expect(columns[4]).toMatchObject({ groupId: "account-returns" });
+    expect(columns[4]).toMatchObject({ colId: "account-return" });
     expect(columns[5]).toMatchObject({
       colId: "path",
       headerName: "Account Group",
