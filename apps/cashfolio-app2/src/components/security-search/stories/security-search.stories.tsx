@@ -1,3 +1,4 @@
+import { Box } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { UserLocaleProvider } from "@/user-locale-context";
@@ -5,17 +6,24 @@ import { SecuritySearchHarness } from "./harness";
 import { selectListing } from "./interaction-helpers";
 
 const meta = {
-  title: "Prototypes/Security Search",
+  title: "Routes/Securities",
   component: SecuritySearchHarness,
+  decorators: [
+    (Story) => (
+      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
+        <Story />
+      </Box>
+    ),
+  ],
   parameters: {
     layout: "fullscreen",
     docs: {
       description: {
-        component: `Frontend-only UX prototype. All listings, symbol/exchange combinations and prices are illustrative local fixtures, not live Marketstack data or verified coverage.
+        component: `Securities page presentation with a fixture-backed server-side datasource. All listings, symbol/exchange combinations and prices are illustrative local fixtures, not live Marketstack data or verified coverage.
 
-Open **Prototypes / Security Search / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages, sorting and filters retain selection; a new search clears selection and filters. Close Details restores the full-width grid. Use the column filter menus (or focus a header and press Ctrl+Enter) to filter the results, and Clear Filters to reset them. Exchange, Country and Historical Prices use set filters; Name and Symbol use text filters. Explore price ranges and Copy Symbol.
+Open **Routes / Securities / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages, sorting and filters retain selection; a new search clears selection and filters. Close Details restores the full-width grid. Use the column filter menus (or focus a header and press Ctrl+Enter) to filter the results, and Clear Filters to reset them. Exchange, Country and Historical Prices use set filters; Name and Symbol use text filters. Explore price ranges and Copy Symbol.
 
-No routes, account creation, backend, persistence or provider connections are included. Loading/error stories are fixed scenarios; Retry Search and Retry Price History recover locally. Clipboard feedback is simulated in the copy-specific stories. Other stories use the browser clipboard.
+These stories use deterministic local data and never call the backend or Marketstack. Loading/error stories are fixed scenarios; Retry Search and Retry Price History recover locally. Clipboard feedback is simulated in the copy-specific stories. Other stories use the browser clipboard.
 
 Run locally with Node 26: pnpm --filter cashfolio-app2 storybook.`,
       },
@@ -46,13 +54,17 @@ export const SearchAndFilter: Story = {
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "Results for “aLpInE”",
     );
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 8 of 8 listings",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 8 of 8 listings"),
     );
     await userEvent.clear(input);
     await userEvent.type(input, "Harbor");
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 8 of 8 listings",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 8 of 8 listings"),
     );
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "aLpInE",
@@ -67,12 +79,16 @@ export const SearchAndFilter: Story = {
         name: "SIX Swiss Exchange (XSWX)",
       }),
     );
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 8 of 8 listings",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 8 of 8 listings"),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 1 of 1 listing",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 1 of 1 listing"),
     );
     const details = await selectListing(canvasElement, "HBR:XSWX");
     await expect(
@@ -91,8 +107,10 @@ export const BrowseAndSelect: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 31 of 31 listings",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 31 of 31 listings"),
     );
     const details = await selectListing(canvasElement, "ALP:XSWX");
     await expect(
@@ -190,8 +208,10 @@ export const SearchError: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Retry Search" }));
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Showing 8 of 8 listings",
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("status", { name: "Result Count" }),
+      ).toHaveTextContent("Showing 8 of 8 listings"),
     );
   },
 };
@@ -328,4 +348,20 @@ export const SwissLocale: Story = {
       </UserLocaleProvider>
     ),
   ],
+};
+
+export const UnknownAvailability: Story = {
+  args: { initialSearch: "ready", initialSelectedId: "MYST:XLON" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const details = within(
+      canvas.getByRole("region", { name: "Security Details" }),
+    );
+    await expect(details.getAllByText("Unknown", { exact: true })).toHaveLength(
+      3,
+    );
+    await expect(
+      details.getByRole("img", { name: /closing price chart/ }),
+    ).toBeVisible();
+  },
 };

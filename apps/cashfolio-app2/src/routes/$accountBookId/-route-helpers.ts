@@ -10,6 +10,7 @@ export type AccountBookSection =
   | "accounts"
   | "report"
   | "settings"
+  | "securities"
   | "history"
   | "user-settings";
 
@@ -58,6 +59,7 @@ export function getActiveSection(args: {
   if (section === "report") return "report";
   if (section === "settings") return "settings";
   if (section === "user-settings") return "user-settings";
+  if (section === "securities") return "securities";
   if (section === "history") return "history";
   if (section === "accounts" || !section) return "accounts";
   const ledger = args.matches?.find((match) =>

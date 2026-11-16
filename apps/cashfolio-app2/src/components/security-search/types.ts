@@ -1,19 +1,25 @@
-export type SecurityListing = {
-  id: string;
-  name: string;
-  symbol: string;
-  exchange: string | null;
-  mic: string | null;
-  country: string | null;
-  securityType: string | null;
-  currency: string | null;
-  hasHistory: boolean;
+import type {
+  PricePoint,
+  SecuritySearchCriteria,
+  SecuritiesQuery,
+  SecuritiesPage,
+  SecuritiesFilterOptions,
+} from "@/shared/securities/contracts";
+export { RESULTS_PAGE_SIZE } from "@/shared/securities/contracts";
+export type {
+  SecurityListing,
+  SecuritySearchCriteria,
+  PriceRange,
+  PricePoint,
+} from "@/shared/securities/contracts";
+export type SecuritiesDataSource = {
+  key: string;
+  loadPage: (
+    query: Pick<SecuritiesQuery, "offset" | "limit" | "filters" | "sorts">,
+    signal: AbortSignal,
+  ) => Promise<SecuritiesPage>;
+  loadFilterOptions: (signal: AbortSignal) => Promise<SecuritiesFilterOptions>;
 };
-
-export type SecuritySearchCriteria = { query: string; exchange: string | null };
-export type PriceRange = "1M" | "6M" | "1Y" | "5Y";
-export type PricePoint = { date: string; close: number };
-
 export type SearchState =
   | { status: "idle" }
   | { status: "loading"; criteria: SecuritySearchCriteria }
@@ -21,12 +27,10 @@ export type SearchState =
   | {
       status: "ready";
       criteria: SecuritySearchCriteria;
-      listings: SecurityListing[];
+      source: SecuritiesDataSource;
     };
 
 export type HistoryState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; points: PricePoint[] };
-
-export const RESULTS_PAGE_SIZE = 20;

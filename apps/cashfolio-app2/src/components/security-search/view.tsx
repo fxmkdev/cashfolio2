@@ -11,6 +11,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { useUserLocale } from "@/user-locale-context";
 import { IconSearch } from "@tabler/icons-react";
 import { TopPageHeader } from "../layout/top-page-header";
 import {
@@ -29,6 +30,8 @@ import classes from "./security-search.module.css";
 
 export type SecuritySearchViewProps = {
   search: SearchState;
+  catalogueUpdatedAt?: string | null;
+  catalogueStale?: boolean;
   exchanges: { value: string; label: string }[];
   page: number;
   selectedListing: SecurityListing | null;
@@ -46,6 +49,7 @@ export type SecuritySearchViewProps = {
 
 export function SecuritySearchView(props: SecuritySearchViewProps) {
   const { search, selectedListing } = props;
+  const locale = useUserLocale();
   const [query, setQuery] = useState(
     search.status === "idle" ? "" : search.criteria.query,
   );
@@ -69,15 +73,25 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
       : null;
 
   return (
-    <main className={classes.page}>
+    <section className={classes.page} aria-label="Securities">
       <TopPageHeader
-        heading={<Title order={1}>Security Search</Title>}
+        heading={<Title order={1}>Securities</Title>}
         description={
           <Text c="dimmed" size="sm">
             Find a security and explore its exchange listing and price history.
           </Text>
         }
       />
+      {props.catalogueUpdatedAt && (
+        <Text size="xs" c={props.catalogueStale ? "orange" : "dimmed"} mb="xs">
+          Catalogue updated{" "}
+          {new Intl.DateTimeFormat(locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(props.catalogueUpdatedAt))}
+          {props.catalogueStale ? " · Catalogue refresh is delayed." : ""}
+        </Text>
+      )}
       <div
         className={classes.workspace}
         data-details-open={selectedId ? true : undefined}
@@ -141,19 +155,11 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
                 </Button>
               </Stack>
             </Alert>
-          ) : search.listings.length === 0 ? (
-            <Paper withBorder p="xl">
-              <Text role="status" ta="center">
-                No securities found.
-              </Text>
-              <Text ta="center" c="dimmed" size="sm">
-                Try another name or symbol, or search all exchanges.
-              </Text>
-            </Paper>
           ) : (
             <SecurityResultsGrid
               ref={grid}
-              listings={search.listings}
+              key={search.source.key}
+              source={search.source}
               page={props.page}
               selectedId={selectedId}
               onPageChange={props.onPageChange}
@@ -174,6 +180,6 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
           />
         )}
       </div>
-    </main>
+    </section>
   );
 }

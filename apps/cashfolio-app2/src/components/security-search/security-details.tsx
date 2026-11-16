@@ -17,6 +17,7 @@ import { IconArrowLeft, IconCopy, IconX } from "@tabler/icons-react";
 import { useUserLocale } from "@/user-locale-context";
 import { SecurityPriceChart } from "./price-chart";
 import { getExchangeLabel } from "./exchange-label";
+import { getHistoryLabel } from "@/shared/securities/contracts";
 import type { HistoryState, PriceRange, SecurityListing } from "./types";
 import classes from "./security-search.module.css";
 
@@ -52,7 +53,7 @@ export function SecurityDetails({
     ["Country", listing.country],
     ["Security Type", listing.securityType],
     ["Quote Currency", listing.currency],
-    ["Historical Prices", listing.hasHistory ? "Available" : "Unavailable"],
+    ["Historical Prices", getHistoryLabel(listing.hasHistory)],
   ];
 
   async function copySymbol() {
@@ -135,7 +136,7 @@ export function SecurityDetails({
             </div>
           ))}
         </dl>
-        {!listing.hasHistory ? (
+        {listing.hasHistory === false ? (
           <Alert title="Historical Prices Unavailable">
             Historical prices are unavailable for this listing. You can still
             copy its symbol.

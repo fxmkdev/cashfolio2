@@ -4,6 +4,7 @@ import {
   IconReceipt,
   IconCalendarMonth,
   IconChartBar,
+  IconChartLine,
   IconListDetails,
   IconSettings,
 } from "@tabler/icons-react";
@@ -41,6 +42,11 @@ const navigationLinks: AccountBookNavigationLink[] = [
     section: "history",
     label: "History",
     icon: (size) => <IconChartBar size={size} />,
+  },
+  {
+    section: "securities",
+    label: "Securities",
+    icon: (size) => <IconChartLine size={size} />,
   },
 ];
 
@@ -330,6 +336,14 @@ const AccountBookNavigationLinkItem = forwardRef<
         <LinkNavLink
           {...sharedProps}
           to="/$accountBookId/history"
+          params={{ accountBookId }}
+        />
+      );
+    case "securities":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/securities"
           params={{ accountBookId }}
         />
       );

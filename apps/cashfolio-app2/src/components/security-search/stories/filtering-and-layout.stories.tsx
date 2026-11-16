@@ -1,3 +1,4 @@
+import { Box } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SecuritySearchHarness } from "./harness";
@@ -8,8 +9,15 @@ import {
 } from "./interaction-helpers";
 
 const meta = {
-  title: "Prototypes/Security Search",
+  title: "Routes/Securities",
   component: SecuritySearchHarness,
+  decorators: [
+    (Story) => (
+      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
+        <Story />
+      </Box>
+    ),
+  ],
   args: { initialSearch: "ready" },
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof SecuritySearchHarness>;
@@ -23,9 +31,13 @@ export const GridFilters: Story = {
     await expect(
       canvas.queryByRole("columnheader", { name: /^MIC/ }),
     ).not.toBeInTheDocument();
-    await expect(
-      (await canvas.findAllByText("NASDAQ (XNAS)", { exact: true }))[0],
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        canvas
+          .getAllByText("NASDAQ (XNAS)", { exact: true })
+          .find((element) => element.checkVisibility()),
+      ).toBeVisible(),
+    );
     await setTextFilter(canvasElement, "name", "Alpine");
     await waitFor(() =>
       expect(count).toHaveTextContent("Showing 8 of 31 listings"),
@@ -131,7 +143,7 @@ export const NewSearchResetsGrid: Story = {
     await setListFilter(canvasElement, "hasHistory", ["Available"]);
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 29 of 31 listings",
+        "Showing 28 of 31 listings",
       ),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
@@ -179,7 +191,7 @@ export const MobileBrowsingState: Story = {
     await setListFilter(canvasElement, "hasHistory", ["Available"]);
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 29 of 31 listings",
+        "Showing 28 of 31 listings",
       ),
     );
     const input = canvas.getByRole("textbox", { name: "Security" });
@@ -216,7 +228,7 @@ export const MobileBrowsingState: Story = {
     await expect(grid).toBeVisible();
     await expect(input).toHaveValue("Unsubmitted draft");
     await expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-      "Showing 29 of 31 listings",
+      "Showing 28 of 31 listings",
     );
     await expect(
       canvas.getByRole("button", { name: "Page 2" }),

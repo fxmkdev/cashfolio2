@@ -68,7 +68,7 @@ listings.push(
     ...exchanges[3]!,
     currency: null,
     securityType: null,
-    hasHistory: true,
+    hasHistory: null,
   },
   {
     id: "OLD:unknown",
@@ -92,7 +92,7 @@ const end = Temporal.PlainDate.from("2026-10-30");
 const start = end.subtract({ years: 5 });
 
 export function createPriceHistory(listing: SecurityListing): PricePoint[] {
-  if (!listing.hasHistory) return [];
+  if (listing.hasHistory === false) return [];
   const seed = [...listing.id].reduce(
     (total, letter) => total + letter.charCodeAt(0),
     0,

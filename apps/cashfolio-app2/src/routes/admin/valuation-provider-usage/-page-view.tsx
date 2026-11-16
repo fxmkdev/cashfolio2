@@ -41,6 +41,8 @@ const outcomeLabels = {
 const reasonLabels = {
   INITIAL_PROBE: "Initial probe",
   BACKTRACK_PROBE: "Backtrack probe",
+  CATALOGUE_REFRESH: "Catalogue refresh",
+  SECURITY_HISTORY: "Security history",
   RATE_LIMIT_RETRY: "Rate-limit retry",
 } as const;
 

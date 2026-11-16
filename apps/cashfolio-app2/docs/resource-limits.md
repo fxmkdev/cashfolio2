@@ -151,3 +151,19 @@ database query or preempt synchronous CPU work. Budgets apply per incoming
 request, not across users or instances, and do not cap aggregate provider
 subscription spending. Revisit shared admission if access becomes public or
 observed usage makes it necessary.
+
+## Securities reference data
+
+Securities RPCs require an active user and validate query text (255 characters),
+20-row pages, five whitelisted sort fields, supported text operations and
+bounded set filters (5,000 choices, 300 characters each). Queries and facets
+operate in PostgreSQL against an immutable, pinned catalogue snapshot.
+Selected-listing history uses the normal 60-second read deadline,
+provider-attempt ledger, shared user-scoped work and bounded Marketstack
+timeouts/rate-limit retries. Its Redis cache is separate from valuation caches.
+
+The maintenance-only catalogue worker has no HTTP entry point. A database
+advisory lock prevents overlapping bulk jobs; a 30-minute deadline, validated
+pagination and bounded HTTP retries constrain provider work. The Fly runner
+terminates and removes its job Machine on failure or cancellation. See
+[Securities operations](securities.md#operations) for scheduling and bootstrap.

@@ -18,6 +18,7 @@ import { Route as AccountBookIdAccountIdRouteRouteImport } from "./routes/$accou
 import { Route as AccountBookIdAccountsRouteRouteImport } from "./routes/$accountBookId/accounts/route";
 import { Route as AccountBookIdHistoryRouteRouteImport } from "./routes/$accountBookId/history/route";
 import { Route as AccountBookIdReportRouteRouteImport } from "./routes/$accountBookId/report/route";
+import { Route as AccountBookIdSecuritiesRouteRouteImport } from "./routes/$accountBookId/securities/route";
 import { Route as AccountBookIdSettingsRouteRouteImport } from "./routes/$accountBookId/settings/route";
 import { Route as AccountBookIdTransactionsRouteRouteImport } from "./routes/$accountBookId/transactions/route";
 import { Route as AccountBooksNewRouteImport } from "./routes/account-books/new";
@@ -83,6 +84,12 @@ const AccountBookIdReportRouteRoute =
   AccountBookIdReportRouteRouteImport.update({
     id: "/report",
     path: "/report",
+    getParentRoute: () => AccountBookIdRouteRoute,
+  } as any);
+const AccountBookIdSecuritiesRouteRoute =
+  AccountBookIdSecuritiesRouteRouteImport.update({
+    id: "/securities",
+    path: "/securities",
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any);
 const AccountBookIdSettingsRouteRoute =
@@ -192,6 +199,7 @@ export interface FileRoutesByFullPath {
   "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
   "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
   "/$accountBookId/report": typeof AccountBookIdReportRouteRouteWithChildren;
+  "/$accountBookId/securities": typeof AccountBookIdSecuritiesRouteRoute;
   "/$accountBookId/settings": typeof AccountBookIdSettingsRouteRouteWithChildren;
   "/$accountBookId/transactions": typeof AccountBookIdTransactionsRouteRouteWithChildren;
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
@@ -216,6 +224,7 @@ export interface FileRoutesByTo {
   "/user-settings": typeof UserSettingsRoute;
   "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
   "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
+  "/$accountBookId/securities": typeof AccountBookIdSecuritiesRouteRoute;
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
   "/admin/valuation-provider-usage": typeof AdminValuationProviderUsageRouteRoute;
   "/account-books/new": typeof AccountBooksNewRoute;
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   "/$accountBookId/accounts": typeof AccountBookIdAccountsRouteRoute;
   "/$accountBookId/history": typeof AccountBookIdHistoryRouteRoute;
   "/$accountBookId/report": typeof AccountBookIdReportRouteRouteWithChildren;
+  "/$accountBookId/securities": typeof AccountBookIdSecuritiesRouteRoute;
   "/$accountBookId/settings": typeof AccountBookIdSettingsRouteRouteWithChildren;
   "/$accountBookId/transactions": typeof AccountBookIdTransactionsRouteRouteWithChildren;
   "/admin/valuation-cache": typeof AdminValuationCacheRouteRoute;
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | "/$accountBookId/accounts"
     | "/$accountBookId/history"
     | "/$accountBookId/report"
+    | "/$accountBookId/securities"
     | "/$accountBookId/settings"
     | "/$accountBookId/transactions"
     | "/admin/valuation-cache"
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | "/user-settings"
     | "/$accountBookId/accounts"
     | "/$accountBookId/history"
+    | "/$accountBookId/securities"
     | "/admin/valuation-cache"
     | "/admin/valuation-provider-usage"
     | "/account-books/new"
@@ -323,6 +335,7 @@ export interface FileRouteTypes {
     | "/$accountBookId/accounts"
     | "/$accountBookId/history"
     | "/$accountBookId/report"
+    | "/$accountBookId/securities"
     | "/$accountBookId/settings"
     | "/$accountBookId/transactions"
     | "/admin/valuation-cache"
@@ -416,6 +429,13 @@ declare module "@tanstack/react-router" {
       path: "/report";
       fullPath: "/$accountBookId/report";
       preLoaderRoute: typeof AccountBookIdReportRouteRouteImport;
+      parentRoute: typeof AccountBookIdRouteRoute;
+    };
+    "/$accountBookId/securities": {
+      id: "/$accountBookId/securities";
+      path: "/securities";
+      fullPath: "/$accountBookId/securities";
+      preLoaderRoute: typeof AccountBookIdSecuritiesRouteRouteImport;
       parentRoute: typeof AccountBookIdRouteRoute;
     };
     "/$accountBookId/settings": {
@@ -613,6 +633,7 @@ interface AccountBookIdRouteRouteChildren {
   AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute;
   AccountBookIdHistoryRouteRoute: typeof AccountBookIdHistoryRouteRoute;
   AccountBookIdReportRouteRoute: typeof AccountBookIdReportRouteRouteWithChildren;
+  AccountBookIdSecuritiesRouteRoute: typeof AccountBookIdSecuritiesRouteRoute;
   AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRouteWithChildren;
   AccountBookIdTransactionsRouteRoute: typeof AccountBookIdTransactionsRouteRouteWithChildren;
   AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute;
@@ -624,6 +645,7 @@ const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
   AccountBookIdAccountsRouteRoute: AccountBookIdAccountsRouteRoute,
   AccountBookIdHistoryRouteRoute: AccountBookIdHistoryRouteRoute,
   AccountBookIdReportRouteRoute: AccountBookIdReportRouteRouteWithChildren,
+  AccountBookIdSecuritiesRouteRoute: AccountBookIdSecuritiesRouteRoute,
   AccountBookIdSettingsRouteRoute: AccountBookIdSettingsRouteRouteWithChildren,
   AccountBookIdTransactionsRouteRoute:
     AccountBookIdTransactionsRouteRouteWithChildren,

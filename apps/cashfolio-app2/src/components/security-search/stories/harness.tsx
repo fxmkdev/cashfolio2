@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createFixtureSource } from "./source";
 import { SecuritySearchView } from "../view";
 import type {
   HistoryState,
@@ -21,16 +22,6 @@ export type SecuritySearchHarnessProps = {
   copySymbol?: (symbol: string) => Promise<void>;
 };
 
-function findListings(criteria: SecuritySearchCriteria) {
-  const query = criteria.query.trim().toLocaleLowerCase("en-US");
-  return listings.filter(
-    (listing) =>
-      (!criteria.exchange || listing.mic === criteria.exchange) &&
-      (listing.name.toLocaleLowerCase("en-US").includes(query) ||
-        listing.symbol.toLocaleLowerCase("en-US").includes(query)),
-  );
-}
-
 export function SecuritySearchHarness({
   initialSearch = "idle",
   initialQuery = "",
@@ -42,7 +33,11 @@ export function SecuritySearchHarness({
     const criteria = { query: initialQuery, exchange: null };
     if (initialSearch === "idle") return { status: "idle" };
     if (initialSearch === "ready")
-      return { status: "ready", criteria, listings: findListings(criteria) };
+      return {
+        status: "ready",
+        criteria,
+        source: createFixtureSource(criteria),
+      };
     if (initialSearch === "error")
       return {
         status: "error",
@@ -74,7 +69,11 @@ export function SecuritySearchHarness({
   function runSearch(criteria: SecuritySearchCriteria) {
     setPage(1);
     setSelectedId(null);
-    setSearch({ status: "ready", criteria, listings: findListings(criteria) });
+    setSearch({
+      status: "ready",
+      criteria,
+      source: createFixtureSource(criteria),
+    });
   }
 
   return (

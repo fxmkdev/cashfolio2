@@ -1,6 +1,7 @@
 import { HttpNetworkFrame } from "msw/experimental";
 import { http, HttpResponse } from "msw/http";
 import { setupServer } from "msw/node";
+import { Temporal } from "../shared/temporal";
 import { getE2ESecurityPrice } from "./security-prices";
 
 const USD_TO_CURRENCY_RATE_BY_SYMBOL: Record<string, number> = {
@@ -32,6 +33,30 @@ function enforceHandledValuationProviderRequests(request: Request): void {
 }
 
 const e2eValuationProviderServer = setupServer(
+  http.get("https://api.marketstack.com/v2/eod", ({ request }) => {
+    const url = new URL(request.url);
+    const symbol = url.searchParams.get("symbols");
+    const mic = url.searchParams.get("exchange");
+    if (symbol !== "E2E.SEC" || !["XNAS", "XSWX"].includes(mic ?? ""))
+      return HttpResponse.json({ error: { code: "no_data_found" } });
+    const from = Temporal.PlainDate.from(url.searchParams.get("date_from")!);
+    const through = url.searchParams.get("date_to")!;
+    const rows = Array.from({ length: 61 }, (_, month) => ({
+      date: from.add({ months: month }).toString(),
+      close: 100 + month,
+      symbol,
+      exchange: mic,
+      price_currency: mic === "XSWX" ? "CHF" : "USD",
+      asset_type: "Stock",
+    })).filter((row) => row.date <= through);
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 1000);
+    const data = rows.slice(offset, offset + limit);
+    return HttpResponse.json({
+      data,
+      pagination: { offset, limit, count: data.length, total: rows.length },
+    });
+  }),
   http.get("https://api.currencylayer.com/historical", ({ request }) => {
     const url = new URL(request.url);
     const targetCurrency =

@@ -305,3 +305,11 @@ Docker pins Corepack 0.36.0, the eligible stable bootstrap checked during the
 migration, rather than downloading an unreviewed latest release. Its runtime
 requirement is satisfied by the Node 26.13.0 image pin. Review Corepack's
 publication age and runtime compatibility when changing this bootstrap pin.
+
+## Securities Catalogue Refresh
+
+The app image includes the standalone Securities catalogue refresh payload.
+Production refresh runs daily at 04:17 UTC; staging and preview use manual
+dispatch. Bootstrap every environment after its first compatible deployment and
+migration. See [Securities operations](securities.md#operations) for dispatch
+commands, deadlines, locking and failure recovery.

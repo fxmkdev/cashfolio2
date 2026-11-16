@@ -39,7 +39,9 @@
     "test:staging-seed": "pnpm build:contracts && pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
     "build:e2e": "pnpm build:contracts && vite build --mode e2e",
     "test:build-boundary": "node --test scripts/build-boundary.test.ts",
-    "build:contracts": "pnpm --filter @cashfolio/book-cache-contracts build"
+    "build:contracts": "pnpm --filter @cashfolio/book-cache-contracts build",
+    "build:securities-refresh": "vite build --config vite.securities-refresh.config.ts",
+    "refresh:securities": "node dist/securities-refresh/refresh.mjs"
   },
   "dependencies": {
     "@cashfolio/book-cache-contracts": "workspace:*",
