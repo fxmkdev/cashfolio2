@@ -16,8 +16,22 @@ describe("Securities input and query boundaries", () => {
       version: "version",
     });
     expect(() =>
-      readScope({ version: "v", criteria: { query: "", exchange: "bad" } }),
-    ).toThrow("MIC");
+      readScope({
+        version: "v",
+        criteria: { query: "", exchange: "bad code" },
+      }),
+    ).toThrow("identifier");
+  });
+  test("accepts exact Marketstack identifiers that are not four-character ISO MICs", () => {
+    for (const exchange of ["XETRA", "NMFQS", "XNAS"])
+      expect(
+        readScope({ version: "v", criteria: { query: "", exchange } }).criteria
+          .exchange,
+      ).toBe(exchange);
+    for (const exchange of ["XNYS,XNAS", "X".repeat(65), "bad code"])
+      expect(() =>
+        readScope({ version: "v", criteria: { query: "", exchange } }),
+      ).toThrow();
   });
   test("trims queries and keeps only whitelisted fields", () => {
     const query = readQuery({

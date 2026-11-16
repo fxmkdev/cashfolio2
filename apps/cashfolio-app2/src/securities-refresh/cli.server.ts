@@ -66,9 +66,16 @@ try {
     });
     console.log("SECURITIES_REFRESH " + JSON.stringify(summary));
   }
-} catch {
+} catch (error) {
+  // Only application-owned provider messages may reach logs, never arbitrary
+  // database/transport errors which could include credentials or URLs.
+  const detail =
+    error instanceof Error &&
+    /^(Marketstack |The Marketstack |Price history )/.test(error.message)
+      ? error.message.split("\n")[0]
+      : "Inspect provider usage and refresh progress.";
   console.error(
-    "Securities catalogue operation failed. Inspect provider usage and refresh progress, then retry. No incomplete catalogue was published.",
+    `Securities catalogue operation failed. ${detail} Retry after resolving the failure. No incomplete catalogue was published.`,
   );
   process.exitCode = 1;
 } finally {

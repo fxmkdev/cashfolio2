@@ -29,9 +29,9 @@ export function readScope(value: unknown): SecuritiesScope {
   const mic =
     value.criteria.exchange == null
       ? null
-      : boundedText(value.criteria.exchange, 4);
-  if (mic !== null && !/^[A-Z0-9]{4}$/.test(mic))
-    throw new Error("Invalid securities exchange MIC.");
+      : boundedText(value.criteria.exchange, 64);
+  if (mic !== null && !/^[A-Za-z0-9._-]{1,64}$/.test(mic))
+    throw new Error("Invalid securities exchange identifier.");
   return {
     version: requireStringField(value, "version"),
     criteria: {

@@ -56,7 +56,7 @@ describe("Marketstack Securities contract", () => {
     });
     for (const row of [
       { ticker: "ABC,DEF" },
-      { ticker: "ABC", stock_exchange: { mic: "INVALID" } },
+      { ticker: "ABC", stock_exchange: { mic: "XNYS,XNAS" } },
       { ticker: "ABC", has_eod: "yes" },
     ])
       expect(() => parseCatalogueRow(row)).toThrow();
@@ -89,6 +89,32 @@ describe("Marketstack Securities contract", () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: "NO_DATA" }),
     );
+  });
+  test("preserves vendor exchange identifiers and unknown country placeholders", async () => {
+    expect(
+      parseCatalogueRow({
+        ticker: "ABC",
+        stock_exchange: { name: "Xetra", mic: "XETRA" },
+      }),
+    ).toMatchObject({ mic: "XETRA", exchangeLabel: "Xetra (XETRA)" });
+    expect(
+      parseCatalogueRow({ ticker: "ABC", stock_exchange: { mic: "NMFQS" } })
+        .mic,
+    ).toBe("NMFQS");
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        data: [
+          { mic: "XETRA", country: null, country_code: "DE" },
+          { mic: "NMFQS", country: null, country_code: "US" },
+          { mic: "INDX", country: null, country_code: "INDX" },
+        ],
+        pagination: { offset: 0, count: 3, total: 3 },
+      }),
+    );
+    expect([...(await fetchExchangeCountries({}))]).toEqual([
+      ["XETRA", "DE"],
+      ["NMFQS", "US"],
+    ]);
   });
   test("rejects inconsistent or malformed pagination", () => {
     expect(parseMarketstackPage(page([]), 0).pagination.total).toBe(0);

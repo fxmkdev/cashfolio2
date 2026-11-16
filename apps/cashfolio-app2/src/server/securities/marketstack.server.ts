@@ -81,9 +81,9 @@ export function parseCatalogueRow(raw: unknown): CatalogueRow {
   if (!symbol || /[,\s]/.test(symbol))
     throw new Error("Marketstack returned an invalid symbol.");
   const exchange = row.stock_exchange == null ? {} : object(row.stock_exchange);
-  const mic = text(exchange.mic, 4)?.toUpperCase() ?? "";
-  if (mic && !/^[A-Z0-9]{4}$/.test(mic))
-    throw new Error("Marketstack returned an invalid exchange MIC.");
+  const mic = text(exchange.mic, 64) ?? "";
+  if (mic && !/^[A-Za-z0-9._-]{1,64}$/.test(mic))
+    throw new Error("Marketstack returned an invalid exchange identifier.");
   if (row.has_eod != null && typeof row.has_eod !== "boolean")
     throw new Error("Marketstack returned invalid availability metadata.");
   const name = text(exchange.name);
@@ -330,8 +330,13 @@ export async function fetchExchangeCountries(
     total ??= page.pagination.total;
     for (const value of page.data) {
       const row = object(value);
-      const mic = text(row.mic, 4);
-      const country = text(row.country) ?? text(row.country_code, 3);
+      const mic = text(row.mic, 64);
+      // Marketstack also uses vendor codes such as XETRA and NMFQS. Keep
+      // their exact identities; never truncate them to an ISO MIC.
+      const code =
+        typeof row.country_code === "string" ? row.country_code.trim() : "";
+      const country =
+        text(row.country) ?? (/^[A-Z]{2,3}$/.test(code) ? code : null);
       if (mic && country) countries.set(mic, country);
     }
     offset += page.data.length;

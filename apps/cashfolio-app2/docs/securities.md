@@ -41,6 +41,9 @@ A listing is unique within a snapshot by the exact provider symbol and MIC;
 internal row IDs are resolved against the requested snapshot before history is
 loaded. An empty MIC is stored for unknown exchanges and returned as `null`.
 Missing availability stays unknown, rather than becoming a confirmed absence.
+Marketstack also supplies vendor exchange identifiers such as `XETRA` and
+`NMFQS`; these are preserved exactly rather than truncated to four-character ISO
+MICs. Country placeholders such as `INDX` remain Unknown.
 
 The standalone TypeScript worker (`src/securities-refresh/cli.server.ts`) first
 checks one AAPL/XNAS catalogue result and a recent unadjusted EOD close. It then
