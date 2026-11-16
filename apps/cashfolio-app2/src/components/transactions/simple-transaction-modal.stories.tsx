@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { SimpleTransactionModal } from "./simple-transaction-modal";
@@ -5,7 +6,17 @@ import { accountOptions } from "../testing/storybook-fixtures";
 import { RESOURCE_LIMITS } from "../../shared/resources/resource-limits";
 
 const meta = {
-  title: "Components/SimpleTransactionModal",
+  title: "Components/Transaction Editors and Actions/Simple Transaction Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Single-counterparty transaction entry. Supply currentAccount, accounts, and the book start date. initialValues selects editing; onSwitchToSplit forwards the draft to the split editor when provided.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: SimpleTransactionModal,
   args: {
     currentAccount: {
@@ -26,6 +37,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const ToggleDirectionAndSubmit: Story = {
+  ...Default,
+  name: "Toggle Direction And Submit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -47,6 +61,9 @@ export const ToggleDirectionAndSubmit: Story = {
 };
 
 export const ForcedDirectionDisablesToggle: Story = {
+  ...Default,
+  name: "Forced Direction Disables Toggle Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -60,7 +77,7 @@ export const ForcedDirectionDisablesToggle: Story = {
   },
 };
 
-export const EditModeWithSwitchToSplit: Story = {
+export const EditModeWithSwitchToSplitView: Story = {
   args: {
     initialValues: {
       date: new Date("2026-01-15T00:00:00.000Z"),
@@ -71,6 +88,15 @@ export const EditModeWithSwitchToSplit: Story = {
     },
     onSwitchToSplit: fn(),
   },
+  name: "Edit Mode With Switch To Split Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const EditModeWithSwitchToSplit: Story = {
+  ...EditModeWithSwitchToSplitView,
+  name: "Edit Mode With Switch To Split Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -118,6 +144,8 @@ export const EnterSubmitPendingGuard: Story = {
     await waitFor(() => expect(submitButton).not.toBeDisabled());
     await expect(submitButton).not.toHaveAttribute("data-loading");
   },
+  name: "Enter Submit Pending Guard Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DescriptionLimitPreservesDraft: Story = {
@@ -152,5 +180,42 @@ export const DescriptionLimitPreservesDraft: Story = {
         description: "x".repeat(RESOURCE_LIMITS.description),
       }),
     );
+  },
+  name: "Description Limit Preserves Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const PendingAfterSubmit: Story = {
+  args: {
+    ...EditModeWithSwitchToSplit.args,
+    onSubmit: fn(pendingStorySubmission),
+  },
+  parameters: {
+    manualSetup:
+      "Click Save to keep this prefilled transaction pending. Remount the story to reset it.",
+    docs: {
+      story: { autoplay: false },
+      description: {
+        story:
+          "Click Save to keep this prefilled transaction pending. Remount the story to reset it.",
+      },
+    },
+  },
+  name: "Pending After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingAfterSubmit,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

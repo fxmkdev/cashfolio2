@@ -1,8 +1,9 @@
+import type { IndexEntry } from "storybook/internal/types";
 import type { Preview } from "@storybook/react-vite";
 import { createContext, useContext, type ComponentType } from "react";
 import { themes } from "storybook/theming";
 import { ensureGridModulesRegistered } from "../src/ag-grid-modules";
-import { MantineProvider } from "@mantine/core";
+import { MantineProvider, Text } from "@mantine/core";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -15,9 +16,16 @@ import {
 import "../src/mantine";
 import { theme } from "../src/theme";
 import { GlobalLoadingProvider } from "../src/components/navigation/global-loading";
+import { UserLocaleProvider } from "../src/user-locale-context";
+import {
+  DEFAULT_USER_LOCALE,
+  USER_LOCALE_OPTIONS,
+  normalizeUserLocaleInput,
+} from "../src/user-locale";
 
 type RouterStoryParameters = {
   colorScheme?: "light" | "dark";
+  manualSetup?: string;
   router?: {
     initialPath?: string;
   };
@@ -30,10 +38,69 @@ function StoryFromContext() {
   return <Story />;
 }
 
-const preview: Preview = {
+const preview: Preview & {
   parameters: {
+    options: { storySort: (a: IndexEntry, b: IndexEntry) => number };
+  };
+} = {
+  globalTypes: {
+    colorScheme: {
+      description:
+        "App color scheme (explicit story overrides take precedence)",
+      toolbar: {
+        title: "Theme",
+        icon: "paintbrush",
+        dynamicTitle: true,
+        items: ["light", "dark"],
+      },
+    },
+    locale: {
+      description:
+        "User locale (explicit component locale props take precedence)",
+      toolbar: {
+        title: "Locale",
+        icon: "globe",
+        dynamicTitle: true,
+        items: USER_LOCALE_OPTIONS.map(({ value, label }) => ({
+          value,
+          title: label,
+        })),
+      },
+    },
+  },
+  initialGlobals: {
+    colorScheme: "light",
+    locale: DEFAULT_USER_LOCALE,
+    viewport: { value: "cashfolioDesktop", isRotated: false },
+  },
+  parameters: {
+    layout: "padded",
+    options: {
+      // Storybook evaluates this function's source as JavaScript during indexing.
+      storySort: (a, b) => {
+        const roots = ["Start Here", "Components", "Screens"];
+        const priority = ["Overview", "Default", "Create", "Edit"];
+        const left = [...a.title.split("/"), a.name];
+        const right = [...b.title.split("/"), b.name];
+        for (
+          let index = 0;
+          index < Math.max(left.length, right.length);
+          index++
+        ) {
+          const x = left[index] ?? "";
+          const y = right[index] ?? "";
+          if (x === y) continue;
+          const order = index === 0 ? roots : priority;
+          const xRank = order.includes(x) ? order.indexOf(x) : order.length;
+          const yRank = order.includes(y) ? order.indexOf(y) : order.length;
+          return (
+            xRank - yRank || x.localeCompare(y, undefined, { numeric: true })
+          );
+        }
+        return 0;
+      },
+    },
     viewport: {
-      defaultViewport: "cashfolioDesktop",
       options: {
         cashfolioDesktop: {
           name: "Cashfolio desktop",
@@ -42,6 +109,10 @@ const preview: Preview = {
         cashfolioMobile: {
           name: "Cashfolio mobile",
           styles: { width: "390px", height: "844px" },
+        },
+        cashfolioTablet: {
+          name: "Cashfolio tablet",
+          styles: { width: "768px", height: "1024px" },
         },
       },
     },
@@ -52,8 +123,9 @@ const preview: Preview = {
       },
     },
     docs: {
+      story: { autoplay: false },
       // Docs theme does not adapt to system theme out of the box.
-      theme: themes[getPreferredColorScheme()],
+      theme: themes.light,
     },
   },
   loaders: [
@@ -74,21 +146,31 @@ const preview: Preview = {
       <div
         data-ag-theme-mode={
           (context.parameters as RouterStoryParameters).colorScheme ??
-          getPreferredColorScheme()
+          context.globals.colorScheme
         }
       >
         <MantineProvider
           theme={theme}
-          defaultColorScheme="auto"
           forceColorScheme={
-            (context.parameters as RouterStoryParameters).colorScheme
+            (context.parameters as RouterStoryParameters).colorScheme ??
+            context.globals.colorScheme
           }
         >
-          <GlobalLoadingProvider>
-            <StoryContext.Provider value={Story}>
-              <RouterProvider router={context.loaded.storyRouter} />
-            </StoryContext.Provider>
-          </GlobalLoadingProvider>
+          {!context.tags.includes("regression") &&
+            (context.parameters as RouterStoryParameters).manualSetup && (
+              <Text size="sm" c="dimmed" p="sm" role="note">
+                {(context.parameters as RouterStoryParameters).manualSetup}
+              </Text>
+            )}
+          <UserLocaleProvider
+            locale={normalizeUserLocaleInput(context.globals.locale)}
+          >
+            <GlobalLoadingProvider>
+              <StoryContext.Provider value={Story}>
+                <RouterProvider router={context.loaded.storyRouter} />
+              </StoryContext.Provider>
+            </GlobalLoadingProvider>
+          </UserLocaleProvider>
         </MantineProvider>
       </div>
     ),
@@ -279,14 +361,3 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
 ensureGridModulesRegistered();
 
 export default preview;
-
-function getPreferredColorScheme() {
-  if (typeof window === "undefined" || !window.matchMedia) return "light";
-
-  const isDarkThemePreferred = window.matchMedia(
-    "(prefers-color-scheme: dark)",
-  ).matches;
-  if (isDarkThemePreferred) return "dark";
-
-  return "light";
-}

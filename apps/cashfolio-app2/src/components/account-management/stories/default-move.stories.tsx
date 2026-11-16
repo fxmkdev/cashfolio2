@@ -7,9 +7,11 @@ import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-hel
 import { organizeAccountNodes } from "./organize-action-fixtures";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Move",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -79,11 +81,47 @@ function rowMoveStory(archived: boolean, assetClass: boolean): Story {
     },
   };
 }
-export const DefaultAccountMove: Story = rowMoveStory(false, false);
-export const DefaultAssetClassAccountMove: Story = rowMoveStory(false, true);
-export const DefaultArchivedAccountMove: Story = rowMoveStory(true, false);
+const DefaultAccountMoveConfiguration = rowMoveStory(false, false);
+export const DefaultAccountMoveView: Story = {
+  ...DefaultAccountMoveConfiguration,
+  name: "Account Move Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+export const DefaultAccountMove: Story = {
+  ...DefaultAccountMoveView,
+  name: "Account Move Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: DefaultAccountMoveConfiguration.play,
+};
+const DefaultAssetClassAccountMoveConfiguration = rowMoveStory(false, true);
+export const DefaultAssetClassAccountMoveView: Story = {
+  ...DefaultAssetClassAccountMoveConfiguration,
+  name: "Asset Class Account Move Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+export const DefaultAssetClassAccountMove: Story = {
+  ...DefaultAssetClassAccountMoveView,
+  name: "Asset Class Account Move Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: DefaultAssetClassAccountMoveConfiguration.play,
+};
+const DefaultArchivedAccountMoveConfiguration = rowMoveStory(true, false);
+export const DefaultArchivedAccountMoveView: Story = {
+  ...DefaultArchivedAccountMoveConfiguration,
+  name: "Archived Account Move Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+export const DefaultArchivedAccountMove: Story = {
+  ...DefaultArchivedAccountMoveView,
+  name: "Archived Account Move Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: DefaultArchivedAccountMoveConfiguration.play,
+};
 
-export const DefaultMoveLoadingAndRetry: Story = {
+export const Default: Story = {
   args: {
     organizerApi: createOrganizerStoryApi(undefined, organizeAccountNodes()),
   },
@@ -94,6 +132,15 @@ export const DefaultMoveLoadingAndRetry: Story = {
       expandGroups
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DefaultMoveLoadingAndRetry: Story = {
+  ...Default,
+  name: "Default Move Loading And Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement),
       body = within(canvasElement.ownerDocument.body);
@@ -192,4 +239,6 @@ export const DefaultMoveCancelsPendingLoad: Story = {
       api.load = original;
     }
   },
+  name: "Default Move Cancels Pending Load Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

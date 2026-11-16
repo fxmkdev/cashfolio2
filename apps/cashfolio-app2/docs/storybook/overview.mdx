@@ -1,0 +1,60 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Start Here/Overview" />
+
+# Cashfolio Component Catalogue
+
+Browse shared components, inspect app screens, and try their important states
+without connecting to a database.
+
+## Find an Example
+
+- **Components** follows shared UI responsibilities: Controls, Navigation,
+  Layout, Grid, Gain and Loss, Confirmation Dialogs, Account Editors, and
+  Transaction Editors and Actions.
+- **Screens** follows app areas. Route-specific controls stay with their screen;
+  for example, find the account switcher under Ledger.
+- Open a component's **Docs** entry for its purpose, supported props, and
+  examples. Open an individual story to use **Controls** and inspect
+  interactions.
+- Overview and default examples appear first. Other groups are alphabetical.
+
+## Reveal Regression Scenarios
+
+The sidebar filter excludes the **regression** tag initially. Open the tag
+filter next to sidebar search and clear that exclusion to reveal automated
+interaction tests, navigation lifecycles, smoke tests, and implementation
+comparisons. These stories continue to run in CI even when excluded from
+browsing.
+
+Visible stories wait for you to interact. Read-only assertions may check their
+initial state, but clicking, typing, navigation, and submission are manual.
+Automated scenarios have names ending in **Interaction Test** and are excluded
+from Docs. Docs autoplay is disabled.
+
+**Pending** states supplied directly are ready to inspect immediately. **Pending
+After Submit** and **Save Failed After Submit** start idle; follow their Manual
+Setup note to reach the state. Remount the example to reset it.
+
+## Compare Environments
+
+- **Theme** switches Mantine and AG Grid between light and dark.
+- **Locale** uses the app's supported user locales, with en-US as the default.
+- **Viewport** provides Desktop (1280 × 900), Tablet (768 × 1024), and Mobile
+  (390 × 844). Responsive examples can also be resized manually.
+- Stories explicitly labelled Light/Dark or with a locale override keep that
+  environment. Their descriptions identify the override. Fixed viewport stories
+  retain their requested size; use an unpinned example for free comparison.
+- Controls and typing share the value in input playgrounds. Complex screen
+  fixtures have Controls disabled; interact with the rendered screen instead.
+
+## Code Ownership
+
+Sidebar groups describe how to find examples; they do not move application code.
+Shared UI stays under `src/components/<responsibility>/`, and route-owned UI
+stays with its route. Accounts and Categories screens also use the shared
+`account-management` and `hierarchy-organize` modules.
+
+[Story authoring conventions](https://github.com/fxmkdev/cashfolio2/blob/main/apps/cashfolio-app2/docs/storybook.md)
+·
+[Module ownership](https://github.com/fxmkdev/cashfolio2/blob/main/apps/cashfolio-app2/docs/module-boundaries.md)

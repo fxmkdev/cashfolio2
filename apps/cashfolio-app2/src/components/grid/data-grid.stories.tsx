@@ -56,7 +56,16 @@ const columns: ColDef<Row>[] = [
 ];
 
 const meta = {
-  title: "Components/DataGrid",
+  title: "Components/Grid/Data Grid",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared AG Grid wrapper for app tables. Stories use bounded containers; compare populated, empty, loading, and narrow layouts.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: DataGrid,
   render: () => (
     <Box h={280}>
@@ -100,11 +109,23 @@ export const ScrollingAndPinnedCells: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement, parameters }) => {
+  play: async ({ canvasElement, globals }) => {
     if (import.meta.env.MODE === "test") {
-      const mobile = parameters.viewport?.defaultViewport === "cashfolioMobile";
-      await expect(window.innerWidth).toBe(mobile ? 390 : 1280);
-      await expect(window.innerHeight).toBe(mobile ? 844 : 900);
+      const mobile = globals.viewport?.value === "cashfolioMobile";
+      await expect(window.innerWidth).toBe(
+        mobile
+          ? 390
+          : globals.viewport?.value === "cashfolioTablet"
+            ? 768
+            : 1280,
+      );
+      await expect(window.innerHeight).toBe(
+        mobile
+          ? 844
+          : globals.viewport?.value === "cashfolioTablet"
+            ? 1024
+            : 900,
+      );
     }
     const canvas = within(canvasElement);
     const viewport =
@@ -163,13 +184,15 @@ export const ScrollingAndPinnedCells: Story = {
     viewport.scrollLeft = 0;
     await waitFor(() => expect(canvas.getByText("Total")).toBeVisible());
   },
+  name: "Scrolling And Pinned Cells Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NarrowScrollingGrid: Story = {
   ...ScrollingAndPinnedCells,
-  parameters: {
-    viewport: { defaultViewport: "cashfolioMobile" },
-  },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+  name: "Narrow Scrolling Grid Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const Empty: Story = {

@@ -39,7 +39,8 @@ function PeriodRouteSmokeHarness() {
 }
 
 const meta = {
-  title: "Routes/ReportPageView",
+  title: "Screens/Report/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   decorators: [
     (Story, context) => {
@@ -140,6 +141,8 @@ export const HeaderActionLayoutSmoke: Story = {
       }),
     ).toBeInTheDocument();
   },
+  name: "Header Action Layout Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NoExpenseData: Story = {
@@ -253,6 +256,8 @@ export const RouteSmoke: Story = {
       "/storybook-book/report",
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const BreakdownToggleSmoke: Story = {
@@ -308,6 +313,8 @@ export const BreakdownToggleSmoke: Story = {
       }),
     ).toBeChecked();
   },
+  name: "Breakdown Toggle Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationToggleSmoke: Story = {
@@ -347,6 +354,8 @@ export const AllocationToggleSmoke: Story = {
       }),
     ).toBeInTheDocument();
   },
+  name: "Allocation Toggle Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const BreakdownTableModeSmoke: Story = {
@@ -370,6 +379,8 @@ export const BreakdownTableModeSmoke: Story = {
       canvas.queryByTestId("period-breakdown-chart"),
     ).not.toBeInTheDocument();
   },
+  name: "Breakdown Table Mode Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationTableModeSmoke: Story = {
@@ -395,6 +406,8 @@ export const AllocationTableModeSmoke: Story = {
       canvas.queryByTestId("period-allocation-breakdown-chart"),
     ).not.toBeInTheDocument();
   },
+  name: "Allocation Table Mode Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const BreakdownTableDoubleClickSmoke: Story = {
@@ -425,6 +438,8 @@ export const BreakdownTableDoubleClickSmoke: Story = {
     await userEvent.dblClick(canvas.getByText("Total"));
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
   },
+  name: "Breakdown Table Double Click Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationTableDoubleClickSmoke: Story = {
@@ -493,6 +508,8 @@ export const AllocationTableDoubleClickSmoke: Story = {
     await userEvent.dblClick(canvas.getByText("Total"));
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
   },
+  name: "Allocation Table Double Click Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationChartContainerDoubleClickSmoke: Story = {
@@ -536,6 +553,8 @@ export const AllocationChartContainerDoubleClickSmoke: Story = {
     );
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
   },
+  name: "Allocation Chart Container Double Click Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
@@ -581,6 +600,8 @@ export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
     await userEvent.dblClick(canvas.getByText("Transfer Clearing (CHF)"));
     await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
   },
+  name: "Allocation Table Virtual Account Double Click Ignored Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
@@ -621,6 +642,8 @@ export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
 
     await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
   },
+  name: "Allocation Chart Virtual Account Double Click Ignored Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const GainsLossesToggleSmoke: Story = {
@@ -654,6 +677,8 @@ export const GainsLossesToggleSmoke: Story = {
       canvas.getByTestId("period-gains-losses-breakdown-chart"),
     ).toBeInTheDocument();
   },
+  name: "Gains Losses Toggle Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const GainsLossesDrillSmoke: Story = {
@@ -686,9 +711,14 @@ export const GainsLossesDrillSmoke: Story = {
     });
     await expect(canvas.getByText("Cash")).toBeInTheDocument();
   },
+  name: "Gains Losses Drill Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SharedAccountGrouping: Story = {
+  ...HappyPath,
+  name: "Shared Account Grouping Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const selector = canvas.getByRole("combobox", {
@@ -751,7 +781,7 @@ function singleGainLossGroup(grouping: "accountStructure" | "assetClass") {
   };
 }
 
-export const GroupingDrillRestoration: Story = {
+export const GroupingDrillRestorationView: Story = {
   args: {
     overview: {
       ...baseOverview,
@@ -761,6 +791,15 @@ export const GroupingDrillRestoration: Story = {
       },
     },
   },
+  name: "Grouping Drill Restoration Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GroupingDrillRestoration: Story = {
+  ...GroupingDrillRestorationView,
+  name: "Grouping Drill Restoration Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const selector = canvas.getByRole("combobox", {

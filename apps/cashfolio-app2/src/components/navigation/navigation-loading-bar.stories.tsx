@@ -79,7 +79,16 @@ function NavigationLoadingBarPreview() {
 }
 
 const meta = {
-  title: "Components/NavigationLoadingBar",
+  title: "Components/Navigation/Navigation Loading Bar",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared progress feedback for route transitions and registered client tasks. The preview buttons start and complete loads; overlapping work keeps the indicator active until every task completes.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: NavigationLoadingBar,
   render: () => (
     <GlobalLoadingProvider>
@@ -115,4 +124,6 @@ export const OverlappingClientLoads: Story = {
     );
     await waitFor(() => expect(indicator).not.toHaveAttribute("data-mounted"));
   },
+  name: "Overlapping Client Loads Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

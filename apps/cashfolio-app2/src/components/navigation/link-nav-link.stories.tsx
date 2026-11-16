@@ -3,7 +3,16 @@ import { expect, within } from "storybook/test";
 import { LinkNavLink } from "./link-nav-link";
 
 const meta = {
-  title: "Components/LinkNavLink",
+  title: "Components/Navigation/Link Nav Link",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Router-aware navigation item with Mantine NavLink presentation. Supply destination, label, and active state for app navigation.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: LinkNavLink,
   args: {
     label: "Accounts",

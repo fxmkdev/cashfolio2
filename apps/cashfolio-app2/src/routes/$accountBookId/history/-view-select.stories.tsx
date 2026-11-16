@@ -4,7 +4,8 @@ import { HistoryViewSelect } from "./-view-select";
 import { netWorthScopeOptions } from "./-story-fixtures";
 
 const meta = {
-  title: "Routes/HistoryViewSelect",
+  title: "Screens/History/View Select",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: HistoryViewSelect,
   args: {
     selectedMetric: "expenses",
@@ -36,7 +37,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const Searchable: Story = {
+  ...Default,
+  name: "Searchable Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", { name: "View" });
@@ -53,8 +63,17 @@ export const Searchable: Story = {
   },
 };
 
-export const Pending: Story = {
+export const PendingView: Story = {
   args: { disabled: true },
+  name: "Pending Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingView,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", { name: "View" });
@@ -66,7 +85,7 @@ export const Pending: Story = {
   },
 };
 
-export const NetWorthHierarchy: Story = {
+export const NetWorthHierarchyView: Story = {
   args: {
     selectedMetric: "netWorth",
     scopeSelection: {
@@ -75,6 +94,15 @@ export const NetWorthHierarchy: Story = {
     },
     scopeOptions: { ...meta.args.scopeOptions, netWorth: netWorthScopeOptions },
   },
+  name: "Net Worth Hierarchy Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const NetWorthHierarchy: Story = {
+  ...NetWorthHierarchyView,
+  name: "Net Worth Hierarchy Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", { name: "View" });
@@ -137,8 +165,17 @@ const gainLossArgs = {
   },
 } satisfies Partial<Story["args"]>;
 
-export const GainLossNavigationBranches: Story = {
+export const GainLossNavigationBranchesView: Story = {
   args: gainLossArgs,
+  name: "Gain Loss Navigation Branches Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossNavigationBranches: Story = {
+  ...GainLossNavigationBranchesView,
+  name: "Gain Loss Navigation Branches Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", { name: "View" });
@@ -186,7 +223,9 @@ export const GainLossNavigationBranches: Story = {
 };
 
 export const GainLossKeyboardNavigation: Story = {
-  args: gainLossArgs,
+  ...GainLossNavigationBranchesView,
+  name: "Gain Loss Keyboard Navigation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", { name: "View" });

@@ -44,7 +44,7 @@ function ReportInAccountBookShell(props: ReportPageViewProps) {
 }
 
 const meta = {
-  title: "Routes/ReportHeaderLayout",
+  title: "Screens/Report/Header",
   component: ReportPageView,
   render: (args) => <ReportInAccountBookShell {...args} />,
   loaders: [
@@ -54,6 +54,14 @@ const meta = {
     },
   ],
   parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: `/${STORYBOOK_ACCOUNT_BOOK_ID}/report` },
     colorScheme: "light",
   },
@@ -155,11 +163,22 @@ const checkLayout: NonNullable<Story["play"]> = async ({
   await assertLayout();
 };
 
-export const Desktop: Story = { play: checkLayout };
-export const ShortDesktop: Story = {
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Desktop: Story = {
+  ...Default,
+  name: "Desktop Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: checkLayout,
+};
+export const ShortDesktopView: Story = {
+  globals: { viewport: { value: "cashfolioShortDesktop", isRotated: false } },
   parameters: {
     viewport: {
-      defaultViewport: "cashfolioShortDesktop",
       options: {
         cashfolioShortDesktop: {
           name: "Cashfolio short desktop",
@@ -168,9 +187,27 @@ export const ShortDesktop: Story = {
       },
     },
   },
+  name: "Short Desktop Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ShortDesktop: Story = {
+  ...ShortDesktopView,
+  name: "Short Desktop Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: checkLayout,
 };
+export const MobileView: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+  name: "Mobile Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const Mobile: Story = {
-  parameters: { viewport: { defaultViewport: "cashfolioMobile" } },
+  ...MobileView,
+  name: "Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: checkLayout,
 };

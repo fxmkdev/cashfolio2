@@ -8,7 +8,8 @@ import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
 
 const meta: Meta<typeof LedgerPageView> = {
-  title: "Routes/LedgerHeaderLayout",
+  title: "Screens/Ledger/Header",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerPageView,
 };
 export default meta;
@@ -194,8 +195,17 @@ async function checkResponsiveLedgerHeader(canvasElement: HTMLElement) {
   }
 }
 
-export const ResponsiveHeaderWide: Story = {
+export const Default: Story = {
   render: () => <ResponsiveLedgerHeaderHarness />,
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ResponsiveHeaderWide: Story = {
+  ...Default,
+  name: "Responsive Header Wide Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByText(
@@ -206,12 +216,21 @@ export const ResponsiveHeaderWide: Story = {
   },
 };
 
-export const ResponsiveHeaderIntermediate: Story = {
+export const ResponsiveHeaderIntermediateView: Story = {
   render: () => <ResponsiveLedgerHeaderHarness initialWidth={960} />,
+  name: "Responsive Header Intermediate Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ResponsiveHeaderIntermediate: Story = {
+  ...ResponsiveHeaderIntermediateView,
+  name: "Responsive Header Intermediate Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => checkResponsiveLedgerHeader(canvasElement),
 };
 
-export const ResponsiveHeaderPhone: Story = {
+export const ResponsiveHeaderPhoneView: Story = {
   args: { onOpenImportPage: fn() },
   render: (args) => (
     <ResponsiveLedgerHeaderHarness
@@ -219,6 +238,15 @@ export const ResponsiveHeaderPhone: Story = {
       onOpenImportPage={args.onOpenImportPage}
     />
   ),
+  name: "Responsive Header Phone Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ResponsiveHeaderPhone: Story = {
+  ...ResponsiveHeaderPhoneView,
+  name: "Responsive Header Phone Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await checkResponsiveLedgerHeader(canvasElement);
@@ -236,8 +264,17 @@ export const ResponsiveHeaderPhone: Story = {
   },
 };
 
-export const ResponsiveHeaderContainerResize: Story = {
+export const ResponsiveHeaderContainerResizeView: Story = {
   render: () => <ResponsiveLedgerHeaderHarness resizable />,
+  name: "Responsive Header Container Resize Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ResponsiveHeaderContainerResize: Story = {
+  ...ResponsiveHeaderContainerResizeView,
+  name: "Responsive Header Container Resize Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const viewportWidth = window.innerWidth;
@@ -255,8 +292,17 @@ export const ResponsiveHeaderContainerResize: Story = {
   },
 };
 
-export const ResponsiveHeaderLongContent: Story = {
+export const ResponsiveHeaderLongContentView: Story = {
   render: () => <ResponsiveLedgerHeaderHarness longContent resizable />,
+  name: "Responsive Header Long Content Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ResponsiveHeaderLongContent: Story = {
+  ...ResponsiveHeaderLongContentView,
+  name: "Responsive Header Long Content Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(

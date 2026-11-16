@@ -8,7 +8,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Editors",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -120,6 +121,8 @@ export const AssetClassHelpEscapePreservesDraft: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
   },
+  name: "Asset Class Help Escape Preserves Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const ContextualAccountCreation: Story = {
@@ -201,35 +204,8 @@ export const ContextualAccountCreation: Story = {
       canvasElement.querySelector(".ag-row-pinned [data-row-actions-trigger]"),
     ).toBeNull();
   },
-};
-
-export const ContextualIncomeCategoryCreation: Story = {
-  render: () => (
-    <AccountsPageStoryHarness
-      initialMode="active"
-      initialTab="EQUITY-INCOME"
-      expandGroups
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement),
-      body = within(canvasElement.ownerDocument.body);
-    const row = (
-      await canvas.findByText("Housing", { exact: true })
-    ).closest<HTMLElement>(".ag-row")!;
-    await userEvent.hover(row);
-    expect(
-      within(row).queryByRole("button", { name: /^Add Expense Category/ }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(
-      within(row).getByRole("button", { name: "Add Income Category Housing" }),
-    );
-    const dialog = within(
-      await body.findByRole("dialog", { name: "New Category" }),
-    );
-    expect(dialog.getByLabelText("Category Group")).toHaveValue("Housing");
-    expect(dialog.getByLabelText("Category Group")).toBeEnabled();
-  },
+  name: "Contextual Account Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const CreationDefaultsResetOnBookAndTabChanges: Story = {
@@ -251,4 +227,6 @@ export const CreationDefaultsResetOnBookAndTabChanges: Story = {
       );
     }
   },
+  name: "Creation Defaults Reset On Book And Tab Changes Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

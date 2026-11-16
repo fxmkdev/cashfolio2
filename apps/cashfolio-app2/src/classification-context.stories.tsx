@@ -56,7 +56,8 @@ function DraftEditor() {
   );
 }
 const meta = {
-  title: "Components/AssetClassProvider",
+  title: "Screens/Settings/Asset Classes/Provider",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AssetClassProvider,
   args: {
     nodes: initialNodes,
@@ -103,4 +104,6 @@ export const RefreshPreservesEditorDraft: Story = {
       ).toHaveTextContent("Unsaved Draft: new"),
     );
   },
+  name: "Refresh Preserves Editor Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

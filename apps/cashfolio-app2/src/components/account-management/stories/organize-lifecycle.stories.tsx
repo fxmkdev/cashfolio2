@@ -8,9 +8,11 @@ import {
 import { AccountsPageStoryHarness } from "./harness";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Lifecycle",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/accounts?tab=BALANCE&mode=active&organize=true",
@@ -97,6 +99,8 @@ export const OrganizeCompactLayoutAndIcons: Story = {
     await expect(move).toHaveFocus();
     await expect(move).toBeVisible();
   },
+  name: "Organize Compact Layout And Icons Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeArchiveUnarchiveAndDelete: Story = {
@@ -190,6 +194,8 @@ export const OrganizeArchiveUnarchiveAndDelete: Story = {
       Object.assign(api, original);
     }
   },
+  name: "Organize Archive Unarchive And Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
@@ -255,6 +261,8 @@ export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
       ).toHaveFocus(),
     );
   },
+  name: "Organize Hidden Children Prevent Group Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeLifecycleRefreshRecovery: Story = {
@@ -309,4 +317,6 @@ export const OrganizeLifecycleRefreshRecovery: Story = {
       api.archive = originalArchive;
     }
   },
+  name: "Organize Lifecycle Refresh Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

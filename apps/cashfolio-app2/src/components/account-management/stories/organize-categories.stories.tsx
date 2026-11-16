@@ -29,9 +29,11 @@ function categoryApi() {
   };
 }
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/Categories/Organize",
+  title: "Screens/Categories/Organize",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
@@ -86,6 +88,8 @@ export const CategoryActionsAndTabChange: Story = {
       canvas.getByRole("region", { name: "Categories Hierarchy" }),
     ).toBeVisible();
   },
+  name: "Category Actions And Tab Change Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DirectCategoryEntry: Story = {
@@ -107,7 +111,7 @@ export const DirectCategoryEntry: Story = {
   },
 };
 
-export const CategoryMutationFailureUsesCategoryWording: Story = {
+export const CategoryMutationFailureUsesCategoryWordingView: Story = {
   args: {
     organizerApi: {
       ...categoryApi(),
@@ -116,6 +120,15 @@ export const CategoryMutationFailureUsesCategoryWording: Story = {
       },
     },
   },
+  name: "Category Mutation Failure Uses Category Wording Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoryMutationFailureUsesCategoryWording: Story = {
+  ...CategoryMutationFailureUsesCategoryWordingView,
+  name: "Category Mutation Failure Uses Category Wording Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

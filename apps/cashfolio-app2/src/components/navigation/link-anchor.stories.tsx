@@ -3,7 +3,16 @@ import { expect, within } from "storybook/test";
 import { LinkAnchor } from "./link-anchor";
 
 const meta = {
-  title: "Components/LinkAnchor",
+  title: "Components/Navigation/Link Anchor",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Router-aware text link using Mantine Anchor styling. Supply TanStack Router destination props and children. Use for inline navigation; it preserves the shared navigation loading behavior.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: LinkAnchor,
   args: {
     children: "Open Account Book",

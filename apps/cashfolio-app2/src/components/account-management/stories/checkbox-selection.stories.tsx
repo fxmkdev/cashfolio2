@@ -11,12 +11,13 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Selection",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const BulkGroupCheckboxSelection: Story = {
+export const Default: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -24,6 +25,15 @@ export const BulkGroupCheckboxSelection: Story = {
       rowsOverride={groupSelectionRows}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkGroupCheckboxSelection: Story = {
+  ...Default,
+  name: "Bulk Group Checkbox Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -93,13 +103,9 @@ export const BulkGroupCheckboxSelection: Story = {
 };
 
 export const BulkArchivedCheckboxSelection: Story = {
-  render: () => (
-    <AccountsPageStoryHarness
-      initialMode="active"
-      bulkAssignment
-      rowsOverride={groupSelectionRows}
-    />
-  ),
+  ...Default,
+  name: "Bulk Archived Checkbox Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await selectAssignmentAccount(canvasElement, "__archived__:root");
@@ -138,7 +144,7 @@ export const BulkArchivedCheckboxSelection: Story = {
   },
 };
 
-export const BulkFilteredGroupCheckboxSelection: Story = {
+export const BulkFilteredGroupCheckboxSelectionView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -147,6 +153,15 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
       rowsOverride={bulkRows}
     />
   ),
+  name: "Bulk Filtered Group Checkbox Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkFilteredGroupCheckboxSelection: Story = {
+  ...BulkFilteredGroupCheckboxSelectionView,
+  name: "Bulk Filtered Group Checkbox Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

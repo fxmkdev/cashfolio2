@@ -4,10 +4,26 @@ import { IconBolt, IconListDetails } from "@tabler/icons-react";
 import { TopPageHeader } from "./top-page-header";
 
 const meta = {
-  title: "Components/TopPageHeader",
+  title: "Components/Layout/Top Page Header",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared page heading with optional accessory, description, and actions. Use responsive layout when the identity and actions must wrap at narrow widths.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: TopPageHeader,
+  argTypes: {
+    heading: { control: "text" },
+    layout: { control: "inline-radio", options: ["default", "responsive"] },
+    headingAccessory: { control: false },
+    actions: { control: false },
+    description: { control: false },
+  },
   args: {
-    heading: null,
+    heading: "February 2026",
   },
 } satisfies Meta<typeof TopPageHeader>;
 
@@ -16,9 +32,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const TitleHeading: Story = {
-  render: () => (
+  render: (args) => (
     <TopPageHeader
-      heading={<Title order={2}>February 2026</Title>}
+      {...args}
+      heading={<Title order={2}>{args.heading}</Title>}
       actions={
         <Button variant="default" leftSection={<IconListDetails size={16} />}>
           Accounts
@@ -29,9 +46,11 @@ export const TitleHeading: Story = {
 };
 
 export const TitleWithAccessory: Story = {
-  render: () => (
+  args: { heading: "Cash" },
+  render: (args) => (
     <TopPageHeader
-      heading={<Title order={2}>Cash</Title>}
+      {...args}
+      heading={<Title order={2}>{args.heading}</Title>}
       headingAccessory={
         <Badge size="lg" color="gray">
           CHF
@@ -48,10 +67,11 @@ export const TitleWithAccessory: Story = {
 };
 
 export const ResponsiveWithDescription: Story = {
-  render: () => (
+  args: { heading: "Everyday account CHF", layout: "responsive" },
+  render: (args) => (
     <TopPageHeader
-      layout="responsive"
-      heading={<Title order={2}>Everyday account CHF</Title>}
+      {...args}
+      heading={<Title order={2}>{args.heading}</Title>}
       headingAccessory={
         <Badge size="lg" color="gray">
           CHF

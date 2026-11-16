@@ -4,7 +4,16 @@ import { IconCalendarMonth } from "@tabler/icons-react";
 import { LinkButton } from "./link-button";
 
 const meta = {
-  title: "Components/LinkButton",
+  title: "Components/Navigation/Link Button",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Router-aware button for navigation. Supply destination props and children; use ordinary buttons for mutations. Mantine button props control its visual presentation.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: LinkButton,
   args: {
     children: "Open Accounts",

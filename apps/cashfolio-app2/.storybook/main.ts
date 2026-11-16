@@ -19,6 +19,9 @@ const config: StorybookConfig = {
   },
   stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)", "../docs/**/*.mdx"],
   addons: ["@storybook/addon-docs", "@storybook/addon-vitest"],
+  tags: {
+    regression: { defaultFilterSelection: "exclude" },
+  },
   framework: {
     name: "@storybook/react-vite",
     options: {},
@@ -43,6 +46,7 @@ const config: StorybookConfig = {
         ...(viteConfig.resolve ?? {}),
         alias: {
           ...(viteConfig.resolve?.alias ?? {}),
+          "@": toFilePath("../src"),
           "#tanstack-start-entry": toFilePath("./tanstack-start-entry.stub.ts"),
           "#tanstack-router-entry": toFilePath(
             "./tanstack-router-entry.stub.ts",

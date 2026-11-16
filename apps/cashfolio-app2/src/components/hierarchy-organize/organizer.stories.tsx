@@ -10,12 +10,22 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;
 
+export const RowActionsKeyboardAccessView: Story = {
+  name: "Row Actions Keyboard Access Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const RowActionsKeyboardAccess: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Row Actions Keyboard Access Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await row(canvasElement, "checking");
     const canvas = within(canvasElement);
@@ -41,6 +51,9 @@ export const RowActionsKeyboardAccess: Story = {
 };
 
 export const BulkSubtreeMove: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Bulk Subtree Move Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     await select(canvasElement, "investments");
     await select(canvasElement, "checking");
@@ -64,6 +77,9 @@ export const BulkSubtreeMove: Story = {
 };
 
 export const ArchivedSelection: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Archived Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -87,6 +103,9 @@ export const ArchivedSelection: Story = {
 };
 
 export const ArchivedVisibilityAndSelection: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Archived Visibility And Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -160,7 +179,7 @@ export const ArchivedVisibilityAndSelection: Story = {
   },
 };
 
-export const ArchivedOnlyEmptyState: Story = {
+export const ArchivedOnlyEmptyStateView: Story = {
   args: {
     api: createOrganizerStoryApi(
       undefined,
@@ -170,6 +189,15 @@ export const ArchivedOnlyEmptyState: Story = {
     ),
   },
   render: (args) => <Harness {...args} useProvidedApi />,
+  name: "Archived Only Empty State Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ArchivedOnlyEmptyState: Story = {
+  ...ArchivedOnlyEmptyStateView,
+  name: "Archived Only Empty State Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -183,6 +211,9 @@ export const ArchivedOnlyEmptyState: Story = {
 };
 
 export const RelativePlacementAndCashPreview: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Relative Placement And Cash Preview Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -213,6 +244,9 @@ export const RelativePlacementAndCashPreview: Story = {
 };
 
 export const DestinationTreeAndSegmentedPosition: Story = {
+  ...RowActionsKeyboardAccessView,
+  name: "Destination Tree And Segmented Position Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -265,8 +299,17 @@ export const DestinationTreeAndSegmentedPosition: Story = {
   },
 };
 
-export const BusyFailureAndRetry: Story = {
+export const BusyFailureAndRetryView: Story = {
   render: (args) => <Harness {...args} failure="busy" />,
+  name: "Busy Failure And Retry Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BusyFailureAndRetry: Story = {
+  ...BusyFailureAndRetryView,
+  name: "Busy Failure And Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await select(canvasElement, "checking");
     const dialog = await chooseMove(canvasElement);
@@ -291,8 +334,17 @@ export const BusyFailureAndRetry: Story = {
   },
 };
 
-export const UncertainFailureRequiresRefresh: Story = {
+export const UncertainFailureRequiresRefreshView: Story = {
   render: (args) => <Harness {...args} failure="network" />,
+  name: "Uncertain Failure Requires Refresh Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const UncertainFailureRequiresRefresh: Story = {
+  ...UncertainFailureRequiresRefreshView,
+  name: "Uncertain Failure Requires Refresh Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await select(canvasElement, "checking");
@@ -328,11 +380,22 @@ export const LoadRecovery: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(args.onDone).toHaveBeenCalled();
   },
+  name: "Load Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const MoveDialogRecoveryFeedbackView: Story = {
+  args: { api: createOrganizerStoryApi("network") },
+  render: (args) => <Harness {...args} useProvidedApi />,
+  name: "Move Dialog Recovery Feedback Playground",
+  tags: ["!regression"],
+  play: undefined,
 };
 
 export const MoveDialogRecoveryFeedback: Story = {
-  args: { api: createOrganizerStoryApi("network") },
-  render: (args) => <Harness {...args} useProvidedApi />,
+  ...MoveDialogRecoveryFeedbackView,
+  name: "Move Dialog Recovery Feedback Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     await select(canvasElement, "checking");
     const original = args.api.load;

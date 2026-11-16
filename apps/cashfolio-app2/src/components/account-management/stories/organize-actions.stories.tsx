@@ -12,9 +12,11 @@ import {
 } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Bulk Actions",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -116,9 +118,11 @@ export const OrganizeBulkLifecycleActions: Story = {
       toolbar.getByRole("button", { name: "Delete" }),
     ).toHaveAttribute("aria-description", expect.stringContaining("Fund"));
   },
+  name: "Organize Bulk Lifecycle Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const OrganizeBulkUnarchive: Story = {
+export const Default: Story = {
   args: {
     organizerApi: createOrganizerStoryApi(undefined, [
       ...organizeStoryNodes.map((node) => ({
@@ -145,6 +149,15 @@ export const OrganizeBulkUnarchive: Story = {
       organizerApi={args.organizerApi}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OrganizeBulkUnarchive: Story = {
+  ...Default,
+  name: "Organize Bulk Unarchive Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement),
       body = within(canvasElement.ownerDocument.body);
@@ -308,4 +321,6 @@ export const OrganizeCollectiveArchiveAndDelete: Story = {
       region.getByRole("button", { name: "Archive Checking" }),
     ).toBeEnabled();
   },
+  name: "Organize Collective Archive And Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

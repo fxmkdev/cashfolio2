@@ -8,7 +8,8 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;
@@ -196,10 +197,14 @@ export const StableHandlesDuringDragAndSave: Story = {
   args: { api: createOrganizerStoryApi() },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(),
+  name: "Stable Handles During Drag And Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const StableHandlesDuringRecovery: Story = {
   args: { api: createOrganizerStoryApi("network") },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(true),
+  name: "Stable Handles During Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

@@ -3,7 +3,8 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { TrackingMethodAssignmentDialog } from "./tracking-method";
 
 const meta = {
-  title: "Routes/Accounts/TrackingMethodAssignmentDialog",
+  title: "Screens/Accounts/Assignments/Tracking Method Dialog",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: TrackingMethodAssignmentDialog,
   args: {
     target: {
@@ -18,7 +19,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const SubmissionGuards: Story = {
+  ...Default,
+  name: "Submission Guards Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
@@ -55,6 +65,9 @@ export const SubmissionGuards: Story = {
 };
 
 export const CancelBeforeChoosing: Story = {
+  ...Default,
+  name: "Cancel Before Choosing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(

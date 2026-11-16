@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box } from "@mantine/core";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -9,7 +10,17 @@ import {
 } from "../testing/storybook-fixtures";
 
 const meta = {
-  title: "Components/EditTransactionModal",
+  title: "Components/Transaction Editors and Actions/Edit Transaction Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Split transaction editor with a bookings grid. Supply accounts, currentAccountId, and the book start date. initialValues selects edit mode; onSubmit saves the draft and onRefreshConstraints supports recovery.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: EditTransactionModal,
   decorators: [
     (Story) => (
@@ -92,23 +103,41 @@ const editCategoryUnitAndCurrency: Story["play"] = async ({
   );
 };
 
-export const CategoryUnitAndCurrencyEditing: Story = {
+export const CategoryUnitAndCurrencyEditingView: Story = {
   args: { initialValues: editTransactionInitialValues },
+  name: "Category Unit And Currency Editing Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoryUnitAndCurrencyEditing: Story = {
+  ...CategoryUnitAndCurrencyEditingView,
+  name: "Category Unit And Currency Editing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: editCategoryUnitAndCurrency,
 };
 
-export const ImportedCategoryUnitAndCurrencyEditing: Story = {
+export const ImportedCategoryUnitAndCurrencyEditingView: Story = {
   args: {
     initialValues: editTransactionInitialValues,
     submitLabel: "Save Draft",
   },
+  name: "Imported Category Unit And Currency Editing Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ImportedCategoryUnitAndCurrencyEditing: Story = {
+  ...ImportedCategoryUnitAndCurrencyEditingView,
+  name: "Imported Category Unit And Currency Editing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: editCategoryUnitAndCurrency,
 };
 
 export const CancelInteraction: Story = {
-  args: {
-    initialValues: editTransactionInitialValues,
-  },
+  ...Edit,
+  name: "Cancel Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
@@ -149,6 +178,8 @@ export const PendingSubmitDisablesActions: Story = {
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
   },
+  name: "Pending Submit Disables Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SubmitCommitsActiveCell: Story = {
@@ -182,6 +213,8 @@ export const SubmitCommitsActiveCell: Story = {
       ),
     );
   },
+  name: "Submit Commits Active Cell Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const ProvisionalDateDirtyState: Story = {
@@ -203,6 +236,8 @@ export const ProvisionalDateDirtyState: Story = {
       expect(args.onDirtyChange).toHaveBeenLastCalledWith(false),
     );
   },
+  name: "Provisional Date Dirty State Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const FailedSubmitRetainsDraft: Story = {
@@ -233,5 +268,70 @@ export const FailedSubmitRetainsDraft: Story = {
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ description: "Retained draft" }),
     );
+  },
+  name: "Failed Submit Retains Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const PendingAfterSubmit: Story = {
+  args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
+  parameters: {
+    manualSetup:
+      "Click Save to keep this prefilled split transaction pending. Remount the story to reset it.",
+    docs: {
+      story: { autoplay: false },
+      description: {
+        story:
+          "Click Save to keep this prefilled split transaction pending. Remount the story to reset it.",
+      },
+    },
+  },
+  name: "Pending After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingAfterSubmit,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
+  },
+};
+
+export const SaveFailedAfterSubmit: Story = {
+  parameters: {
+    manualSetup:
+      "Click Save to display the failed-save message. The draft remains editable; remount the story to reset it.",
+    docs: {
+      description: {
+        story:
+          "Click Save to display the failed-save message. The existing draft remains editable; remount the story to reset it.",
+      },
+    },
+  },
+  args: { ...FailedSubmitRetainsDraft.args },
+  name: "Save Failed After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SaveFailed: Story = {
+  ...SaveFailedAfterSubmit,
+  name: "Save Failed Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "Draft could not be saved.",
+    );
+    await expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
   },
 };

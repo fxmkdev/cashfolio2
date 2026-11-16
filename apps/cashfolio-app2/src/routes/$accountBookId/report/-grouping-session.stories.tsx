@@ -46,7 +46,8 @@ function BookSwitchHarness() {
 }
 
 const meta = {
-  title: "Routes/ReportGroupingSession",
+  title: "Screens/Report/Grouping",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: BookSwitchHarness,
   loaders: [
     () => {
@@ -138,6 +139,8 @@ export const AccountBooksKeepIndependentPaths: Story = {
       }),
     ).toBeChecked();
   },
+  name: "Account Books Keep Independent Paths Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 const periodBookId = "grouping-period-ancestor";
@@ -253,4 +256,6 @@ export const PeriodChangesRetainSurvivingClass: Story = {
       ).toEqual([equities.id]);
     });
   },
+  name: "Period Changes Retain Surviving Class Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

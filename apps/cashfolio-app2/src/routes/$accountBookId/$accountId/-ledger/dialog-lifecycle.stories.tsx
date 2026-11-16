@@ -87,7 +87,8 @@ function EditDialogHarness(props: LifecycleProps) {
 }
 
 const meta: Meta<typeof CreateDialogHarness> = {
-  title: "Routes/LedgerDialogLifecycle",
+  title: "Screens/Ledger/Dialogs",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: CreateDialogHarness,
   args: {
     onClose: fn(),
@@ -141,6 +142,8 @@ export const PendingCreationCannotBeDismissed: Story = {
       screen.queryByRole("dialog", { name: "Add Transaction" }),
     ).not.toBeInTheDocument();
   },
+  name: "Pending Creation Cannot Be Dismissed Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SwitchingToSplitForwardsDraft: Story = {
@@ -169,6 +172,8 @@ export const SwitchingToSplitForwardsDraft: Story = {
       await screen.findByRole("dialog", { name: "Add Transaction" }),
     ).toBeVisible();
   },
+  name: "Switching To Split Forwards Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const PendingEditCannotBeDismissed: Story = {
@@ -204,6 +209,8 @@ export const PendingEditCannotBeDismissed: Story = {
       screen.queryByRole("dialog", { name: "Edit Transaction" }),
     ).not.toBeInTheDocument();
   },
+  name: "Pending Edit Cannot Be Dismissed Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const EditDraftClearsAfterExit: Story = {
@@ -238,6 +245,8 @@ export const EditDraftClearsAfterExit: Story = {
       "exit:transaction-2",
     );
   },
+  name: "Edit Draft Clears After Exit Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 function WorkflowHarness() {
@@ -328,4 +337,6 @@ export const ReducerPreservesDraftAfterFailureAndSwitch: Story = {
       within(reopened).getByRole("textbox", { name: "Description" }),
     ).toHaveValue("");
   },
+  name: "Reducer Preserves Draft After Failure And Switch Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

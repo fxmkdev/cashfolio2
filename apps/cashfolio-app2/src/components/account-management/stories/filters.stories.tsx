@@ -7,7 +7,8 @@ import {
 } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountFilterHarness> = {
-  title: "Routes/AccountsPageView/Filters",
+  title: "Screens/Accounts/Filters",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountFilterHarness,
 };
 export default meta;
@@ -60,7 +61,16 @@ async function expandFilterNode(popup: HTMLElement, label: string) {
   await userEvent.click(icon);
 }
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const AssetClassBranchAndDirectAssignments: Story = {
+  ...Default,
+  name: "Asset Class Branch And Direct Assignments Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const popup = await openHierarchy(canvasElement);
@@ -120,6 +130,9 @@ export const AssetClassBranchAndDirectAssignments: Story = {
 };
 
 export const MixedCurrencyAndBulkSelection: Story = {
+  ...Default,
+  name: "Mixed Currency And Bulk Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -161,8 +174,17 @@ export const MixedCurrencyAndBulkSelection: Story = {
   },
 };
 
-export const OriginalAccountGroupBranch: Story = {
+export const OriginalAccountGroupBranchView: Story = {
   args: { grouping: "assetClass" },
+  name: "Original Account Group Branch Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OriginalAccountGroupBranch: Story = {
+  ...OriginalAccountGroupBranchView,
+  name: "Original Account Group Branch Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const popup = await openHierarchy(canvasElement);
     await checkbox(popup, "Portfolio");

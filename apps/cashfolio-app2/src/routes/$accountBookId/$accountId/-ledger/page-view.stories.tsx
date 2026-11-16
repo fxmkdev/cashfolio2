@@ -10,7 +10,8 @@ import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
 
 const meta: Meta<typeof LedgerPageView> = {
-  title: "Routes/LedgerPageView",
+  title: "Screens/Ledger/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerPageView,
 };
 
@@ -114,11 +115,20 @@ export const EquityWithoutAssetClass: Story = {
   },
 };
 
-export const AccountActionsMenu: Story = {
+export const AccountActionsMenuView: Story = {
   args: { onOpenImportPage: fn() },
   render: (args) => (
     <LedgerPageStoryHarness onOpenImportPage={args.onOpenImportPage} />
   ),
+  name: "Account Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AccountActionsMenu: Story = {
+  ...AccountActionsMenuView,
+  name: "Account Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const actionButtons = within(
@@ -165,8 +175,17 @@ export const AccountActionsMenu: Story = {
   },
 };
 
-export const ArchivedAccountActionsMenu: Story = {
+export const ArchivedAccountActionsMenuView: Story = {
   render: () => <LedgerPageStoryHarness accountActive={false} />,
+  name: "Archived Account Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ArchivedAccountActionsMenu: Story = {
+  ...ArchivedAccountActionsMenuView,
+  name: "Archived Account Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -200,8 +219,17 @@ export const ArchivedAccountActionsMenu: Story = {
   },
 };
 
-export const DisabledAccountActionsMenu: Story = {
+export const DisabledAccountActionsMenuView: Story = {
   render: () => <LedgerPageStoryHarness accountActionsDisabled={true} />,
+  name: "Disabled Account Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DisabledAccountActionsMenu: Story = {
+  ...DisabledAccountActionsMenuView,
+  name: "Disabled Account Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -221,8 +249,17 @@ export const DisabledAccountActionsMenu: Story = {
   },
 };
 
-export const MissingStatementImportCsvFormat: Story = {
+export const MissingStatementImportCsvFormatView: Story = {
   render: () => <LedgerPageStoryHarness hasStatementImportCsvFormat={false} />,
+  name: "Missing Statement Import Csv Format Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const MissingStatementImportCsvFormat: Story = {
+  ...MissingStatementImportCsvFormatView,
+  name: "Missing Statement Import Csv Format Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const actionButtons = within(
@@ -295,40 +332,76 @@ function categoryActionsMenuPlay(
   };
 }
 
-export const CategoryActionsMenu: Story = {
+export const CategoryActionsMenuView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
       equitySubtype={EquityAccountSubtype.EXPENSE}
     />
   ),
+  name: "Category Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoryActionsMenu: Story = {
+  ...CategoryActionsMenuView,
+  name: "Category Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: categoryActionsMenuPlay(EquityAccountSubtype.EXPENSE),
 };
 
-export const IncomeCategoryActionsMenu: Story = {
+export const IncomeCategoryActionsMenuView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
       equitySubtype={EquityAccountSubtype.INCOME}
     />
   ),
+  name: "Income Category Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const IncomeCategoryActionsMenu: Story = {
+  ...IncomeCategoryActionsMenuView,
+  name: "Income Category Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: categoryActionsMenuPlay(EquityAccountSubtype.INCOME),
 };
 
-export const GainLossCategoryActionsMenu: Story = {
+export const GainLossCategoryActionsMenuView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
       equitySubtype={EquityAccountSubtype.GAIN_LOSS}
     />
   ),
+  name: "Gain Loss Category Actions Menu Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossCategoryActionsMenu: Story = {
+  ...GainLossCategoryActionsMenuView,
+  name: "Gain Loss Category Actions Menu Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: categoryActionsMenuPlay(EquityAccountSubtype.GAIN_LOSS),
 };
 
-export const DisabledEditMenuAction: Story = {
+export const DisabledEditMenuActionView: Story = {
   render: () => (
     <LedgerPageStoryHarness accountEditDisabledReason="This account cannot be edited." />
   ),
+  name: "Disabled Edit Menu Action Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DisabledEditMenuAction: Story = {
+  ...DisabledEditMenuActionView,
+  name: "Disabled Edit Menu Action Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -417,9 +490,11 @@ export const PeriodFilterRouteSmoke: Story = {
       "(none)",
     );
   },
+  name: "Period Filter Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const ExpenseCategoryContext: Story = {
+export const ExpenseCategoryContextView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -427,6 +502,15 @@ export const ExpenseCategoryContext: Story = {
       returnLabel="Report"
     />
   ),
+  name: "Expense Category Context Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ExpenseCategoryContext: Story = {
+  ...ExpenseCategoryContextView,
+  name: "Expense Category Context Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -447,7 +531,7 @@ export const ExpenseCategoryContext: Story = {
 };
 
 export const IncomeCategoryMobile: Story = {
-  parameters: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -466,7 +550,7 @@ export const IncomeCategoryMobile: Story = {
   },
 };
 
-export const OpeningBalancesDirectVisit: Story = {
+export const OpeningBalancesDirectVisitView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -474,6 +558,15 @@ export const OpeningBalancesDirectVisit: Story = {
       accountActionsDisabled
     />
   ),
+  name: "Opening Balances Direct Visit Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OpeningBalancesDirectVisit: Story = {
+  ...OpeningBalancesDirectVisitView,
+  name: "Opening Balances Direct Visit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -492,7 +585,7 @@ export const OpeningBalancesDirectVisit: Story = {
   },
 };
 
-export const GainLossContext: Story = {
+export const GainLossContextView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -501,6 +594,15 @@ export const GainLossContext: Story = {
       accountActionsDisabled
     />
   ),
+  name: "Gain Loss Context Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossContext: Story = {
+  ...GainLossContextView,
+  name: "Gain Loss Context Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -551,11 +653,20 @@ function StableLedgerNavigationHarness() {
   );
 }
 
-export const StableNavigationState: Story = {
+export const StableNavigationStateView: Story = {
   parameters: {
     router: { initialPath: "/storybook-book/report?period=2026-01" },
   },
   render: () => <StableLedgerNavigationHarness />,
+  name: "Stable Navigation State Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const StableNavigationState: Story = {
+  ...StableNavigationStateView,
+  name: "Stable Navigation State Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
