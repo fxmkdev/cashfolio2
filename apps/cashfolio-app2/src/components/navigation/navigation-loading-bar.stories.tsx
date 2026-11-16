@@ -104,7 +104,6 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const OverlappingClientLoads: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const indicator = within(canvasElement.ownerDocument.body).getByTestId(
@@ -125,4 +124,6 @@ export const OverlappingClientLoads: Story = {
     );
     await waitFor(() => expect(indicator).not.toHaveAttribute("data-mounted"));
   },
+  name: "Overlapping Client Loads Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

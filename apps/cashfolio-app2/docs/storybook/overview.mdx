@@ -22,13 +22,19 @@ without connecting to a database.
 ## Reveal Regression Scenarios
 
 The sidebar filter excludes the **regression** tag initially. Open the tag
-filter next to sidebar search and clear that exclusion to reveal smoke tests,
-navigation lifecycles, implementation comparisons, and multi-step mutation
-scenarios. These stories continue to run in CI even when excluded from browsing.
+filter next to sidebar search and clear that exclusion to reveal automated
+interaction tests, navigation lifecycles, smoke tests, and implementation
+comparisons. These stories continue to run in CI even when excluded from
+browsing.
 
-Visible interaction demonstrations can also perform actions automatically. A
-**Pending** example intentionally keeps its submission busy until you remount
-it. Use Storybook's remount control to reset the example.
+Visible stories wait for you to interact. Read-only assertions may check their
+initial state, but clicking, typing, navigation, and submission are manual.
+Automated scenarios have names ending in **Interaction Test** and are excluded
+from Docs. Docs autoplay is disabled.
+
+**Pending** states supplied directly are ready to inspect immediately. **Pending
+After Submit** and **Save Failed After Submit** start idle; follow their Manual
+Setup note to reach the state. Remount the example to reset it.
 
 ## Compare Environments
 

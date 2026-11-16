@@ -3,7 +3,7 @@ import type { Preview } from "@storybook/react-vite";
 import { createContext, useContext, type ComponentType } from "react";
 import { themes } from "storybook/theming";
 import { ensureGridModulesRegistered } from "../src/ag-grid-modules";
-import { MantineProvider } from "@mantine/core";
+import { MantineProvider, Text } from "@mantine/core";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -25,6 +25,7 @@ import {
 
 type RouterStoryParameters = {
   colorScheme?: "light" | "dark";
+  manualSetup?: string;
   router?: {
     initialPath?: string;
   };
@@ -122,6 +123,7 @@ const preview: Preview & {
       },
     },
     docs: {
+      story: { autoplay: false },
       // Docs theme does not adapt to system theme out of the box.
       theme: themes.light,
     },
@@ -154,6 +156,12 @@ const preview: Preview & {
             context.globals.colorScheme
           }
         >
+          {!context.tags.includes("regression") &&
+            (context.parameters as RouterStoryParameters).manualSetup && (
+              <Text size="sm" c="dimmed" p="sm" role="note">
+                {(context.parameters as RouterStoryParameters).manualSetup}
+              </Text>
+            )}
           <UserLocaleProvider
             locale={normalizeUserLocaleInput(context.globals.locale)}
           >

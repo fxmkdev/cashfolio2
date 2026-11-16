@@ -73,6 +73,9 @@ export const General: Story = {
 };
 
 export const Save: Story = {
+  ...General,
+  name: "Save Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const name = canvas.getByLabelText(/Account Book Name/);

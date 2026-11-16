@@ -194,15 +194,17 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
 }
 
 export const StableHandlesDuringDragAndSave: Story = {
-  tags: ["regression", "!autodocs"],
   args: { api: createOrganizerStoryApi() },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(),
+  name: "Stable Handles During Drag And Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const StableHandlesDuringRecovery: Story = {
-  tags: ["regression", "!autodocs"],
   args: { api: createOrganizerStoryApi("network") },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(true),
+  name: "Stable Handles During Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

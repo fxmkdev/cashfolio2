@@ -10,7 +10,7 @@ const meta: Meta<typeof AccountsPageView> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const ExpenseCategories: Story = {
+export const Default: Story = {
   parameters: {
     router: {
       initialPath:
@@ -24,6 +24,15 @@ export const ExpenseCategories: Story = {
       expandGroups
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ExpenseCategories: Story = {
+  ...Default,
+  name: "Expense Categories Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -89,7 +98,7 @@ export const ExpenseCategories: Story = {
   },
 };
 
-export const CategoriesWithArchived: Story = {
+export const CategoriesWithArchivedView: Story = {
   parameters: {
     router: {
       initialPath:
@@ -103,6 +112,15 @@ export const CategoriesWithArchived: Story = {
       expandGroups
     />
   ),
+  name: "Categories With Archived Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoriesWithArchived: Story = {
+  ...CategoriesWithArchivedView,
+  name: "Categories With Archived Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const visibility = canvas.getByRole("checkbox", { name: "Show Archived" });
@@ -127,15 +145,87 @@ export const CategoriesWithArchived: Story = {
   },
 };
 
-export const CategoriesMobile: Story = {
+export const CategoriesMobileView: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   ...ExpenseCategories,
   parameters: {
     ...ExpenseCategories.parameters,
   },
+  name: "Categories Mobile Playground",
+  tags: ["!regression"],
+  play: undefined,
 };
 
-export const IncomeCategories: Story = {
+export const CategoriesMobile: Story = {
+  ...CategoriesMobileView,
+  name: "Categories Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      within(canvas.getByRole("tablist", { name: "Category Type" })).getByRole(
+        "tab",
+        { name: "Expenses" },
+      ),
+    ).toHaveAttribute("aria-selected", "true");
+    const utilities = await canvas.findByText("Utilities", { exact: true });
+    const expander = utilities
+      .closest(".ag-row")
+      ?.querySelector<HTMLElement>(".ag-group-contracted");
+    if (expander) await userEvent.click(expander);
+    await waitFor(() =>
+      expect(canvas.getByText("Electricity", { exact: true })).toBeVisible(),
+    );
+    // Name scrolls while row actions remain pinned, including on mobile.
+    await expect(
+      canvasElement.querySelector(
+        '.ag-grid-scrolling-cells [col-id="ag-Grid-AutoColumn"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      canvasElement.querySelector(
+        '.ag-grid-pinned-right-cells [col-id="actions"]',
+      ),
+    ).toBeVisible();
+    const body = within(canvasElement.ownerDocument.body);
+    for (const [name, reason] of [
+      ["Electricity", "Cannot delete category because it has bookings"],
+      [
+        "Housing",
+        "Cannot delete category group because it contains categories",
+      ],
+    ]) {
+      const row = canvas
+        .getByText(name, { exact: true })
+        .closest<HTMLElement>(".ag-row");
+      if (!row) throw new Error(`Missing ${name} row`);
+      await userEvent.hover(row);
+      const deleteItem = within(row).getByRole("button", {
+        name: new RegExp(`^Delete ${name}$`),
+      });
+      await expect(deleteItem).toBeDisabled();
+      await expect(deleteItem).toHaveAccessibleDescription(reason);
+      await userEvent.hover(deleteItem);
+      await waitFor(() =>
+        expect(body.getByRole("tooltip")).toHaveTextContent(reason),
+      );
+      await userEvent.unhover(deleteItem);
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(body.queryByRole("menu")).not.toBeInTheDocument(),
+      );
+    }
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Expense Category" }),
+    );
+    await findVisibleDialog(
+      within(canvasElement.ownerDocument.body),
+      "New Category",
+    );
+  },
+};
+
+export const IncomeCategoriesView: Story = {
   parameters: {
     router: {
       initialPath:
@@ -145,6 +235,15 @@ export const IncomeCategories: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="active" initialTab="EQUITY-INCOME" />
   ),
+  name: "Income Categories Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const IncomeCategories: Story = {
+  ...IncomeCategoriesView,
+  name: "Income Categories Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -168,10 +267,41 @@ export const IncomeCategories: Story = {
   },
 };
 
-export const CategoriesWithArchivedMobile: Story = {
+export const CategoriesWithArchivedMobileView: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   ...CategoriesWithArchived,
   parameters: {
     ...CategoriesWithArchived.parameters,
+  },
+  name: "Categories With Archived Mobile Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoriesWithArchivedMobile: Story = {
+  ...CategoriesWithArchivedMobileView,
+  name: "Categories With Archived Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const visibility = canvas.getByRole("checkbox", { name: "Show Archived" });
+    await expect(visibility).toBeChecked();
+    await waitFor(() =>
+      expect(canvas.getByText("Old Category", { exact: true })).toBeVisible(),
+    );
+    expect(canvasElement.querySelector('[row-id^="__archived__:"]')).toBeNull();
+    await expect(
+      canvas.getByRole("button", { name: "Add Expense Category" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("navigation", { name: "Category Archive" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(visibility);
+    await waitFor(() =>
+      expect(
+        canvas.queryByText("Old Category", { exact: true }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(visibility).not.toBeChecked();
   },
 };

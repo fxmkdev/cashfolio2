@@ -55,7 +55,6 @@ function NativeDesignComparison() {
 }
 
 export const NativeDesignLight: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: { colorScheme: "light" },
   render: () => <NativeDesignComparison />,
   play: async ({ canvasElement }) => {
@@ -107,10 +106,13 @@ export const NativeDesignLight: Story = {
       within(branch).getByRole("button", { name: "Collapse" }),
     ).toBeVisible();
   },
+  name: "Native Design Light Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NativeDesignDark: Story = {
-  tags: ["regression", "!autodocs"],
   ...NativeDesignLight,
   parameters: { colorScheme: "dark" },
+  name: "Native Design Dark Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

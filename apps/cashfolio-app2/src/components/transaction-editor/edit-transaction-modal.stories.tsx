@@ -103,23 +103,41 @@ const editCategoryUnitAndCurrency: Story["play"] = async ({
   );
 };
 
-export const CategoryUnitAndCurrencyEditing: Story = {
+export const CategoryUnitAndCurrencyEditingView: Story = {
   args: { initialValues: editTransactionInitialValues },
+  name: "Category Unit And Currency Editing Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CategoryUnitAndCurrencyEditing: Story = {
+  ...CategoryUnitAndCurrencyEditingView,
+  name: "Category Unit And Currency Editing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: editCategoryUnitAndCurrency,
 };
 
-export const ImportedCategoryUnitAndCurrencyEditing: Story = {
+export const ImportedCategoryUnitAndCurrencyEditingView: Story = {
   args: {
     initialValues: editTransactionInitialValues,
     submitLabel: "Save Draft",
   },
+  name: "Imported Category Unit And Currency Editing Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ImportedCategoryUnitAndCurrencyEditing: Story = {
+  ...ImportedCategoryUnitAndCurrencyEditingView,
+  name: "Imported Category Unit And Currency Editing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: editCategoryUnitAndCurrency,
 };
 
 export const CancelInteraction: Story = {
-  args: {
-    initialValues: editTransactionInitialValues,
-  },
+  ...Edit,
+  name: "Cancel Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
@@ -140,7 +158,6 @@ export const CreateWithCustomSubmitLabel: Story = {
 };
 
 export const PendingSubmitDisablesActions: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editTransactionInitialValues,
     onSubmit: fn(
@@ -161,10 +178,11 @@ export const PendingSubmitDisablesActions: Story = {
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
   },
+  name: "Pending Submit Disables Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SubmitCommitsActiveCell: Story = {
-  tags: ["regression", "!autodocs"],
   args: { initialValues: editTransactionInitialValues, onDirtyChange: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -195,10 +213,11 @@ export const SubmitCommitsActiveCell: Story = {
       ),
     );
   },
+  name: "Submit Commits Active Cell Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const ProvisionalDateDirtyState: Story = {
-  tags: ["regression", "!autodocs"],
   args: { onDirtyChange: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -217,10 +236,11 @@ export const ProvisionalDateDirtyState: Story = {
       expect(args.onDirtyChange).toHaveBeenLastCalledWith(false),
     );
   },
+  name: "Provisional Date Dirty State Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const FailedSubmitRetainsDraft: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editTransactionInitialValues,
     onSubmit: fn(async () => {
@@ -249,19 +269,32 @@ export const FailedSubmitRetainsDraft: Story = {
       expect.objectContaining({ description: "Retained draft" }),
     );
   },
+  name: "Failed Submit Retains Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const Pending: Story = {
+export const PendingAfterSubmit: Story = {
   args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
   parameters: {
+    manualSetup:
+      "Click Save to keep this prefilled split transaction pending. Remount the story to reset it.",
     docs: {
-      story: { autoplay: true },
+      story: { autoplay: false },
       description: {
         story:
-          "The submission remains pending for inspection. Remount the story to reset it.",
+          "Click Save to keep this prefilled split transaction pending. Remount the story to reset it.",
       },
     },
   },
+  name: "Pending After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingAfterSubmit,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -272,9 +305,27 @@ export const Pending: Story = {
   },
 };
 
-export const SaveFailed: Story = {
-  parameters: { docs: { story: { autoplay: true } } },
+export const SaveFailedAfterSubmit: Story = {
+  parameters: {
+    manualSetup:
+      "Click Save to display the failed-save message. The draft remains editable; remount the story to reset it.",
+    docs: {
+      description: {
+        story:
+          "Click Save to display the failed-save message. The existing draft remains editable; remount the story to reset it.",
+      },
+    },
+  },
   args: { ...FailedSubmitRetainsDraft.args },
+  name: "Save Failed After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SaveFailed: Story = {
+  ...SaveFailedAfterSubmit,
+  name: "Save Failed Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));

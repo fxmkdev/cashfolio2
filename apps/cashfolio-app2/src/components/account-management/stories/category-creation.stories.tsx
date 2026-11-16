@@ -9,7 +9,7 @@ const meta: Meta<typeof AccountsPageView> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const ContextualIncomeCategoryCreation: Story = {
+export const Default: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -17,6 +17,15 @@ export const ContextualIncomeCategoryCreation: Story = {
       expandGroups
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ContextualIncomeCategoryCreation: Story = {
+  ...Default,
+  name: "Contextual Income Category Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
       body = within(canvasElement.ownerDocument.body);

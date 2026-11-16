@@ -19,7 +19,6 @@ export const ActiveHappyPath: Story = {
 };
 
 export const RouteSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active",
@@ -44,6 +43,8 @@ export const RouteSmoke: Story = {
       '"mode":"active"',
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const MixedBalanceHierarchy: Story = {
@@ -105,7 +106,6 @@ export const MixedBalanceHierarchy: Story = {
 };
 
 export const ConstrainedWidthWithGainLoss: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <Box w={960} maw="100%">
       <AccountsPageStoryHarness
@@ -236,4 +236,6 @@ export const ConstrainedWidthWithGainLoss: Story = {
     await userEvent.keyboard("{Escape}");
     viewport.scrollLeft = 0;
   },
+  name: "Constrained Width With Gain Loss Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

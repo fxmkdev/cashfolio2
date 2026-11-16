@@ -103,7 +103,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const OverdraftAndOverpayment: Story = {
+  ...Default,
+  name: "Overdraft And Overpayment Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -150,8 +159,17 @@ export const OverdraftAndOverpayment: Story = {
   },
 };
 
-export const AllBalancesOwed: Story = {
+export const AllBalancesOwedView: Story = {
   args: { overview: overviewForBalances(-50, -20) },
+  name: "All Balances Owed Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AllBalancesOwed: Story = {
+  ...AllBalancesOwedView,
+  name: "All Balances Owed Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -175,8 +193,17 @@ export const AllBalancesOwed: Story = {
   },
 };
 
-export const MissingValuationsOnBothSides: Story = {
+export const MissingValuationsOnBothSidesView: Story = {
   args: { overview: baseOverview },
+  name: "Missing Valuations On Both Sides Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const MissingValuationsOnBothSides: Story = {
+  ...MissingValuationsOnBothSidesView,
+  name: "Missing Valuations On Both Sides Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const note =
@@ -208,7 +235,6 @@ function ZeroCrossingHarness() {
 }
 
 export const PeriodSwitchClampsDrillPath: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <ZeroCrossingHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -240,4 +266,6 @@ export const PeriodSwitchClampsDrillPath: Story = {
     await expect(await table.findByText("Credit Card")).toBeVisible();
     await expect(table.queryByText("Bank Account")).not.toBeInTheDocument();
   },
+  name: "Period Switch Clamps Drill Path Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

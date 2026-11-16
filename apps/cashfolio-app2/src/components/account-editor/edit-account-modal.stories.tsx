@@ -1,4 +1,7 @@
-import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
+import {
+  createPendingStorySubmitState,
+  pendingStorySubmission,
+} from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { EditAccountModal } from "./edit-account-modal";
@@ -100,7 +103,7 @@ export const Edit: Story = {
   },
 };
 
-export const ManagedPortfolio: Story = {
+export const ManagedPortfolioView: Story = {
   args: {
     initialValues: {
       ...editAccountInitialValues,
@@ -110,6 +113,15 @@ export const ManagedPortfolio: Story = {
     },
     editingId: "portfolio",
   },
+  name: "Managed Portfolio Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ManagedPortfolio: Story = {
+  ...ManagedPortfolioView,
+  name: "Managed Portfolio Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = await body.findByRole("dialog", { name: "Edit Account" });
@@ -152,7 +164,7 @@ export const ManagedPortfolio: Story = {
   },
 };
 
-export const LiabilityOpeningDebt: Story = {
+export const LiabilityOpeningDebtView: Story = {
   args: {
     initialValues: {
       ...editAccountInitialValues,
@@ -165,6 +177,15 @@ export const LiabilityOpeningDebt: Story = {
     typeDescriptor: "BALANCE",
     editingId: "account-card",
   },
+  name: "Liability Opening Debt Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const LiabilityOpeningDebt: Story = {
+  ...LiabilityOpeningDebtView,
+  name: "Liability Opening Debt Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = await body.findByRole("dialog", { name: "Edit Account" });
@@ -182,7 +203,7 @@ export const LiabilityOpeningDebt: Story = {
   },
 };
 
-export const StatementImportSettings: Story = {
+export const StatementImportSettingsView: Story = {
   args: {
     initialValues: {
       ...editAccountInitialValues,
@@ -194,6 +215,15 @@ export const StatementImportSettings: Story = {
     },
     editingId: "account-checking",
   },
+  name: "Statement Import Settings Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const StatementImportSettings: Story = {
+  ...StatementImportSettingsView,
+  name: "Statement Import Settings Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = await body.findByRole("dialog", { name: "Edit Account" });
@@ -233,10 +263,9 @@ export const StatementImportSettings: Story = {
 };
 
 export const CollapsedStatementImportError: Story = {
-  args: {
-    initialValues: editAccountInitialValues,
-    editingId: "account-checking",
-  },
+  ...Edit,
+  name: "Collapsed Statement Import Error Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = await body.findByRole("dialog", { name: "Edit Account" });
@@ -263,16 +292,17 @@ export const CollapsedStatementImportError: Story = {
 };
 
 export const ValidationSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
     await userEvent.click(body.getByRole("button", { name: "Create" }));
     await expect(body.getByText("Name is required")).toBeInTheDocument();
   },
+  name: "Validation Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const NestedAssetClass: Story = {
+export const NestedAssetClassView: Story = {
   args: {
     initialValues: { ...editAccountInitialValues, assetClassId: "swiss" },
     editingId: "account-checking",
@@ -294,6 +324,15 @@ export const NestedAssetClass: Story = {
       </AssetClassContext.Provider>
     ),
   ],
+  name: "Nested Asset Class Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const NestedAssetClass: Story = {
+  ...NestedAssetClassView,
+  name: "Nested Asset Class Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
@@ -318,7 +357,6 @@ export const NestedAssetClass: Story = {
 };
 
 export const PendingSubmitDisablesActions: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editAccountInitialValues,
     editingId: "account-checking",
@@ -348,19 +386,35 @@ export const PendingSubmitDisablesActions: Story = {
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
   },
+  name: "Pending Submit Disables Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const Pending: Story = {
-  args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
+export const PendingState: Story = {
+  args: {
+    ...Edit.args,
+    onSubmit: fn(pendingStorySubmission),
+    submitState: createPendingStorySubmitState(),
+  },
   parameters: {
     docs: {
-      story: { autoplay: true },
+      story: { autoplay: false },
       description: {
         story:
-          "The submission remains pending for inspection. Remount the story to reset it.",
+          "Pending is supplied directly through submitState. No submission runs on mount; controls are intentionally disabled.",
       },
     },
   },
+  name: "Pending",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingState,
+  args: { ...PendingState.args, submitState: undefined },
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 

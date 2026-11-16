@@ -16,7 +16,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const SubmissionGuards: Story = {
+  ...Default,
+  name: "Submission Guards Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
@@ -52,7 +61,7 @@ export const SubmissionGuards: Story = {
   },
 };
 
-export const CustomNestedClass: Story = {
+export const CustomNestedClassView: Story = {
   decorators: [
     (Story) => (
       <AssetClassContext.Provider
@@ -70,6 +79,15 @@ export const CustomNestedClass: Story = {
       </AssetClassContext.Provider>
     ),
   ],
+  name: "Custom Nested Class Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CustomNestedClass: Story = {
+  ...CustomNestedClassView,
+  name: "Custom Nested Class Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
@@ -90,6 +108,9 @@ export const CustomNestedClass: Story = {
 };
 
 export const CancelBeforeChoosing: Story = {
+  ...Default,
+  name: "Cancel Before Choosing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(

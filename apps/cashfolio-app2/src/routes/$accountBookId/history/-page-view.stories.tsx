@@ -159,7 +159,6 @@ function EmptyViewTransition(props: HistoryPageViewProps) {
 }
 
 export const PreservesLegendAcrossEmptyView: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     history: {
       ...history,
@@ -186,6 +185,8 @@ export const PreservesLegendAcrossEmptyView: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Show Income" }));
     await waitFor(() => expect(cumulative()).toBeChecked());
   },
+  name: "Preserves Legend Across Empty View Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 const creditCardHistory: PeriodHistoryResponse = {

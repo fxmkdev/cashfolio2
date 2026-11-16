@@ -76,7 +76,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AccountBooksKeepIndependentPaths: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const card = within(
@@ -140,6 +139,8 @@ export const AccountBooksKeepIndependentPaths: Story = {
       }),
     ).toBeChecked();
   },
+  name: "Account Books Keep Independent Paths Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 const periodBookId = "grouping-period-ancestor";
@@ -200,7 +201,6 @@ function PeriodSwitchHarness() {
   );
 }
 export const PeriodChangesRetainSurvivingClass: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <PeriodSwitchHarness />,
   loaders: [
     () => {
@@ -256,4 +256,6 @@ export const PeriodChangesRetainSurvivingClass: Story = {
       ).toEqual([equities.id]);
     });
   },
+  name: "Period Changes Retain Surviving Class Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

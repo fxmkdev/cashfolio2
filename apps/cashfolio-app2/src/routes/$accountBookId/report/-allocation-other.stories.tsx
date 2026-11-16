@@ -156,7 +156,16 @@ async function navigateToOtherAction(
   return actionCell;
 }
 
+export const OtherDetailsAndNavigationView: Story = {
+  name: "Other Details And Navigation Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const OtherDetailsAndNavigation: Story = {
+  ...OtherDetailsAndNavigationView,
+  name: "Other Details And Navigation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const allocationModes = within(
@@ -261,7 +270,6 @@ export const OtherDetailsAndNavigation: Story = {
 };
 
 export const ContextChangesCloseDetails: Story = {
-  tags: ["regression", "!autodocs"],
   render: (args) => <ContextHarness {...args} />,
   play: async ({ canvasElement }) => {
     for (const name of ["Change Period Externally", "Change Book Externally"]) {
@@ -277,9 +285,14 @@ export const ContextChangesCloseDetails: Story = {
       }
     }
   },
+  name: "Context Changes Close Details Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OtherSliceOpensDetails: Story = {
+  ...OtherDetailsAndNavigationView,
+  name: "Other Slice Opens Details Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const chart = await canvas.findByTestId(
@@ -340,7 +353,7 @@ const syntheticHierarchy = hierarchy.map((node) =>
     : node,
 );
 
-export const SyntheticBalancesHaveNoLedger: Story = {
+export const SyntheticBalancesHaveNoLedgerView: Story = {
   args: {
     overview: {
       ...overview,
@@ -356,6 +369,15 @@ export const SyntheticBalancesHaveNoLedger: Story = {
       },
     },
   },
+  name: "Synthetic Balances Have No Ledger Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SyntheticBalancesHaveNoLedger: Story = {
+  ...SyntheticBalancesHaveNoLedgerView,
+  name: "Synthetic Balances Have No Ledger Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const dialog = await openOther(canvasElement);
     const balance = dialog.getByText("USD Transfer Clearing", { exact: true });

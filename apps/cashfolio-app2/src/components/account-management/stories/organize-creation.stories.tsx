@@ -62,7 +62,6 @@ function CreationHarness({
 }
 
 export const OrganizeCreationActions: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <CreationHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
@@ -112,10 +111,11 @@ export const OrganizeCreationActions: Story = {
     await expect(dialog.getByLabelText("Parent Group")).toHaveValue("");
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
+  name: "Organize Creation Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeCreationPendingAndRecovery: Story = {
-  tags: ["regression", "!autodocs"],
   args: { onSubmitCreateGroup: fn(async () => {}) },
   render: (args) => (
     <CreationHarness
@@ -182,6 +182,8 @@ export const OrganizeCreationPendingAndRecovery: Story = {
       release();
     }
   },
+  name: "Organize Creation Pending And Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 function ExistingEditHarness({
@@ -207,7 +209,6 @@ function ExistingEditHarness({
 }
 
 export const OrganizeRetainsAndRefreshesExistingEdit: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <ExistingEditHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
@@ -243,10 +244,11 @@ export const OrganizeRetainsAndRefreshesExistingEdit: Story = {
       await region.findByText("Retained Checking Draft", { exact: true }),
     ).toBeVisible();
   },
+  name: "Organize Retains And Refreshes Existing Edit Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NormalEditSubmissionQueuesOrganizeEntry: Story = {
-  tags: ["regression", "!autodocs"],
   args: { onSubmitUpdateAccount: fn(async () => {}) },
   render: (args) => (
     <ExistingEditHarness
@@ -305,4 +307,6 @@ export const NormalEditSubmissionQueuesOrganizeEntry: Story = {
       release();
     }
   },
+  name: "Normal Edit Submission Queues Organize Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

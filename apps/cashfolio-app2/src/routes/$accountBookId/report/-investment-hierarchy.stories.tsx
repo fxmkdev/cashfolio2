@@ -194,7 +194,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const TablesWithLongPaths: Story = {
+  ...Default,
+  name: "Tables With Long Paths Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const allocationTable = within(
@@ -241,13 +250,22 @@ export const TablesWithLongPaths: Story = {
   },
 };
 
-export const AllocationAccountPaths: Story = {
+export const AllocationAccountPathsView: Story = {
   loaders: [
     () => {
       storeState(false);
       return {};
     },
   ],
+  name: "Allocation Account Paths Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AllocationAccountPaths: Story = {
+  ...AllocationAccountPathsView,
+  name: "Allocation Account Paths Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const chart = await canvas.findByTestId(
@@ -292,7 +310,7 @@ export const AllocationAccountPaths: Story = {
   },
 };
 
-export const SingleManagedPortfolio: Story = {
+export const SingleManagedPortfolioView: Story = {
   args: {
     overview: {
       ...overview,
@@ -326,6 +344,15 @@ export const SingleManagedPortfolio: Story = {
       return {};
     },
   ],
+  name: "Single Managed Portfolio Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SingleManagedPortfolio: Story = {
+  ...SingleManagedPortfolioView,
+  name: "Single Managed Portfolio Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const chart = await canvas.findByTestId(

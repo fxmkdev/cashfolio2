@@ -132,7 +132,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
@@ -278,10 +277,11 @@ export const RouteSmoke: Story = {
       "returnTo",
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DesktopRailSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
@@ -358,11 +358,12 @@ export const DesktopRailSmoke: Story = {
     ).not.toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: "Settings" })).toBeVisible();
   },
+  name: "Desktop Rail Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const MobileFooterControlsSmoke: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
-  tags: ["regression", "!autodocs"],
   loaders: [resetDesktopRailPreference],
   parameters: {
     router: {
@@ -388,6 +389,8 @@ export const MobileFooterControlsSmoke: Story = {
     await userEvent.click(await findUserMenuButton(canvasElement));
     await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
   },
+  name: "Mobile Footer Controls Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NeutralLedgerNavigation: Story = {

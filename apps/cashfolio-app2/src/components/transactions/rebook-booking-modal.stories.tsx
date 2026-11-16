@@ -51,6 +51,9 @@ export const NoEligibleTarget: Story = {
 };
 
 export const SubmitAndCancel: Story = {
+  ...Default,
+  name: "Submit And Cancel Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -70,7 +73,6 @@ export const SubmitAndCancel: Story = {
 };
 
 export const EnterSubmitPendingGuard: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     onSubmit: fn(
       async () => await new Promise((resolve) => setTimeout(resolve, 150)),
@@ -93,19 +95,32 @@ export const EnterSubmitPendingGuard: Story = {
     await waitFor(() => expect(submitButton).not.toBeDisabled());
     await expect(submitButton).not.toHaveAttribute("data-loading");
   },
+  name: "Enter Submit Pending Guard Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const Pending: Story = {
+export const PendingAfterSubmit: Story = {
   args: { ...{}, onSubmit: fn(pendingStorySubmission) },
   parameters: {
+    manualSetup:
+      "Select Savings (CHF) in Account or Category, then click Rebook. The submission remains pending until you remount the story.",
     docs: {
-      story: { autoplay: true },
+      story: { autoplay: false },
       description: {
         story:
-          "The submission remains pending for inspection. Remount the story to reset it.",
+          "Select Savings (CHF) in Account or Category, then click Rebook. The submission remains pending until you remount the story.",
       },
     },
   },
+  name: "Pending After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingAfterSubmit,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(body.getByLabelText("Account or Category"));

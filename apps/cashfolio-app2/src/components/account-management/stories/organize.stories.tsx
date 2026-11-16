@@ -18,7 +18,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const OrganizeEntryAndExit: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness initialMode="active" organize bulkAssignment />
   ),
@@ -81,6 +80,8 @@ export const OrganizeEntryAndExit: Story = {
     ).toBeVisible();
     await expectStationaryActions("Organize");
   },
+  name: "Organize Entry And Exit Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 function deferredEntryScenario(failFirst: boolean): NonNullable<Story["play"]> {
@@ -135,7 +136,7 @@ function deferredEntryScenario(failFirst: boolean): NonNullable<Story["play"]> {
   };
 }
 
-export const DeferredOrganizeEntry: Story = {
+export const Default: Story = {
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -143,10 +144,19 @@ export const DeferredOrganizeEntry: Story = {
       organizerApi={args.organizerApi}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DeferredOrganizeEntry: Story = {
+  ...Default,
+  name: "Deferred Organize Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: deferredEntryScenario(false),
 };
 
-export const OrganizeEntryFailureAndRetry: Story = {
+export const OrganizeEntryFailureAndRetryView: Story = {
   args: { organizerApi: createOrganizerStoryApi("load") },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -154,10 +164,19 @@ export const OrganizeEntryFailureAndRetry: Story = {
       organizerApi={args.organizerApi}
     />
   ),
+  name: "Organize Entry Failure And Retry Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OrganizeEntryFailureAndRetry: Story = {
+  ...OrganizeEntryFailureAndRetryView,
+  name: "Organize Entry Failure And Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: deferredEntryScenario(true),
 };
 
-export const OrganizeOnlyForAccountStructure: Story = {
+export const OrganizeOnlyForAccountStructureView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -166,6 +185,15 @@ export const OrganizeOnlyForAccountStructure: Story = {
       bulkAssignment
     />
   ),
+  name: "Organize Only For Account Structure Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OrganizeOnlyForAccountStructure: Story = {
+  ...OrganizeOnlyForAccountStructureView,
+  name: "Organize Only For Account Structure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const financialGrid = await canvas.findByRole("treegrid");
@@ -193,7 +221,6 @@ export const OrganizeOnlyForAccountStructure: Story = {
 };
 
 export const GroupingChangeCancelsOrganizeEntry: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -248,4 +275,6 @@ export const GroupingChangeCancelsOrganizeEntry: Story = {
       args.organizerApi!.load = original;
     }
   },
+  name: "Grouping Change Cancels Organize Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

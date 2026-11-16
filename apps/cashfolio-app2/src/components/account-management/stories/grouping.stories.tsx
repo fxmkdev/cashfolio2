@@ -23,7 +23,7 @@ const meta: Meta<typeof AccountsPageView> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const AssetClassSwitchingAndExpansion: Story = {
+export const Default: Story = {
   beforeEach: () => {
     sessionStorage.removeItem("storybook:account-grouping:accountStructure");
     sessionStorage.removeItem("storybook:account-grouping:assetClass");
@@ -38,6 +38,15 @@ export const AssetClassSwitchingAndExpansion: Story = {
       )}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AssetClassSwitchingAndExpansion: Story = {
+  ...Default,
+  name: "Asset Class Switching And Expansion Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const classId = assetClassRowId("EQUITIES");
@@ -208,7 +217,7 @@ export const AssetClassSwitchingAndExpansion: Story = {
   },
 };
 
-export const AssetClassFilteredBulkAssignment: Story = {
+export const AssetClassFilteredBulkAssignmentView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -220,6 +229,15 @@ export const AssetClassFilteredBulkAssignment: Story = {
       )}
     />
   ),
+  name: "Asset Class Filtered Bulk Assignment Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AssetClassFilteredBulkAssignment: Story = {
+  ...AssetClassFilteredBulkAssignmentView,
+  name: "Asset Class Filtered Bulk Assignment Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -270,7 +288,6 @@ export const AssetClassFilteredBulkAssignment: Story = {
 };
 
 export const AssetClassTrackingMethodRegrouping: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -346,4 +363,6 @@ export const AssetClassTrackingMethodRegrouping: Story = {
       canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
     ).not.toBeInTheDocument();
   },
+  name: "Asset Class Tracking Method Regrouping Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

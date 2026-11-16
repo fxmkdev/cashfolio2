@@ -96,7 +96,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const HierarchyView: Story = {
+  name: "Hierarchy Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const Hierarchy: Story = {
+  ...HierarchyView,
+  name: "Hierarchy Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -133,6 +142,9 @@ export const Hierarchy: Story = {
   },
 };
 export const CreateChild: Story = {
+  ...HierarchyView,
+  name: "Create Child Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
@@ -156,6 +168,9 @@ export const CreateChild: Story = {
   },
 };
 export const DeleteAssignedLeaf: Story = {
+  ...HierarchyView,
+  name: "Delete Assigned Leaf Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const parent = await rowActions(canvasElement, "equities");
@@ -180,6 +195,9 @@ export const DeleteAssignedLeaf: Story = {
 };
 
 export const ParentSelectionExcludesSubtree: Story = {
+  ...HierarchyView,
+  name: "Parent Selection Excludes Subtree Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "equities");
@@ -206,6 +224,9 @@ export const ParentSelectionExcludesSubtree: Story = {
 };
 
 export const ClearParentToTopLevel: Story = {
+  ...HierarchyView,
+  name: "Clear Parent To Top Level Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "swiss");
@@ -232,6 +253,9 @@ export const ClearParentToTopLevel: Story = {
 };
 
 export const NestedParentSelection: Story = {
+  ...HierarchyView,
+  name: "Nested Parent Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
@@ -261,6 +285,9 @@ export const NestedParentSelection: Story = {
 };
 
 export const NestedReplacementSelection: Story = {
+  ...HierarchyView,
+  name: "Nested Replacement Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const actions = await rowActions(canvasElement, "cash");
@@ -280,6 +307,9 @@ export const NestedReplacementSelection: Story = {
   },
 };
 export const SaveFailurePreservesDraft: Story = {
+  ...HierarchyView,
+  name: "Save Failure Preserves Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     args.onSave.mockRejectedValueOnce(
       new Error("The selected parent is no longer available."),
@@ -307,6 +337,9 @@ export const SaveFailurePreservesDraft: Story = {
   },
 };
 export const Edit: Story = {
+  ...HierarchyView,
+  name: "Edit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     let actions = await rowActions(canvasElement, "swiss");
@@ -341,7 +374,6 @@ export const Empty: Story = {
   },
 };
 export const ExpansionSurvivesRefresh: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const parent = await gridRow(canvasElement, "equities");
     await userEvent.click(parent.querySelector(".ag-group-expanded")!);
@@ -387,6 +419,8 @@ export const ExpansionSurvivesRefresh: Story = {
       expect(await gridRow(canvasElement, "swiss")).toBeVisible(),
     );
   },
+  name: "Expansion Survives Refresh Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const DeepHierarchy: Story = {
   args: {

@@ -67,7 +67,6 @@ export const EditModalOpen: Story = {
 };
 
 export const AssetClassHelpEscapePreservesDraft: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness initialMode="active" startWithEditModal={true} />
   ),
@@ -122,10 +121,11 @@ export const AssetClassHelpEscapePreservesDraft: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
   },
+  name: "Asset Class Help Escape Preserves Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const ContextualAccountCreation: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <AccountsPageStoryHarness initialMode="active" expandGroups />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
@@ -204,10 +204,11 @@ export const ContextualAccountCreation: Story = {
       canvasElement.querySelector(".ag-row-pinned [data-row-actions-trigger]"),
     ).toBeNull();
   },
+  name: "Contextual Account Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const CreationDefaultsResetOnBookAndTabChanges: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <CreationScopeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -226,4 +227,6 @@ export const CreationDefaultsResetOnBookAndTabChanges: Story = {
       );
     }
   },
+  name: "Creation Defaults Reset On Book And Tab Changes Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

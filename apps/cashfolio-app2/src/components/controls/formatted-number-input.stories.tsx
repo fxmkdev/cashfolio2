@@ -90,7 +90,7 @@ export const ReadOnly: Story = { args: { readOnly: true } };
 export const ValidationError: Story = {
   args: { error: "Enter an amount greater than zero.", value: "-10" },
 };
-export const Editable: Story = {
+export const EditableView: Story = {
   args: { value: "", locale: "en-US" },
   parameters: {
     docs: {
@@ -99,6 +99,15 @@ export const Editable: Story = {
       },
     },
   },
+  name: "Editable Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Editable: Story = {
+  ...EditableView,
+  name: "Editable Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const input = within(canvasElement).getByRole("textbox", {
       name: "Amount",

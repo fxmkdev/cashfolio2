@@ -190,12 +190,28 @@ function entryStory({
   };
 }
 
-export const OrganizeEntryWaitsForCreation = entryStory();
-export const OrganizeEntryWaitsForEdit = entryStory({ edit: true });
-export const OrganizeEntryPreservesFailedEditor = entryStory({
-  edit: true,
-  failSave: true,
-});
-export const OrganizeEntryRefreshDoesNotReplayCreation = entryStory({
-  failEntryRefresh: true,
-});
+export const OrganizeEntryWaitsForCreation = {
+  ...entryStory(),
+  name: "Organize Entry Waits For Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+export const OrganizeEntryWaitsForEdit = {
+  ...entryStory({ edit: true }),
+  name: "Organize Entry Waits For Edit Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+export const OrganizeEntryPreservesFailedEditor = {
+  ...entryStory({
+    edit: true,
+    failSave: true,
+  }),
+  name: "Organize Entry Preserves Failed Editor Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+export const OrganizeEntryRefreshDoesNotReplayCreation = {
+  ...entryStory({
+    failEntryRefresh: true,
+  }),
+  name: "Organize Entry Refresh Does Not Replay Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
+};

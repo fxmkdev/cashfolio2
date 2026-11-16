@@ -48,7 +48,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/admin",
@@ -109,4 +108,6 @@ export const RouteSmoke: Story = {
       expect(canvas.getByTestId("router-path")).toHaveTextContent("/");
     });
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

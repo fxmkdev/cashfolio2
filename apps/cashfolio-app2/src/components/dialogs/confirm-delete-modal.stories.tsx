@@ -1,4 +1,7 @@
-import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
+import {
+  createPendingStorySubmitState,
+  pendingStorySubmission,
+} from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
@@ -32,6 +35,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const Interactions: Story = {
+  ...Default,
+  name: "Confirm And Cancel Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -44,7 +50,6 @@ export const Interactions: Story = {
 };
 
 export const PendingConfirmDisablesActions: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     onConfirm: fn(
       async () =>
@@ -68,19 +73,35 @@ export const PendingConfirmDisablesActions: Story = {
     await expect(confirmButton).not.toHaveAttribute("data-loading");
     await expect(cancelButton).not.toBeDisabled();
   },
+  name: "Pending Confirm Disables Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const Pending: Story = {
-  args: { ...{}, onConfirm: fn(pendingStorySubmission) },
+export const PendingState: Story = {
+  args: {
+    ...{},
+    onConfirm: fn(pendingStorySubmission),
+    submitState: createPendingStorySubmitState(),
+  },
   parameters: {
     docs: {
-      story: { autoplay: true },
+      story: { autoplay: false },
       description: {
         story:
-          "The submission remains pending for inspection. Remount the story to reset it.",
+          "Pending is supplied directly through submitState. No submission runs on mount; controls are intentionally disabled.",
       },
     },
   },
+  name: "Pending",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingState,
+  args: { ...PendingState.args, submitState: undefined },
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 

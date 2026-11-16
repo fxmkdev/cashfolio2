@@ -41,7 +41,6 @@ async function lifecycleRow(canvasElement: HTMLElement, id: string) {
 }
 
 export const OrganizeCompactLayoutAndIcons: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   parameters: {
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
@@ -100,10 +99,11 @@ export const OrganizeCompactLayoutAndIcons: Story = {
     await expect(move).toHaveFocus();
     await expect(move).toBeVisible();
   },
+  name: "Organize Compact Layout And Icons Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeArchiveUnarchiveAndDelete: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -194,10 +194,11 @@ export const OrganizeArchiveUnarchiveAndDelete: Story = {
       Object.assign(api, original);
     }
   },
+  name: "Organize Archive Unarchive And Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     organizerApi: createOrganizerStoryApi(undefined, [
       ...organizeStoryNodes,
@@ -260,10 +261,11 @@ export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
       ).toHaveFocus(),
     );
   },
+  name: "Organize Hidden Children Prevent Group Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeLifecycleRefreshRecovery: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -315,4 +317,6 @@ export const OrganizeLifecycleRefreshRecovery: Story = {
       api.archive = originalArchive;
     }
   },
+  name: "Organize Lifecycle Refresh Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

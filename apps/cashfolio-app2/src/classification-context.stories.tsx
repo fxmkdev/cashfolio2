@@ -68,7 +68,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const RefreshPreservesEditorDraft: Story = {
-  tags: ["regression", "!autodocs"],
   render: (args) => <AssetClassProvider {...args} />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
@@ -105,4 +104,6 @@ export const RefreshPreservesEditorDraft: Story = {
       ).toHaveTextContent("Unsaved Draft: new"),
     );
   },
+  name: "Refresh Preserves Editor Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

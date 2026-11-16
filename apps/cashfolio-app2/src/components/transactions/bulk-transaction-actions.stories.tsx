@@ -204,8 +204,13 @@ async function selectRow(canvasElement: HTMLElement, id: string) {
   );
 }
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const SelectAllAndDelete: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -268,10 +273,11 @@ export const SelectAllAndDelete: Story = {
       expect(canvas.queryByRole("toolbar")).not.toBeInTheDocument(),
     );
   },
+  name: "Select All And Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SelectionLifecycle: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await selectRow(canvasElement, "b1");
@@ -302,9 +308,14 @@ export const SelectionLifecycle: Story = {
       expect(canvas.queryByRole("toolbar")).not.toBeInTheDocument(),
     );
   },
+  name: "Selection Lifecycle Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const RebookSelection: Story = {
+  ...Default,
+  name: "Rebook Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -336,7 +347,7 @@ export const RebookSelection: Story = {
   },
 };
 
-export const DeleteFailure: Story = {
+export const DeleteFailureView: Story = {
   args: {
     mode: "transactions",
     deleteTransactions: fn(async () => {
@@ -345,6 +356,15 @@ export const DeleteFailure: Story = {
       );
     }),
   },
+  name: "Delete Failure Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DeleteFailure: Story = {
+  ...DeleteFailureView,
+  name: "Delete Failure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -368,12 +388,21 @@ export const DeleteFailure: Story = {
   },
 };
 
-export const PendingDelete: Story = {
+export const PendingDeleteView: Story = {
   args: {
     deleteTransactions: fn(async () => {
       await new Promise((resolve) => setTimeout(resolve, 800));
     }),
   },
+  name: "Pending Delete Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const PendingDelete: Story = {
+  ...PendingDeleteView,
+  name: "Pending Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -398,7 +427,6 @@ export const PendingDelete: Story = {
 };
 
 export const ShiftSelectionAndClear: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>
@@ -433,10 +461,21 @@ export const ShiftSelectionAndClear: Story = {
     );
     await expect(canvas.queryByRole("toolbar")).not.toBeInTheDocument();
   },
+  name: "Shift Selection And Clear Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const NoCommonRebookTargetView: Story = {
+  args: { incompatible: true },
+  name: "No Common Rebook Target Playground",
+  tags: ["!regression"],
+  play: undefined,
 };
 
 export const NoCommonRebookTarget: Story = {
-  args: { incompatible: true },
+  ...NoCommonRebookTargetView,
+  name: "No Common Rebook Target Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -460,12 +499,21 @@ export const NoCommonRebookTarget: Story = {
   },
 };
 
-export const RebookFailure: Story = {
+export const RebookFailureView: Story = {
   args: {
     submitRebook: fn(async () => {
       throw new Error("Target account is no longer active.");
     }),
   },
+  name: "Rebook Failure Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const RebookFailure: Story = {
+  ...RebookFailureView,
+  name: "Rebook Failure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -490,12 +538,21 @@ export const RebookFailure: Story = {
   },
 };
 
-export const PendingRebook: Story = {
+export const PendingRebookView: Story = {
   args: {
     submitRebook: fn(async () => {
       await new Promise((resolve) => setTimeout(resolve, 800));
     }),
   },
+  name: "Pending Rebook Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const PendingRebook: Story = {
+  ...PendingRebookView,
+  name: "Pending Rebook Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

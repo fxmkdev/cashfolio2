@@ -92,7 +92,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const FirstBookView: Story = {
+  name: "First Book Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const FirstBook: Story = {
+  ...FirstBookView,
+  name: "First Book Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByLabelText(/Account Book Name/)).toHaveValue("");
@@ -128,6 +137,9 @@ export const ReturnToBook: Story = {
 };
 
 export const Validation: Story = {
+  ...FirstBookView,
+  name: "Validation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
@@ -139,6 +151,9 @@ export const Validation: Story = {
 };
 
 export const Submit: Story = {
+  ...FirstBookView,
+  name: "Submit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
@@ -159,12 +174,21 @@ export const Submit: Story = {
   },
 };
 
-export const Pending: Story = {
+export const PendingView: Story = {
   args: {
     onSubmit: fn<(values: NewAccountBookSubmission) => Promise<void>>(
       () => new Promise<void>(() => undefined),
     ),
   },
+  name: "Pending Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingView,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const name = canvas.getByLabelText(/Account Book Name/);
@@ -183,6 +207,9 @@ export const Pending: Story = {
 };
 
 export const FailureAndRetry: Story = {
+  ...FirstBookView,
+  name: "Failure And Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     args.onSubmit.mockRejectedValueOnce(
       new Error("Creation is temporarily unavailable."),
@@ -206,7 +233,6 @@ export const FailureAndRetry: Story = {
 };
 
 export const RouteSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   args: { routeSmoke: true },
   parameters: {
     router: {
@@ -228,4 +254,6 @@ export const RouteSmoke: Story = {
       ),
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

@@ -34,7 +34,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const HierarchyAndParentSelectionView: Story = {
+  parameters: {
+    manualSetup:
+      "Open Asset Class to expand Equities and choose a parent or child. Type a hierarchy path to search; use Clear to return to Unclassified.",
+  },
+  name: "Hierarchy And Parent Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const HierarchyAndParentSelection: Story = {
+  ...HierarchyAndParentSelectionView,
+  name: "Hierarchy And Parent Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -61,6 +74,9 @@ export const HierarchyAndParentSelection: Story = {
 };
 
 export const PathSearchAndKeyboard: Story = {
+  ...HierarchyAndParentSelectionView,
+  name: "Path Search And Keyboard Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -77,8 +93,21 @@ export const PathSearchAndKeyboard: Story = {
   },
 };
 
-export const ClearAndUnclassified: Story = {
+export const ClearAndUnclassifiedView: Story = {
+  parameters: {
+    manualSetup:
+      "Clear Swiss Shares to inspect the empty value, then choose Unclassified from the tree.",
+  },
   args: { defaultValue: "swiss" },
+  name: "Clear And Unclassified Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ClearAndUnclassified: Story = {
+  ...ClearAndUnclassifiedView,
+  name: "Clear And Unclassified Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

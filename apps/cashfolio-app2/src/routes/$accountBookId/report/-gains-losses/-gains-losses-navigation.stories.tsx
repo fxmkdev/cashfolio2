@@ -186,13 +186,42 @@ const exercise: NonNullable<Story["play"]> = async ({
   await expect(args.onOpen).toHaveBeenCalledTimes(args.duplicateNames ? 2 : 1);
 };
 
-export const SingleAccount: Story = { play: exercise };
-export const MultipleAccounts: Story = {
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SingleAccount: Story = {
+  ...Default,
+  name: "Single Account Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: exercise,
+};
+export const MultipleAccountsView: Story = {
   args: { accountCount: 2 },
+  name: "Multiple Accounts Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const MultipleAccounts: Story = {
+  ...MultipleAccountsView,
+  name: "Multiple Accounts Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: exercise,
 };
 
-export const DuplicateAccountNames: Story = {
+export const DuplicateAccountNamesView: Story = {
   args: { accountCount: 2, duplicateNames: true },
+  name: "Duplicate Account Names Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DuplicateAccountNames: Story = {
+  ...DuplicateAccountNamesView,
+  name: "Duplicate Account Names Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: exercise,
 };

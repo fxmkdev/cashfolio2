@@ -24,7 +24,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const OrganizeBulkLifecycleActions: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -119,9 +118,11 @@ export const OrganizeBulkLifecycleActions: Story = {
       toolbar.getByRole("button", { name: "Delete" }),
     ).toHaveAttribute("aria-description", expect.stringContaining("Fund"));
   },
+  name: "Organize Bulk Lifecycle Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const OrganizeBulkUnarchive: Story = {
+export const Default: Story = {
   args: {
     organizerApi: createOrganizerStoryApi(undefined, [
       ...organizeStoryNodes.map((node) => ({
@@ -148,6 +149,15 @@ export const OrganizeBulkUnarchive: Story = {
       organizerApi={args.organizerApi}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OrganizeBulkUnarchive: Story = {
+  ...Default,
+  name: "Organize Bulk Unarchive Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement),
       body = within(canvasElement.ownerDocument.body);
@@ -234,7 +244,6 @@ export const OrganizeBulkUnarchive: Story = {
 };
 
 export const OrganizeCollectiveArchiveAndDelete: Story = {
-  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -312,4 +321,6 @@ export const OrganizeCollectiveArchiveAndDelete: Story = {
       region.getByRole("button", { name: "Archive Checking" }),
     ).toBeEnabled();
   },
+  name: "Organize Collective Archive And Delete Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

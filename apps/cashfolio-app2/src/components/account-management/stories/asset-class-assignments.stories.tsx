@@ -16,7 +16,7 @@ const meta: Meta<typeof AccountsPageView> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const BulkAssetClassSelection: Story = {
+export const BulkAssetClassSelectionView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -25,6 +25,15 @@ export const BulkAssetClassSelection: Story = {
       rowsOverride={bulkRows}
     />
   ),
+  name: "Bulk Asset Class Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkAssetClassSelection: Story = {
+  ...BulkAssetClassSelectionView,
+  name: "Bulk Asset Class Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -75,14 +84,9 @@ export const BulkAssetClassSelection: Story = {
 };
 
 export const BulkAssetClassFilteredSelection: Story = {
-  render: () => (
-    <AccountsPageStoryHarness
-      initialMode="active"
-      bulkAssignment
-      expandGroups
-      rowsOverride={bulkRows}
-    />
-  ),
+  ...BulkAssetClassSelectionView,
+  name: "Bulk Asset Class Filtered Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>
@@ -119,7 +123,7 @@ export const BulkAssetClassFilteredSelection: Story = {
   },
 };
 
-export const GroupAssetClassRetry: Story = {
+export const GroupAssetClassRetryView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -128,6 +132,15 @@ export const GroupAssetClassRetry: Story = {
       rowsOverride={bulkRows}
     />
   ),
+  name: "Group Asset Class Retry Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GroupAssetClassRetry: Story = {
+  ...GroupAssetClassRetryView,
+  name: "Group Asset Class Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -162,7 +175,6 @@ export const GroupAssetClassRetry: Story = {
 };
 
 export const BulkAssetClassScopeReset: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -191,6 +203,8 @@ export const BulkAssetClassScopeReset: Story = {
       ),
     ).not.toBeChecked();
   },
+  name: "Bulk Asset Class Scope Reset Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const GroupAssetClassSummaries: Story = {

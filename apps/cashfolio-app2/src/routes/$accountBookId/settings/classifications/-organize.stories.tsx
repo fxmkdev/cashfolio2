@@ -84,7 +84,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const MoveSubtreeAndDeleteWithReplacement: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -154,10 +153,21 @@ export const MoveSubtreeAndDeleteWithReplacement: Story = {
       canvas.getByText("2 active, 1 archived", { exact: true }),
     ).toBeVisible();
   },
+  name: "Move Subtree And Delete With Replacement Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const FailedLoadRetryView: Story = {
+  args: { failFirstLoad: true },
+  name: "Failed Load Retry Playground",
+  tags: ["!regression"],
+  play: undefined,
 };
 
 export const FailedLoadRetry: Story = {
-  args: { failFirstLoad: true },
+  ...FailedLoadRetryView,
+  name: "Failed Load Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
@@ -186,7 +196,16 @@ export const LegacyParameterDoesNotCreateMode: Story = {
   },
 };
 
+export const DragIntoChildlessClassView: Story = {
+  name: "Drag Into Childless Class Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const DragIntoChildlessClass: Story = {
+  ...DragIntoChildlessClassView,
+  name: "Drag Into Childless Class Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("region", { name: "Asset Classes Hierarchy" });
@@ -231,6 +250,9 @@ export const DragIntoChildlessClass: Story = {
 };
 
 export const DirectActionsOnHoverAndFocus: Story = {
+  ...DragIntoChildlessClassView,
+  name: "Direct Actions On Hover And Focus Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -266,7 +288,6 @@ export const DirectActionsOnHoverAndFocus: Story = {
 };
 
 export const CommittedCreationRefreshRecovery: Story = {
-  tags: ["regression", "!autodocs"],
   args: { apiOverride: createAssetClassStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -317,10 +338,11 @@ export const CommittedCreationRefreshRecovery: Story = {
       api.save = save;
     }
   },
+  name: "Committed Creation Refresh Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NavigationWaitsForEditorSave: Story = {
-  tags: ["regression", "!autodocs"],
   args: { apiOverride: createAssetClassStoryApi(), navigation: true },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -368,4 +390,6 @@ export const NavigationWaitsForEditorSave: Story = {
       api.save = save;
     }
   },
+  name: "Navigation Waits For Editor Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

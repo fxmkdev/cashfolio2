@@ -54,7 +54,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const PendingDeletion: Story = {
+  ...Default,
+  name: "Pending Deletion Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -93,12 +102,21 @@ export const PendingDeletion: Story = {
     });
   },
 };
-export const DeletionFailure: Story = {
+export const DeletionFailureView: Story = {
   args: {
     onDeleteUser: fn(async () => {
       throw new Error("Deletion is pending. Retry to finish it.");
     }),
   },
+  name: "Deletion Failure Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DeletionFailure: Story = {
+  ...DeletionFailureView,
+  name: "Deletion Failure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -130,6 +148,9 @@ export const DeletionFailure: Story = {
 };
 
 export const SelfDeletionDisabled: Story = {
+  ...Default,
+  name: "Self Deletion Disabled Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
@@ -189,6 +210,9 @@ async function openRolesFromRowMenu(
 }
 
 export const DialogFocusReturn: Story = {
+  ...Default,
+  name: "Dialog Focus Return Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     for (const dismissal of ["Escape", "Cancel", "Save"] as const) {
       const { trigger, dialog } = await openRolesFromRowMenu(

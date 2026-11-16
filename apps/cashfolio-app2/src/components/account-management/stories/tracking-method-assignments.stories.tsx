@@ -55,7 +55,7 @@ export const TrackingMethodColumn: Story = {
   },
 };
 
-export const BulkTrackingMethodMixedGroupSelection: Story = {
+export const BulkTrackingMethodMixedGroupSelectionView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -63,6 +63,15 @@ export const BulkTrackingMethodMixedGroupSelection: Story = {
       rowsOverride={trackingMethodRows}
     />
   ),
+  name: "Bulk Tracking Method Mixed Group Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkTrackingMethodMixedGroupSelection: Story = {
+  ...BulkTrackingMethodMixedGroupSelectionView,
+  name: "Bulk Tracking Method Mixed Group Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -111,7 +120,7 @@ export const BulkTrackingMethodMixedGroupSelection: Story = {
   },
 };
 
-export const BulkTrackingMethodNoEligibleAccounts: Story = {
+export const BulkTrackingMethodNoEligibleAccountsView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -120,6 +129,15 @@ export const BulkTrackingMethodNoEligibleAccounts: Story = {
       rowsOverride={trackingMethodRows}
     />
   ),
+  name: "Bulk Tracking Method No Eligible Accounts Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkTrackingMethodNoEligibleAccounts: Story = {
+  ...BulkTrackingMethodNoEligibleAccountsView,
+  name: "Bulk Tracking Method No Eligible Accounts Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await selectAssignmentAccount(canvasElement, Unit.SECURITY);
@@ -140,7 +158,7 @@ export const BulkTrackingMethodNoEligibleAccounts: Story = {
   },
 };
 
-export const BulkTrackingMethodFilteredSelection: Story = {
+export const BulkTrackingMethodFilteredSelectionView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -149,6 +167,15 @@ export const BulkTrackingMethodFilteredSelection: Story = {
       rowsOverride={bulkRows}
     />
   ),
+  name: "Bulk Tracking Method Filtered Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const BulkTrackingMethodFilteredSelection: Story = {
+  ...BulkTrackingMethodFilteredSelectionView,
+  name: "Bulk Tracking Method Filtered Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>
@@ -201,7 +228,7 @@ export const BulkTrackingMethodFilteredSelection: Story = {
   },
 };
 
-export const GroupTrackingMethodRetry: Story = {
+export const GroupTrackingMethodRetryView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -210,6 +237,15 @@ export const GroupTrackingMethodRetry: Story = {
       rowsOverride={bulkRows}
     />
   ),
+  name: "Group Tracking Method Retry Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GroupTrackingMethodRetry: Story = {
+  ...GroupTrackingMethodRetryView,
+  name: "Group Tracking Method Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -246,7 +282,6 @@ export const GroupTrackingMethodRetry: Story = {
 };
 
 export const BulkTrackingMethodScopeReset: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -283,4 +318,6 @@ export const BulkTrackingMethodScopeReset: Story = {
       ),
     ).not.toBeChecked();
   },
+  name: "Bulk Tracking Method Scope Reset Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

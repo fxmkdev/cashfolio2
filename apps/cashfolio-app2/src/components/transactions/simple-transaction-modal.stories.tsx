@@ -37,6 +37,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const ToggleDirectionAndSubmit: Story = {
+  ...Default,
+  name: "Toggle Direction And Submit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -58,6 +61,9 @@ export const ToggleDirectionAndSubmit: Story = {
 };
 
 export const ForcedDirectionDisablesToggle: Story = {
+  ...Default,
+  name: "Forced Direction Disables Toggle Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -71,7 +77,7 @@ export const ForcedDirectionDisablesToggle: Story = {
   },
 };
 
-export const EditModeWithSwitchToSplit: Story = {
+export const EditModeWithSwitchToSplitView: Story = {
   args: {
     initialValues: {
       date: new Date("2026-01-15T00:00:00.000Z"),
@@ -82,6 +88,15 @@ export const EditModeWithSwitchToSplit: Story = {
     },
     onSwitchToSplit: fn(),
   },
+  name: "Edit Mode With Switch To Split Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const EditModeWithSwitchToSplit: Story = {
+  ...EditModeWithSwitchToSplitView,
+  name: "Edit Mode With Switch To Split Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -104,7 +119,6 @@ export const EditModeWithSwitchToSplit: Story = {
 };
 
 export const EnterSubmitPendingGuard: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     onSubmit: fn(
       async () => await new Promise((resolve) => setTimeout(resolve, 150)),
@@ -130,10 +144,11 @@ export const EnterSubmitPendingGuard: Story = {
     await waitFor(() => expect(submitButton).not.toBeDisabled());
     await expect(submitButton).not.toHaveAttribute("data-loading");
   },
+  name: "Enter Submit Pending Guard Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DescriptionLimitPreservesDraft: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     initialValues: {
       date: new Date("2026-01-15T00:00:00.000Z"),
@@ -166,22 +181,35 @@ export const DescriptionLimitPreservesDraft: Story = {
       }),
     );
   },
+  name: "Description Limit Preserves Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
-export const Pending: Story = {
+export const PendingAfterSubmit: Story = {
   args: {
     ...EditModeWithSwitchToSplit.args,
     onSubmit: fn(pendingStorySubmission),
   },
   parameters: {
+    manualSetup:
+      "Click Save to keep this prefilled transaction pending. Remount the story to reset it.",
     docs: {
-      story: { autoplay: true },
+      story: { autoplay: false },
       description: {
         story:
-          "The submission remains pending for inspection. Remount the story to reset it.",
+          "Click Save to keep this prefilled transaction pending. Remount the story to reset it.",
       },
     },
   },
+  name: "Pending After Submit",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingAfterSubmit,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 

@@ -46,7 +46,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const MixedBooksView: Story = {
+  name: "Mixed Books Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const MixedBooks: Story = {
+  ...MixedBooksView,
+  name: "Mixed Books Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Private Book")).toBeVisible();
@@ -111,7 +120,6 @@ export const Deleted: Story = {
 };
 
 export const RouteSmoke: Story = {
-  tags: ["regression", "!autodocs"],
   parameters: { router: { initialPath: "/user/delete?deleted=1" } },
   render: () => <UserDeleteRouteSmoke />,
   play: async ({ canvasElement }) => {
@@ -124,4 +132,6 @@ export const RouteSmoke: Story = {
     ).toBeVisible();
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument();
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

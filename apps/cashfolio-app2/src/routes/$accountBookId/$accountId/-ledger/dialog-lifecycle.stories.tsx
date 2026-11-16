@@ -113,7 +113,6 @@ async function enterDraft(dialog: HTMLElement) {
 }
 
 export const PendingCreationCannotBeDismissed: Story = {
-  tags: ["regression", "!autodocs"],
   args: { pending: true },
   play: async ({ args }) => {
     const dialog = await screen.findByRole("dialog", {
@@ -143,10 +142,11 @@ export const PendingCreationCannotBeDismissed: Story = {
       screen.queryByRole("dialog", { name: "Add Transaction" }),
     ).not.toBeInTheDocument();
   },
+  name: "Pending Creation Cannot Be Dismissed Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const SwitchingToSplitForwardsDraft: Story = {
-  tags: ["regression", "!autodocs"],
   play: async ({ args }) => {
     const dialog = await screen.findByRole("dialog", {
       name: "Add Transaction",
@@ -172,10 +172,11 @@ export const SwitchingToSplitForwardsDraft: Story = {
       await screen.findByRole("dialog", { name: "Add Transaction" }),
     ).toBeVisible();
   },
+  name: "Switching To Split Forwards Draft Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const PendingEditCannotBeDismissed: Story = {
-  tags: ["regression", "!autodocs"],
   args: {
     pending: true,
     onClose: fn(),
@@ -208,10 +209,11 @@ export const PendingEditCannotBeDismissed: Story = {
       screen.queryByRole("dialog", { name: "Edit Transaction" }),
     ).not.toBeInTheDocument();
   },
+  name: "Pending Edit Cannot Be Dismissed Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const EditDraftClearsAfterExit: Story = {
-  tags: ["regression", "!autodocs"],
   render: (args) => <EditDialogHarness {...args} />,
   play: async ({ canvasElement, args }) => {
     const dialog = await screen.findByRole("dialog", {
@@ -243,6 +245,8 @@ export const EditDraftClearsAfterExit: Story = {
       "exit:transaction-2",
     );
   },
+  name: "Edit Draft Clears After Exit Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 function WorkflowHarness() {
@@ -282,7 +286,6 @@ function WorkflowHarness() {
 }
 
 export const ReducerPreservesDraftAfterFailureAndSwitch: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => <WorkflowHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -334,4 +337,6 @@ export const ReducerPreservesDraftAfterFailureAndSwitch: Story = {
       within(reopened).getByRole("textbox", { name: "Description" }),
     ).toHaveValue("");
   },
+  name: "Reducer Preserves Draft After Failure And Switch Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

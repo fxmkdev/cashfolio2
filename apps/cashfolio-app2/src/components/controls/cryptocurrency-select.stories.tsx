@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Searchable cryptocurrency selection. Units already used in the account book appear first. compactLabels switches between codes and full labels; selected unknown units remain selectable. Typing and Controls share the current value.",
+          "Searchable cryptocurrency selection. Units already used in the account book appear first. compactLabels switches between codes and full labels; selected unknown units remain selectable. Typing and Controls share the current value. Open the selector to browse units; type not-a-unit to inspect the empty search result. No selection or search runs automatically.",
       },
     },
   },
@@ -55,8 +55,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-export const UsedUnits: Story = {
+export const UsedUnitsView: Story = {
   args: { usedCryptocurrencies: ["BTC", "ETH"] },
+  name: "Used Units Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const UsedUnits: Story = {
+  ...UsedUnitsView,
+  name: "Used Units Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -78,6 +87,9 @@ export const UsedUnits: Story = {
 };
 export const FullLabels: Story = { args: { compactLabels: false } };
 export const SearchWithNoMatches: Story = {
+  ...Default,
+  name: "Search With No Matches Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("combobox", { name: "Cryptocurrency" });

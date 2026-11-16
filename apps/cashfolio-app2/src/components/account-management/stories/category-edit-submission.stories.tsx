@@ -184,22 +184,26 @@ function committedRefreshRecovery(target: Target): NonNullable<Story["play"]> {
 }
 
 export const CategoryEditWaitsForNavigation: Story = {
-  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: pendingNavigation("category"),
+  name: "Category Edit Waits For Navigation Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const GroupEditWaitsForTabChange: Story = {
-  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: pendingNavigation("group"),
+  name: "Group Edit Waits For Tab Change Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const CategoryEditRecoversCommittedSave: Story = {
-  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("category"),
+  name: "Category Edit Recovers Committed Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const GroupEditRecoversCommittedSave: Story = {
-  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("group"),
+  name: "Group Edit Recovers Committed Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

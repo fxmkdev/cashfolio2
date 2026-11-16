@@ -87,7 +87,6 @@ export const Default: Story = {};
 
 // A long, wide grid exercises v36's unified scroll viewport and pinned cells.
 export const ScrollingAndPinnedCells: Story = {
-  tags: ["regression", "!autodocs"],
   render: () => (
     <Box h={280} w="100%">
       <DataGrid
@@ -185,12 +184,15 @@ export const ScrollingAndPinnedCells: Story = {
     viewport.scrollLeft = 0;
     await waitFor(() => expect(canvas.getByText("Total")).toBeVisible());
   },
+  name: "Scrolling And Pinned Cells Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NarrowScrollingGrid: Story = {
-  tags: ["regression", "!autodocs"],
   ...ScrollingAndPinnedCells,
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+  name: "Narrow Scrolling Grid Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const Empty: Story = {

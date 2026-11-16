@@ -163,8 +163,19 @@ const checkLayout: NonNullable<Story["play"]> = async ({
   await assertLayout();
 };
 
-export const Desktop: Story = { play: checkLayout };
-export const ShortDesktop: Story = {
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Desktop: Story = {
+  ...Default,
+  name: "Desktop Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: checkLayout,
+};
+export const ShortDesktopView: Story = {
   globals: { viewport: { value: "cashfolioShortDesktop", isRotated: false } },
   parameters: {
     viewport: {
@@ -176,9 +187,27 @@ export const ShortDesktop: Story = {
       },
     },
   },
+  name: "Short Desktop Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ShortDesktop: Story = {
+  ...ShortDesktopView,
+  name: "Short Desktop Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: checkLayout,
 };
-export const Mobile: Story = {
+export const MobileView: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+  name: "Mobile Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Mobile: Story = {
+  ...MobileView,
+  name: "Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: checkLayout,
 };
