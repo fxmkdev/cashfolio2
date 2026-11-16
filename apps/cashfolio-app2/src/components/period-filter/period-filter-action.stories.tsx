@@ -67,7 +67,16 @@ function PeriodFilterExample({
 }
 
 const meta = {
-  title: "Routes/ExplicitPeriodFilter",
+  title: "Components/Controls/Period Filter",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared period-selection action for Ledger and Transactions. The supplied availability and selected period determine navigation, empty, and out-of-range states. Screen-specific routing stays in the owner. This harness fixes en-CH formatting for period navigation checks, overriding the Locale toolbar.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: PeriodFilterExample,
   args: { initialPeriod: "2026-05", onPeriodChange: fn() },
 } satisfies Meta<typeof PeriodFilterExample>;

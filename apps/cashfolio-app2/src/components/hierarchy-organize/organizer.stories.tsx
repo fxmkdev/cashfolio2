@@ -10,7 +10,8 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;
@@ -315,6 +316,7 @@ export const UncertainFailureRequiresRefresh: Story = {
 };
 
 export const LoadRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   render: (args) => <Harness {...args} failure="load" />,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);

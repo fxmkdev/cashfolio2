@@ -4,7 +4,8 @@ import { HistoryViewSelect } from "./-view-select";
 import { netWorthScopeOptions } from "./-story-fixtures";
 
 const meta = {
-  title: "Routes/HistoryViewSelect",
+  title: "Screens/History/View Select",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: HistoryViewSelect,
   args: {
     selectedMetric: "expenses",

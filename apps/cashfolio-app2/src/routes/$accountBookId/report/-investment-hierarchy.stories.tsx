@@ -173,7 +173,8 @@ function storeState(tables: boolean, singleAccount = false) {
 }
 
 const meta = {
-  title: "Routes/ReportInvestmentHierarchy",
+  title: "Screens/Report/Investment Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   args: {
     accountBookId: bookId,

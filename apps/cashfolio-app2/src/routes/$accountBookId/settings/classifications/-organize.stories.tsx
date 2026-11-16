@@ -72,9 +72,11 @@ function Harness({
 }
 
 const meta = {
-  title: "Routes/Settings/Asset Classes/Hierarchy",
+  title: "Screens/Settings/Asset Classes/Organize",
   component: Harness,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/settings/classifications" },
   },
 } satisfies Meta<typeof Harness>;
@@ -82,6 +84,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const MoveSubtreeAndDeleteWithReplacement: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -263,6 +266,7 @@ export const DirectActionsOnHoverAndFocus: Story = {
 };
 
 export const CommittedCreationRefreshRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   args: { apiOverride: createAssetClassStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -316,6 +320,7 @@ export const CommittedCreationRefreshRecovery: Story = {
 };
 
 export const NavigationWaitsForEditorSave: Story = {
+  tags: ["regression", "!autodocs"],
   args: { apiOverride: createAssetClassStoryApi(), navigation: true },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);

@@ -14,7 +14,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Archived Accounts/Units",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;

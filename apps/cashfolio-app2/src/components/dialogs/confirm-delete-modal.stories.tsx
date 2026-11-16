@@ -1,10 +1,21 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 
 const meta = {
   component: ConfirmDeleteModal,
-  title: "Components/ConfirmDeleteModal",
+  title: "Components/Confirmation Dialogs/Confirm Delete Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Confirm deleting a named entity. Supply opened, title, name, and onConfirm; description provides any additional consequences. Pending submissions disable cancellation and repeated confirmation.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   args: {
     opened: true,
     title: "Delete Account",
@@ -33,6 +44,7 @@ export const Interactions: Story = {
 };
 
 export const PendingConfirmDisablesActions: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onConfirm: fn(
       async () =>
@@ -55,5 +67,26 @@ export const PendingConfirmDisablesActions: Story = {
     await waitFor(() => expect(confirmButton).not.toBeDisabled());
     await expect(confirmButton).not.toHaveAttribute("data-loading");
     await expect(cancelButton).not.toBeDisabled();
+  },
+};
+
+export const Pending: Story = {
+  args: { ...{}, onConfirm: fn(pendingStorySubmission) },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Delete" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

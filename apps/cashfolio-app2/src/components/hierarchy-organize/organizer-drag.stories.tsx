@@ -10,7 +10,8 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;

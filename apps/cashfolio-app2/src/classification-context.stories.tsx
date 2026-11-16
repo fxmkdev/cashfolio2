@@ -56,7 +56,8 @@ function DraftEditor() {
   );
 }
 const meta = {
-  title: "Components/AssetClassProvider",
+  title: "Screens/Settings/Asset Classes/Provider",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AssetClassProvider,
   args: {
     nodes: initialNodes,
@@ -67,6 +68,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const RefreshPreservesEditorDraft: Story = {
+  tags: ["regression", "!autodocs"],
   render: (args) => <AssetClassProvider {...args} />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);

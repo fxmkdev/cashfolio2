@@ -10,7 +10,8 @@ import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
 
 const meta: Meta<typeof LedgerPageView> = {
-  title: "Routes/LedgerPageView",
+  title: "Screens/Ledger/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerPageView,
 };
 
@@ -365,6 +366,7 @@ export const EditModalState: Story = {
 };
 
 export const PeriodFilterRouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/account-checking",
@@ -447,7 +449,7 @@ export const ExpenseCategoryContext: Story = {
 };
 
 export const IncomeCategoryMobile: Story = {
-  parameters: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}

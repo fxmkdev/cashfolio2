@@ -29,7 +29,16 @@ function LinkTabStory({ selectedTab }: { selectedTab: "BALANCE" }) {
 }
 
 const meta = {
-  title: "Components/LinkTab",
+  title: "Components/Navigation/Link Tab",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Router-aware tab navigation. Supply the destination and tab content; selected examples show how financial-account context appears in tabs.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: LinkTabStory,
   args: {
     selectedTab: "BALANCE",

@@ -4,7 +4,8 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { AssetClassAssignmentDialog } from "./asset-class";
 
 const meta = {
-  title: "Routes/Accounts/AssetClassAssignmentDialog",
+  title: "Screens/Accounts/Assignments/Asset Class Dialog",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AssetClassAssignmentDialog,
   args: {
     target: { accountIds: ["first", "second"], archivedCount: 1 },

@@ -29,9 +29,11 @@ function categoryApi() {
   };
 }
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/Categories/Organize",
+  title: "Screens/Categories/Organize",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
@@ -50,6 +52,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const CategoryActionsAndTabChange: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

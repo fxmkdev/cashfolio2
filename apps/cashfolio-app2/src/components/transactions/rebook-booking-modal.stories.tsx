@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { RebookBookingModal } from "./rebook-booking-modal";
@@ -8,7 +9,17 @@ const targetAccounts = [
 ];
 
 const meta = {
-  title: "Components/RebookBookingModal",
+  title: "Components/Transaction Editors and Actions/Rebook Booking Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Move bookings to an eligible account/category. targetAccounts contains valid destinations; disabledReason explains when none are eligible. onSubmit receives the chosen target account ID.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: RebookBookingModal,
   args: {
     targetAccounts,
@@ -59,6 +70,7 @@ export const SubmitAndCancel: Story = {
 };
 
 export const EnterSubmitPendingGuard: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onSubmit: fn(
       async () => await new Promise((resolve) => setTimeout(resolve, 150)),
@@ -80,5 +92,27 @@ export const EnterSubmitPendingGuard: Story = {
 
     await waitFor(() => expect(submitButton).not.toBeDisabled());
     await expect(submitButton).not.toHaveAttribute("data-loading");
+  },
+};
+
+export const Pending: Story = {
+  args: { ...{}, onSubmit: fn(pendingStorySubmission) },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByLabelText("Account or Category"));
+    await userEvent.click(await body.findByText("Savings (CHF)"));
+    const submit = body.getByRole("button", { name: "Rebook" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

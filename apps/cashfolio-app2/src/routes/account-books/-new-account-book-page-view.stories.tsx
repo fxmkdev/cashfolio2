@@ -68,9 +68,13 @@ function NewAccountBookStory({
 }
 
 const meta = {
-  title: "Routes/NewAccountBookPageView",
+  title: "Screens/Account Books/New Account Book",
   component: NewAccountBookStory,
-  parameters: { router: { initialPath: "/account-books/new" } },
+  parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: "/account-books/new" },
+  },
   args: {
     onSubmit: fn<(values: NewAccountBookSubmission) => Promise<void>>(
       async () => undefined,
@@ -202,6 +206,7 @@ export const FailureAndRetry: Story = {
 };
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: { routeSmoke: true },
   parameters: {
     router: {

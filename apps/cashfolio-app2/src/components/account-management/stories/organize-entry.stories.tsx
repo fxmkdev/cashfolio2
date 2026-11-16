@@ -8,9 +8,11 @@ import { expandAssignmentGroup } from "./interaction-helpers";
 import { organizeAccountNodes } from "./organize-action-fixtures";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Entry/Editor Coordination",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };

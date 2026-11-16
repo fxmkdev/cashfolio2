@@ -8,9 +8,11 @@ import {
 import { AccountsPageStoryHarness } from "./harness";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Lifecycle",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/accounts?tab=BALANCE&mode=active&organize=true",
@@ -39,6 +41,7 @@ async function lifecycleRow(canvasElement: HTMLElement, id: string) {
 }
 
 export const OrganizeCompactLayoutAndIcons: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   parameters: {
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
@@ -100,6 +103,7 @@ export const OrganizeCompactLayoutAndIcons: Story = {
 };
 
 export const OrganizeArchiveUnarchiveAndDelete: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -193,6 +197,7 @@ export const OrganizeArchiveUnarchiveAndDelete: Story = {
 };
 
 export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     organizerApi: createOrganizerStoryApi(undefined, [
       ...organizeStoryNodes,
@@ -258,6 +263,7 @@ export const OrganizeHiddenChildrenPreventGroupDelete: Story = {
 };
 
 export const OrganizeLifecycleRefreshRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);

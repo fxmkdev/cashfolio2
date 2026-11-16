@@ -7,7 +7,8 @@ import {
 } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountFilterHarness> = {
-  title: "Routes/AccountsPageView/Filters",
+  title: "Screens/Accounts/Filters",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountFilterHarness,
 };
 export default meta;

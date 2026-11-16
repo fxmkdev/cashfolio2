@@ -108,7 +108,8 @@ async function findUserMenuButton(canvasElement: HTMLElement) {
 }
 
 const meta = {
-  title: "Routes/AccountBookShell",
+  title: "Screens/App Shell/Account Book Shell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountBookShellSmokeHarness,
   loaders: [
     () => {
@@ -131,6 +132,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
@@ -279,6 +281,7 @@ export const RouteSmoke: Story = {
 };
 
 export const DesktopRailSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
@@ -358,13 +361,12 @@ export const DesktopRailSmoke: Story = {
 };
 
 export const MobileFooterControlsSmoke: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+  tags: ["regression", "!autodocs"],
   loaders: [resetDesktopRailPreference],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
-    },
-    viewport: {
-      defaultViewport: "cashfolioMobile",
     },
   },
   render: () => <AccountBookShellSmokeHarness />,

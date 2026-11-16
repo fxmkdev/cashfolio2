@@ -39,7 +39,8 @@ function PeriodRouteSmokeHarness() {
 }
 
 const meta = {
-  title: "Routes/ReportPageView",
+  title: "Screens/Report/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   decorators: [
     (Story, context) => {
@@ -125,6 +126,7 @@ export const ZeroIncomeSavingsRate: Story = {
 };
 
 export const HeaderActionLayoutSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByTestId("period-top-section")).toBeNull();
@@ -196,6 +198,7 @@ export const FullyConvertible: Story = {
 };
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/report",
@@ -256,6 +259,7 @@ export const RouteSmoke: Story = {
 };
 
 export const BreakdownToggleSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -311,6 +315,7 @@ export const BreakdownToggleSmoke: Story = {
 };
 
 export const AllocationToggleSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -350,6 +355,7 @@ export const AllocationToggleSmoke: Story = {
 };
 
 export const BreakdownTableModeSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -373,6 +379,7 @@ export const BreakdownTableModeSmoke: Story = {
 };
 
 export const AllocationTableModeSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -398,6 +405,7 @@ export const AllocationTableModeSmoke: Story = {
 };
 
 export const BreakdownTableDoubleClickSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onBreakdownAccountDoubleClick: fn(),
   },
@@ -428,6 +436,7 @@ export const BreakdownTableDoubleClickSmoke: Story = {
 };
 
 export const AllocationTableDoubleClickSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onBreakdownAccountDoubleClick: fn(),
     overview: withAccountBreakdowns({
@@ -496,6 +505,7 @@ export const AllocationTableDoubleClickSmoke: Story = {
 };
 
 export const AllocationChartContainerDoubleClickSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onBreakdownAccountDoubleClick: fn(),
     overview: withAccountBreakdowns({
@@ -539,6 +549,7 @@ export const AllocationChartContainerDoubleClickSmoke: Story = {
 };
 
 export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onBreakdownAccountDoubleClick: fn(),
     overview: withAccountBreakdowns({
@@ -584,6 +595,7 @@ export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
 };
 
 export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onBreakdownAccountDoubleClick: fn(),
     overview: withAccountBreakdowns({
@@ -624,6 +636,7 @@ export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
 };
 
 export const GainsLossesToggleSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -657,6 +670,7 @@ export const GainsLossesToggleSmoke: Story = {
 };
 
 export const GainsLossesDrillSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     overview: withAccountBreakdowns({
       gainsLossesBreakdown: {

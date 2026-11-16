@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { EditAccountGroupModal } from "./edit-account-group-modal";
@@ -8,7 +9,17 @@ import {
 } from "../testing/storybook-fixtures";
 
 const meta = {
-  title: "Components/EditAccountGroupModal",
+  title: "Components/Account Editors/Edit Account Group Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Create or edit an account/category group. typeDescriptor determines the labels and allowed parent groups. Use initialValues and editingId for editing; onSubmit owns persistence.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: EditAccountGroupModal,
   args: {
     opened: true,
@@ -53,6 +64,7 @@ export const Edit: Story = {
 };
 
 export const ValidationSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -62,6 +74,7 @@ export const ValidationSmoke: Story = {
 };
 
 export const PendingSubmitDisablesActions: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editAccountGroupInitialValues,
     editingId: "group-cash",
@@ -82,5 +95,26 @@ export const PendingSubmitDisablesActions: Story = {
 
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
+  },
+};
+
+export const Pending: Story = {
+  args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

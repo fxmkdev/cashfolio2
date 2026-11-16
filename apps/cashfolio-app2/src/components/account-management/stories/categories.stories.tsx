@@ -4,7 +4,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Categories/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -127,10 +128,10 @@ export const CategoriesWithArchived: Story = {
 };
 
 export const CategoriesMobile: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   ...ExpenseCategories,
   parameters: {
     ...ExpenseCategories.parameters,
-    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };
 
@@ -168,9 +169,9 @@ export const IncomeCategories: Story = {
 };
 
 export const CategoriesWithArchivedMobile: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   ...CategoriesWithArchived,
   parameters: {
     ...CategoriesWithArchived.parameters,
-    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };

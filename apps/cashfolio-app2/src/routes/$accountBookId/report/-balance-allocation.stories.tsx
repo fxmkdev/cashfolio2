@@ -82,7 +82,8 @@ function overviewForBalances(bank: number, card: number): typeof baseOverview {
 }
 
 const meta = {
-  title: "Routes/ReportBalanceAllocation",
+  title: "Screens/Report/Allocation/Balances",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   decorators: [
     (Story) => {
@@ -207,6 +208,7 @@ function ZeroCrossingHarness() {
 }
 
 export const PeriodSwitchClampsDrillPath: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => <ZeroCrossingHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

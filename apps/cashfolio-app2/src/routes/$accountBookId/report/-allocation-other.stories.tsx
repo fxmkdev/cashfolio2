@@ -96,7 +96,8 @@ function ContextHarness(props: ReportPageViewProps) {
 }
 
 const meta = {
-  title: "Routes/ReportOtherAllocation",
+  title: "Screens/Report/Allocation/Other",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   args: {
     accountBookId: bookId,
@@ -260,6 +261,7 @@ export const OtherDetailsAndNavigation: Story = {
 };
 
 export const ContextChangesCloseDetails: Story = {
+  tags: ["regression", "!autodocs"],
   render: (args) => <ContextHarness {...args} />,
   play: async ({ canvasElement }) => {
     for (const name of ["Change Period Externally", "Change Book Externally"]) {

@@ -30,7 +30,8 @@ const row: LedgerRow = {
 };
 
 const meta = {
-  title: "Components/LedgerActionsCell",
+  title: "Screens/Ledger/Actions Cell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerActionsCell,
   args: {
     row,

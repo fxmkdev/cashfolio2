@@ -110,7 +110,8 @@ function NavigationHarness({
 }
 
 const meta = {
-  title: "Routes/Report/GainsLossesNavigation",
+  title: "Screens/Report/Gains and Losses/Navigation",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: NavigationHarness,
   args: { accountCount: 1, onOpen: fn() },
 } satisfies Meta<typeof NavigationHarness>;

@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { EditAccountModal } from "./edit-account-modal";
@@ -9,7 +10,17 @@ import {
 } from "../testing/storybook-fixtures";
 
 const meta = {
-  title: "Components/EditAccountModal",
+  title: "Components/Account Editors/Edit Account Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Create or edit a financial account or category. typeDescriptor selects the domain; initialValues and editingId select edit mode. Supply available groups and classes plus onSubmit/onClose callbacks.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: EditAccountModal,
   args: {
     opened: true,
@@ -252,6 +263,7 @@ export const CollapsedStatementImportError: Story = {
 };
 
 export const ValidationSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
@@ -306,6 +318,7 @@ export const NestedAssetClass: Story = {
 };
 
 export const PendingSubmitDisablesActions: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editAccountInitialValues,
     editingId: "account-checking",
@@ -334,5 +347,26 @@ export const PendingSubmitDisablesActions: Story = {
     finishSubmit();
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
+  },
+};
+
+export const Pending: Story = {
+  args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

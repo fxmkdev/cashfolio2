@@ -26,9 +26,13 @@ function UserDeleteRouteSmoke() {
 }
 
 const meta = {
-  title: "Routes/UserDeletePageView",
+  title: "Screens/User/Delete",
   component: UserDeletePageView,
-  parameters: { router: { initialPath: "/user/delete" } },
+  parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: "/user/delete" },
+  },
   args: { deleted: false, preview },
   decorators: [
     (Story) => (
@@ -107,6 +111,7 @@ export const Deleted: Story = {
 };
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: { router: { initialPath: "/user/delete?deleted=1" } },
   render: () => <UserDeleteRouteSmoke />,
   play: async ({ canvasElement }) => {

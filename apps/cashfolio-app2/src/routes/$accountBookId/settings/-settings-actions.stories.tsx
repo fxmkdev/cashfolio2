@@ -6,9 +6,17 @@ import { SettingsNavigation } from "./-settings-navigation";
 import { SettingsActions } from "./-settings-actions";
 
 const meta = {
-  title: "Routes/Settings/Actions",
+  title: "Screens/Settings/Actions",
   component: SettingsActions,
   parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/settings" },
     colorScheme: "light",
   },
@@ -121,14 +129,14 @@ export const MoreMenuDark: Story = {
 
 export const MoreMenuMobile: Story = {
   ...MoreMenu,
-  parameters: { viewport: { defaultViewport: "cashfolioMobile" } },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
 };
 
 export const MoreMenuMobileDark: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   ...MoreMenu,
   parameters: {
     colorScheme: "dark",
-    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };
 

@@ -17,7 +17,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Assignments/Tracking Method",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -245,6 +246,7 @@ export const GroupTrackingMethodRetry: Story = {
 };
 
 export const BulkTrackingMethodScopeReset: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"

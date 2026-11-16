@@ -45,7 +45,8 @@ const overview = {
 };
 
 const meta = {
-  title: "Routes/ReportBreakdownOrdering",
+  title: "Screens/Report/Breakdowns/Ordering",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   args: {
     accountBookId: bookId,

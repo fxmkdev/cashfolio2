@@ -38,7 +38,8 @@ const users: AdminUserListItem[] = [
   },
 ];
 const meta = {
-  title: "Routes/AdminUsers",
+  title: "Screens/Admin/Users",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AdminUsersPageView,
   args: { users, onSubmitRoles: fn(), onDeleteUser: fn(async () => {}) },
   render: (args) => (

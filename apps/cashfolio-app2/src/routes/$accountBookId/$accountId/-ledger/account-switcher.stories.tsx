@@ -12,7 +12,8 @@ import {
 
 const tree = createSwitcherStoryTree();
 const meta: Meta<typeof LedgerAccountSwitcher> = {
-  title: "Routes/LedgerAccountSwitcher",
+  title: "Screens/Ledger/Account Switcher",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerAccountSwitcher,
   args: { account: switcherStoryAccount, tree, onSelectAccount: fn() },
 };

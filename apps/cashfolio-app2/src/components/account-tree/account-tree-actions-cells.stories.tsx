@@ -66,7 +66,16 @@ function StoryComponent({
 }
 
 const meta = {
-  title: "Components/AccountTreeActionsCells",
+  title: "Components/Grid/Account Tree Actions Cells",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Row actions for active and archived account trees. Supply the permitted callbacks and disabled reasons; hover or focus the row to reveal its actions. Child creation follows the hierarchy action guidelines.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: StoryComponent,
   args: {
     variant: "active",
@@ -100,6 +109,7 @@ export const Archived: Story = {
 };
 
 export const InteractionSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -128,6 +138,7 @@ export const InteractionSmoke: Story = {
 };
 
 export const ArchivedInteractionSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     variant: "archived",
   },

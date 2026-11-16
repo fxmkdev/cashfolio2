@@ -79,9 +79,11 @@ function CategoryEditHarness({
 }
 
 const meta = {
-  title: "Routes/Categories/Edit Submission",
+  title: "Screens/Categories/Editors",
   component: CategoryEditHarness,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
@@ -182,18 +184,22 @@ function committedRefreshRecovery(target: Target): NonNullable<Story["play"]> {
 }
 
 export const CategoryEditWaitsForNavigation: Story = {
+  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: pendingNavigation("category"),
 };
 export const GroupEditWaitsForTabChange: Story = {
+  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: pendingNavigation("group"),
 };
 export const CategoryEditRecoversCommittedSave: Story = {
+  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("category"),
 };
 export const GroupEditRecoversCommittedSave: Story = {
+  tags: ["regression", "!autodocs"],
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("group"),
 };

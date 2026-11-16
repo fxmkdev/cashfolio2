@@ -8,7 +8,8 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;
@@ -193,12 +194,14 @@ function handleStabilityScenario(failure = false): NonNullable<Story["play"]> {
 }
 
 export const StableHandlesDuringDragAndSave: Story = {
+  tags: ["regression", "!autodocs"],
   args: { api: createOrganizerStoryApi() },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(),
 };
 
 export const StableHandlesDuringRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   args: { api: createOrganizerStoryApi("network") },
   render: (args) => <Harness {...args} useProvidedApi />,
   play: handleStabilityScenario(true),

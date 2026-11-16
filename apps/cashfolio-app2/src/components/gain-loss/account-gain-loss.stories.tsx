@@ -85,7 +85,17 @@ const data: AccountGainLossDetails = {
 };
 
 const meta = {
-  title: "Components/GainLoss/AccountGainLoss",
+  title: "Components/Gain and Loss/Account Gain and Loss",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Account Gain and Loss is owned by the gain-loss module. Inspect its visual states and use Controls for supported props. Callback and fixture objects are supplied by the story.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: AccountGainLossSummaryView,
   args: {
     data,

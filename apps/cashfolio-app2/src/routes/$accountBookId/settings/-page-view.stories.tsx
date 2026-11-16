@@ -6,9 +6,11 @@ import { SettingsNavigation } from "./-settings-navigation";
 import { SettingsActions } from "./-settings-actions";
 
 const meta = {
-  title: "Routes/SettingsPageView",
+  title: "Screens/Settings/Overview",
   component: SettingsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/settings" },
   },
   args: {
@@ -87,5 +89,5 @@ export const Save: Story = {
 
 export const GeneralMobile: Story = {
   ...General,
-  parameters: { viewport: { defaultViewport: "cashfolioMobile" } },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
 };

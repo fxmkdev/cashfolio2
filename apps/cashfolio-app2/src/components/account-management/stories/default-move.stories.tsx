@@ -7,9 +7,11 @@ import { openRowActionsMenu } from "@/components/grid/row-actions-menu.story-hel
 import { organizeAccountNodes } from "./organize-action-fixtures";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Move",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -137,6 +139,7 @@ export const DefaultMoveLoadingAndRetry: Story = {
 };
 
 export const DefaultMoveCancelsPendingLoad: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     organizerApi: createOrganizerStoryApi(undefined, organizeAccountNodes()),
   },

@@ -12,9 +12,11 @@ import {
 } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Bulk Actions",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -22,6 +24,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const OrganizeBulkLifecycleActions: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -231,6 +234,7 @@ export const OrganizeBulkUnarchive: Story = {
 };
 
 export const OrganizeCollectiveArchiveAndDelete: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness

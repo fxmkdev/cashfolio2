@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box } from "@mantine/core";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -9,7 +10,17 @@ import {
 } from "../testing/storybook-fixtures";
 
 const meta = {
-  title: "Components/EditTransactionModal",
+  title: "Components/Transaction Editors and Actions/Edit Transaction Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Split transaction editor with a bookings grid. Supply accounts, currentAccountId, and the book start date. initialValues selects edit mode; onSubmit saves the draft and onRefreshConstraints supports recovery.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: EditTransactionModal,
   decorators: [
     (Story) => (
@@ -129,6 +140,7 @@ export const CreateWithCustomSubmitLabel: Story = {
 };
 
 export const PendingSubmitDisablesActions: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editTransactionInitialValues,
     onSubmit: fn(
@@ -152,6 +164,7 @@ export const PendingSubmitDisablesActions: Story = {
 };
 
 export const SubmitCommitsActiveCell: Story = {
+  tags: ["regression", "!autodocs"],
   args: { initialValues: editTransactionInitialValues, onDirtyChange: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -185,6 +198,7 @@ export const SubmitCommitsActiveCell: Story = {
 };
 
 export const ProvisionalDateDirtyState: Story = {
+  tags: ["regression", "!autodocs"],
   args: { onDirtyChange: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -206,6 +220,7 @@ export const ProvisionalDateDirtyState: Story = {
 };
 
 export const FailedSubmitRetainsDraft: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     initialValues: editTransactionInitialValues,
     onSubmit: fn(async () => {
@@ -233,5 +248,39 @@ export const FailedSubmitRetainsDraft: Story = {
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ description: "Retained draft" }),
     );
+  },
+};
+
+export const Pending: Story = {
+  args: { ...Edit.args, onSubmit: fn(pendingStorySubmission) },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
+  },
+};
+
+export const SaveFailed: Story = {
+  parameters: { docs: { story: { autoplay: true } } },
+  args: { ...FailedSubmitRetainsDraft.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "Draft could not be saved.",
+    );
+    await expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
   },
 };

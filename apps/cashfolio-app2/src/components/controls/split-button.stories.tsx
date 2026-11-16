@@ -11,12 +11,27 @@ import {
 import { SplitButton, SplitButtonGroup } from "./split-button";
 
 const meta = {
-  title: "Components/SplitButton",
+  title: "Components/Controls/Split Button",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Combines a primary action with related menu actions. Configure children, primaryDisabled, variant, and menuLabel in Controls; supply menuItems for secondary actions.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: SplitButton,
   args: {
     children: "Edit",
     menuItems: [],
     onClick: () => undefined,
+  },
+  argTypes: {
+    children: { control: "text" },
+    menuLabel: { control: "text" },
+    primaryDisabled: { control: "boolean" },
+    menuItems: { control: false },
   },
 } satisfies Meta<typeof SplitButton>;
 
@@ -25,31 +40,27 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AccountAction: Story = {
-  render: () => (
-    <SplitButton
-      leftSection={<IconFileImport size={16} />}
-      menuLabel="Account Actions"
-      onClick={() => undefined}
-      menuItems={[
-        {
-          key: "edit",
-          label: "Edit",
-          leftSection: <IconPencil size={16} />,
-          onClick: () => undefined,
-        },
-        { type: "divider", key: "danger-divider" },
-        {
-          key: "delete",
-          label: "Delete",
-          color: "red",
-          leftSection: <IconTrash size={16} />,
-          onClick: () => undefined,
-        },
-      ]}
-    >
-      Import Statement
-    </SplitButton>
-  ),
+  args: {
+    children: "Import Statement",
+    leftSection: <IconFileImport size={16} />,
+    menuLabel: "Account Actions",
+    menuItems: [
+      {
+        key: "edit",
+        label: "Edit",
+        leftSection: <IconPencil size={16} />,
+        onClick: () => undefined,
+      },
+      { type: "divider", key: "danger-divider" },
+      {
+        key: "delete",
+        label: "Delete",
+        color: "red",
+        leftSection: <IconTrash size={16} />,
+        onClick: () => undefined,
+      },
+    ],
+  },
 };
 
 export const ThreePartControl: Story = {

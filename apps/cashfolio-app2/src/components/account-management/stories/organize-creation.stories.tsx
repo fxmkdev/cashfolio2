@@ -10,9 +10,11 @@ import { expandAssignmentGroup } from "./interaction-helpers";
 import { organizeAccountNodes } from "./organize-action-fixtures";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Creation",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -60,6 +62,7 @@ function CreationHarness({
 }
 
 export const OrganizeCreationActions: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => <CreationHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
@@ -112,6 +115,7 @@ export const OrganizeCreationActions: Story = {
 };
 
 export const OrganizeCreationPendingAndRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   args: { onSubmitCreateGroup: fn(async () => {}) },
   render: (args) => (
     <CreationHarness
@@ -203,6 +207,7 @@ function ExistingEditHarness({
 }
 
 export const OrganizeRetainsAndRefreshesExistingEdit: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => <ExistingEditHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement),
@@ -241,6 +246,7 @@ export const OrganizeRetainsAndRefreshesExistingEdit: Story = {
 };
 
 export const NormalEditSubmissionQueuesOrganizeEntry: Story = {
+  tags: ["regression", "!autodocs"],
   args: { onSubmitUpdateAccount: fn(async () => {}) },
   render: (args) => (
     <ExistingEditHarness

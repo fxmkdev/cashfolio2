@@ -167,7 +167,16 @@ function Harness({
 }
 
 const meta = {
-  title: "Components/BulkTransactionActions",
+  title: "Components/Transaction Editors and Actions/Bulk Transaction Actions",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Selection toolbar for deleting or rebooking transactions. Supply selection and eligible targets from the owning grid, with asynchronous mutation callbacks. Examples cover mixed eligibility, failures, and pending actions.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: Harness,
   args: {
     mode: "ledger",
@@ -196,6 +205,7 @@ async function selectRow(canvasElement: HTMLElement, id: string) {
 }
 
 export const SelectAllAndDelete: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -261,6 +271,7 @@ export const SelectAllAndDelete: Story = {
 };
 
 export const SelectionLifecycle: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await selectRow(canvasElement, "b1");
@@ -387,6 +398,7 @@ export const PendingDelete: Story = {
 };
 
 export const ShiftSelectionAndClear: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>

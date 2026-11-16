@@ -38,7 +38,8 @@ function AdminShellSmokeHarness() {
 }
 
 const meta = {
-  title: "Routes/AdminShell",
+  title: "Screens/Admin/Shell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AdminShellSmokeHarness,
 } satisfies Meta<typeof AdminShellSmokeHarness>;
 
@@ -47,6 +48,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/admin",

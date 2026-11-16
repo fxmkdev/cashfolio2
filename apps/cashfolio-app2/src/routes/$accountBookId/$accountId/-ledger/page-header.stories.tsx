@@ -8,7 +8,8 @@ import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
 
 const meta: Meta<typeof LedgerPageView> = {
-  title: "Routes/LedgerHeaderLayout",
+  title: "Screens/Ledger/Header",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerPageView,
 };
 export default meta;

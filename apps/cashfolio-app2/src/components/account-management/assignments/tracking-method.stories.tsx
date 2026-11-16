@@ -3,7 +3,8 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { TrackingMethodAssignmentDialog } from "./tracking-method";
 
 const meta = {
-  title: "Routes/Accounts/TrackingMethodAssignmentDialog",
+  title: "Screens/Accounts/Assignments/Tracking Method Dialog",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: TrackingMethodAssignmentDialog,
   args: {
     target: {

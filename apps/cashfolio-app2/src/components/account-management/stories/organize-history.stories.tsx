@@ -6,9 +6,13 @@ import { AccountsPageStoryHarness } from "./harness";
 
 const normalPath = "/storybook-book/accounts?tab=BALANCE&mode=active";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Navigation",
   component: AccountsPageView,
-  parameters: { router: { initialPath: normalPath } },
+  parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: normalPath },
+  },
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -22,6 +26,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const OrganizeBackForwardAndDone: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const financialGrid = await canvas.findByRole("treegrid");
@@ -59,6 +64,7 @@ export const OrganizeBackForwardAndDone: Story = {
 };
 
 export const DirectOrganizeEntry: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: { router: { initialPath: `${normalPath}&organize=true` } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -74,6 +80,7 @@ export const DirectOrganizeEntry: Story = {
 };
 
 export const BackCancelsOrganizeLoading: Story = {
+  tags: ["regression", "!autodocs"],
   render: (args) => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -154,6 +161,7 @@ export const BackCancelsOrganizeLoading: Story = {
 };
 
 export const OrganizeRetryKeepsHistoryEntry: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi("load") },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -260,19 +268,23 @@ function pendingNavigation(
 }
 
 export const OrganizeNavigationWaitsForMove: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: pendingNavigation("move"),
 };
 export const OrganizeNavigationWaitsForArchive: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   play: pendingNavigation("archive"),
 };
 export const OrganizeNavigationWaitsForRecovery: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi("network") },
   play: pendingNavigation("recovery"),
 };
 
 export const DirectOrganizeAssetClassIsExcluded: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: { initialPath: `${normalPath}&grouping=assetClass&organize=true` },
   },

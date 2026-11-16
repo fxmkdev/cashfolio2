@@ -87,7 +87,8 @@ function EditDialogHarness(props: LifecycleProps) {
 }
 
 const meta: Meta<typeof CreateDialogHarness> = {
-  title: "Routes/LedgerDialogLifecycle",
+  title: "Screens/Ledger/Dialogs",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: CreateDialogHarness,
   args: {
     onClose: fn(),
@@ -112,6 +113,7 @@ async function enterDraft(dialog: HTMLElement) {
 }
 
 export const PendingCreationCannotBeDismissed: Story = {
+  tags: ["regression", "!autodocs"],
   args: { pending: true },
   play: async ({ args }) => {
     const dialog = await screen.findByRole("dialog", {
@@ -144,6 +146,7 @@ export const PendingCreationCannotBeDismissed: Story = {
 };
 
 export const SwitchingToSplitForwardsDraft: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ args }) => {
     const dialog = await screen.findByRole("dialog", {
       name: "Add Transaction",
@@ -172,6 +175,7 @@ export const SwitchingToSplitForwardsDraft: Story = {
 };
 
 export const PendingEditCannotBeDismissed: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     pending: true,
     onClose: fn(),
@@ -207,6 +211,7 @@ export const PendingEditCannotBeDismissed: Story = {
 };
 
 export const EditDraftClearsAfterExit: Story = {
+  tags: ["regression", "!autodocs"],
   render: (args) => <EditDialogHarness {...args} />,
   play: async ({ canvasElement, args }) => {
     const dialog = await screen.findByRole("dialog", {
@@ -277,6 +282,7 @@ function WorkflowHarness() {
 }
 
 export const ReducerPreservesDraftAfterFailureAndSwitch: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => <WorkflowHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

@@ -6,9 +6,11 @@ import { createOrganizerStoryApi } from "@/components/hierarchy-organize/story-f
 import { chooseAccountGrouping } from "./interaction-helpers";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Entry/Overview",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -16,6 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const OrganizeEntryAndExit: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness initialMode="active" organize bulkAssignment />
   ),
@@ -190,6 +193,7 @@ export const OrganizeOnlyForAccountStructure: Story = {
 };
 
 export const GroupingChangeCancelsOrganizeEntry: Story = {
+  tags: ["regression", "!autodocs"],
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness

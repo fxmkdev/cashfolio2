@@ -48,7 +48,17 @@ const history: PeriodHistoryResponse = {
 };
 
 const meta = {
-  title: "Routes/HistoryPageView",
+  title: "Screens/History/Overview",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
+  },
   component: HistoryPageView,
   args: {
     accountBookId: "storybook-book",
@@ -149,6 +159,7 @@ function EmptyViewTransition(props: HistoryPageViewProps) {
 }
 
 export const PreservesLegendAcrossEmptyView: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     history: {
       ...history,

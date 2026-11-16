@@ -50,7 +50,8 @@ function ManagementHarness(
 }
 
 const meta = {
-  title: "Routes/Settings/Classifications",
+  title: "Screens/Settings/Asset Classes/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ClassificationsPageView,
   decorators: [
     (Story) => (
@@ -340,6 +341,7 @@ export const Empty: Story = {
   },
 };
 export const ExpansionSurvivesRefresh: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const parent = await gridRow(canvasElement, "equities");
     await userEvent.click(parent.querySelector(".ag-group-expanded")!);

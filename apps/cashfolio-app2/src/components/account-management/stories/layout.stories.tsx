@@ -8,7 +8,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -18,6 +19,7 @@ export const ActiveHappyPath: Story = {
 };
 
 export const RouteSmoke: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active",
@@ -103,6 +105,7 @@ export const MixedBalanceHierarchy: Story = {
 };
 
 export const ConstrainedWidthWithGainLoss: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => (
     <Box w={960} maw="100%">
       <AccountsPageStoryHarness

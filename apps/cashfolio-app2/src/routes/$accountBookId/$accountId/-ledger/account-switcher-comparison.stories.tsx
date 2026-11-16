@@ -9,7 +9,17 @@ import {
 
 const tree = createSwitcherStoryTree();
 const meta: Meta<typeof LedgerAccountSwitcher> = {
-  title: "Routes/LedgerAccountSwitcher",
+  title: "Screens/Ledger/Account Switcher",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
+  },
   component: LedgerAccountSwitcher,
 };
 export default meta;
@@ -45,6 +55,7 @@ function NativeDesignComparison() {
 }
 
 export const NativeDesignLight: Story = {
+  tags: ["regression", "!autodocs"],
   parameters: { colorScheme: "light" },
   render: () => <NativeDesignComparison />,
   play: async ({ canvasElement }) => {
@@ -99,6 +110,7 @@ export const NativeDesignLight: Story = {
 };
 
 export const NativeDesignDark: Story = {
+  tags: ["regression", "!autodocs"],
   ...NativeDesignLight,
   parameters: { colorScheme: "dark" },
 };

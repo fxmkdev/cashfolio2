@@ -1,9 +1,20 @@
+import { useArgs } from "storybook/preview-api";
+import { StoryValue } from "../testing/story-value";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { AssetClassTreeSelect } from "./asset-class-tree-select";
 
 const meta = {
-  title: "Components/AssetClassTreeSelect",
+  title: "Components/Controls/Asset Class Tree Select",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Select an asset class from a hierarchy. Supports parent selection, path search, keyboard navigation, and an unclassified value.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: AssetClassTreeSelect,
   args: {
     label: "Asset Class",
@@ -81,5 +92,27 @@ export const ClearAndUnclassified: Story = {
     await userEvent.click(input);
     await userEvent.click(body.getByRole("option", { name: "Unclassified" }));
     await expect(args.onChange).toHaveBeenLastCalledWith("");
+  },
+};
+
+export const Default: Story = {
+  args: { value: null },
+  render: function Render(args) {
+    const [, updateArgs] = useArgs();
+    return (
+      <StoryValue value={args.value}>
+        {(value, setValue) => (
+          <AssetClassTreeSelect
+            {...args}
+            value={value}
+            onChange={(value) => {
+              setValue(value);
+              updateArgs({ value });
+              args.onChange?.(value);
+            }}
+          />
+        )}
+      </StoryValue>
+    );
   },
 };

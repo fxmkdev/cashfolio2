@@ -79,7 +79,16 @@ function NavigationLoadingBarPreview() {
 }
 
 const meta = {
-  title: "Components/NavigationLoadingBar",
+  title: "Components/Navigation/Navigation Loading Bar",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared progress feedback for route transitions and registered client tasks. The preview buttons start and complete loads; overlapping work keeps the indicator active until every task completes.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: NavigationLoadingBar,
   render: () => (
     <GlobalLoadingProvider>
@@ -95,6 +104,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const OverlappingClientLoads: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const indicator = within(canvasElement.ownerDocument.body).getByTestId(

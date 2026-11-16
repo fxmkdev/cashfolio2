@@ -46,7 +46,8 @@ function BookSwitchHarness() {
 }
 
 const meta = {
-  title: "Routes/ReportGroupingSession",
+  title: "Screens/Report/Grouping",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: BookSwitchHarness,
   loaders: [
     () => {
@@ -75,6 +76,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AccountBooksKeepIndependentPaths: Story = {
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const card = within(
@@ -198,6 +200,7 @@ function PeriodSwitchHarness() {
   );
 }
 export const PeriodChangesRetainSurvivingClass: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => <PeriodSwitchHarness />,
   loaders: [
     () => {

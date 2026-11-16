@@ -17,7 +17,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Grouping",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -269,6 +270,7 @@ export const AssetClassFilteredBulkAssignment: Story = {
 };
 
 export const AssetClassTrackingMethodRegrouping: Story = {
+  tags: ["regression", "!autodocs"],
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"

@@ -1,3 +1,4 @@
+import { pendingStorySubmission } from "../testing/pending-submission.story-helpers";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { SimpleTransactionModal } from "./simple-transaction-modal";
@@ -5,7 +6,17 @@ import { accountOptions } from "../testing/storybook-fixtures";
 import { RESOURCE_LIMITS } from "../../shared/resources/resource-limits";
 
 const meta = {
-  title: "Components/SimpleTransactionModal",
+  title: "Components/Transaction Editors and Actions/Simple Transaction Modal",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Single-counterparty transaction entry. Supply currentAccount, accounts, and the book start date. initialValues selects editing; onSwitchToSplit forwards the draft to the split editor when provided.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: SimpleTransactionModal,
   args: {
     currentAccount: {
@@ -93,6 +104,7 @@ export const EditModeWithSwitchToSplit: Story = {
 };
 
 export const EnterSubmitPendingGuard: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     onSubmit: fn(
       async () => await new Promise((resolve) => setTimeout(resolve, 150)),
@@ -121,6 +133,7 @@ export const EnterSubmitPendingGuard: Story = {
 };
 
 export const DescriptionLimitPreservesDraft: Story = {
+  tags: ["regression", "!autodocs"],
   args: {
     initialValues: {
       date: new Date("2026-01-15T00:00:00.000Z"),
@@ -152,5 +165,29 @@ export const DescriptionLimitPreservesDraft: Story = {
         description: "x".repeat(RESOURCE_LIMITS.description),
       }),
     );
+  },
+};
+
+export const Pending: Story = {
+  args: {
+    ...EditModeWithSwitchToSplit.args,
+    onSubmit: fn(pendingStorySubmission),
+  },
+  parameters: {
+    docs: {
+      story: { autoplay: true },
+      description: {
+        story:
+          "The submission remains pending for inspection. Remount the story to reset it.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const submit = body.getByRole("button", { name: "Save" });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("data-loading");
   },
 };

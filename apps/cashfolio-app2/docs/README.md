@@ -15,6 +15,10 @@ Architecture and implementation patterns for `apps/cashfolio-app2`.
 
 ## Storybook and Chromatic
 
+See [Catalogue and authoring conventions](storybook.md) for sidebar
+organization, regression filters, preview controls, documentation, and state
+examples.
+
 For interactive development, start Storybook in a separate terminal. The server
 command keeps running until you stop it:
 
