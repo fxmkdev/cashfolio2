@@ -163,7 +163,10 @@ provider-attempt ledger, shared user-scoped work and bounded Marketstack
 timeouts/rate-limit retries. Its Redis cache is separate from valuation caches.
 
 The maintenance-only catalogue worker has no HTTP entry point. A database
-advisory lock prevents overlapping bulk jobs; a 30-minute deadline, validated
-pagination and bounded HTTP retries constrain provider work. The Fly runner
-terminates and removes its job Machine on failure or cancellation. See
-[Securities operations](securities.md#operations) for scheduling and bootstrap.
+advisory lock prevents overlapping bulk jobs. Deployment initialization skips
+provider calls when a catalogue already exists, or waits for an overlapping job
+within the same deadline before initializing a missing catalogue. A 30-minute
+deadline, validated pagination and bounded HTTP retries constrain provider work.
+The Fly runner terminates and removes its job Machine on failure or
+cancellation. See [Securities operations](securities.md#operations) for
+scheduling and bootstrap.

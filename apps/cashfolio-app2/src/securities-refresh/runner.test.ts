@@ -75,6 +75,56 @@ describe("deployed securities refresh runner", () => {
     );
     expect(options.api).toHaveBeenLastCalledWith("DELETE", "/job?force=true");
   });
+  test("passes initialization mode and accepts only an available catalogue", async () => {
+    const options = fixture();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    options.readLogs.mockResolvedValue(
+      JSON.stringify({
+        message:
+          'SECURITIES_REFRESH {"status":"skipped","reason":"catalogue-present","rows":31,"pages":0,"version":"v"}',
+      }),
+    );
+    await runSecuritiesRefresh({ ...options, onlyIfMissing: true });
+    expect(options.api).toHaveBeenCalledWith(
+      "POST",
+      "",
+      expect.objectContaining({
+        config: expect.objectContaining({
+          init: {
+            exec: [
+              "node",
+              "/app/apps/cashfolio-app2/dist/securities-refresh/refresh.mjs",
+              "--if-missing",
+            ],
+          },
+        }),
+      }),
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining("no provider requests"),
+    );
+    expect(options.api).toHaveBeenLastCalledWith("DELETE", "/job?force=true");
+  });
+  test("initialization cannot succeed merely because another job holds the lock", async () => {
+    const options = fixture();
+    options.readLogs.mockResolvedValue(
+      JSON.stringify({
+        message:
+          'SECURITIES_REFRESH {"status":"skipped","reason":"refresh-locked","rows":0,"pages":0,"version":null}',
+      }),
+    );
+    await expect(
+      runSecuritiesRefresh({ ...options, onlyIfMissing: true }),
+    ).rejects.toThrow("without completion metrics");
+    expect(options.api).toHaveBeenLastCalledWith("DELETE", "/job?force=true");
+  });
+  test("failed initialization is reported and its Machine is destroyed", async () => {
+    const options = fixture(1);
+    await expect(
+      runSecuritiesRefresh({ ...options, onlyIfMissing: true }),
+    ).rejects.toThrow("process failed");
+    expect(options.api).toHaveBeenLastCalledWith("DELETE", "/job?force=true");
+  });
   test("rejects nonzero exits and missing terminal metrics without printing remote logs", async () => {
     const failed = fixture(1);
     await expect(runSecuritiesRefresh(failed)).rejects.toThrow(

@@ -53,6 +53,7 @@ jobs:
   cashfolio-app2-deploy:
     name: "cashfolio-app2: Deploy"
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     if: ${{ inputs.deploy-cashfolio-app2 }}
     concurrency:
       group:
@@ -60,8 +61,12 @@ jobs:
         'shared' }}
       cancel-in-progress: false
     environment:
-      name: ${{ inputs.app_environment_name || format('{0}-cashfolio-app', inputs.environment) }}
-      url: ${{ inputs.app_environment_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
+      name:
+        ${{ inputs.app_environment_name || format('{0}-cashfolio-app',
+        inputs.environment) }}
+      url:
+        ${{ inputs.app_environment_url || format('https://{0}/',
+        inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -102,7 +107,9 @@ jobs:
           api_key: ${{ secrets.NEON_API_KEY }}
           expires_at: ${{ env.EXPIRES_AT }}
       - name: Run Neon branch post-provision hook
-        if: ${{ inputs.prepare_preview_environment && steps.neon.outputs.created == 'true' }}
+        if:
+          ${{ inputs.prepare_preview_environment && steps.neon.outputs.created
+          == 'true' }}
         run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
         env:
           DATABASE_URL: ${{ steps.neon.outputs.db_url }}
@@ -209,11 +216,15 @@ jobs:
       - name: Deploy cashfolio-app2
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
-          image: ${{ inputs.cashfolio_app2_image || format('registry.fly.io/{0}:v{1}', vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
+          image:
+            ${{ inputs.cashfolio_app2_image ||
+            format('registry.fly.io/{0}:v{1}',
+            vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
           high_availability: ${{ inputs.high_availability }}
           app_environment: ${{ inputs.environment }}
           fly_app: ${{ inputs.fly_app || vars.FLY_APP }}
-          canonical_hostname: ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
+          canonical_hostname:
+            ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
           base_url: ${{ inputs.base_url || vars.BASE_URL }}
           fly_primary_region: ${{ vars.FLY_PRIMARY_REGION }}
           fly_min_machines_running: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
@@ -231,7 +242,22 @@ jobs:
       - name: Wake up deployed app
         uses: ./.github/actions/warm-up-url
         with:
-          url: ${{ inputs.app_environment_url || inputs.base_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
+          url:
+            ${{ inputs.app_environment_url || inputs.base_url ||
+            format('https://{0}/', inputs.canonical_hostname ||
+            vars.CANONICAL_HOSTNAME) }}
+      - name: Set up initialization runner
+        uses: ./.github/actions/setup
+      - name: Install initialization runner dependencies
+        run: pnpm --filter cashfolio-app2 install --frozen-lockfile
+      - name: Initialize missing Securities catalogue
+        run:
+          pnpm --filter cashfolio-app2 exec node
+          scripts/run-securities-refresh.ts --if-missing
+        env:
+          FLY_APP: ${{ inputs.fly_app || vars.FLY_APP }}
+          FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"

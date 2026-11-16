@@ -98,12 +98,28 @@ The refresh payload is bundled into the deployed app image. The GitHub workflow
 [refresh-securities.yml](../../../.github/workflows/refresh-securities.yml)
 creates an isolated Fly Machine from that environment's deployed web image,
 checks its exit and completion metrics, then destroys it. It runs daily in
-production at **04:17 UTC**. Staging and preview refresh only by manual
-dispatch. A 30-minute worker deadline and a 32-minute runner deadline bound
-work; provider requests time out and rate-limit retries are bounded. No provider
-credentials are sent to browsers or supplied as runner arguments.
+production at **04:17 UTC**. Subsequent full refreshes in staging and preview
+use manual dispatch. A 30-minute worker deadline and a 32-minute runner deadline
+bound work; provider requests time out and rate-limit retries are bounded. No
+provider credentials are sent to browsers or supplied as runner arguments.
 
-After the first deployment and migration in each environment, bootstrap it:
+After deployment and warm-up, the shared deployment workflow runs the job with
+`--if-missing` in **every environment**. An existing published catalogue,
+including a stale one or one inherited by a preview database branch, skips all
+preflight and provider requests. An empty catalogue is initialized after taking
+the database lock and rechecking publication. If another refresh holds the lock,
+initialization waits within its deadline until data is available or it can take
+over. A lock-only skip cannot report successful initialization.
+
+Initialization failure fails the deployment check without rolling back or
+stopping the deployed app. Inspect the job/provider-usage logs, correct the
+failure, then rerun the failed deployment job; initialization is idempotent. The
+deployment workflow allows 50 minutes for app deployment and the bounded
+initialization job. This path also works before a newly introduced manual
+workflow becomes available on GitHub's default branch.
+
+For a deliberate full refresh after deployment, use the manual workflow
+(available once the workflow is on `main`):
 
 ```sh
 gh workflow run refresh-securities.yml --ref main -f environment=staging
@@ -123,7 +139,10 @@ First run `pnpm --filter cashfolio-app2 build:securities-refresh`. For a local
 preflight only (no bulk refresh), supply the existing API key via the
 environment and run `pnpm --filter cashfolio-app2 refresh:securities --smoke`.
 Bulk local refresh also requires `DATABASE_URL`; run without `--smoke` only when
-intentionally populating that database. No credentials belong in fixtures.
+intentionally populating that database. Use `--if-missing` for idempotent
+initial setup; an existing catalogue succeeds without `MARKETSTACK_API_KEY` or
+provider calls. Do not combine `--smoke` and `--if-missing`. No credentials
+belong in fixtures.
 
 On 2026-11-16, a small authenticated staging smoke check confirmed the catalogue
 shape (`ticker`, `stock_exchange`, `has_eod`), exchange `country_code`, and
@@ -136,6 +155,7 @@ work. Automated tests always use fixtures.
 Focused unit tests cover authentication, validation, parsing, cache isolation,
 provider failures and the Fly runner. The general database integration CI suite
 owns `src/securities-refresh/catalogue.integration.ts`: atomic publication,
-failed-refresh preservation, pagination, locking and versioned queries. The
-mocked Securities E2E flow covers sidebar navigation, exact exchange selection
-and chart ranges. Full suites/builds and database-backed runs remain CI checks.
+failed-refresh preservation, pagination, locking, versioned queries and
+idempotent/concurrent initialization. The mocked Securities E2E flow covers
+sidebar navigation, exact exchange selection and chart ranges. Full
+suites/builds and database-backed runs remain CI checks.

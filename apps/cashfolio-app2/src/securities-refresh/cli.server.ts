@@ -1,13 +1,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../.prisma-client/client";
-import { Temporal } from "../shared/temporal";
 import {
-  fetchMarketstackPage,
   fetchExchangeCountries,
-  parseCatalogueRow,
-  parseHistoryRows,
   type MarketstackOptions,
 } from "../server/securities/marketstack.server";
+import { marketstackPreflight } from "./preflight.server";
+import { readRefreshArguments } from "./options";
 import { refreshCatalogue } from "./refresh.server";
 
 let db: PrismaClient | undefined;
@@ -17,6 +15,7 @@ const cancel = () =>
 process.once("SIGTERM", cancel);
 process.once("SIGINT", cancel);
 try {
+  const args = readRefreshArguments(process.argv.slice(2));
   if (process.env.DATABASE_URL)
     db = new PrismaClient({
       adapter: new PrismaPg({
@@ -52,59 +51,24 @@ try {
       }
     },
   };
-  // A small preflight validates the deployed provider contract before bulk work.
-  const page = await fetchMarketstackPage(
-    "tickerslist",
-    { search: "AAPL", exchange: "XNAS", limit: "1", offset: "0" },
-    options,
-  );
-  const listing = page.data
-    .map(parseCatalogueRow)
-    .find((row) => row.symbol === "AAPL" && row.mic === "XNAS");
-  if (!listing) throw new Error("Marketstack catalogue smoke check failed.");
-  const through = Temporal.Now.plainDateISO("UTC");
-  const from = through.subtract({ days: 7 }).toString();
-  const prices = await fetchMarketstackPage(
-    "eod",
-    {
-      symbols: listing.symbol,
-      exchange: listing.mic,
-      date_from: from,
-      date_to: through.toString(),
-      limit: "1",
-      offset: "0",
-    },
-    options,
-  );
-  const history = parseHistoryRows(
-    prices.data,
-    listing.symbol,
-    listing.mic,
-    from,
-    through.toString(),
-  );
-  if (!history.points.length)
-    throw new Error("Marketstack price smoke check failed.");
-  console.log(
-    "SECURITIES_SMOKE " +
-      JSON.stringify({
-        symbol: listing.symbol,
-        mic: listing.mic,
-        currency: history.currency,
-        catalogueTotal: page.pagination.total,
-      }),
-  );
-  if (!process.argv.includes("--smoke")) {
+  if (args.smoke) {
+    await marketstackPreflight(options);
+  } else {
     if (!db) throw new Error("Missing catalogue database configuration.");
     const summary = await refreshCatalogue(db, {
       ...options,
-      exchangeCountries: await fetchExchangeCountries(options),
+      onlyIfMissing: args.onlyIfMissing,
+      prepare: async (signal) => {
+        const providerOptions = { ...options, signal };
+        await marketstackPreflight(providerOptions);
+        return fetchExchangeCountries(providerOptions);
+      },
     });
     console.log("SECURITIES_REFRESH " + JSON.stringify(summary));
   }
 } catch {
   console.error(
-    "Securities catalogue operation failed. Inspect provider usage and refresh progress; the previous catalogue remains available.",
+    "Securities catalogue operation failed. Inspect provider usage and refresh progress, then retry. No incomplete catalogue was published.",
   );
   process.exitCode = 1;
 } finally {

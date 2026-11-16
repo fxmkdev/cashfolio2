@@ -309,7 +309,11 @@ publication age and runtime compatibility when changing this bootstrap pin.
 ## Securities Catalogue Refresh
 
 The app image includes the standalone Securities catalogue refresh payload.
-Production refresh runs daily at 04:17 UTC; staging and preview use manual
-dispatch. Bootstrap every environment after its first compatible deployment and
-migration. See [Securities operations](securities.md#operations) for dispatch
-commands, deadlines, locking and failure recovery.
+After deployment/migration and warm-up, every environment automatically runs
+`--if-missing`: a published catalogue skips all provider calls, while a missing
+catalogue is initialized once under the database lock. Initialization failure
+fails the deployment check while leaving the deployed app running; rerun the
+failed deployment job after resolving the cause. Production's subsequent full
+refresh runs daily at 04:17 UTC; staging and preview use manual dispatch. See
+[Securities operations](securities.md#operations) for dispatch commands,
+deadlines, locking and failure recovery.

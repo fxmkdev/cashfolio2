@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { createId } from "@paralleldrive/cuid2";
+import { readRefreshArguments } from "../src/securities-refresh/options.ts";
 import {
   selectWebImage,
   processExit,
@@ -17,6 +18,7 @@ export async function runSecuritiesRefresh(options: {
   sleep?: (ms: number) => Promise<void>;
   clock?: () => number;
   signal?: AbortSignal;
+  onlyIfMissing?: boolean;
 }) {
   const { api, region, readLogs, signal } = options;
   const sleep =
@@ -44,6 +46,7 @@ export async function runSecuritiesRefresh(options: {
           exec: [
             "node",
             "/app/apps/cashfolio-app2/dist/securities-refresh/refresh.mjs",
+            ...(options.onlyIfMissing ? ["--if-missing"] : []),
           ],
         },
         guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 },
@@ -87,10 +90,16 @@ export async function runSecuritiesRefresh(options: {
             Number.isSafeInteger(value.rows) &&
             value.rows >= 0 &&
             Number.isSafeInteger(value.pages) &&
-            value.pages >= 0
+            value.pages >= 0 &&
+            (!options.onlyIfMissing ||
+              (typeof value.version === "string" &&
+                value.version.length > 0 &&
+                value.rows > 0 &&
+                (value.status === "completed" ||
+                  value.reason === "catalogue-present")))
           ) {
             console.log(
-              `Securities refresh ${value.status}: ${value.rows} listings, ${value.pages} pages.`,
+              `Securities ${options.onlyIfMissing ? "initialization" : "refresh"} ${value.status}: ${value.rows} listings, ${value.pages} pages${value.reason === "catalogue-present" ? "; catalogue already available, no provider requests" : ""}.`,
             );
             return;
           }
@@ -119,6 +128,9 @@ export async function runSecuritiesRefresh(options: {
   }
 }
 async function main() {
+  const args = readRefreshArguments(process.argv.slice(2));
+  if (args.smoke)
+    throw new Error("The Fly runner supports --if-missing or no arguments.");
   const {
     FLY_APP: app,
     FLY_API_TOKEN: token,
@@ -141,6 +153,7 @@ async function main() {
       api: createMachinesApi(app, token),
       region,
       signal: controller.signal,
+      onlyIfMissing: args.onlyIfMissing,
       readLogs: async (id) =>
         (
           await execute(

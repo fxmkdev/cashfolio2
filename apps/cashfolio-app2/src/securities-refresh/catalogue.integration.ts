@@ -9,6 +9,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import {
@@ -85,6 +86,94 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     } finally {
       await admin.$disconnect();
     }
+  });
+  test("initializes an empty catalogue once and skips subsequent/stale initialization without provider calls", async () => {
+    const prepare = vi.fn(async () => new Map<string, string>());
+    const fetchPage = vi.fn(page);
+    const first = await refreshCatalogue(db, {
+      onlyIfMissing: true,
+      prepare,
+      fetchPage,
+    });
+    expect(first).toMatchObject({ status: "completed", rows: 3 });
+    expect(prepare).toHaveBeenCalledTimes(1);
+    await db.securityCatalogueSnapshot.update({
+      where: { id: first.version! },
+      data: { publishedAt: new Date(0) },
+    });
+    prepare.mockClear();
+    fetchPage.mockClear();
+    const second = await refreshCatalogue(db, {
+      onlyIfMissing: true,
+      prepare,
+      fetchPage,
+    });
+    expect(second).toMatchObject({
+      status: "skipped",
+      reason: "catalogue-present",
+      version: first.version,
+      rows: 3,
+    });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetchPage).not.toHaveBeenCalled();
+    expect(await db.securityCatalogueSnapshot.count()).toBe(1);
+  });
+  test("concurrent initialization publishes once and waits for a usable catalogue", async () => {
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const firstPrepare = vi.fn(async () => {
+      ready();
+      await gate;
+      return new Map<string, string>();
+    });
+    const secondPrepare = vi.fn(async () => new Map<string, string>());
+    const first = refreshCatalogue(db, {
+      onlyIfMissing: true,
+      prepare: firstPrepare,
+      fetchPage: page,
+    });
+    await pending;
+    let finished = false;
+    const second = refreshCatalogue(db, {
+      onlyIfMissing: true,
+      prepare: secondPrepare,
+      fetchPage: page,
+    }).then((value) => {
+      finished = true;
+      return value;
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(finished).toBe(false);
+    } finally {
+      release();
+    }
+    const [published, skipped] = await Promise.all([first, second]);
+    expect(published.status).toBe("completed");
+    expect(skipped).toMatchObject({
+      reason: "catalogue-present",
+      version: published.version,
+    });
+    expect(secondPrepare).not.toHaveBeenCalled();
+    expect(await db.securityCatalogueSnapshot.count()).toBe(1);
+  });
+  test("failed initialization never leaves a partial or usable catalogue", async () => {
+    await expect(
+      refreshCatalogue(db, {
+        onlyIfMissing: true,
+        fetchPage: async () => {
+          throw new Error("provider failed");
+        },
+      }),
+    ).rejects.toThrow("provider failed");
+    expect(await db.securityCatalogueSnapshot.count()).toBe(0);
+    expect((await catalogueStatus(db)).version).toBeNull();
   });
   test("publishes only complete snapshots, retains old versions for 48 hours and queries full metadata", async () => {
     const first = await refreshCatalogue(db, {
