@@ -248,10 +248,83 @@ describe("Marketstack Securities contract", () => {
     }
     fetch.mockResolvedValueOnce(Response.json({ data: "bad" }));
     await expect(fetchMarketstackPage("eod", {})).rejects.toThrow("malformed");
-    fetch.mockRejectedValueOnce(new TypeError("network"));
+    fetch.mockRejectedValue(new TypeError("network"));
     await expect(fetchMarketstackPage("eod", {})).rejects.toThrow(
       "could not be reached",
     );
+  });
+  test("retries a timed-out page with the exact same offset and records every attempt", async () => {
+    vi.spyOn(AbortSignal, "timeout")
+      .mockReturnValueOnce(
+        AbortSignal.abort(new DOMException("timed out", "TimeoutError")),
+      )
+      .mockReturnValue(new AbortController().signal);
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new DOMException("aborted", "AbortError"))
+      .mockResolvedValueOnce(
+        Response.json({
+          data: [],
+          pagination: { offset: 1000, count: 0, total: 1000 },
+        }),
+      );
+    await expect(
+      fetchMarketstackPage("tickerslist", { offset: "1000" }),
+    ).resolves.toMatchObject({ pagination: { offset: 1000 } });
+    expect(
+      fetch.mock.calls.map(([url]) =>
+        new URL(String(url)).searchParams.get("offset"),
+      ),
+    ).toEqual(["1000", "1000"]);
+    expect(
+      record.mock.calls.map(([input]) => [
+        input.outcome,
+        input.retryCount,
+        input.requestReason,
+      ]),
+    ).toEqual([
+      ["TIMEOUT", 0, "CATALOGUE_REFRESH"],
+      ["NO_DATA", 1, "CATALOGUE_REFRESH"],
+    ]);
+  });
+  test("recovers from temporary HTTP and network failures without retrying malformed data", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("temporary", { status: 503 }))
+      .mockRejectedValueOnce(new TypeError("network"))
+      .mockResolvedValueOnce(Response.json(page([])));
+    await expect(fetchMarketstackPage("eod", {})).resolves.toMatchObject({
+      data: [],
+    });
+    expect(record.mock.calls.map(([input]) => input.outcome)).toEqual([
+      "HTTP_ERROR",
+      "REQUEST_ERROR",
+      "NO_DATA",
+    ]);
+    fetch.mockClear();
+    fetch.mockResolvedValueOnce(Response.json({ data: "malformed" }));
+    await expect(fetchMarketstackPage("tickerslist", {})).rejects.toThrow(
+      "malformed",
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  test("bounds persistent timeouts and never retries an explicit cancellation", async () => {
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(
+      AbortSignal.abort(new DOMException("timed out", "TimeoutError")),
+    );
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new DOMException("aborted", "AbortError"));
+    await expect(fetchMarketstackPage("eod", {})).rejects.toThrow("timed out");
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(record).toHaveBeenCalledTimes(3);
+    fetch.mockClear();
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    await expect(
+      fetchMarketstackPage("eod", {}, { signal: controller.signal }),
+    ).rejects.toThrow("cancelled");
+    expect(fetch).not.toHaveBeenCalled();
   });
   test("bounds rate-limit retries and records them", async () => {
     vi.useFakeTimers();

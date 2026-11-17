@@ -149,6 +149,8 @@ function providerError(raw: unknown, status: number): Error | null {
     );
   return new Error("Marketstack data could not be retrieved. Try again later.");
 }
+const TRANSIENT_MAX_RETRIES = 2;
+
 export async function fetchMarketstackPage(
   path: "tickerslist" | "exchanges" | "eod",
   params: Record<string, string>,
@@ -162,8 +164,10 @@ export async function fetchMarketstackPage(
   if (!key)
     throw new Error("Marketstack is not configured. Contact an administrator.");
   const record = options.record ?? recordValuationProviderRequest;
+  let previousRateLimit = false;
   for (let retry = 0; ; retry++) {
     checkResourceBudget();
+    options.signal?.throwIfAborted();
     consumeProviderAttempt();
     const requestedAt = new Date();
     const signal = AbortSignal.any([
@@ -176,6 +180,12 @@ export async function fetchMarketstackPage(
       "REQUEST_ERROR";
     let httpStatus: number | undefined;
     let errorMessage: string | undefined;
+    let rateLimited = false;
+    const requestReason = previousRateLimit
+      ? "RATE_LIMIT_RETRY"
+      : path === "eod"
+        ? "SECURITY_HISTORY"
+        : "CATALOGUE_REFRESH";
     try {
       const query = new URLSearchParams({ ...params, access_key: key });
       const response = await fetch(
@@ -185,7 +195,16 @@ export async function fetchMarketstackPage(
       httpStatus = response.status;
       if (httpStatus === 429 && retry < MARKETSTACK_RATE_LIMIT_MAX_RETRIES) {
         outcome = "RATE_LIMIT_RETRY";
+        rateLimited = true;
         await response.body?.cancel();
+      } else if (httpStatus >= 500) {
+        outcome = "HTTP_ERROR";
+        errorMessage = "Marketstack is temporarily unavailable.";
+        await response.body?.cancel();
+        if (retry >= TRANSIENT_MAX_RETRIES)
+          throw new Error(
+            "Marketstack is temporarily unavailable. Try again later.",
+          );
       } else {
         outcome = response.ok ? "PROVIDER_ERROR" : "HTTP_ERROR";
         let raw: unknown;
@@ -241,25 +260,26 @@ export async function fetchMarketstackPage(
       if (options.signal?.aborted) throw options.signal.reason;
       if (signal.aborted) {
         outcome = "TIMEOUT";
-        throw new Error("Marketstack request timed out. Try again.", {
-          cause: error,
-        });
+        errorMessage = "Marketstack request timed out.";
+        if (retry >= TRANSIENT_MAX_RETRIES)
+          throw new Error("Marketstack request timed out. Try again.", {
+            cause: error,
+          });
+      } else if (outcome === "REQUEST_ERROR") {
+        errorMessage = "Marketstack could not be reached.";
+        if (retry >= TRANSIENT_MAX_RETRIES)
+          throw new Error("Marketstack could not be reached. Try again.", {
+            cause: error,
+          });
+      } else {
+        throw error;
       }
-      if (outcome === "REQUEST_ERROR")
-        throw new Error("Marketstack could not be reached. Try again.", {
-          cause: error,
-        });
-      throw error;
     } finally {
       await record({
         provider: "MARKETSTACK",
         unitType: "SECURITY",
         outcome,
-        requestReason: retry
-          ? "RATE_LIMIT_RETRY"
-          : path === "eod"
-            ? "SECURITY_HISTORY"
-            : "CATALOGUE_REFRESH",
+        requestReason,
         requestedAt,
         valuationDate: requestedAt,
         durationMs: Date.now() - requestedAt.getTime(),
@@ -269,6 +289,7 @@ export async function fetchMarketstackPage(
         errorMessage,
       });
     }
+    previousRateLimit = rateLimited;
     await delay(MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS, undefined, {
       signal: options.signal ?? getResourceSignal(),
     });

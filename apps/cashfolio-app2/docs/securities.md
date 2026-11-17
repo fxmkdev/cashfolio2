@@ -97,11 +97,13 @@ and empty histories are not cached. Range controls filter the loaded series
 locally without additional provider calls.
 
 Provider requests reuse `MARKETSTACK_API_KEY`, timeout/rate-limit retry
-constants, resource-budget accounting and sanitized provider usage. Every HTTP
-attempt is reported with `CATALOGUE_REFRESH`, `SECURITY_HISTORY` or
-`RATE_LIMIT_RETRY`. Configuration, subscription/quota, malformed data and
-transient errors have separate safe messages. Existing financial-account
-valuation is unchanged.
+constants, resource-budget accounting and sanitized provider usage. A timed-out
+request, network failure or HTTP 5xx response retries the same page at most
+twice, with bounded delays inside the existing deadline. Cancellation and
+malformed data never retry. Every HTTP attempt is reported with
+`CATALOGUE_REFRESH`, `SECURITY_HISTORY` or `RATE_LIMIT_RETRY`. Configuration,
+subscription/quota, malformed data and transient errors have separate safe
+messages. Existing financial-account valuation is unchanged.
 
 ## Operations
 
