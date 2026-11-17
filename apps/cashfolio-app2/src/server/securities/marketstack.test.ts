@@ -326,6 +326,22 @@ describe("Marketstack Securities contract", () => {
     ).rejects.toThrow("cancelled");
     expect(fetch).not.toHaveBeenCalled();
   });
+  test("retries unreadable HTTP payloads but bounds persistent invalid JSON", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("<html>temporary failure</html>"))
+      .mockResolvedValueOnce(Response.json(page([])));
+    await expect(fetchMarketstackPage("eod", {})).resolves.toMatchObject({
+      data: [],
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    fetch.mockClear();
+    fetch.mockImplementation(async () => new Response("{"));
+    await expect(fetchMarketstackPage("eod", {})).rejects.toThrow(
+      "unreadable response",
+    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
   test("bounds rate-limit retries and records them", async () => {
     vi.useFakeTimers();
     const fetch = vi

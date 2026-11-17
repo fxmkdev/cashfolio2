@@ -175,7 +175,7 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     expect(await db.securityCatalogueSnapshot.count()).toBe(0);
     expect((await catalogueStatus(db)).version).toBeNull();
   });
-  test("prefetches while an insert is blocked and binds provider metadata as data", async () => {
+  test("prefetches two pages while an insert is blocked and binds provider metadata as data", async () => {
     let release!: () => void;
     let ready!: () => void;
     let fetched!: () => void;
@@ -199,17 +199,17 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     await locked;
     const refresh = refreshCatalogue(db, {
       fetchPage: async (offset) => {
-        if (offset === 1) fetched();
+        if (offset === 2) fetched();
         return {
           data: [
             {
-              ticker: offset ? "NEE 6.219" : "O'NEIL",
+              ticker: ["O'NEIL", "NEE 6.219", "THIRD"][offset],
               name: 'A "quoted" name; --',
               has_eod: offset ? false : null,
               stock_exchange: { mic: "XETRA", name: "Provider's Exchange" },
             },
           ],
-          pagination: { offset, count: 1, total: 2 },
+          pagination: { offset, count: 1, total: 3 },
         };
       },
     });
@@ -264,6 +264,14 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
         mic: "XETRA",
         exchange: "Provider's Exchange",
         hasHistory: null,
+        country: null,
+      },
+      {
+        symbol: "THIRD",
+        name: 'A "quoted" name; --',
+        mic: "XETRA",
+        exchange: "Provider's Exchange",
+        hasHistory: false,
         country: null,
       },
     ]);

@@ -28,6 +28,83 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("catalogue initialization", () => {
+  test.each([false, true])(
+    "bounds concurrent requests and rejects changed page sizes: %s",
+    async (changedPageSize) => {
+      let release!: () => void;
+      let ready!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const queued = new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+      const snapshots = {
+        findFirst: vi.fn(async () => null),
+        create: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        deleteMany: vi.fn(async () => ({ count: 1 })),
+      };
+      const execute = vi.fn(async () => 1);
+      const client = {
+        securityCatalogueSnapshot: snapshots,
+        $executeRaw: execute,
+        $queryRaw: vi.fn(async () => [{ locked: true }]),
+        $transaction: vi.fn(async (operation: (tx: unknown) => unknown) =>
+          operation(client),
+        ),
+      };
+      let active = 0;
+      let maximum = 0;
+      const offsets: number[] = [];
+      const operation = refreshCatalogue(client as unknown as PrismaClient, {
+        fetchPage: async (offset) => {
+          offsets.push(offset);
+          active++;
+          maximum = Math.max(maximum, active);
+          if (offset > 0) {
+            if (offset === 2) ready();
+            await gate;
+          }
+          active--;
+          return {
+            data: Array.from(
+              { length: changedPageSize && offset === 1 ? 2 : 1 },
+              (_, i) => ({ ticker: `SAMPLE${offset + i}` }),
+            ),
+            pagination: {
+              offset,
+              count: changedPageSize && offset === 1 ? 2 : 1,
+              total: 5,
+            },
+          };
+        },
+      });
+      try {
+        await queued;
+        expect(offsets).toEqual([0, 1, 2]);
+        expect(snapshots.update).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+      if (changedPageSize) {
+        await expect(operation).rejects.toThrow("pagination was incomplete");
+        expect(snapshots.update).not.toHaveBeenCalled();
+        expect(snapshots.deleteMany).toHaveBeenCalledOnce();
+        return;
+      }
+      await expect(operation).resolves.toMatchObject({
+        status: "completed",
+        pages: 5,
+        rows: 5,
+      });
+      expect(offsets).toEqual([0, 1, 2, 3, 4]);
+      expect(maximum).toBe(2);
+      expect(execute).toHaveBeenCalledTimes(5);
+      expect(snapshots.update).toHaveBeenCalledOnce();
+    },
+  );
   test("skips existing, even stale catalogues without requiring provider credentials", async () => {
     vi.stubEnv("MARKETSTACK_API_KEY", undefined);
     findFirst.mockResolvedValue(existing);

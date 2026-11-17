@@ -96,6 +96,8 @@ export async function refreshCatalogue(
         const requests = new AbortController();
         const fetchSignal = AbortSignal.any([signal, requests.signal]);
         let pending: Promise<MarketstackPage> | undefined;
+        let prefetched:
+          { offset: number; request: Promise<MarketstackPage> } | undefined;
         const queuePage = (offset: number) => {
           const request = fetchPage(offset, fetchSignal);
           // A prefetched request may fail while its preceding batch is writing.
@@ -145,9 +147,25 @@ export async function refreshCatalogue(
                   snapshotId: version,
                 };
               });
-            // Keep at most one page ahead, overlapping HTTP with the batch write.
+            // Keep at most two requests in flight. The provider's fixed-size
+            // pages let the next request start before its predecessor returns.
+            // A changed page size/offset must fail rather than skip any rows.
             const nextOffset = offset + page.data.length;
-            pending = nextOffset < total ? queuePage(nextOffset) : undefined;
+            if (prefetched && prefetched.offset !== nextOffset)
+              throw new Error(
+                "The Marketstack catalogue changed or pagination was incomplete. Retry the refresh.",
+              );
+            pending =
+              prefetched?.request ??
+              (nextOffset < total ? queuePage(nextOffset) : undefined);
+            const lookaheadOffset = nextOffset + page.data.length;
+            prefetched =
+              lookaheadOffset < total
+                ? {
+                    offset: lookaheadOffset,
+                    request: queuePage(lookaheadOffset),
+                  }
+                : undefined;
             // One JSON parameter avoids thousands of bind parameters per batch.
             // Provider values remain data, never interpolated SQL identifiers.
             const inserted = batch.length
@@ -225,7 +243,11 @@ export async function refreshCatalogue(
           throw error;
         } finally {
           requests.abort();
-          await pending?.catch(() => {});
+          await Promise.allSettled(
+            [pending, prefetched?.request].filter(
+              (request): request is Promise<MarketstackPage> => !!request,
+            ),
+          );
         }
       },
       { maxWait: 1000, timeout: Math.max(1, deadline - Date.now()) + 5000 },

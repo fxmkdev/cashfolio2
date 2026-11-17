@@ -180,6 +180,7 @@ export async function fetchMarketstackPage(
       "REQUEST_ERROR";
     let httpStatus: number | undefined;
     let errorMessage: string | undefined;
+    let unreadable = false;
     let rateLimited = false;
     const requestReason = previousRateLimit
       ? "RATE_LIMIT_RETRY"
@@ -211,6 +212,7 @@ export async function fetchMarketstackPage(
         try {
           raw = await response.json();
         } catch {
+          unreadable = true;
           throw new Error("Marketstack returned an unreadable response.");
         }
         const root = object(raw);
@@ -265,6 +267,9 @@ export async function fetchMarketstackPage(
           throw new Error("Marketstack request timed out. Try again.", {
             cause: error,
           });
+      } else if (unreadable) {
+        errorMessage = "Marketstack returned an unreadable response.";
+        if (retry >= TRANSIENT_MAX_RETRIES) throw error;
       } else if (outcome === "REQUEST_ERROR") {
         errorMessage = "Marketstack could not be reached.";
         if (retry >= TRANSIENT_MAX_RETRIES)

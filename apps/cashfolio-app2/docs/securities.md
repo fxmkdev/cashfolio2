@@ -58,20 +58,22 @@ The provider boundary follows the
 
 A transaction-scoped PostgreSQL advisory lock prevents concurrent bulk
 refreshes. The worker reserves connections for the lock, staged batch writes and
-best-effort provider-attempt logging. It prefetches at most one catalogue page
-while writing the previous batch. Batch inserts use a bound JSON parameter and
-PostgreSQL record expansion to avoid thousands of individual bind parameters.
-Offset/count/total changes, duplicate identities, malformed rows and
-incomplete/empty catalogues fail the refresh. The only excluded provider records
-are explicitly identified `TEST`-exchange placeholders with both symbol and name
-absent. Their count is logged, and raw provider-row offsets still advance across
-every page. Missing identities on other exchanges remain errors, and a catalogue
-containing only placeholders is rejected. Only a completely staged catalogue is
-atomically published. Failed stages are deleted; the previous active snapshot
-continues serving. Superseded snapshots remain readable for 48 hours after their
-replacement, then become unavailable and are removed on a later successful
-refresh. Clients with expired versions receive a search-again error. Abandoned
-stages older than 24 hours are removed during publication.
+best-effort provider-attempt logging. At most two page requests run concurrently
+while batches are written in provider order. A changed page size or offset fails
+validation rather than skipping or duplicating rows. Batch inserts use a bound
+JSON parameter and PostgreSQL record expansion to avoid thousands of individual
+bind parameters. Offset/count/total changes, duplicate identities, malformed
+rows and incomplete/empty catalogues fail the refresh. The only excluded
+provider records are explicitly identified `TEST`-exchange placeholders with
+both symbol and name absent. Their count is logged, and raw provider-row offsets
+still advance across every page. Missing identities on other exchanges remain
+errors, and a catalogue containing only placeholders is rejected. Only a
+completely staged catalogue is atomically published. Failed stages are deleted;
+the previous active snapshot continues serving. Superseded snapshots remain
+readable for 48 hours after their replacement, then become unavailable and are
+removed on a later successful refresh. Clients with expired versions receive a
+search-again error. Abandoned stages older than 24 hours are removed during
+publication.
 
 Status includes publication time and a stale flag after 48 hours. An environment
 without a published snapshot shows catalogue-unavailable feedback with retry.
@@ -98,12 +100,13 @@ locally without additional provider calls.
 
 Provider requests reuse `MARKETSTACK_API_KEY`, timeout/rate-limit retry
 constants, resource-budget accounting and sanitized provider usage. A timed-out
-request, network failure or HTTP 5xx response retries the same page at most
-twice, with bounded delays inside the existing deadline. Cancellation and
-malformed data never retry. Every HTTP attempt is reported with
-`CATALOGUE_REFRESH`, `SECURITY_HISTORY` or `RATE_LIMIT_RETRY`. Configuration,
-subscription/quota, malformed data and transient errors have separate safe
-messages. Existing financial-account valuation is unchanged.
+request, network failure, unreadable HTTP payload or HTTP 5xx response retries
+the same page at most twice, with bounded delays inside the existing deadline.
+Cancellation and structurally invalid provider data never retry. Every HTTP
+attempt is reported with `CATALOGUE_REFRESH`, `SECURITY_HISTORY` or
+`RATE_LIMIT_RETRY`. Configuration, subscription/quota, malformed data and
+transient errors have separate safe messages. Existing financial-account
+valuation is unchanged.
 
 ## Operations
 
