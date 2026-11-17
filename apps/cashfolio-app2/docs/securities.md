@@ -62,8 +62,12 @@ best-effort provider-attempt logging. It prefetches at most one catalogue page
 while writing the previous batch. Batch inserts use a bound JSON parameter and
 PostgreSQL record expansion to avoid thousands of individual bind parameters.
 Offset/count/total changes, duplicate identities, malformed rows and
-incomplete/empty catalogues fail the refresh. Only a completely staged catalogue
-is atomically published. Failed stages are deleted; the previous active snapshot
+incomplete/empty catalogues fail the refresh. The only excluded provider records
+are explicitly identified `TEST`-exchange placeholders with both symbol and name
+absent. Their count is logged, and raw provider-row offsets still advance across
+every page. Missing identities on other exchanges remain errors, and a catalogue
+containing only placeholders is rejected. Only a completely staged catalogue is
+atomically published. Failed stages are deleted; the previous active snapshot
 continues serving. Superseded snapshots remain readable for 48 hours after their
 replacement, then become unavailable and are removed on a later successful
 refresh. Clients with expired versions receive a search-again error. Abandoned

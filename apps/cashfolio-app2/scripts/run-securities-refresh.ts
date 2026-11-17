@@ -99,7 +99,7 @@ export async function runSecuritiesRefresh(options: {
                   value.reason === "catalogue-present")))
           ) {
             console.log(
-              `Securities ${options.onlyIfMissing ? "initialization" : "refresh"} ${value.status}: ${value.rows} listings, ${value.pages} pages${value.reason === "catalogue-present" ? "; catalogue already available, no provider requests" : ""}.`,
+              `Securities ${options.onlyIfMissing ? "initialization" : "refresh"} ${value.status}: ${value.rows} listings, ${value.pages} pages${value.reason === "catalogue-present" ? "; catalogue already available, no provider requests" : ""}${Number.isSafeInteger(value.excluded) && value.excluded > 0 ? `; ${value.excluded} empty provider TEST placeholders excluded` : ""}.`,
             );
             return;
           }

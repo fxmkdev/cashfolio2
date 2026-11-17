@@ -10,6 +10,7 @@ vi.mock("../valuation/provider-usage.server", () => ({
 import {
   fetchMarketstackPage,
   parseCatalogueRow,
+  isCataloguePlaceholder,
   parseHistoryRows,
   parseMarketstackPage,
   fetchExchangeCountries,
@@ -142,6 +143,28 @@ describe("Marketstack Securities contract", () => {
     const url = new URL(String(fetch.mock.calls[0]![0]));
     expect(url.searchParams.get("symbols")).toBe("NEE 6.219");
     expect(url.searchParams.get("exchange")).toBe("XNYS");
+  });
+  test("recognizes only nameless, symbolless TEST placeholders and preserves raw pagination", async () => {
+    const placeholder = { name: null, stock_exchange: { mic: "TEST" } };
+    expect(isCataloguePlaceholder(placeholder)).toBe(true);
+    expect(
+      isCataloguePlaceholder({
+        ticker: "ABC",
+        stock_exchange: { mic: "TEST" },
+      }),
+    ).toBe(false);
+    expect(
+      isCataloguePlaceholder({ name: null, stock_exchange: { mic: "XNYS" } }),
+    ).toBe(false);
+    expect(() =>
+      parseCatalogueRow({ name: null, stock_exchange: { mic: "XNYS" } }),
+    ).toThrow("invalid symbol");
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json(page([placeholder, { ticker: "ABC", name: "ABC" }])),
+    );
+    const result = await fetchMarketstackPage("tickerslist", {});
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination.count).toBe(2);
   });
   test("rejects inconsistent or malformed pagination", () => {
     expect(parseMarketstackPage(page([]), 0).pagination.total).toBe(0);

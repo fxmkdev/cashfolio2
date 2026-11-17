@@ -75,6 +75,20 @@ export function parseMarketstackPage(
     },
   };
 }
+/** The provider emits empty TEST-exchange fixtures, not security listings. */
+export function isCataloguePlaceholder(raw: unknown): boolean {
+  const row = object(raw);
+  const symbol = row.ticker ?? row.symbol;
+  const exchange = row.stock_exchange;
+  return (
+    (symbol == null || symbol === "") &&
+    (row.name == null || row.name === "") &&
+    exchange != null &&
+    typeof exchange === "object" &&
+    !Array.isArray(exchange) &&
+    (exchange as Record<string, unknown>).mic === "TEST"
+  );
+}
 export function parseCatalogueRow(raw: unknown): CatalogueRow {
   const row = object(raw);
   const symbol = text(row.ticker ?? row.symbol, 64);
@@ -196,7 +210,10 @@ export async function fetchMarketstackPage(
         const error = providerError(raw, response.status);
         if (error) throw error;
         const page = parseMarketstackPage(raw, Number(params.offset ?? 0));
-        if (path === "tickerslist") page.data.forEach(parseCatalogueRow);
+        if (path === "tickerslist")
+          page.data.forEach((row) => {
+            if (!isCataloguePlaceholder(row)) parseCatalogueRow(row);
+          });
         if (
           path === "eod" &&
           params.symbols &&

@@ -268,6 +268,39 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
       },
     ]);
   });
+  test("counts provider offsets across placeholder pages without publishing fixtures", async () => {
+    const offsets: number[] = [];
+    const result = await refreshCatalogue(db, {
+      fetchPage: async (offset) => {
+        offsets.push(offset);
+        return {
+          data: offset
+            ? [sample("REAL")]
+            : [{ name: null, stock_exchange: { mic: "TEST" } }],
+          pagination: { offset, count: 1, total: 2 },
+        };
+      },
+    });
+    expect(offsets).toEqual([0, 1]);
+    expect(result).toMatchObject({ rows: 1, pages: 2, excluded: 1 });
+    expect(await db.securityCatalogueListing.count()).toBe(1);
+    expect((await db.securityCatalogueListing.findFirst())?.symbol).toBe(
+      "REAL",
+    );
+  });
+  test("a placeholder-only response cannot replace a successful catalogue", async () => {
+    const first = await refreshCatalogue(db, { fetchPage: page });
+    await expect(
+      refreshCatalogue(db, {
+        fetchPage: async (offset) => ({
+          data: [{ name: null, stock_exchange: { mic: "TEST" } }],
+          pagination: { offset, count: 1, total: 1 },
+        }),
+      }),
+    ).rejects.toThrow("no securities listings");
+    expect((await catalogueStatus(db)).version).toBe(first.version);
+    expect(await db.securityCatalogueSnapshot.count()).toBe(1);
+  });
   test("publishes only complete snapshots, retains old versions for 48 hours and queries full metadata", async () => {
     const first = await refreshCatalogue(db, {
       fetchPage: page,

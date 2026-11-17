@@ -2,6 +2,7 @@ import { Temporal } from "../shared/temporal";
 import {
   fetchMarketstackPage,
   parseCatalogueRow,
+  isCataloguePlaceholder,
   parseHistoryRows,
   type MarketstackOptions,
 } from "../server/securities/marketstack.server";
@@ -14,6 +15,7 @@ export async function marketstackPreflight(options: MarketstackOptions) {
     options,
   );
   const listing = page.data
+    .filter((row) => !isCataloguePlaceholder(row))
     .map(parseCatalogueRow)
     .find((row) => row.symbol === "AAPL" && row.mic === "XNAS");
   if (!listing) throw new Error("Marketstack catalogue smoke check failed.");

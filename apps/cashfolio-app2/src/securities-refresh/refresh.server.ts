@@ -4,6 +4,7 @@ import type { PrismaClient } from "../.prisma-client/client";
 import {
   fetchMarketstackPage,
   parseCatalogueRow,
+  isCataloguePlaceholder,
   type MarketstackPage,
   type MarketstackOptions,
 } from "../server/securities/marketstack.server";
@@ -18,6 +19,7 @@ export type RefreshSummary = {
   status: "completed" | "skipped";
   rows: number;
   pages: number;
+  excluded?: number;
   version: string | null;
   reason?: "catalogue-present" | "refresh-locked";
 };
@@ -89,6 +91,8 @@ export async function refreshCatalogue(
         const version = createId();
         let rows = 0;
         let pages = 0;
+        let offset = 0;
+        let excluded = 0;
         const requests = new AbortController();
         const fetchSignal = AbortSignal.any([signal, requests.signal]);
         let pending: Promise<MarketstackPage> | undefined;
@@ -114,9 +118,9 @@ export async function refreshCatalogue(
               throw new Error("Catalogue pagination ended prematurely.");
             const page: MarketstackPage = await pending;
             if (
-              page.pagination.offset !== rows ||
+              page.pagination.offset !== offset ||
               page.pagination.count !== page.data.length ||
-              page.pagination.total < rows + page.data.length ||
+              page.pagination.total < offset + page.data.length ||
               !page.data.length ||
               (total !== undefined && page.pagination.total !== total)
             )
@@ -124,49 +128,56 @@ export async function refreshCatalogue(
                 "The Marketstack catalogue changed or pagination was incomplete. Retry the refresh.",
               );
             total ??= page.pagination.total;
-            const batch = page.data.map((raw) => {
-              const row = parseCatalogueRow(raw);
-              const key = JSON.stringify([row.symbol, row.mic]);
-              if (seen.has(key))
-                throw new Error(
-                  "Marketstack returned duplicate catalogue listings.",
-                );
-              seen.add(key);
-              return {
-                ...row,
-                country: row.country ?? countries?.get(row.mic) ?? null,
-                id: createId(),
-                snapshotId: version,
-              };
-            });
+            const batch = page.data
+              .filter((raw) => !isCataloguePlaceholder(raw))
+              .map((raw) => {
+                const row = parseCatalogueRow(raw);
+                const key = JSON.stringify([row.symbol, row.mic]);
+                if (seen.has(key))
+                  throw new Error(
+                    "Marketstack returned duplicate catalogue listings.",
+                  );
+                seen.add(key);
+                return {
+                  ...row,
+                  country: row.country ?? countries?.get(row.mic) ?? null,
+                  id: createId(),
+                  snapshotId: version,
+                };
+              });
             // Keep at most one page ahead, overlapping HTTP with the batch write.
-            pending =
-              rows + batch.length < total
-                ? queuePage(rows + batch.length)
-                : undefined;
+            const nextOffset = offset + page.data.length;
+            pending = nextOffset < total ? queuePage(nextOffset) : undefined;
             // One JSON parameter avoids thousands of bind parameters per batch.
             // Provider values remain data, never interpolated SQL identifiers.
-            const inserted = await db.$executeRaw`
+            const inserted = batch.length
+              ? await db.$executeRaw`
               INSERT INTO "SecurityCatalogueListing"
                 ("id", "snapshotId", "symbol", "name", "exchange", "mic", "exchangeLabel", "country", "hasHistory")
               SELECT "id", "snapshotId", "symbol", "name", "exchange", "mic", "exchangeLabel", "country", "hasHistory"
               FROM jsonb_to_recordset(${JSON.stringify(batch)}::jsonb)
                 AS listing("id" text, "snapshotId" text, "symbol" text, "name" text,
                   "exchange" text, "mic" text, "exchangeLabel" text, "country" text, "hasHistory" boolean)
-            `;
+            `
+              : 0;
             if (inserted !== batch.length)
               throw new Error(
                 "The catalogue batch was not inserted completely.",
               );
             rows += batch.length;
+            offset = nextOffset;
+            excluded += page.data.length - batch.length;
             pages++;
             if (pages % 10 === 0)
               console.info("SECURITIES_REFRESH", {
                 status: "running",
                 rows,
                 pages,
+                excluded,
               });
-          } while (rows < total);
+          } while (offset < total);
+          if (!rows)
+            throw new Error("Marketstack returned no securities listings.");
           signal.throwIfAborted();
           await lock.$queryRaw`SELECT 1`;
           await db.$transaction(async (tx) => {
@@ -206,7 +217,7 @@ export async function refreshCatalogue(
               },
             });
           });
-          return { status: "completed", version, rows, pages };
+          return { status: "completed", version, rows, pages, excluded };
         } catch (error) {
           await db.securityCatalogueSnapshot
             .deleteMany({ where: { id: version, publishedAt: null } })
