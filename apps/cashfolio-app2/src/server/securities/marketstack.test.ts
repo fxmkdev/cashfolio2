@@ -116,6 +116,33 @@ describe("Marketstack Securities contract", () => {
       ["NMFQS", "US"],
     ]);
   });
+  test("preserves spaces in provider symbols while rejecting delimiters and control characters", async () => {
+    expect(
+      parseCatalogueRow({
+        ticker: "NEE 6.219",
+        name: "NextEra Energy Inc",
+        stock_exchange: { mic: "XNYS" },
+      }).symbol,
+    ).toBe("NEE 6.219");
+    for (const ticker of ["ABC,DEF", "ABC\nDEF", "ABC\tDEF"])
+      expect(() => parseCatalogueRow({ ticker })).toThrow("invalid symbol");
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json(
+          page([{ ...price, symbol: "NEE 6.219", exchange: "XNYS" }]),
+        ),
+      );
+    await fetchMarketstackPage("eod", {
+      symbols: "NEE 6.219",
+      exchange: "XNYS",
+      date_from: "2026-11-01",
+      date_to: "2026-11-16",
+    });
+    const url = new URL(String(fetch.mock.calls[0]![0]));
+    expect(url.searchParams.get("symbols")).toBe("NEE 6.219");
+    expect(url.searchParams.get("exchange")).toBe("XNYS");
+  });
   test("rejects inconsistent or malformed pagination", () => {
     expect(parseMarketstackPage(page([]), 0).pagination.total).toBe(0);
     for (const raw of [

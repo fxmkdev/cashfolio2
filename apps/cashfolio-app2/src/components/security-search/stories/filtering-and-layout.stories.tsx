@@ -210,12 +210,9 @@ export const MobileBrowsingState: Story = {
       ),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
-    let row: HTMLElement | null = null;
-    await waitFor(() => {
-      row = canvasElement.querySelector('.ag-row[row-index="20"]');
-      expect(row).toBeVisible();
-    });
-    const id = row!.getAttribute("row-id")!;
+    // SSRM renders a placeholder before the page arrives. Select the known
+    // first listing on the sorted second page, never a placeholder's null ID.
+    const id = "ORC:XNAS";
     await selectListing(canvasElement, id);
     await expect(grid).not.toBeVisible();
     await expect(input).not.toBeVisible();
