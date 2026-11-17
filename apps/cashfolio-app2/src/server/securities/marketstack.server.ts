@@ -78,7 +78,13 @@ export function parseMarketstackPage(
 export function parseCatalogueRow(raw: unknown): CatalogueRow {
   const row = object(raw);
   const symbol = text(row.ticker ?? row.symbol, 64);
-  if (!symbol || /[,\u0000-\u001f\u007f]/.test(symbol))
+  if (
+    !symbol ||
+    symbol.includes(",") ||
+    [...symbol].some(
+      (char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
+    )
+  )
     throw new Error("Marketstack returned an invalid symbol.");
   const exchange = row.stock_exchange == null ? {} : object(row.stock_exchange);
   const mic = text(exchange.mic, 64) ?? "";
