@@ -112,7 +112,7 @@ export async function refreshCatalogue(
             await lock.$queryRaw`SELECT 1`;
             if (!pending)
               throw new Error("Catalogue pagination ended prematurely.");
-            const page = await pending;
+            const page: MarketstackPage = await pending;
             if (
               page.pagination.offset !== rows ||
               page.pagination.count !== page.data.length ||
