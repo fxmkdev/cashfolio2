@@ -57,14 +57,17 @@ The provider boundary follows the
 [Marketstack v2 specification](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0).
 
 A transaction-scoped PostgreSQL advisory lock prevents concurrent bulk
-refreshes. The worker reserves one connection for the lock and uses another for
-staged batches. Offset/count/total changes, duplicate identities, malformed rows
-and incomplete/empty catalogues fail the refresh. Only a completely staged
-catalogue is atomically published. Failed stages are deleted; the previous
-active snapshot continues serving. Superseded snapshots remain readable for 48
-hours after their replacement, then become unavailable and are removed on a
-later successful refresh. Clients with expired versions receive a search-again
-error. Abandoned stages older than 24 hours are removed during publication.
+refreshes. The worker reserves connections for the lock, staged batch writes and
+best-effort provider-attempt logging. It prefetches at most one catalogue page
+while writing the previous batch. Batch inserts use a bound JSON parameter and
+PostgreSQL record expansion to avoid thousands of individual bind parameters.
+Offset/count/total changes, duplicate identities, malformed rows and
+incomplete/empty catalogues fail the refresh. Only a completely staged catalogue
+is atomically published. Failed stages are deleted; the previous active snapshot
+continues serving. Superseded snapshots remain readable for 48 hours after their
+replacement, then become unavailable and are removed on a later successful
+refresh. Clients with expired versions receive a search-again error. Abandoned
+stages older than 24 hours are removed during publication.
 
 Status includes publication time and a stale flag after 48 hours. An environment
 without a published snapshot shows catalogue-unavailable feedback with retry.

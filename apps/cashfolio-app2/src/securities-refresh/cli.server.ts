@@ -20,7 +20,7 @@ try {
     db = new PrismaClient({
       adapter: new PrismaPg({
         connectionString: process.env.DATABASE_URL,
-        max: 2,
+        max: 3,
         connectionTimeoutMillis: 1000,
       }),
     });

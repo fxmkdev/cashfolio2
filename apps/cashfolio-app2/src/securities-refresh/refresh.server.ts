@@ -64,8 +64,8 @@ export async function refreshCatalogue(
   }
   const existing = await existingCatalogue();
   if (existing) return existing;
-  // The lock transaction reserves one connection; staged batch writes use the
-  // second. No HTTP request can acquire or trigger this maintenance lock.
+  // Reserve separate connections for the lock, batch writes and best-effort
+  // attempt logging while the next page is in flight. No HTTP request can acquire or trigger this maintenance lock.
   while (true) {
     signal.throwIfAborted();
     const summary = await db.$transaction(
@@ -89,17 +89,30 @@ export async function refreshCatalogue(
         const version = createId();
         let rows = 0;
         let pages = 0;
+        const requests = new AbortController();
+        const fetchSignal = AbortSignal.any([signal, requests.signal]);
+        let pending: Promise<MarketstackPage> | undefined;
+        const queuePage = (offset: number) => {
+          const request = fetchPage(offset, fetchSignal);
+          // A prefetched request may fail while its preceding batch is writing.
+          // Observe it immediately, then propagate the error when consumed.
+          void request.catch(() => {});
+          return request;
+        };
         try {
           signal.throwIfAborted();
           await db.securityCatalogueSnapshot.create({ data: { id: version } });
           let total: number | undefined;
           const seen = new Set<string>();
+          pending = queuePage(0);
           do {
             signal.throwIfAborted();
             // Keep the lock connection active throughout the paginated HTTP work.
             // Losing the transaction must stop staging before publication.
             await lock.$queryRaw`SELECT 1`;
-            const page = await fetchPage(rows, signal);
+            if (!pending)
+              throw new Error("Catalogue pagination ended prematurely.");
+            const page = await pending;
             if (
               page.pagination.offset !== rows ||
               page.pagination.count !== page.data.length ||
@@ -126,7 +139,25 @@ export async function refreshCatalogue(
                 snapshotId: version,
               };
             });
-            await db.securityCatalogueListing.createMany({ data: batch });
+            // Keep at most one page ahead, overlapping HTTP with the batch write.
+            pending =
+              rows + batch.length < total
+                ? queuePage(rows + batch.length)
+                : undefined;
+            // One JSON parameter avoids thousands of bind parameters per batch.
+            // Provider values remain data, never interpolated SQL identifiers.
+            const inserted = await db.$executeRaw`
+              INSERT INTO "SecurityCatalogueListing"
+                ("id", "snapshotId", "symbol", "name", "exchange", "mic", "exchangeLabel", "country", "hasHistory")
+              SELECT "id", "snapshotId", "symbol", "name", "exchange", "mic", "exchangeLabel", "country", "hasHistory"
+              FROM jsonb_to_recordset(${JSON.stringify(batch)}::jsonb)
+                AS listing("id" text, "snapshotId" text, "symbol" text, "name" text,
+                  "exchange" text, "mic" text, "exchangeLabel" text, "country" text, "hasHistory" boolean)
+            `;
+            if (inserted !== batch.length)
+              throw new Error(
+                "The catalogue batch was not inserted completely.",
+              );
             rows += batch.length;
             pages++;
             if (pages % 10 === 0)
@@ -181,6 +212,9 @@ export async function refreshCatalogue(
             .deleteMany({ where: { id: version, publishedAt: null } })
             .catch(() => {});
           throw error;
+        } finally {
+          requests.abort();
+          await pending?.catch(() => {});
         }
       },
       { maxWait: 1000, timeout: Math.max(1, deadline - Date.now()) + 5000 },

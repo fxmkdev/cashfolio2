@@ -175,6 +175,99 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     expect(await db.securityCatalogueSnapshot.count()).toBe(0);
     expect((await catalogueStatus(db)).version).toBeNull();
   });
+  test("prefetches while an insert is blocked and binds provider metadata as data", async () => {
+    let release!: () => void;
+    let ready!: () => void;
+    let fetched!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const prefetched = new Promise<void>((resolve) => {
+      fetched = resolve;
+    });
+    const holding = db.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`LOCK TABLE "SecurityCatalogueListing" IN SHARE MODE`;
+        ready();
+        await gate;
+      },
+      { timeout: 10000 },
+    );
+    await locked;
+    const refresh = refreshCatalogue(db, {
+      fetchPage: async (offset) => {
+        if (offset === 1) fetched();
+        return {
+          data: [
+            {
+              ticker: offset ? "NEE 6.219" : "O'NEIL",
+              name: 'A "quoted" name; --',
+              has_eod: offset ? false : null,
+              stock_exchange: { mic: "XETRA", name: "Provider's Exchange" },
+            },
+          ],
+          pagination: { offset, count: 1, total: 2 },
+        };
+      },
+    });
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        prefetched,
+        new Promise<never>((_resolve, reject) => {
+          timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "Next page was not prefetched during the blocked write.",
+                ),
+              ),
+            2000,
+          );
+        }),
+      ]);
+      expect((await catalogueStatus(db)).version).toBeNull();
+    } finally {
+      clearTimeout(timeout);
+      release();
+      await holding;
+    }
+    const result = await refresh;
+    const rows = await db.securityCatalogueListing.findMany({
+      where: { snapshotId: result.version! },
+      orderBy: { symbol: "asc" },
+    });
+    expect(
+      rows.map(({ symbol, name, mic, exchange, hasHistory, country }) => ({
+        symbol,
+        name,
+        mic,
+        exchange,
+        hasHistory,
+        country,
+      })),
+    ).toEqual([
+      {
+        symbol: "NEE 6.219",
+        name: 'A "quoted" name; --',
+        mic: "XETRA",
+        exchange: "Provider's Exchange",
+        hasHistory: false,
+        country: null,
+      },
+      {
+        symbol: "O'NEIL",
+        name: 'A "quoted" name; --',
+        mic: "XETRA",
+        exchange: "Provider's Exchange",
+        hasHistory: null,
+        country: null,
+      },
+    ]);
+  });
   test("publishes only complete snapshots, retains old versions for 48 hours and queries full metadata", async () => {
     const first = await refreshCatalogue(db, {
       fetchPage: page,
