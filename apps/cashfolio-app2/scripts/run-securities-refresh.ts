@@ -50,7 +50,7 @@ export async function runSecuritiesRefresh(options: {
             ...(options.onlyIfMissing ? ["--if-missing"] : []),
           ],
         },
-        guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 },
+        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
         services: [],
         restart: { policy: "no" },
         auto_destroy: false,

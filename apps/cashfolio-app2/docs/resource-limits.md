@@ -167,6 +167,13 @@ advisory lock prevents overlapping bulk jobs. Deployment initialization skips
 provider calls when a catalogue already exists, or waits for an overlapping job
 within the same deadline before initializing a missing catalogue. A 30-minute
 deadline, validated pagination and bounded HTTP retries constrain provider work.
-The Fly runner terminates and removes its job Machine on failure or
-cancellation. See [Securities operations](securities.md#operations) for
-scheduling and bootstrap.
+The isolated Fly job has two shared CPUs and 1 GiB of memory, with at most two
+page requests in flight. Increasing compute capacity does not increase the
+provider request count. The Fly runner terminates and removes its job Machine on
+failure or cancellation. See [Securities operations](securities.md#operations)
+for scheduling and bootstrap.
+
+A catalogue with roughly 683,000 provider rows needs about 684 catalogue HTTP
+requests per full refresh, plus preflight, exchange metadata and any bounded
+retries. Account for provider overage charges when dispatching a full refresh;
+initialization of an already published catalogue makes no provider requests.

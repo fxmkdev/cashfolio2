@@ -119,7 +119,11 @@ checks its exit and completion metrics, then destroys it. It runs daily in
 production at **04:17 UTC**. Subsequent full refreshes in staging and preview
 use manual dispatch. A 30-minute worker deadline and a 32-minute runner deadline
 bound work; provider requests time out and rate-limit retries are bounded. No
-provider credentials are sent to browsers or supplied as runner arguments.
+provider credentials are sent to browsers or supplied as runner arguments. The
+catalogue job uses two shared CPUs and 1 GiB of memory: generating and
+validating hundreds of thousands of listing identities exhausted the burst CPU
+allocation of a one-CPU job and approached its deadline. This sizing does not
+increase provider concurrency or request counts.
 
 After deployment and warm-up, the shared deployment workflow runs the job with
 `--if-missing` in **every environment**. An existing published catalogue,
