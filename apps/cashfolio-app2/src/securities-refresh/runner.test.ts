@@ -84,7 +84,9 @@ describe("deployed securities refresh runner", () => {
           'SECURITIES_REFRESH {"status":"skipped","reason":"catalogue-present","rows":31,"pages":0,"version":"v"}',
       }),
     );
-    await runSecuritiesRefresh({ ...options, onlyIfMissing: true });
+    await expect(
+      runSecuritiesRefresh({ ...options, onlyIfMissing: true }),
+    ).resolves.toContain("catalogue already available, no provider requests");
     expect(options.api).toHaveBeenCalledWith(
       "POST",
       "",

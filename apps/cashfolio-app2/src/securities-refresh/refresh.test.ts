@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { PrismaClient } from "../.prisma-client/client";
+import type { CatalogueRow } from "../server/securities/marketstack.server";
 import { refreshCatalogue } from "./refresh.server";
 import { readRefreshArguments } from "./options";
 
@@ -28,9 +29,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("catalogue initialization", () => {
-  test.each([false, true])(
-    "bounds concurrent requests and rejects changed page sizes: %s",
-    async (changedPageSize) => {
+  test.each([
+    "complete",
+    "changed-page-size",
+    "identical-duplicates",
+    "conflicting-duplicates",
+  ])(
+    "bounds concurrent requests and validates publication: %s",
+    async (scenario) => {
+      const changedPageSize = scenario === "changed-page-size";
+      const duplicate = scenario.endsWith("duplicates");
       let release!: () => void;
       let ready!: () => void;
       const gate = new Promise<void>((resolve) => {
@@ -46,9 +54,18 @@ describe("catalogue initialization", () => {
         updateMany: vi.fn(),
         deleteMany: vi.fn(async () => ({ count: 1 })),
       };
-      const execute = vi.fn(async () => 1);
+      let stored: CatalogueRow | undefined;
+      const findUnique = vi.fn(async () => stored);
+      const execute = vi.fn(
+        async (_query: TemplateStringsArray, batch: string) => {
+          const rows = JSON.parse(batch) as CatalogueRow[];
+          stored ??= rows[0];
+          return rows.length;
+        },
+      );
       const client = {
         securityCatalogueSnapshot: snapshots,
+        securityCatalogueListing: { findUnique },
         $executeRaw: execute,
         $queryRaw: vi.fn(async () => [{ locked: true }]),
         $transaction: vi.fn(async (operation: (tx: unknown) => unknown) =>
@@ -71,7 +88,12 @@ describe("catalogue initialization", () => {
           return {
             data: Array.from(
               { length: changedPageSize && offset === 1 ? 2 : 1 },
-              (_, i) => ({ ticker: `SAMPLE${offset + i}` }),
+              (_, i) => ({
+                ticker: duplicate ? "SAMPLE" : `SAMPLE${offset + i}`,
+                ...(scenario === "conflicting-duplicates" && offset > 0
+                  ? { name: "Conflict" }
+                  : {}),
+              }),
             ),
             pagination: {
               offset,
@@ -88,8 +110,12 @@ describe("catalogue initialization", () => {
       } finally {
         release();
       }
-      if (changedPageSize) {
-        await expect(operation).rejects.toThrow("pagination was incomplete");
+      if (changedPageSize || scenario === "conflicting-duplicates") {
+        await expect(operation).rejects.toThrow(
+          changedPageSize
+            ? "pagination was incomplete"
+            : "conflicting duplicate",
+        );
         expect(snapshots.update).not.toHaveBeenCalled();
         expect(snapshots.deleteMany).toHaveBeenCalledOnce();
         return;
@@ -97,11 +123,13 @@ describe("catalogue initialization", () => {
       await expect(operation).resolves.toMatchObject({
         status: "completed",
         pages: 5,
-        rows: 5,
+        rows: duplicate ? 1 : 5,
+        duplicates: duplicate ? 4 : 0,
       });
       expect(offsets).toEqual([0, 1, 2, 3, 4]);
       expect(maximum).toBe(2);
-      expect(execute).toHaveBeenCalledTimes(5);
+      expect(execute).toHaveBeenCalledTimes(duplicate ? 1 : 5);
+      expect(findUnique).toHaveBeenCalledTimes(duplicate ? 1 : 0);
       expect(snapshots.update).toHaveBeenCalledOnce();
     },
   );

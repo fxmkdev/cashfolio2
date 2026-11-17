@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { appendFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { createId } from "@paralleldrive/cuid2";
@@ -98,10 +99,9 @@ export async function runSecuritiesRefresh(options: {
                 (value.status === "completed" ||
                   value.reason === "catalogue-present")))
           ) {
-            console.log(
-              `Securities ${options.onlyIfMissing ? "initialization" : "refresh"} ${value.status}: ${value.rows} listings, ${value.pages} pages${value.reason === "catalogue-present" ? "; catalogue already available, no provider requests" : ""}${Number.isSafeInteger(value.excluded) && value.excluded > 0 ? `; ${value.excluded} empty provider TEST placeholders excluded` : ""}.`,
-            );
-            return;
+            const summary = `Securities ${options.onlyIfMissing ? "initialization" : "refresh"} ${value.status}: ${value.rows} listings, ${value.pages} pages${value.reason === "catalogue-present" ? "; catalogue already available, no provider requests" : ""}${Number.isSafeInteger(value.excluded) && value.excluded > 0 ? `; ${value.excluded} empty provider TEST placeholders excluded` : ""}${Number.isSafeInteger(value.duplicates) && value.duplicates > 0 ? `; ${value.duplicates} identical duplicate listings coalesced` : ""}.`;
+            console.log(summary);
+            return summary;
           }
         } catch {
           /* Never forward arbitrary remote logs or credentials. */
@@ -148,8 +148,9 @@ async function main() {
   const cancel = () => controller.abort();
   process.once("SIGTERM", cancel);
   process.once("SIGINT", cancel);
+  let summary = `Securities ${args.onlyIfMissing ? "initialization" : "refresh"} failed. The deployed application remains running. Inspect the refresh job and Fly Machines, resolve the cause, then retry.`;
   try {
-    await runSecuritiesRefresh({
+    summary = await runSecuritiesRefresh({
       api: createMachinesApi(app, token),
       region,
       signal: controller.signal,
@@ -166,6 +167,11 @@ async function main() {
   } finally {
     process.removeListener("SIGTERM", cancel);
     process.removeListener("SIGINT", cancel);
+    if (process.env.GITHUB_STEP_SUMMARY)
+      await appendFile(
+        process.env.GITHUB_STEP_SUMMARY,
+        `### Securities Catalogue\n\n${summary}\n`,
+      );
   }
 }
 if (

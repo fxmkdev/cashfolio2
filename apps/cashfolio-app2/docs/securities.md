@@ -62,18 +62,20 @@ best-effort provider-attempt logging. At most two page requests run concurrently
 while batches are written in provider order. A changed page size or offset fails
 validation rather than skipping or duplicating rows. Batch inserts use a bound
 JSON parameter and PostgreSQL record expansion to avoid thousands of individual
-bind parameters. Offset/count/total changes, duplicate identities, malformed
-rows and incomplete/empty catalogues fail the refresh. The only excluded
-provider records are explicitly identified `TEST`-exchange placeholders with
-both symbol and name absent. Their count is logged, and raw provider-row offsets
-still advance across every page. Missing identities on other exchanges remain
-errors, and a catalogue containing only placeholders is rejected. Only a
-completely staged catalogue is atomically published. Failed stages are deleted;
-the previous active snapshot continues serving. Superseded snapshots remain
-readable for 48 hours after their replacement, then become unavailable and are
-removed on a later successful refresh. Clients with expired versions receive a
-search-again error. Abandoned stages older than 24 hours are removed during
-publication.
+bind parameters. Identical normalized listings with the same exact symbol/MIC
+are stored once and counted separately; this handles repeated IEX records in the
+provider catalogue. Conflicting metadata for one identity, offset/count/total
+changes, malformed rows and incomplete/empty catalogues fail the refresh. The
+only excluded provider records are explicitly identified `TEST`-exchange
+placeholders with both symbol and name absent. Their count is logged, and raw
+provider-row offsets still advance across every page. Missing identities on
+other exchanges remain errors, and a catalogue containing only placeholders is
+rejected. Only a completely staged catalogue is atomically published. Failed
+stages are deleted; the previous active snapshot continues serving. Superseded
+snapshots remain readable for 48 hours after their replacement, then become
+unavailable and are removed on a later successful refresh. Clients with expired
+versions receive a search-again error. Abandoned stages older than 24 hours are
+removed during publication.
 
 Status includes publication time and a stale flag after 48 hours. An environment
 without a published snapshot shows catalogue-unavailable feedback with retry.
@@ -133,6 +135,10 @@ failure, then rerun the failed deployment job; initialization is idempotent. The
 deployment workflow allows 50 minutes for app deployment and the bounded
 initialization job. This path also works before a newly introduced manual
 workflow becomes available on GitHub's default branch.
+
+GitHub job summaries report safe completion counts, existing-catalogue skips
+without provider calls, or failure/retry guidance; they never include raw
+provider responses or credentials.
 
 For a deliberate full refresh after deployment, use the manual workflow
 (available once the workflow is on `main`):

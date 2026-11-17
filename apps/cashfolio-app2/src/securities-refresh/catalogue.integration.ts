@@ -309,6 +309,40 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
     expect((await catalogueStatus(db)).version).toBe(first.version);
     expect(await db.securityCatalogueSnapshot.count()).toBe(1);
   });
+  test("coalesces identical duplicates within and across pages, retaining exact exchange identities", async () => {
+    const offsets: number[] = [];
+    const result = await refreshCatalogue(db, {
+      fetchPage: async (offset) => {
+        offsets.push(offset);
+        const data = [
+          sample("CLNY-P-B-C", "IEXG"),
+          sample("CLNY-P-B-C", "IEXG"),
+          sample("CLNY-P-B-C", "IEXG"),
+          sample("CLNY-P-B-C", "XNAS"),
+          sample("CLNY-P-B-C", "IEXG"),
+        ].slice(offset, offset + 2);
+        return { data, pagination: { offset, count: data.length, total: 5 } };
+      },
+    });
+    expect(offsets).toEqual([0, 2, 4]);
+    expect(result).toMatchObject({
+      rows: 2,
+      pages: 3,
+      duplicates: 3,
+      excluded: 0,
+    });
+    expect(await db.securityCatalogueListing.count()).toBe(2);
+    await expect(
+      refreshCatalogue(db, {
+        fetchPage: async (offset) => ({
+          data: [{ ...sample("DUP"), has_eod: offset ? false : true }],
+          pagination: { offset, count: 1, total: 2 },
+        }),
+      }),
+    ).rejects.toThrow("conflicting duplicate");
+    expect((await catalogueStatus(db)).version).toBe(result.version);
+    expect(await db.securityCatalogueSnapshot.count()).toBe(1);
+  });
   test("publishes only complete snapshots, retains old versions for 48 hours and queries full metadata", async () => {
     const first = await refreshCatalogue(db, {
       fetchPage: page,
@@ -373,7 +407,7 @@ describe("versioned Securities catalogue in PostgreSQL", () => {
       async (offset: number) => {
         expect((await catalogueStatus(db)).version).toBe(first.version);
         return {
-          data: [sample("DUP"), sample("DUP")],
+          data: [sample("DUP"), { ...sample("DUP"), name: "Conflicting name" }],
           pagination: { offset, count: 2, total: 2 },
         };
       },

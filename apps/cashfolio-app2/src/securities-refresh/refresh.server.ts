@@ -7,6 +7,7 @@ import {
   isCataloguePlaceholder,
   type MarketstackPage,
   type MarketstackOptions,
+  type CatalogueRow,
 } from "../server/securities/marketstack.server";
 
 export const REFRESH_TIMEOUT_MS = 30 * 60 * 1000;
@@ -20,6 +21,7 @@ export type RefreshSummary = {
   rows: number;
   pages: number;
   excluded?: number;
+  duplicates?: number;
   version: string | null;
   reason?: "catalogue-present" | "refresh-locked";
 };
@@ -93,6 +95,7 @@ export async function refreshCatalogue(
         let pages = 0;
         let offset = 0;
         let excluded = 0;
+        let duplicates = 0;
         const requests = new AbortController();
         const fetchSignal = AbortSignal.any([signal, requests.signal]);
         let pending: Promise<MarketstackPage> | undefined;
@@ -110,6 +113,7 @@ export async function refreshCatalogue(
           await db.securityCatalogueSnapshot.create({ data: { id: version } });
           let total: number | undefined;
           const seen = new Set<string>();
+          const repeated = new Map<string, CatalogueRow>();
           pending = queuePage(0);
           do {
             signal.throwIfAborted();
@@ -130,23 +134,62 @@ export async function refreshCatalogue(
                 "The Marketstack catalogue changed or pagination was incomplete. Retry the refresh.",
               );
             total ??= page.pagination.total;
-            const batch = page.data
-              .filter((raw) => !isCataloguePlaceholder(raw))
-              .map((raw) => {
-                const row = parseCatalogueRow(raw);
-                const key = JSON.stringify([row.symbol, row.mic]);
-                if (seen.has(key))
+            const listings = page.data.filter(
+              (raw) => !isCataloguePlaceholder(raw),
+            );
+            const batch: (CatalogueRow & { id: string; snapshotId: string })[] =
+              [];
+            const current = new Map<string, CatalogueRow>();
+            for (const raw of listings) {
+              const parsed = parseCatalogueRow(raw);
+              const row = {
+                ...parsed,
+                country: parsed.country ?? countries?.get(parsed.mic) ?? null,
+              };
+              const key = JSON.stringify([row.symbol, row.mic]);
+              if (seen.has(key)) {
+                // Compare only repeated identities. Keep memory bounded by the
+                // identity set, one batch and the usually tiny duplicate cache.
+                const previous =
+                  current.get(key) ??
+                  repeated.get(key) ??
+                  (await db.securityCatalogueListing.findUnique({
+                    where: {
+                      snapshotId_symbol_mic: {
+                        snapshotId: version,
+                        symbol: row.symbol,
+                        mic: row.mic,
+                      },
+                    },
+                  }));
+                const fields = [
+                  "symbol",
+                  "name",
+                  "mic",
+                  "exchange",
+                  "exchangeLabel",
+                  "country",
+                  "hasHistory",
+                ] as const;
+                if (
+                  !previous ||
+                  fields.some((field) => previous[field] !== row[field])
+                )
                   throw new Error(
-                    "Marketstack returned duplicate catalogue listings.",
+                    "Marketstack returned conflicting duplicate catalogue listings.",
                   );
-                seen.add(key);
-                return {
-                  ...row,
-                  country: row.country ?? countries?.get(row.mic) ?? null,
-                  id: createId(),
-                  snapshotId: version,
-                };
+                repeated.set(key, previous);
+                duplicates++;
+                continue;
+              }
+              seen.add(key);
+              current.set(key, row);
+              batch.push({
+                ...row,
+                id: createId(),
+                snapshotId: version,
               });
+            }
             // Keep at most two requests in flight. The provider's fixed-size
             // pages let the next request start before its predecessor returns.
             // A changed page size/offset must fail rather than skip any rows.
@@ -184,7 +227,7 @@ export async function refreshCatalogue(
               );
             rows += batch.length;
             offset = nextOffset;
-            excluded += page.data.length - batch.length;
+            excluded += page.data.length - listings.length;
             pages++;
             if (pages % 10 === 0)
               console.info("SECURITIES_REFRESH", {
@@ -192,6 +235,7 @@ export async function refreshCatalogue(
                 rows,
                 pages,
                 excluded,
+                duplicates,
               });
           } while (offset < total);
           if (!rows)
@@ -235,7 +279,14 @@ export async function refreshCatalogue(
               },
             });
           });
-          return { status: "completed", version, rows, pages, excluded };
+          return {
+            status: "completed",
+            version,
+            rows,
+            pages,
+            excluded,
+            duplicates,
+          };
         } catch (error) {
           await db.securityCatalogueSnapshot
             .deleteMany({ where: { id: version, publishedAt: null } })
