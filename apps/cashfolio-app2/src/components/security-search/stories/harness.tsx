@@ -18,7 +18,7 @@ export type SecuritySearchHarnessProps = {
   initialSearch?: "idle" | "ready" | "loading" | "error";
   initialQuery?: string;
   initialSelectedId?: string;
-  initialHistory?: HistoryState["status"];
+  initialHistory?: "ready" | "loading" | "error";
   copySymbol?: (symbol: string) => Promise<void>;
 };
 
