@@ -9,9 +9,19 @@ export async function seedSecuritiesCatalogue() {
     create: {
       id,
       publishedAt: new Date(),
-      rowCount: 3,
+      rowCount: 4,
       listings: {
         create: [
+          {
+            id: "e2e-security-partial",
+            symbol: "E2E.PARTIAL",
+            name: "E2E Partial History ETF",
+            exchange: "SIX Swiss Exchange",
+            mic: "XSWX",
+            exchangeLabel: "SIX Swiss Exchange (XSWX)",
+            country: "CH",
+            hasHistory: true,
+          },
           {
             id: "e2e-security-xnas",
             symbol: "E2E.SEC",

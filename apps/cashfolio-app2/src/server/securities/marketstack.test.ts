@@ -37,6 +37,60 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("Marketstack Securities contract", () => {
+  test("preserves authentication errors when a non-success envelope is malformed", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json([], { status: 401 }));
+    await expect(fetchMarketstackPage("eod", {})).rejects.toThrow(
+      "credentials",
+    );
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "HTTP_ERROR", httpStatus: 401 }),
+    );
+  });
+  test.each([true, false])(
+    "reports usable versus entirely omitted pages once: %s",
+    async (usable) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const data = [
+        { ...price, close: 0 },
+        ...(usable ? [{ ...price, date: "2026-11-11" }] : []),
+      ];
+      const fetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(Response.json(page(data)));
+      const result = await fetchMarketstackPage("eod", {
+        symbols: "ABC",
+        exchange: "XNAS",
+        date_from: "2026-11-01",
+        date_to: "2026-11-16",
+      });
+      expect(result.pagination.count).toBe(data.length);
+      expect(result.data).toEqual(data);
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: usable ? "RETRIEVED" : "NO_DATA",
+          httpStatus: 200,
+        }),
+      );
+      expect(warn).toHaveBeenCalledWith(
+        "Marketstack history observations omitted.",
+        expect.objectContaining({
+          samples: [
+            {
+              date: "2026-11-10",
+              reason: "non-positive",
+              valueType: "number",
+              numericValue: 0,
+            },
+          ],
+        }),
+      );
+    },
+  );
   test("normalizes exact provider identity and preserves unknown metadata", () => {
     expect(
       parseCatalogueRow({
@@ -188,6 +242,7 @@ describe("Marketstack Securities contract", () => {
     ).toEqual({
       currency: "USD",
       securityType: "Stock",
+      omissions: [],
       points: [
         { date: "2026-11-09", close: 10 },
         { date: "2026-11-10", close: 12.5 },
@@ -198,7 +253,6 @@ describe("Marketstack Securities contract", () => {
       [price, price],
       [price, { ...price, date: "2026-11-09", price_currency: "GBp" }],
       [{ ...price, date: "2026-02-30" }],
-      [{ ...price, close: NaN }],
     ])
       expect(() =>
         parseHistoryRows(rows, "ABC", "XNAS", "2026-11-01", "2026-11-16"),

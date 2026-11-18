@@ -4,6 +4,8 @@ import type {
   SecuritiesQuery,
   SecuritiesPage,
   SecuritiesFilterOptions,
+  PriceOmission,
+  SecurityHistoryStatus,
 } from "@/shared/securities/contracts";
 export { RESULTS_PAGE_SIZE } from "@/shared/securities/contracts";
 export type {
@@ -33,4 +35,7 @@ export type SearchState =
 export type HistoryState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; points: PricePoint[] };
+  | ({
+      points: PricePoint[];
+      omissions: PriceOmission[];
+    } & SecurityHistoryStatus);

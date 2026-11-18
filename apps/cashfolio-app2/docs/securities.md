@@ -93,12 +93,42 @@ metadata. Missing metadata remains Unknown. Rows without a MIC are copyable but
 cannot safely request history. A confirmed `has_eod: false` skips retrieval;
 unknown availability still attempts it.
 
-Successful nonempty history is cached in Redis for 24 hours under
-`securities:marketstack:history:v1:` using symbol, MIC, requested window and UTC
-through-day. The namespace and payload are separate from valuation caches. A
-Redis failure or invalid payload falls back to bounded live retrieval. Errors
-and empty histories are not cached. Range controls filter the loaded series
-locally without additional provider calls.
+A missing/null, non-positive, non-finite or non-numeric close is an omitted
+observation, not a reason to discard valid prices. Strings are never coerced.
+Omissions carry their provider date and a reason (`missing`, `non-positive`, or
+`invalid`); raw provider row counts still drive pagination. Identity, date,
+duplicate-day, currency/unit and pagination checks remain strict, including on
+omitted observations. Matching metadata can still supply currency/type when all
+closing prices are unusable. The catalogue's availability flag is unchanged.
+
+The RPC preserves listing/points/window fields and adds `status`, dated
+`omissions`, and—for `unavailable` results—a reason (`no-data`,
+`no-usable-prices`, or `invalid-data`), safe message and UTC `retryAt`. Range
+controls filter prices and omissions locally. Partial history shows an omission
+count; explicit missing observations break the chart line and enable small point
+markers. Weekends and other unreported days do not create gaps. Latest-close
+labels always use valid prices. A range with only omissions has a different
+message from a range without observations.
+
+Usable complete or partial history is cached in Redis for 24 hours under
+`securities:marketstack:history:v2:` using symbol, MIC, requested window and UTC
+through-day. No-data, all-unusable and deterministic validation failures are
+cached for five minutes. Retry is disabled until the returned retry time, then
+re-enabled without automatic fetching; there is no force-retry parameter.
+Configuration, authentication, quota, cancellation and transient transport
+failures are not negative-cached. The namespace and payload are separate from
+valuation caches. Payloads, including omissions and cooldowns, are validated on
+read; older v1 entries expire normally and are not read. Redis failure retains
+bounded live fallback, so server cooldown persistence depends on Redis, while
+the visible client still respects an already received retry time.
+
+Each HTTP attempt is recorded once. Usable pages are `RETRIEVED`; pages without
+usable prices are `NO_DATA`; fatal provider validation remains `PROVIDER_ERROR`.
+Omission diagnostics contain counts and at most five date/reason/type samples,
+with a numeric value only when finite. No arbitrary provider strings, full
+responses, URLs or credentials are logged. Cache hits make no provider calls.
+The partial-history and cooldown stories use local fixtures; the interactive
+cooldown story compresses five minutes to two seconds to exercise expiry.
 
 Provider requests reuse `MARKETSTACK_API_KEY`, timeout/rate-limit retry
 constants, resource-budget accounting and sanitized provider usage. A timed-out

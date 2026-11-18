@@ -160,7 +160,15 @@ bounded set filters (5,000 choices, 300 characters each). Queries and facets
 operate in PostgreSQL against an immutable, pinned catalogue snapshot.
 Selected-listing history uses the normal 60-second read deadline,
 provider-attempt ledger, shared user-scoped work and bounded Marketstack
-timeouts/rate-limit retries. Its Redis cache is separate from valuation caches.
+timeouts/rate-limit retries. Its versioned Redis cache is separate from
+valuation caches: usable complete/partial history lasts 24 hours, while no-data,
+all-unusable and deterministic data failures have a five-minute cooldown. Cache
+hits consume no provider attempts. Retry cannot bypass the cooldown and expiry
+does not automatically fetch; transient/configuration/quota errors remain
+uncached. Redis failure preserves bounded live fallback. At most 5,000 raw
+observations are loaded; omitted prices still count toward that limit and
+provider pagination. Diagnostics emit counts and at most five safe
+date/reason/type/numeric samples per affected page.
 
 The maintenance-only catalogue worker has no HTTP entry point. A database
 advisory lock prevents overlapping bulk jobs. Deployment initialization skips

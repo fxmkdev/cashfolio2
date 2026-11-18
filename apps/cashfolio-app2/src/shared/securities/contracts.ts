@@ -12,6 +12,18 @@ export type SecurityListing = {
 export type SecuritySearchCriteria = { query: string; exchange: string | null };
 export type PriceRange = "1M" | "6M" | "1Y" | "5Y";
 export type PricePoint = { date: string; close: number };
+export type PriceOmission = {
+  date: string;
+  reason: "missing" | "non-positive" | "invalid";
+};
+export type SecurityHistoryStatus =
+  | { status: "ready" }
+  | {
+      status: "unavailable";
+      reason: "no-data" | "no-usable-prices" | "invalid-data";
+      message: string;
+      retryAt: string;
+    };
 export const RESULTS_PAGE_SIZE = 20;
 export const SECURITY_COLUMNS = [
   "name",
@@ -68,9 +80,10 @@ export type SecuritiesCatalogueStatus = {
 export type SecurityHistory = {
   listing: SecurityListing;
   points: PricePoint[];
+  omissions: PriceOmission[];
   from: string;
   through: string;
-};
+} & SecurityHistoryStatus;
 export function getExchangeLabel({
   exchange,
   mic,

@@ -16,6 +16,8 @@ import {
 import { IconArrowLeft, IconCopy, IconX } from "@tabler/icons-react";
 import { useUserLocale } from "@/user-locale-context";
 import { SecurityPriceChart } from "./price-chart";
+import { HistoryRetry } from "./history-retry";
+import { historyChartData } from "./history-chart-data";
 import { getExchangeLabel } from "./exchange-label";
 import { getHistoryLabel } from "@/shared/securities/contracts";
 import type { HistoryState, PriceRange, SecurityListing } from "./types";
@@ -47,6 +49,10 @@ export function SecurityDetails({
     "idle" | "copying" | "copied" | "error"
   >("idle");
   const latest = history.status === "ready" ? history.points.at(-1) : undefined;
+  const represented =
+    history.status === "ready"
+      ? historyChartData(history.points, history.omissions)
+      : [];
   const fields = [
     ["Symbol", listing.symbol],
     ["Exchange", getExchangeLabel(listing)],
@@ -128,7 +134,13 @@ export function SecurityDetails({
           {fields.map(([label, value]) => (
             <div key={label}>
               <Text component="dt" size="sm" c="dimmed">
-                {label}
+                {label === "Historical Prices" ? (
+                  <Tooltip label="Indicates whether historical data is listed for this security; individual prices may be missing.">
+                    <span tabIndex={0}>{label}</span>
+                  </Tooltip>
+                ) : (
+                  label
+                )}
               </Text>
               <Text component="dd" size="sm" fw={500}>
                 {value ?? "Unknown"}
@@ -169,15 +181,48 @@ export function SecurityDetails({
               <Alert color="red" title="Price History Unavailable" role="alert">
                 <Stack gap="sm" align="start">
                   <Text size="sm">{history.message}</Text>
-                  <Button variant="light" onClick={onRetryHistory}>
-                    Retry Price History
-                  </Button>
+                  <HistoryRetry onRetry={onRetryHistory} />
+                </Stack>
+              </Alert>
+            ) : history.status === "unavailable" ? (
+              <Alert
+                title="Price History Unavailable"
+                color={history.reason === "no-data" ? "blue" : "yellow"}
+                role="alert"
+              >
+                <Stack gap="sm">
+                  <Text size="sm">{history.message}</Text>
+                  <HistoryRetry
+                    retryAt={history.retryAt}
+                    onRetry={onRetryHistory}
+                  />
                 </Stack>
               </Alert>
             ) : history.points.length === 0 ? (
-              <Text role="status">No prices are available for this range.</Text>
+              <Text role="status">
+                {history.omissions.length
+                  ? "No usable closing prices are available for this range."
+                  : "No prices are available for this range."}
+              </Text>
             ) : (
               <>
+                {history.omissions.length > 0 && (
+                  <Alert
+                    title="Partial Price History"
+                    color="yellow"
+                    role="status"
+                  >
+                    {new Intl.NumberFormat(locale).format(
+                      history.omissions.length,
+                    )}{" "}
+                    closing price{" "}
+                    {history.omissions.length === 1
+                      ? "observation is"
+                      : "observations are"}{" "}
+                    unavailable for this range. Gaps mark the missing
+                    observations.
+                  </Alert>
+                )}
                 {latest && (
                   <Text size="sm" aria-label="Latest Closing Price">
                     Latest close:{" "}
@@ -196,6 +241,7 @@ export function SecurityDetails({
                   name={listing.name}
                   currency={listing.currency}
                   points={history.points}
+                  omissions={history.omissions}
                   range={range}
                 />
                 <Text size="xs" c="dimmed" aria-label="Chart Period">
@@ -203,8 +249,8 @@ export function SecurityDetails({
                     dateStyle: "medium",
                     timeZone: "UTC",
                   }).formatRange(
-                    new Date(`${history.points[0]!.date}T00:00:00Z`),
-                    new Date(`${history.points.at(-1)!.date}T00:00:00Z`),
+                    new Date(`${represented[0]!.date}T00:00:00Z`),
+                    new Date(`${represented.at(-1)!.date}T00:00:00Z`),
                   )}
                 </Text>
               </>

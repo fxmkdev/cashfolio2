@@ -64,7 +64,11 @@ export function SecuritySearchHarness({
             status: "error",
             message: "Price history could not be loaded. Try again.",
           }
-        : { status: "ready", points: pricesForRange(allPrices, range) };
+        : {
+            status: "ready",
+            points: pricesForRange(allPrices, range),
+            omissions: [],
+          };
 
   function runSearch(criteria: SecuritySearchCriteria) {
     setPage(1);

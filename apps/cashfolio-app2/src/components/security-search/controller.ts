@@ -51,6 +51,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
   const [loadedHistory, setLoadedHistory] = useState<HistoryState>({
     status: "ready",
     points: [],
+    omissions: [],
   });
   const searchRequest = useRef<AbortController | null>(null);
   const historyRequest = useRef<AbortController | null>(null);
@@ -148,7 +149,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
       historyRequest.current = request;
       setHistoryThrough(null);
       if (listing.hasHistory === false) {
-        setLoadedHistory({ status: "ready", points: [] });
+        setLoadedHistory({ status: "ready", points: [], omissions: [] });
         return;
       }
       setLoadedHistory({ status: "loading" });
@@ -162,7 +163,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
         if (request.signal.aborted) return;
         setHistoryThrough(response.through);
         setSelectedListing(response.listing);
-        setLoadedHistory({ status: "ready", points: response.points });
+        setLoadedHistory(response);
       } catch (error) {
         if (!request.signal.aborted)
           setLoadedHistory({ status: "error", message: message(error) });
@@ -183,8 +184,11 @@ export function useSecuritiesController(services: SecuritiesServices) {
     }[range];
     const from = through.subtract(duration).toString();
     return {
-      status: "ready",
+      ...loadedHistory,
       points: loadedHistory.points.filter(
+        (point) => point.date >= from && point.date <= through.toString(),
+      ),
+      omissions: loadedHistory.omissions.filter(
         (point) => point.date >= from && point.date <= through.toString(),
       ),
     };
@@ -219,6 +223,14 @@ export function useSecuritiesController(services: SecuritiesServices) {
       if (search.status !== "idle") void runSearch(search.criteria);
     },
     onRetryHistory: () => {
+      if (
+        loadedHistory.status === "unavailable" &&
+        Temporal.Instant.compare(
+          Temporal.Instant.from(loadedHistory.retryAt),
+          Temporal.Now.instant(),
+        ) > 0
+      )
+        return;
       if (selectedListing) void loadHistory(selectedListing);
     },
     onCopySymbol: (symbol: string) => navigator.clipboard.writeText(symbol),

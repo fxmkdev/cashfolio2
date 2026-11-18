@@ -6,17 +6,21 @@ import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { useUserLocale } from "@/user-locale-context";
 import { getDashboardChartThemeColors } from "../charts/dashboard-chart-theme";
 import type { PricePoint, PriceRange } from "./types";
+import type { PriceOmission } from "@/shared/securities/contracts";
+import { historyChartData } from "./history-chart-data";
 import classes from "./security-search.module.css";
 
 ensureChartModulesRegistered();
 
 export function SecurityPriceChart({
   points,
+  omissions,
   currency,
   name,
   range,
 }: {
   points: PricePoint[];
+  omissions: PriceOmission[];
   currency: string | null;
   name: string;
   range: PriceRange;
@@ -39,7 +43,7 @@ export function SecurityPriceChart({
       ...(range === "1M" ? { day: "numeric" } : { year: "2-digit" }),
       timeZone: "UTC",
     });
-    const data = points.map((point) => ({
+    const data = historyChartData(points, omissions).map((point) => ({
       ...point,
       date: new Date(`${point.date}T00:00:00Z`),
     }));
@@ -56,14 +60,18 @@ export function SecurityPriceChart({
           yKey: "close",
           yName: "Closing Price",
           stroke: colors.incomeStrokeColor,
-          marker: { enabled: false },
+          connectMissingData: false,
+          marker: { enabled: omissions.length > 0, size: 3 },
           tooltip: {
             renderer: ({ datum }) => ({
               title: date.format(datum.date),
               data: [
                 {
                   label: "Closing Price",
-                  value: `${amount.format(datum.close)}${currency ? ` ${currency}` : ""}`,
+                  value:
+                    datum.close === null
+                      ? "Unavailable"
+                      : `${amount.format(datum.close)}${currency ? ` ${currency}` : ""}`,
                 },
               ],
             }),
@@ -94,7 +102,7 @@ export function SecurityPriceChart({
         },
       },
     };
-  }, [points, currency, locale, theme, isDarkMode, range]);
+  }, [points, omissions, currency, locale, theme, isDarkMode, range]);
 
   return (
     <div role="img" aria-label={`${name} closing price chart`}>

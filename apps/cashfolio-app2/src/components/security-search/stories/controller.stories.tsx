@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Temporal } from "@/shared/temporal";
 import { Box, Button } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
@@ -21,8 +22,12 @@ function ControllerHarness({
     | "resultsError"
     | "obsoleteSearch"
     | "filtersError"
-    | "historyError";
+    | "historyError"
+    | "partial"
+    | "unusable"
+    | "cooldown";
 }) {
+  const [historyRequests, setHistoryRequests] = useState(0);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const [services] = useState<SecuritiesServices>(() => {
     let filterCalls = 0;
@@ -60,17 +65,50 @@ function ControllerHarness({
       async history({ id }, signal) {
         const listing = listings.find((row) => row.id === id)!;
         historyCalls++;
+        setHistoryRequests(historyCalls);
         if (scenario === "historyError" && historyCalls === 1)
           throw new Error("Temporary price lookup failure.");
         if (scenario === "obsolete" && historyCalls === 1)
           await new Promise<void>((resolve) => setPending(() => resolve));
         // Deliberately return even after cancellation to test the consumer guard.
         if (scenario !== "obsolete") signal.throwIfAborted();
+        const base = { listing, from: "2021-10-30", through: "2026-10-30" };
+        if (
+          scenario === "unusable" ||
+          (scenario === "cooldown" && historyCalls === 1)
+        )
+          return {
+            ...base,
+            status: "unavailable",
+            points: [],
+            omissions: [{ date: "2026-10-30", reason: "non-positive" }],
+            reason: "no-usable-prices",
+            message:
+              "Marketstack returned no usable closing prices for this listing.",
+            retryAt: Temporal.Now.instant()
+              .add({ seconds: scenario === "cooldown" ? 2 : 300 })
+              .toString(),
+          };
+        if (scenario === "partial")
+          return {
+            ...base,
+            status: "ready",
+            points: [
+              { date: "2026-09-02", close: 123.45 },
+              { date: "2026-09-10", close: 124 },
+              { date: "2026-09-20", close: 125 },
+              { date: "2026-09-26", close: 125.67 },
+            ],
+            omissions: [
+              { date: "2026-09-15", reason: "invalid" },
+              { date: "2026-10-30", reason: "non-positive" },
+            ],
+          };
         return {
-          listing,
+          ...base,
+          status: "ready",
+          omissions: [],
           points: createPriceHistory(listing),
-          from: "2021-10-30",
-          through: "2026-10-30",
         };
       },
     };
@@ -78,6 +116,9 @@ function ControllerHarness({
   const controller = useSecuritiesController(services);
   return (
     <>
+      <output aria-label="Fixture History Requests" hidden>
+        {historyRequests}
+      </output>
       {pending && (
         <Button
           onClick={() => {
@@ -286,5 +327,102 @@ export const SelectedHistoryRetry: Story = {
         "CHF",
       ),
     );
+  },
+};
+
+export const PartialPriceHistory: Story = {
+  args: { scenario: "partial" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
+    await selectListing(canvasElement, "ALP:XSWX");
+    await expect(
+      await canvas.findByText("Partial Price History"),
+    ).toBeVisible();
+    await expect(
+      canvas.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("125.67 CHF");
+    await expect(
+      canvas.getByRole("img", { name: /closing price chart/ }),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+    const requests = canvas.getByLabelText(
+      "Fixture History Requests",
+    ).textContent;
+    await userEvent.click(canvas.getByRole("radio", { name: "1M" }));
+    await expect(
+      canvas.getByText(
+        "No usable closing prices are available for this range.",
+      ),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByLabelText("Latest Closing Price"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("radio", { name: "5Y" }));
+    await expect(
+      canvas.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("125.67 CHF");
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent(requests!);
+  },
+};
+export const PartialPriceHistoryDark: Story = {
+  args: { scenario: "partial" },
+  parameters: { colorScheme: "dark" },
+  play: PartialPriceHistory.play,
+};
+export const PartialPriceHistoryMobile: Story = {
+  args: { scenario: "partial" },
+  globals: { viewport: { value: "cashfolioMobile" } },
+  play: PartialPriceHistory.play,
+};
+export const UnusablePriceHistory: Story = {
+  args: { scenario: "unusable" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
+    await selectListing(canvasElement, "ALP:XSWX");
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "no usable closing prices",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Retry Price History" }),
+    ).toBeDisabled();
+    await expect(canvas.getByText(/Retry available at/)).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Copy Symbol" }),
+    ).toBeEnabled();
+  },
+};
+export const HistoryRetryCooldown: Story = {
+  args: { scenario: "cooldown" },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The fixture compresses the server cooldown to two seconds to exercise expiry; production uses five minutes. Expiry enables Retry without making a request.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
+    await selectListing(canvasElement, "ALP:XSWX");
+    const retry = await canvas.findByRole("button", {
+      name: "Retry Price History",
+    });
+    await expect(retry).toBeDisabled();
+    await waitFor(() => expect(retry).toBeEnabled(), { timeout: 5000 });
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent("1");
+    await userEvent.click(retry);
+    await expect(
+      await canvas.findByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("CHF");
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent("2");
   },
 };

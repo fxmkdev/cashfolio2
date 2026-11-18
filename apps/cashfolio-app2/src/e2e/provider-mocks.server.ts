@@ -37,17 +37,25 @@ const e2eValuationProviderServer = setupServer(
     const url = new URL(request.url);
     const symbol = url.searchParams.get("symbols");
     const mic = url.searchParams.get("exchange");
-    if (symbol !== "E2E.SEC" || !["XNAS", "XSWX"].includes(mic ?? ""))
+    if (
+      !["E2E.SEC", "E2E.PARTIAL"].includes(symbol ?? "") ||
+      !["XNAS", "XSWX"].includes(mic ?? "")
+    )
       return HttpResponse.json({ error: { code: "no_data_found" } });
     const from = Temporal.PlainDate.from(url.searchParams.get("date_from")!);
     const through = url.searchParams.get("date_to")!;
     const rows = Array.from({ length: 61 }, (_, month) => ({
       date: from.add({ months: month }).toString(),
-      close: 100 + month,
+      close:
+        symbol === "E2E.PARTIAL" && month === 58
+          ? null
+          : symbol === "E2E.PARTIAL" && month === 59
+            ? 0
+            : 100 + month,
       symbol,
       exchange: mic,
       price_currency: mic === "XSWX" ? "CHF" : "USD",
-      asset_type: "Stock",
+      asset_type: symbol === "E2E.PARTIAL" ? "ETF" : "Stock",
     })).filter((row) => row.date <= through);
     const offset = Number(url.searchParams.get("offset") ?? 0);
     const limit = Number(url.searchParams.get("limit") ?? 1000);

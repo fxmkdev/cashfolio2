@@ -1,9 +1,10 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { Temporal } from "../../shared/temporal";
 import {
-  getExchangeLabel,
-  type PricePoint,
-} from "../../shared/securities/contracts";
+  HistoryDataError,
+  parseHistoryRows,
+  historyOmissionDiagnostics,
+} from "./history-data.server";
+import { getExchangeLabel } from "../../shared/securities/contracts";
 import {
   checkResourceBudget,
   consumeProviderAttempt,
@@ -20,6 +21,7 @@ import {
   MARKETSTACK_RATE_LIMIT_MAX_RETRIES,
   MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS,
 } from "../valuation/constants";
+export { parseHistoryRows, type HistorySeries } from "./history-data.server";
 
 export type CatalogueRow = {
   symbol: string;
@@ -215,7 +217,20 @@ export async function fetchMarketstackPage(
           unreadable = true;
           throw new Error("Marketstack returned an unreadable response.");
         }
-        const root = object(raw);
+        let root: Record<string, unknown>;
+        try {
+          root = object(raw);
+        } catch (error) {
+          if (!response.ok) {
+            const failure = providerError({}, response.status);
+            if (failure) throw failure;
+          }
+          if (path === "eod")
+            throw new HistoryDataError(
+              "Marketstack returned malformed price data.",
+            );
+          throw error;
+        }
         const providerCode =
           root.error && typeof root.error === "object"
             ? String((root.error as Record<string, unknown>).code)
@@ -230,7 +245,17 @@ export async function fetchMarketstackPage(
         }
         const error = providerError(raw, response.status);
         if (error) throw error;
-        const page = parseMarketstackPage(raw, Number(params.offset ?? 0));
+        let page: MarketstackPage;
+        try {
+          page = parseMarketstackPage(raw, Number(params.offset ?? 0));
+        } catch (error) {
+          if (path === "eod")
+            throw new HistoryDataError(
+              "Marketstack returned malformed price pagination.",
+            );
+          throw error;
+        }
+        let usableRows = page.data.length;
         if (path === "tickerslist")
           page.data.forEach((row) => {
             if (!isCataloguePlaceholder(row)) parseCatalogueRow(row);
@@ -241,15 +266,26 @@ export async function fetchMarketstackPage(
           params.exchange &&
           params.date_from &&
           params.date_to
-        )
-          parseHistoryRows(
+        ) {
+          const series = parseHistoryRows(
             page.data,
             params.symbols,
             params.exchange,
             params.date_from,
             params.date_to,
           );
-        outcome = page.data.length ? "RETRIEVED" : "NO_DATA";
+          usableRows = series.points.length;
+          if (series.omissions.length) {
+            const diagnostics = historyOmissionDiagnostics(page.data, series);
+            console.warn("Marketstack history observations omitted.", {
+              symbol: params.symbols,
+              mic: params.exchange,
+              ...diagnostics,
+            });
+            errorMessage = `Unusable closing prices omitted: missing=${diagnostics.counts.missing}, non-positive=${diagnostics.counts["non-positive"]}, invalid=${diagnostics.counts.invalid}.`;
+          }
+        }
+        outcome = usableRows ? "RETRIEVED" : "NO_DATA";
         return page;
       }
     } catch (error) {
@@ -300,64 +336,6 @@ export async function fetchMarketstackPage(
     });
   }
 }
-export type HistorySeries = {
-  points: PricePoint[];
-  currency: string | null;
-  securityType: string | null;
-};
-export function parseHistoryRows(
-  raw: unknown[],
-  symbol: string,
-  mic: string,
-  from: string,
-  through: string,
-): HistorySeries {
-  const points = new Map<string, number>();
-  const currencies = new Set<string>();
-  const types = new Set<string>();
-  for (const value of raw) {
-    const row = object(value);
-    if (row.symbol !== symbol || (mic && row.exchange !== mic))
-      throw new Error("Marketstack returned prices for a different listing.");
-    const date = text(row.date, 64)?.slice(0, 10);
-    if (
-      !date ||
-      Temporal.PlainDate.from(date).toString() !== date ||
-      date < from ||
-      date > through
-    )
-      throw new Error("Marketstack returned an invalid price date.");
-    if (row.close == null) continue;
-    if (
-      typeof row.close !== "number" ||
-      !Number.isFinite(row.close) ||
-      row.close <= 0
-    )
-      throw new Error("Marketstack returned an invalid closing price.");
-    if (points.has(date))
-      throw new Error("Marketstack returned duplicate price dates.");
-    points.set(date, row.close);
-    const currency = text(row.price_currency, 64);
-    if (currency)
-      currencies.add(
-        /^[a-z]{3}$/.test(currency) ? currency.toUpperCase() : currency,
-      );
-    const type = text(row.asset_type);
-    if (type) types.add(type);
-  }
-  if (currencies.size > 1)
-    throw new Error(
-      "Price history contains incompatible quote currencies or units.",
-    );
-  return {
-    points: [...points]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, close]) => ({ date, close })),
-    currency: [...currencies][0] ?? null,
-    securityType: types.size === 1 ? [...types][0]! : null,
-  };
-}
-
 /** Exchange metadata is loaded once per refresh, never once per listing. */
 export async function fetchExchangeCountries(
   options: MarketstackOptions,

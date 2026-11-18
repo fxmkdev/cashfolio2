@@ -49,3 +49,31 @@ test("Securities sidebar navigation, exact exchange details and locally selected
     page.locator('[row-id="e2e-security-xswx"] [col-id="name"]'),
   ).toBeFocused();
 });
+
+test("partial history crosses the server boundary without losing valid prices or metadata", async ({
+  page,
+}) => {
+  await page.goto(`/${accountBookId}/securities`);
+  await page
+    .getByRole("textbox", { name: "Security", exact: true })
+    .fill("E2E.PARTIAL");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.locator('[row-id="e2e-security-partial"] [col-id="name"]').click();
+  const details = page.getByRole("region", { name: "Security Details" });
+  await expect(
+    details.getByText("Partial Price History", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    details.getByText(/2 closing price observations are unavailable/),
+  ).toBeVisible();
+  await expect(details.getByLabel("Latest Closing Price")).toContainText(
+    "160.00 CHF",
+  );
+  await expect(
+    details.getByRole("img", { name: /closing price chart/ }),
+  ).toBeVisible();
+  await expect(details.getByText("ETF", { exact: true })).toBeVisible();
+  await expect(
+    details.getByRole("button", { name: "Retry Price History" }),
+  ).toHaveCount(0);
+});
