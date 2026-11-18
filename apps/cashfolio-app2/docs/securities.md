@@ -151,7 +151,9 @@ Focused tests cover authentication, query/provider validation, exact requested
 pages/order, cache hits/TTLs/corruption, signed identity/expiry, history parsing
 and cooldowns. Mocked E2E uses build-gated ticker/exchange/history responses,
 requires no catalogue seed, and blocks unhandled provider traffic. Full suites,
-coverage, builds and mocked E2E runs remain CI checks.
+coverage, builds and mocked E2E runs remain CI checks. Playwright supplies an
+ephemeral `SESSION_SECRET` to its test server so signed listing references work
+even though E2E authentication itself is bypassed.
 
 Make **no live Marketstack calls** during implementation or verification and
 trigger no refreshes. Verification uses fixtures/mocks only. Overage is **USD
