@@ -11,7 +11,6 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useUserLocale } from "@/user-locale-context";
 import { IconSearch } from "@tabler/icons-react";
 import { TopPageHeader } from "../layout/top-page-header";
 import {
@@ -30,8 +29,8 @@ import classes from "./security-search.module.css";
 
 export type SecuritySearchViewProps = {
   search: SearchState;
-  catalogueUpdatedAt?: string | null;
-  catalogueStale?: boolean;
+  exchangeStatus?: "idle" | "loading" | "ready" | "error";
+  onLoadExchanges?: () => void;
   exchanges: { value: string; label: string }[];
   page: number;
   selectedListing: SecurityListing | null;
@@ -49,7 +48,6 @@ export type SecuritySearchViewProps = {
 
 export function SecuritySearchView(props: SecuritySearchViewProps) {
   const { search, selectedListing } = props;
-  const locale = useUserLocale();
   const [query, setQuery] = useState(
     search.status === "idle" ? "" : search.criteria.query,
   );
@@ -82,16 +80,6 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
           </Text>
         }
       />
-      {props.catalogueUpdatedAt && (
-        <Text size="xs" c={props.catalogueStale ? "orange" : "dimmed"} mb="xs">
-          Catalogue updated{" "}
-          {new Intl.DateTimeFormat(locale, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }).format(new Date(props.catalogueUpdatedAt))}
-          {props.catalogueStale ? " · Catalogue refresh is delayed." : ""}
-        </Text>
-      )}
       <div
         className={classes.workspace}
         data-details-open={selectedId ? true : undefined}
@@ -120,12 +108,29 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
                 data={props.exchanges}
                 value={exchange}
                 onChange={setExchange}
+                onDropdownOpen={props.onLoadExchanges}
+                rightSection={
+                  props.exchangeStatus === "loading" ? (
+                    <Loader size="xs" />
+                  ) : undefined
+                }
               />
               <Button type="submit" loading={search.status === "loading"}>
                 Search
               </Button>
             </form>
           </Paper>
+          {props.exchangeStatus === "error" && (
+            <Alert color="red" title="Exchanges Unavailable" role="alert">
+              <Text size="sm">
+                Exchanges could not be loaded. You can still search all
+                exchanges.
+              </Text>
+              <Button variant="light" onClick={props.onLoadExchanges}>
+                Retry Exchanges
+              </Button>
+            </Alert>
+          )}
           {search.status !== "idle" && (
             <Text size="sm" c="dimmed" aria-label="Submitted Search">
               {search.criteria.query

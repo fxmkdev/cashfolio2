@@ -154,34 +154,33 @@ observed usage makes it necessary.
 
 ## Securities reference data
 
-Securities RPCs require an active user and validate query text (255 characters),
-20-row pages, five whitelisted sort fields, supported text operations and
-bounded set filters (5,000 choices, 300 characters each). Queries and facets
-operate in PostgreSQL against an immutable, pinned catalogue snapshot.
-Selected-listing history uses the normal 60-second read deadline,
-provider-attempt ledger, shared user-scoped work and bounded Marketstack
-timeouts/rate-limit retries. Its versioned Redis cache is separate from
-valuation caches: usable complete/partial history lasts 24 hours, while no-data,
-all-unusable and deterministic data failures have a five-minute cooldown. Cache
-hits consume no provider attempts. Retry cannot bypass the cooldown and expiry
-does not automatically fetch; transient/configuration/quota errors remain
-uncached. Redis failure preserves bounded live fallback. At most 5,000 raw
-observations are loaded; omitted prices still count toward that limit and
-provider pagination. Diagnostics emit counts and at most five safe
-date/reason/type/numeric samples per affected page.
+Authenticated Securities RPCs accept a name/symbol query (255 characters), an
+optional exact provider exchange identifier (64 characters), fixed 20-row pages
+and bounded offsets aligned to page boundaries. No column filters, sort fields,
+facets or catalogue scans are accepted. Each listing cache miss fetches only the
+requested provider page. Search pages, including empty results, last 24 hours;
+the separately paginated exchange directory lasts seven days and is bounded to
+10,000 entries. Exchanges load only when the control is opened. Navigation and
+draft edits fetch neither listings nor prices.
 
-The maintenance-only catalogue worker has no HTTP entry point. A database
-advisory lock prevents overlapping bulk jobs. Deployment initialization skips
-provider calls when a catalogue already exists, or waits for an overlapping job
-within the same deadline before initializing a missing catalogue. A 30-minute
-deadline, validated pagination and bounded HTTP retries constrain provider work.
-The isolated Fly job has two shared CPUs and 1 GiB of memory, with at most two
-page requests in flight. Increasing compute capacity does not increase the
-provider request count. The Fly runner terminates and removes its job Machine on
-failure or cancellation. See [Securities operations](securities.md#operations)
-for scheduling and bootstrap.
+Signed selected-listing references expire after 24 hours and are validated
+before requesting history. No catalogue query or provider identity lookup is
+needed. History uses the normal 60-second read deadline, provider-attempt
+ledger, shared user-scoped work and bounded Marketstack timeouts/retries. Its
+separate versioned Redis cache preserves usable complete/partial history for 24
+hours; no-data, all-unusable and deterministic data failures have a five-minute
+cooldown. Retry cannot bypass the cooldown; expiry does not automatically fetch.
+Transient/configuration/quota errors remain uncached. At most 5,000 raw history
+observations are loaded, including omitted prices; pagination uses raw counts.
+Diagnostics emit counts and at most five safe date/reason/type/numeric samples
+per affected page. Cache hits consume no provider attempts. Redis failure
+preserves bounded provider fallback.
 
-A catalogue with roughly 683,000 provider rows needs about 684 catalogue HTTP
-requests per full refresh, plus preflight, exchange metadata and any bounded
-retries. Account for provider overage charges when dispatching a full refresh;
-initialization of an already published catalogue makes no provider requests.
+No bulk refresh, scheduled refresh, deployment initialization or Marketstack
+smoke/preflight runs remain. Overage is USD 0.003996 per HTTP request; retries
+and exchange-directory pages also count. The stated maximum additional-cost
+limit is USD 20; this change adds no aggregate runtime spending guard. Existing
+per-request budgets do not enforce an account-wide monetary cap. Use the
+provider/account limit for aggregate spending. Implementation and verification
+must use fixtures/mocks with zero live Marketstack calls. See
+[Securities operations and caching](securities.md) for details.

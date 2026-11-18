@@ -3,7 +3,6 @@ import type {
   SecuritySearchCriteria,
   SecuritiesQuery,
   SecuritiesPage,
-  SecuritiesFilterOptions,
   PriceOmission,
   SecurityHistoryStatus,
 } from "@/shared/securities/contracts";
@@ -17,10 +16,9 @@ export type {
 export type SecuritiesDataSource = {
   key: string;
   loadPage: (
-    query: Pick<SecuritiesQuery, "offset" | "limit" | "filters" | "sorts">,
+    query: Pick<SecuritiesQuery, "offset" | "limit">,
     signal: AbortSignal,
   ) => Promise<SecuritiesPage>;
-  loadFilterOptions: (signal: AbortSignal) => Promise<SecuritiesFilterOptions>;
 };
 export type SearchState =
   | { status: "idle" }

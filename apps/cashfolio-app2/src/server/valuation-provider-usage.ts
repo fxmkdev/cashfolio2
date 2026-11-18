@@ -224,7 +224,11 @@ export const getValuationProviderUsage = createServerFn({
       unitLabel:
         row.requestReason === "CATALOGUE_REFRESH"
           ? "Security Catalogue"
-          : toUnitLabel(row),
+          : row.requestReason === "SECURITY_SEARCH"
+            ? "Security Search"
+            : row.requestReason === "SECURITY_EXCHANGES"
+              ? "Security Exchanges"
+              : toUnitLabel(row),
       currency: row.currency,
       cryptocurrency: row.cryptocurrency,
       symbol: row.symbol,

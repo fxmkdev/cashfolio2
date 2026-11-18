@@ -1,90 +1,81 @@
 # Securities Discovery
 
-The authenticated **Securities** page at `/$accountBookId/securities` searches a
-shared Marketstack reference catalogue. The account-book parent route authorizes
-book access; the reference data has no book, user or financial-account
-associations. Each RPC independently requires an active authenticated user.
-Discovery and **Copy Symbol** do not change account creation or valuation.
+The authenticated **Securities** page at `/$accountBookId/securities` searches
+Marketstack on demand. The account-book parent route authorizes book access;
+every discovery/history RPC independently requires an active authenticated user.
+Reference data has no user, book or financial-account associations. Discovery
+and **Copy Symbol** do not change account creation or valuation.
 
 ## Ownership and browsing
 
-- `src/shared/securities/` owns transport contracts and exchange/availability
-  labels. `src/server/securities.ts` is the public RPC facade; its private
-  domain owns runtime validation, PostgreSQL queries and Marketstack history.
+- `src/shared/securities/` owns transport contracts and labels.
+  `src/server/securities.ts` is the public RPC facade; its private domain owns
+  validation, provider access, signed references and caching.
 - `src/components/security-search/` owns the view and cancellable controller.
-  The route's private page supplies real services. AG Grid's server-side row
-  model uses 20-row blocks/pages. Query text, exchange, filters, sort order,
-  counts and filter choices are evaluated over the full submitted search in
-  PostgreSQL. Grid queries use POST to accommodate large set-filter selections
-  without exceeding URL limits; they do not mutate reference data.
-- Search submission pins a catalogue version and resets selection, filters and
-  pagination. Sorting, filtering and page changes retain the selected listing.
-  Desktop details scroll independently; below `64em`, the mounted grid is hidden
-  while details are shown. Back/close restores focus and browsing state.
-- Requests carry abort signals. Search replacement and route unmount cancel
-  outstanding work; a replaced history response cannot update another listing.
-  The grid also ignores obsolete count/error responses.
+  The private route supplies real services. Shared DataGrid uses server-side
+  20-row blocks/pages with informational Name, Symbol, Exchange, Country and
+  Historical Prices columns. All sorting and column filters are disabled.
+- Nothing loads listings or prices on navigation. Search/Enter submits the
+  name/symbol query and optional single exchange MIC. An explicitly submitted
+  empty query browses all listings. Editing draft controls does not fetch.
+- Opening Exchange first loads its directory; typing filters cached choices
+  locally. Labels are Exchange Name (MIC); clearing means All Exchanges.
+  Directory failures offer their own retry and do not block all-exchange search.
+- Submission resets pagination and selection. Page changes preserve the selected
+  listing. Desktop details scroll independently; below `64em`, details hide the
+  mounted grid. Back/close restores focus and browsing state.
+- Abort signals cancel replaced searches/history and unmounted work. Obsolete
+  responses cannot replace another listing or update the current grid summary.
 
-Open **Routes/Securities** in Storybook
-(`pnpm --filter cashfolio-app2 storybook`). The interactive stories emulate the
-server-side datasource with deterministic, illustrative listings/prices and
-fixed fixture dates. They never call the server or Marketstack. Exercise
-submit-only search, exchange/country/availability set filters, Name/Symbol text
-filters, pagination, selection, range controls and copy feedback. Controller
-stories cover unavailable catalogues, retry and late responses. The illustrative
-fixtures make no provider-coverage or currency claims.
+Open **Routes/Securities** in Storybook. Fixtures emulate provider ordering,
+explicit submission, exchange choices and requested pages, plus chart/copy,
+responsive layouts, partial history and cooldowns. They never call Marketstack
+or the backend and make no provider-coverage or currency claims.
 
-## Catalogue refresh and consistency
+## On-demand provider pages and cache
 
-`SecurityCatalogueSnapshot` and `SecurityCatalogueListing` store reference data.
-A listing is unique within a snapshot by the exact provider symbol and MIC;
-internal row IDs are resolved against the requested snapshot before history is
-loaded. An empty MIC is stored for unknown exchanges and returned as `null`.
-Missing availability stays unknown, rather than becoming a confirmed absence.
-Marketstack also supplies vendor exchange identifiers such as `XETRA` and
-`NMFQS`; these are preserved exactly rather than truncated to four-character ISO
-MICs. Symbols such as `NEE 6.219` retain internal spaces in storage, copying and
-provider requests. Country placeholders such as `INDX` remain Unknown.
-
-The standalone TypeScript worker (`src/securities-refresh/cli.server.ts`) first
-checks one AAPL/XNAS catalogue result and a recent unadjusted EOD close. It then
-loads exchange metadata once and reads every `/v2/tickerslist` page, enriching
-missing countries from provider exchange country/country-code fields. Country
-codes remain provider metadata; currency is never inferred from geography. It
-does not load company profiles or prices for all listings.
-
-The provider boundary follows the
+Discovery uses GET `/v2/tickerslist` with `search`, optional `exchange`,
+`limit=20` and the requested `offset`, following the
 [Marketstack v2 specification](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0).
+Each cache miss fetches only that page, in provider order. No background page
+prefetch, catalogue scan, local column filtering/sorting or row-price enrichment
+runs. Pagination totals come from the provider and are not snapshot-pinned;
+provider changes can move rows between independently cached pages. Malformed
+listing pages fail visibly without scanning replacement pages.
 
-A transaction-scoped PostgreSQL advisory lock prevents concurrent bulk
-refreshes. The worker reserves connections for the lock, staged batch writes and
-best-effort provider-attempt logging. At most two page requests run concurrently
-while batches are written in provider order. A changed page size or offset fails
-validation rather than skipping or duplicating rows. Batch inserts use a bound
-JSON parameter and PostgreSQL record expansion to avoid thousands of individual
-bind parameters. Identical normalized listings with the same exact symbol/MIC
-are stored once and counted separately; this handles repeated IEX records in the
-provider catalogue. Conflicting metadata for one identity, offset/count/total
-changes, malformed rows and incomplete/empty catalogues fail the refresh. The
-only excluded provider records are explicitly identified `TEST`-exchange
-placeholders with both symbol and name absent. Their count is logged, and raw
-provider-row offsets still advance across every page. Missing identities on
-other exchanges remain errors, and a catalogue containing only placeholders is
-rejected. Only a completely staged catalogue is atomically published. Failed
-stages are deleted; the previous active snapshot continues serving. Superseded
-snapshots remain readable for 48 hours after their replacement, then become
-unavailable and are removed on a later successful refresh. Clients with expired
-versions receive a search-again error. Abandoned stages older than 24 hours are
-removed during publication.
+Validated pages, including empty results, are cached in Redis for **24 hours**
+under `securities:marketstack:search:v1:`, keyed by exact submitted search,
+optional exchange, limit and offset. The lightweight `/v2/exchanges` directory
+is paginated separately and cached for **seven days** under
+`securities:marketstack:exchanges:v1`. Directory loading is bounded to 10,000
+entries and the normal read deadline. Unknown listing metadata remains Unknown;
+discovery never loads profiles or historical prices to fill result columns.
 
-Status includes publication time and a stale flag after 48 hours. An environment
-without a published snapshot shows catalogue-unavailable feedback with retry.
-Refresh failures never appear as a successful empty search. A stale catalogue
-remains usable while administrators investigate the refresh job.
+Cache payloads are validated before use. Corrupt/unavailable Redis retains
+bounded provider fallback. Failed operations are not cached as empty successes.
+Concurrent work reuses the existing user-scoped shared-work mechanism and
+provider-attempt budgets. Search and directory caches contain public metadata;
+credentials and selection-signing keys remain server-only.
+
+## Trusted selected-listing references
+
+Every validated result receives a stable SHA-256 ID over its exact symbol/MIC
+and a signed reference containing its listing metadata, format version and
+24-hour expiry. HMAC-SHA-256 uses a purpose-specific key derived from
+`SESSION_SECRET`. References are issued when serving a page; they do not require
+a catalogue row, Redis lookup or extra provider call to resolve. Signature
+comparison is timing-safe, and payload bounds, version, metadata and expiry are
+checked before history access. Invalid/expired references require a new search.
+Secret rotation invalidates outstanding references.
+
+Symbols such as `NEE 6.219` and vendor exchange identifiers such as `XETRA` and
+`NMFQS` are preserved exactly. Client-supplied symbols or metadata cannot
+replace the signed identity. A valid reference still requires an authenticated
+active user; reference metadata itself is shared public reference data.
 
 ## Selected-listing history
 
-The history operation resolves the stored symbol and MIC, then requests all
+The history operation verifies the signed selection reference, then requests all
 paginated `/v2/eod` rows over the previous five years through the current UTC
 accounting day. It validates exact exchange/symbol matching, pagination, dates,
 unadjusted closes and duplicate days, sorts chronologically, and rejects mixed
@@ -99,7 +90,8 @@ Omissions carry their provider date and a reason (`missing`, `non-positive`, or
 `invalid`); raw provider row counts still drive pagination. Identity, date,
 duplicate-day, currency/unit and pagination checks remain strict, including on
 omitted observations. Matching metadata can still supply currency/type when all
-closing prices are unusable. The catalogue's availability flag is unchanged.
+closing prices are unusable. The provider-declared availability flag is
+unchanged.
 
 The RPC preserves listing/points/window fields and adds `status`, dated
 `omissions`, and—for `unavailable` results—a reason (`no-data`,
@@ -135,83 +127,37 @@ constants, resource-budget accounting and sanitized provider usage. A timed-out
 request, network failure, unreadable HTTP payload or HTTP 5xx response retries
 the same page at most twice, with bounded delays inside the existing deadline.
 Cancellation and structurally invalid provider data never retry. Every HTTP
-attempt is reported with `CATALOGUE_REFRESH`, `SECURITY_HISTORY` or
-`RATE_LIMIT_RETRY`. Configuration, subscription/quota, malformed data and
-transient errors have separate safe messages. Existing financial-account
-valuation is unchanged.
+attempt is reported with `SECURITY_SEARCH`, `SECURITY_EXCHANGES`,
+`SECURITY_HISTORY` or `RATE_LIMIT_RETRY`. Configuration, subscription/quota,
+malformed data and transient errors have separate safe messages. Existing
+financial-account valuation is unchanged.
 
-## Operations
+## Deployment and schema compatibility
 
-The refresh payload is bundled into the deployed app image. The GitHub workflow
-[refresh-securities.yml](../../../.github/workflows/refresh-securities.yml)
-creates an isolated Fly Machine from that environment's deployed web image,
-checks its exit and completion metrics, then destroys it. It runs daily in
-production at **04:17 UTC**. Subsequent full refreshes in staging and preview
-use manual dispatch. A 30-minute worker deadline and a 32-minute runner deadline
-bound work; provider requests time out and rate-limit retries are bounded. No
-provider credentials are sent to browsers or supplied as runner arguments. The
-catalogue job uses two shared CPUs and 1 GiB of memory: generating and
-validating hundreds of thousands of listing identities exhausted the burst CPU
-allocation of a one-CPU job and approached its deadline. This sizing does not
-increase provider concurrency or request counts.
+There is no catalogue refresh worker, scheduled/manual refresh workflow,
+deployment initialization, preflight, smoke request or refresh payload in the
+app image. Deployment and warm-up do not access Marketstack. No manual bootstrap
+is needed: user actions request pages and selected history only when needed.
 
-After deployment and warm-up, the shared deployment workflow runs the job with
-`--if-missing` in **every environment**. An existing published catalogue,
-including a stale one or one inherited by a preview database branch, skips all
-preflight and provider requests. An empty catalogue is initialized after taking
-the database lock and rechecking publication. If another refresh holds the lock,
-initialization waits within its deadline until data is available or it can take
-over. A lock-only skip cannot report successful initialization.
+The existing catalogue migration, Prisma models/tables, data and legacy
+`CATALOGUE_REFRESH` usage records remain intact temporarily. No runtime
+Securities path reads them. Do not reset databases, rewrite applied migrations,
+or run destructive cleanup. A new additive migration adds `SECURITY_SEARCH` and
+`SECURITY_EXCHANGES` usage reasons; normal Prisma deployment applies it.
 
-Initialization failure fails the deployment check without rolling back or
-stopping the deployed app. Inspect the job/provider-usage logs, correct the
-failure, then rerun the failed deployment job; initialization is idempotent. The
-deployment workflow allows 50 minutes for app deployment and the bounded
-initialization job. This path also works before a newly introduced manual
-workflow becomes available on GitHub's default branch.
+## Verification and cost
 
-GitHub job summaries report safe completion counts, existing-catalogue skips
-without provider calls, or failure/retry guidance; they never include raw
-provider responses or credentials.
+Focused tests cover authentication, query/provider validation, exact requested
+pages/order, cache hits/TTLs/corruption, signed identity/expiry, history parsing
+and cooldowns. Mocked E2E uses build-gated ticker/exchange/history responses,
+requires no catalogue seed, and blocks unhandled provider traffic. Full suites,
+coverage, builds and mocked E2E runs remain CI checks.
 
-For a deliberate full refresh after deployment, use the manual workflow
-(available once the workflow is on `main`):
-
-```sh
-gh workflow run refresh-securities.yml --ref main -f environment=staging
-gh workflow run refresh-securities.yml --ref main -f environment=prod
-# Use the existing preview app/region shown by its deploy workflow:
-gh workflow run refresh-securities.yml --ref main -f environment=preview \
-  -f preview_app=cashfolio-app2-pr-504-security-search-storybook -f preview_region=cdg
-```
-
-Dispatch uses the corresponding protected GitHub environment's Fly token.
-Preview targets must match the repository's preview naming convention. Deploy a
-compatible image before dispatching. The worker prints safe smoke/progress and
-terminal summary messages; inspect those and provider-usage reporting after a
-failure, correct configuration/entitlements if needed, then dispatch again.
-
-First run `pnpm --filter cashfolio-app2 build:securities-refresh`. For a local
-preflight only (no bulk refresh), supply the existing API key via the
-environment and run `pnpm --filter cashfolio-app2 refresh:securities --smoke`.
-Bulk local refresh also requires `DATABASE_URL`; run without `--smoke` only when
-intentionally populating that database. Use `--if-missing` for idempotent
-initial setup; an existing catalogue succeeds without `MARKETSTACK_API_KEY` or
-provider calls. Do not combine `--smoke` and `--if-missing`. No credentials
-belong in fixtures.
-
-On 2026-11-16, a small authenticated staging smoke check confirmed the catalogue
-shape (`ticker`, `stock_exchange`, `has_eod`), exchange `country_code`, and
-exchange-aware EOD shape (`symbol`, `exchange`, `close`, `price_currency`,
-`asset_type`). The refresh preflight repeats catalogue/EOD checks before bulk
-work. Automated tests always use fixtures.
-
-## Verification
-
-Focused unit tests cover authentication, validation, parsing, cache isolation,
-provider failures and the Fly runner. The general database integration CI suite
-owns `src/securities-refresh/catalogue.integration.ts`: atomic publication,
-failed-refresh preservation, pagination, locking, versioned queries and
-idempotent/concurrent initialization. The mocked Securities E2E flow covers
-sidebar navigation, exact exchange selection and chart ranges. Full
-suites/builds and database-backed runs remain CI checks.
+Make **no live Marketstack calls** during implementation or verification and
+trigger no refreshes. Verification uses fixtures/mocks only. Overage is **USD
+0.003996 per request**, against the stated **USD 20 maximum additional cost**.
+The pivot adds no aggregate runtime spending guard; provider/account limits
+control aggregate spending. Existing request budgets bound individual
+operations. Cache hits make no provider requests, while cache misses, directory
+pagination and bounded retries consume requests. There is no recurring full
+catalogue cost.

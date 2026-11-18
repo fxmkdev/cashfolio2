@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw/http";
 import { setupServer } from "msw/node";
 import { Temporal } from "../shared/temporal";
 import { getE2ESecurityPrice } from "./security-prices";
+import { e2eSecuritiesListings } from "./securities-listings";
 
 const USD_TO_CURRENCY_RATE_BY_SYMBOL: Record<string, number> = {
   USD: 1,
@@ -33,6 +34,38 @@ function enforceHandledValuationProviderRequests(request: Request): void {
 }
 
 const e2eValuationProviderServer = setupServer(
+  http.get("https://api.marketstack.com/v2/tickerslist", ({ request }) => {
+    const url = new URL(request.url);
+    const search = (url.searchParams.get("search") ?? "").toLowerCase();
+    const exchange = url.searchParams.get("exchange");
+    const rows = e2eSecuritiesListings.filter(
+      (row) =>
+        (!exchange || row.stock_exchange.mic === exchange) &&
+        (row.ticker.toLowerCase().includes(search) ||
+          row.name.toLowerCase().includes(search)),
+    );
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 20);
+    const data = rows.slice(offset, offset + limit);
+    return HttpResponse.json({
+      data,
+      pagination: { offset, limit, count: data.length, total: rows.length },
+    });
+  }),
+  http.get("https://api.marketstack.com/v2/exchanges", ({ request }) => {
+    const url = new URL(request.url);
+    const rows = [
+      { name: "NASDAQ", mic: "XNAS" },
+      { name: "SIX Swiss Exchange", mic: "XSWX" },
+    ];
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 1000);
+    const data = rows.slice(offset, offset + limit);
+    return HttpResponse.json({
+      data,
+      pagination: { offset, limit, count: data.length, total: rows.length },
+    });
+  }),
   http.get("https://api.marketstack.com/v2/eod", ({ request }) => {
     const url = new URL(request.url);
     const symbol = url.searchParams.get("symbols");

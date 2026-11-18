@@ -2,12 +2,7 @@ import { Box } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SecuritySearchHarness } from "./harness";
-import {
-  selectListing,
-  setListFilter,
-  setTextFilter,
-} from "./interaction-helpers";
-
+import { selectListing } from "./interaction-helpers";
 const meta = {
   title: "Routes/Securities",
   component: SecuritySearchHarness,
@@ -23,72 +18,29 @@ const meta = {
 } satisfies Meta<typeof SecuritySearchHarness>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const GridFilters: Story = {
+export const InformationalColumns: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const count = canvas.getByRole("status", { name: "Result Count" });
+    await waitFor(() =>
+      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
+        "31 listings",
+      ),
+    );
+    const header = canvas.getByRole("columnheader", { name: /^Symbol/ });
+    await userEvent.click(header);
+    await expect(header).not.toHaveAttribute("aria-sort");
+    header.focus();
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await expect(document.querySelector(".ag-filter")).toBeNull();
     await expect(
-      canvas.queryByRole("columnheader", { name: /^MIC/ }),
+      canvasElement.querySelector(".ag-header-cell-filter-button"),
+    ).toBeNull();
+    await expect(canvasElement.querySelector(".ag-floating-filter")).toBeNull();
+    await expect(
+      canvas.queryByRole("button", { name: "Clear Filters" }),
     ).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        canvas
-          .getAllByText("NASDAQ (XNAS)", { exact: true })
-          .find((element) => element.checkVisibility()),
-      ).toBeVisible(),
-    );
-    await setTextFilter(canvasElement, "name", "Alpine");
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 8 of 31 listings"),
-    );
-    await setTextFilter(canvasElement, "symbol", "ALPN");
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 4 of 31 listings"),
-    );
-    await setListFilter(canvasElement, "exchange", [
-      "SIX Swiss Exchange (XSWX)",
-    ]);
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 1 of 31 listings"),
-    );
-    await setListFilter(canvasElement, "country", ["Switzerland"]);
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 1 of 31 listings"),
-    );
-    await expect(
-      canvas.getByRole("button", { name: "Next Page" }),
-    ).toBeDisabled();
-    await setListFilter(canvasElement, "hasHistory", ["Unavailable"]);
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 0 of 31 listings"),
-    );
-    await expect(
-      await canvas.findByText("No listings match the grid filters."),
-    ).toBeVisible();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Clear Filters" }),
-    );
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 31 of 31 listings"),
-    );
-    await expect(
-      canvas.queryByText("No securities found."),
-    ).not.toBeInTheDocument();
-    await setListFilter(canvasElement, "country", ["Unknown"]);
-    await waitFor(() =>
-      expect(count).toHaveTextContent("Showing 1 of 31 listings"),
-    );
-    await selectListing(canvasElement, "OLD:unknown");
-    const details = within(
-      canvas.getByRole("region", { name: "Security Details" }),
-    );
-    await expect(
-      details.getAllByText("Unknown", { exact: true }).length,
-    ).toBeGreaterThan(0);
   },
 };
-
 export const PersistentDetails: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -101,24 +53,9 @@ export const PersistentDetails: Story = {
     await waitFor(() =>
       expect(grid.getBoundingClientRect().width).toBeLessThan(fullWidth),
     );
-    await userEvent.click(
-      within(canvas.getByRole("columnheader", { name: /^Symbol/ })).getByText(
-        "Symbol",
-        { exact: true },
-      ),
-    );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
     await expect(
       canvas.getByRole("region", { name: "Security Details" }),
-    ).toBeVisible();
-    await setListFilter(canvasElement, "country", ["Switzerland"]);
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 7 of 31 listings",
-      ),
-    );
-    await expect(
-      details.getByRole("heading", { name: "Alpine Technologies" }),
     ).toBeVisible();
     await userEvent.click(
       details.getByRole("button", { name: "Close Details" }),
@@ -130,22 +67,12 @@ export const PersistentDetails: Story = {
     await waitFor(() =>
       expect(grid.getBoundingClientRect().width).toBeCloseTo(fullWidth, 0),
     );
-    await expect(
-      canvas.getByRole("button", { name: "Clear Filters" }),
-    ).toBeVisible();
   },
 };
-
 export const NewSearchResetsGrid: Story = {
   args: { initialSelectedId: "ALP:XNAS" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await setListFilter(canvasElement, "hasHistory", ["Available"]);
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 28 of 31 listings",
-      ),
-    );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
     const input = canvas.getByRole("textbox", { name: "Security" });
     await userEvent.type(input, "Harbor{Enter}");
@@ -154,12 +81,9 @@ export const NewSearchResetsGrid: Story = {
     ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 4 of 4 listings",
+        "4 listings",
       ),
     );
-    await expect(
-      canvas.queryByRole("button", { name: "Clear Filters" }),
-    ).not.toBeInTheDocument();
     await expect(
       canvas.getByRole("button", { name: "Page 1" }),
     ).toHaveAttribute("data-active");
@@ -167,7 +91,7 @@ export const NewSearchResetsGrid: Story = {
     await userEvent.keyboard("{Enter}");
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 31 of 31 listings",
+        "31 listings",
       ),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
@@ -182,61 +106,32 @@ export const NewSearchResetsGrid: Story = {
     );
   },
 };
-
 export const MobileBrowsingState: Story = {
-  parameters: { viewport: { defaultViewport: "cashfolioMobile" } },
+  globals: { viewport: { value: "cashfolioMobile" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const grid = canvas.getByRole("region", { name: "Security Results" });
-    await setListFilter(canvasElement, "hasHistory", ["Available"]);
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 28 of 31 listings",
-      ),
-    );
     const input = canvas.getByRole("textbox", { name: "Security" });
     await userEvent.type(input, "Unsubmitted draft");
-    canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!.scrollLeft =
-      0;
-    await waitFor(() =>
-      expect(
-        canvas.getByRole("columnheader", { name: /^Symbol/ }),
-      ).toBeVisible(),
-    );
-    await userEvent.click(
-      within(canvas.getByRole("columnheader", { name: /^Symbol/ })).getByText(
-        "Symbol",
-        { exact: true },
-      ),
-    );
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
-    // SSRM renders a placeholder before the page arrives. Select the known
-    // first listing on the sorted second page, never a placeholder's null ID.
-    const id = "ORC:XNAS";
-    await selectListing(canvasElement, id);
+    await selectListing(canvasElement, "ORC:XNAS");
     await expect(grid).not.toBeVisible();
     await expect(input).not.toBeVisible();
-    await expect(
-      canvas.getByRole("region", { name: "Security Details" }),
-    ).toBeVisible();
     await userEvent.click(
       canvas.getByRole("button", { name: "Back to Results" }),
     );
     await expect(grid).toBeVisible();
     await expect(input).toHaveValue("Unsubmitted draft");
     await expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-      "Showing 28 of 31 listings",
+      "31 listings",
     );
     await expect(
       canvas.getByRole("button", { name: "Page 2" }),
     ).toHaveAttribute("data-active");
-    await expect(
-      canvas.getByRole("columnheader", { name: /^Symbol/ }),
-    ).toHaveAttribute("aria-sort", "ascending");
     await waitFor(() =>
       expect(document.activeElement?.closest(".ag-row")).toHaveAttribute(
         "row-id",
-        id,
+        "ORC:XNAS",
       ),
     );
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(

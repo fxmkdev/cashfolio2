@@ -44,6 +44,7 @@ export const listings: SecurityListing[] = instruments.flatMap(
   ([symbol, name, securityType]) =>
     exchanges.map((exchange) => ({
       id: `${symbol}:${exchange.mic}`,
+      selectionToken: `${symbol}:${exchange.mic}`,
       symbol,
       name,
       securityType,
@@ -55,6 +56,7 @@ export const listings: SecurityListing[] = instruments.flatMap(
 listings.push(
   {
     id: "ARCH:XNAS",
+    selectionToken: "ARCH:XNAS",
     symbol: "ARCH",
     name: "Archive Industries",
     ...exchanges[0]!,
@@ -63,6 +65,7 @@ listings.push(
   },
   {
     id: "MYST:XLON",
+    selectionToken: "MYST:XLON",
     symbol: "MYST",
     name: "Mystery Capital",
     ...exchanges[3]!,
@@ -72,6 +75,7 @@ listings.push(
   },
   {
     id: "OLD:unknown",
+    selectionToken: "OLD:unknown",
     symbol: "OLD",
     name: "Old World Holdings",
     exchange: null,

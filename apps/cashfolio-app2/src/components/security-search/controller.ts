@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createId } from "@paralleldrive/cuid2";
 import { Temporal } from "@/shared/temporal";
 import type {
-  SecuritiesCatalogueStatus,
+  SecuritiesExchanges,
   SecuritiesQuery,
   SecuritiesPage,
-  SecuritiesFilterOptions,
-  SecuritiesScope,
   SecurityHistory,
 } from "@/shared/securities/contracts";
 import type {
@@ -17,17 +15,13 @@ import type {
   SecuritySearchCriteria,
 } from "./types";
 export type SecuritiesServices = {
-  catalogue: (signal: AbortSignal) => Promise<SecuritiesCatalogueStatus>;
+  exchanges: (signal: AbortSignal) => Promise<SecuritiesExchanges>;
   search: (
     input: SecuritiesQuery,
     signal: AbortSignal,
   ) => Promise<SecuritiesPage>;
-  filters: (
-    input: SecuritiesScope,
-    signal: AbortSignal,
-  ) => Promise<SecuritiesFilterOptions>;
   history: (
-    input: { version: string; id: string },
+    input: { selectionToken: string },
     signal: AbortSignal,
   ) => Promise<SecurityHistory>;
 };
@@ -36,12 +30,31 @@ const message = (error: unknown) =>
     ? error.message
     : "Securities could not be loaded. Try again.";
 export function useSecuritiesController(services: SecuritiesServices) {
-  const [catalogue, setCatalogue] = useState<SecuritiesCatalogueStatus>({
-    version: null,
-    updatedAt: null,
-    stale: false,
-    exchanges: [],
-  });
+  const [exchanges, setExchanges] = useState<SecuritiesExchanges>([]);
+  const [exchangeStatus, setExchangeStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const exchangeRequest = useRef<AbortController | null>(null);
+  const loadExchanges = useCallback(() => {
+    if (exchangeRequest.current || exchangeStatus === "ready") return;
+    const request = new AbortController();
+    exchangeRequest.current = request;
+    setExchangeStatus("loading");
+    void services
+      .exchanges(request.signal)
+      .then((options) => {
+        if (!request.signal.aborted) {
+          setExchanges(options);
+          setExchangeStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setExchangeStatus("error");
+      })
+      .finally(() => {
+        if (exchangeRequest.current === request) exchangeRequest.current = null;
+      });
+  }, [services, exchangeStatus]);
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   const [selectedListing, setSelectedListing] =
     useState<SecurityListing | null>(null);
@@ -56,89 +69,42 @@ export function useSecuritiesController(services: SecuritiesServices) {
   const searchRequest = useRef<AbortController | null>(null);
   const historyRequest = useRef<AbortController | null>(null);
   const rows = useRef(new Map<string, SecurityListing>());
-  const version = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
     historyRequest.current?.abort();
     setSelectedListing(null);
   }, []);
-  useEffect(() => {
-    const request = new AbortController();
-    searchRequest.current = request;
-    void services
-      .catalogue(request.signal)
-      .then((status) => {
-        if (request.signal.aborted) return;
-        setCatalogue(status);
-        if (!status.version)
-          setSearch({
-            status: "error",
-            criteria: { query: "", exchange: null },
-            message:
-              "The securities catalogue is not available yet. Try again later.",
-          });
-      })
-      .catch((error) => {
-        if (!request.signal.aborted)
-          setSearch({
-            status: "error",
-            criteria: { query: "", exchange: null },
-            message: message(error),
-          });
-      });
-    return () => {
+  useEffect(
+    () => () => {
       searchRequest.current?.abort();
       historyRequest.current?.abort();
-    };
-  }, [services]);
+      exchangeRequest.current?.abort();
+    },
+    [services],
+  );
   const runSearch = useCallback(
-    async (criteria: SecuritySearchCriteria) => {
+    (criteria: SecuritySearchCriteria) => {
       searchRequest.current?.abort();
       const request = new AbortController();
       searchRequest.current = request;
       closeDetails();
       setPage(1);
-      setSearch({ status: "loading", criteria });
       rows.current.clear();
-      try {
-        const status = await services.catalogue(request.signal);
-        if (request.signal.aborted) return;
-        setCatalogue(status);
-        if (!status.version)
-          throw new Error(
-            "The securities catalogue is not available yet. Try again later.",
-          );
-        version.current = status.version;
-        const scope = { version: status.version, criteria };
-        let options: Promise<SecuritiesFilterOptions> | undefined;
-        setSearch({
-          status: "ready",
-          criteria,
-          source: {
-            key: createId(),
-            async loadPage(query, signal) {
-              const response = await services.search(
-                { ...scope, ...query },
-                AbortSignal.any([signal, request.signal]),
-              );
-              if (!request.signal.aborted && !signal.aborted)
-                for (const row of response.rows) rows.current.set(row.id, row);
-              return response;
-            },
-            loadFilterOptions(signal) {
-              options ??= services
-                .filters(scope, AbortSignal.any([signal, request.signal]))
-                .catch((error) => {
-                  options = undefined;
-                  throw error;
-                });
-              return options;
-            },
+      setSearch({
+        status: "ready",
+        criteria,
+        source: {
+          key: createId(),
+          async loadPage(query, signal) {
+            const response = await services.search(
+              { criteria, ...query },
+              AbortSignal.any([signal, request.signal]),
+            );
+            if (!request.signal.aborted && !signal.aborted)
+              for (const row of response.rows) rows.current.set(row.id, row);
+            return response;
           },
-        });
-      } catch (error) {
-        if (!request.signal.aborted)
-          setSearch({ status: "error", criteria, message: message(error) });
-      }
+        },
+      });
     },
     [services, closeDetails],
   );
@@ -154,10 +120,8 @@ export function useSecuritiesController(services: SecuritiesServices) {
       }
       setLoadedHistory({ status: "loading" });
       try {
-        if (!version.current)
-          throw new Error("Search again to load this listing.");
         const response = await services.history(
-          { version: version.current, id: listing.id },
+          { selectionToken: listing.selectionToken },
           request.signal,
         );
         if (request.signal.aborted) return;
@@ -195,9 +159,9 @@ export function useSecuritiesController(services: SecuritiesServices) {
   }, [loadedHistory, range, historyThrough]);
   return {
     search,
-    exchanges: catalogue.exchanges,
-    catalogueUpdatedAt: catalogue.updatedAt,
-    catalogueStale: catalogue.stale,
+    exchanges,
+    exchangeStatus,
+    onLoadExchanges: loadExchanges,
     selectedListing,
     history,
     page,

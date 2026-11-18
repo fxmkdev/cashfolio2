@@ -1,4 +1,3 @@
-import type { PrismaClient } from "../../.prisma-client/client";
 import { Temporal } from "../../shared/temporal";
 import type { SecurityHistory } from "../../shared/securities/contracts";
 import { getRedisClient } from "../../redis.server";
@@ -8,7 +7,7 @@ import {
   checkResourceBudget,
 } from "../resource-context.server";
 import { fetchMarketstackPage, parseHistoryRows } from "./marketstack.server";
-import { listingResponse, readSnapshot } from "./store.server";
+import { resolveListing } from "./selection.server";
 import { HistoryDataError } from "./history-data.server";
 import {
   historyCacheKey,
@@ -92,24 +91,18 @@ async function loadSeries(
   return result;
 }
 const sharedHistory = createUserScopedSharedWork<HistoryResult>();
-export async function securityHistory(
-  db: PrismaClient,
-  input: { version: string; id: string },
-): Promise<SecurityHistory> {
+export async function securityHistory(input: {
+  selectionToken: string;
+}): Promise<SecurityHistory> {
   startReadBudget();
-  await readSnapshot(db, input.version);
-  const row = await db.securityCatalogueListing.findFirst({
-    where: { id: input.id, snapshotId: input.version },
-  });
-  if (!row)
-    throw new Error("This listing is no longer available. Search again.");
+  const row = resolveListing(input.selectionToken);
   const through = Temporal.Now.plainDateISO("UTC").toString();
   const from = Temporal.PlainDate.from(through)
     .subtract({ years: 5 })
     .toString();
   if (row.hasHistory === false)
     return {
-      listing: listingResponse(row),
+      listing: row,
       status: "ready",
       points: [],
       omissions: [],
@@ -120,15 +113,16 @@ export async function securityHistory(
     throw new Error(
       "Price history cannot be matched safely because this listing has no exchange MIC.",
     );
+  const mic = row.mic;
   const series = await sharedHistory(
     JSON.stringify([row.symbol, row.mic, from, through]),
-    () => loadSeries(row.symbol, row.mic, from, through),
+    () => loadSeries(row.symbol, mic, from, through),
   );
   const { currency, securityType, ...history } = series;
   return {
     ...history,
     listing: {
-      ...listingResponse(row),
+      ...row,
       currency,
       securityType,
     },

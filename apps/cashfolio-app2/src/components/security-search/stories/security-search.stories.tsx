@@ -21,7 +21,7 @@ const meta = {
       description: {
         component: `Securities page presentation with a fixture-backed server-side datasource. All listings, symbol/exchange combinations and prices are illustrative local fixtures, not live Marketstack data or verified coverage.
 
-Open **Routes / Securities / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages, sorting and filters retain selection; a new search clears selection and filters. Close Details restores the full-width grid. Use the column filter menus (or focus a header and press Ctrl+Enter) to filter the results, and Clear Filters to reset them. Exchange, Country and Historical Prices use set filters; Name and Symbol use text filters. Explore price ranges and Copy Symbol.
+Open **Routes / Securities / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages retain selection; a submitted search resets selection and pagination. Columns are informational and have no sorting or filters. Explore price ranges and Copy Symbol.
 
 These stories use deterministic local data and never call the backend or Marketstack. Loading/error stories are fixed scenarios; Retry Search and Retry Price History recover locally. Clipboard feedback is simulated in the copy-specific stories. Other stories use the browser clipboard.
 
@@ -57,14 +57,14 @@ export const SearchAndFilter: Story = {
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 8 of 8 listings"),
+      ).toHaveTextContent("8 listings"),
     );
     await userEvent.clear(input);
     await userEvent.type(input, "Harbor");
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 8 of 8 listings"),
+      ).toHaveTextContent("8 listings"),
     );
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "aLpInE",
@@ -82,13 +82,13 @@ export const SearchAndFilter: Story = {
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 8 of 8 listings"),
+      ).toHaveTextContent("8 listings"),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 1 of 1 listing"),
+      ).toHaveTextContent("1 listing"),
     );
     const details = await selectListing(canvasElement, "HBR:XSWX");
     await expect(
@@ -110,7 +110,7 @@ export const BrowseAndSelect: Story = {
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 31 of 31 listings"),
+      ).toHaveTextContent("31 listings"),
     );
     const details = await selectListing(canvasElement, "ALP:XSWX");
     await expect(
@@ -211,7 +211,7 @@ export const SearchError: Story = {
     await waitFor(() =>
       expect(
         canvas.getByRole("status", { name: "Result Count" }),
-      ).toHaveTextContent("Showing 8 of 8 listings"),
+      ).toHaveTextContent("8 listings"),
     );
   },
 };

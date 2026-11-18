@@ -1,40 +1,30 @@
 import { createServerFn } from "@tanstack/react-start";
 import { ensureUser } from "../users/functions.server";
-import { prisma } from "../prisma.server";
 import { startReadBudget } from "./resource-context.server";
-import { readScope, readQuery, readSelection } from "./securities/input";
+import { readQuery, readSelection } from "./securities/input";
 import {
-  catalogueStatus,
-  searchCatalogue,
-  filterOptions,
-} from "./securities/store.server";
+  searchListings,
+  exchangeDirectory,
+} from "./securities/discovery.server";
 import { securityHistory } from "./securities/history.server";
 
-export const getSecuritiesCatalogue = createServerFn({ method: "GET" }).handler(
+export const getSecuritiesExchanges = createServerFn({ method: "GET" }).handler(
   async () => {
     await ensureUser();
     startReadBudget();
-    return catalogueStatus(prisma);
+    return exchangeDirectory();
   },
 );
-// Set-filter selections can exceed URL limits; this remains a read operation.
-export const searchSecurities = createServerFn({ method: "POST" })
+export const searchSecurities = createServerFn({ method: "GET" })
   .validator(readQuery)
   .handler(async ({ data }) => {
     await ensureUser();
     startReadBudget();
-    return searchCatalogue(prisma, data);
-  });
-export const getSecuritiesFilterOptions = createServerFn({ method: "GET" })
-  .validator(readScope)
-  .handler(async ({ data }) => {
-    await ensureUser();
-    startReadBudget();
-    return filterOptions(prisma, data);
+    return searchListings(data);
   });
 export const getSecurityHistory = createServerFn({ method: "GET" })
   .validator(readSelection)
   .handler(async ({ data }) => {
     await ensureUser();
-    return securityHistory(prisma, data);
+    return securityHistory(data);
   });

@@ -1,9 +1,8 @@
 import { beforeEach, expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   user: vi.fn(),
-  status: vi.fn(),
+  exchanges: vi.fn(),
   search: vi.fn(),
-  filters: vi.fn(),
   history: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
@@ -13,18 +12,15 @@ vi.mock("@tanstack/react-start", () => ({
   }),
 }));
 vi.mock("../users/functions.server", () => ({ ensureUser: mocks.user }));
-vi.mock("../prisma.server", () => ({ prisma: {} }));
-vi.mock("./securities/store.server", () => ({
-  catalogueStatus: mocks.status,
-  searchCatalogue: mocks.search,
-  filterOptions: mocks.filters,
+vi.mock("./securities/discovery.server", () => ({
+  exchangeDirectory: mocks.exchanges,
+  searchListings: mocks.search,
 }));
 vi.mock("./securities/history.server", () => ({
   securityHistory: mocks.history,
 }));
 import {
-  getSecuritiesCatalogue,
-  getSecuritiesFilterOptions,
+  getSecuritiesExchanges,
   getSecurityHistory,
   searchSecurities,
 } from "./securities";
@@ -35,22 +31,25 @@ beforeEach(() => {
 test("all reference-data operations require an authenticated active user", async () => {
   const forbidden = new Response("Forbidden", { status: 403 });
   mocks.user.mockRejectedValue(forbidden);
-  const scope = { version: "v", criteria: { query: "", exchange: null } };
+  const scope = { criteria: { query: "", exchange: null } };
   for (const call of [
-    () => getSecuritiesCatalogue(),
-    () => getSecuritiesFilterOptions({ data: scope }),
-    () => getSecurityHistory({ data: { version: "v", id: "listing" } }),
+    () => getSecuritiesExchanges(),
+    () => getSecurityHistory({ data: { selectionToken: "reference" } }),
     () =>
       searchSecurities({
-        data: { ...scope, offset: 0, limit: 20, filters: {}, sorts: [] },
+        data: { ...scope, offset: 0, limit: 20 },
       }),
   ])
     await expect(call()).rejects.toBe(forbidden);
-  for (const fn of [mocks.status, mocks.search, mocks.filters, mocks.history])
+  for (const fn of [mocks.exchanges, mocks.search, mocks.history])
     expect(fn).not.toHaveBeenCalled();
 });
-test("authenticated catalogue access is shared independently of book identity", async () => {
-  mocks.status.mockResolvedValue({ version: "shared" });
-  expect(await getSecuritiesCatalogue()).toEqual({ version: "shared" });
-  expect(mocks.status).toHaveBeenCalledWith({});
+test("authenticated exchange directory access is shared independently of book identity", async () => {
+  mocks.exchanges.mockResolvedValue([
+    { value: "XNAS", label: "NASDAQ (XNAS)" },
+  ]);
+  expect(await getSecuritiesExchanges()).toEqual([
+    { value: "XNAS", label: "NASDAQ (XNAS)" },
+  ]);
+  expect(mocks.exchanges).toHaveBeenCalledWith();
 });

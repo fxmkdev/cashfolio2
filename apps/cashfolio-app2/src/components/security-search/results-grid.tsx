@@ -13,7 +13,6 @@ import {
   type ColDef,
   type GridApi,
   type IServerSideDatasource,
-  type ISetFilterParams,
 } from "ag-grid-enterprise";
 import { Alert, Button, Group, Pagination, Text } from "@mantine/core";
 import { useUserLocale } from "@/user-locale-context";
@@ -21,7 +20,6 @@ import { getHistoryLabel } from "@/shared/securities/contracts";
 import { DataGrid } from "../grid/data-grid";
 import { TEXT_COLUMN } from "../grid/column-types";
 import { getExchangeLabel } from "./exchange-label";
-import { gridQuery } from "./grid-query";
 import {
   RESULTS_PAGE_SIZE,
   type SecurityListing,
@@ -48,11 +46,7 @@ export function SecurityResultsGrid({
   const locale = useUserLocale();
   const [api, setApi] = useState<GridApi<SecurityListing> | null>(null);
   const container = useRef<HTMLDivElement>(null);
-  const [summary, setSummary] = useState({
-    filteredCount: 0,
-    totalCount: 0,
-    filtersActive: false,
-  });
+  const [totalCount, setTotalCount] = useState(0);
   const latestRequest = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const requests = useRef(new Set<AbortController>());
@@ -64,27 +58,6 @@ export function SecurityResultsGrid({
     };
   }, [source]);
   const columns = useMemo<ColDef<SecurityListing>[]>(() => {
-    const setFilter = (column: "exchange" | "country" | "hasHistory") =>
-      ({
-        values: (params) => {
-          const controller = new AbortController();
-          requests.current.add(controller);
-          void source
-            .loadFilterOptions(controller.signal)
-            .then((options) => {
-              if (!controller.signal.aborted) params.success(options[column]);
-            })
-            .catch(() => {
-              if (!controller.signal.aborted) {
-                params.success([]);
-                setError("Filter options could not be loaded. Try again.");
-              }
-            })
-            .finally(() => requests.current.delete(controller));
-        },
-        suppressClearModelOnRefreshValues: true,
-        refreshValuesOnOpen: true,
-      }) satisfies Partial<ISetFilterParams<SecurityListing>>;
     return [
       { field: "name", headerName: "Name", minWidth: 240, flex: 2 },
       { field: "symbol", headerName: "Symbol", width: 120 },
@@ -94,16 +67,12 @@ export function SecurityResultsGrid({
         minWidth: 250,
         flex: 1,
         valueGetter: ({ data }) => (data ? getExchangeLabel(data) : "Unknown"),
-        filter: "agSetColumnFilter",
-        filterParams: setFilter("exchange"),
       },
       {
         field: "country",
         headerName: "Country",
         width: 150,
         valueGetter: ({ data }) => data?.country ?? "Unknown",
-        filter: "agSetColumnFilter",
-        filterParams: setFilter("country"),
       },
       {
         field: "hasHistory",
@@ -111,11 +80,9 @@ export function SecurityResultsGrid({
         width: 170,
         cellDataType: false,
         valueGetter: ({ data }) => getHistoryLabel(data?.hasHistory ?? null),
-        filter: "agSetColumnFilter",
-        filterParams: { ...setFilter("hasHistory"), suppressMiniFilter: true },
       },
     ];
-  }, [source]);
+  }, []);
   const datasource = useMemo<IServerSideDatasource<SecurityListing>>(
     () => ({
       async getRows(params) {
@@ -124,22 +91,17 @@ export function SecurityResultsGrid({
         const requestId = ++latestRequest.current;
         try {
           const result = await source.loadPage(
-            gridQuery(params.request),
+            { offset: params.request.startRow ?? 0, limit: RESULTS_PAGE_SIZE },
             controller.signal,
           );
           if (controller.signal.aborted) return;
           if (requestId === latestRequest.current) {
             setError(null);
-            setSummary({
-              filteredCount: result.filteredCount,
-              totalCount: result.totalCount,
-              filtersActive:
-                Object.keys(params.request.filterModel ?? {}).length > 0,
-            });
+            setTotalCount(result.totalCount);
           }
           params.success({
             rowData: result.rows,
-            rowCount: result.filteredCount,
+            rowCount: result.totalCount,
           });
         } catch (cause) {
           if (controller.signal.aborted) return;
@@ -210,19 +172,9 @@ export function SecurityResultsGrid({
       )}
       <Group justify="space-between" mih={30}>
         <Text size="sm" role="status" aria-label="Result Count">
-          Showing {number.format(summary.filteredCount)} of{" "}
-          {number.format(summary.totalCount)}{" "}
-          {summary.totalCount === 1 ? "listing" : "listings"}
+          {number.format(totalCount)}{" "}
+          {totalCount === 1 ? "listing" : "listings"}
         </Text>
-        {summary.filtersActive && (
-          <Button
-            size="compact-sm"
-            variant="subtle"
-            onClick={() => api?.setFilterModel(null)}
-          >
-            Clear Filters
-          </Button>
-        )}
       </Group>
       <div
         className={classes.grid}
@@ -253,12 +205,7 @@ export function SecurityResultsGrid({
           paginationPageSize={RESULTS_PAGE_SIZE}
           paginationPageSizeSelector={false}
           suppressPaginationPanel
-          localeText={{
-            noMatchingRows: "No listings match the grid filters.",
-            noRowsToShow: summary.filtersActive
-              ? "No listings match the grid filters."
-              : "No securities found.",
-          }}
+          localeText={{ noRowsToShow: "No securities found." }}
           onGridReady={({ api: readyApi }) => setApi(readyApi)}
           onModelUpdated={({ api: gridApi }) => syncSelection(gridApi)}
           onPaginationChanged={({ api: gridApi }) => {
@@ -279,14 +226,14 @@ export function SecurityResultsGrid({
         <Text size="sm" c="dimmed">
           Select a listing to view details and prices.
         </Text>
-        {summary.filteredCount > 0 && (
+        {totalCount > 0 && (
           <Pagination
             aria-label="Results Pages"
             getControlProps={(control) => ({
               "aria-label": `${control[0].toUpperCase()}${control.slice(1)} Page`,
             })}
             getItemProps={(item) => ({ "aria-label": `Page ${item}` })}
-            total={Math.ceil(summary.filteredCount / RESULTS_PAGE_SIZE)}
+            total={Math.ceil(totalCount / RESULTS_PAGE_SIZE)}
             value={page}
             onChange={onPageChange}
             size="sm"
@@ -298,19 +245,11 @@ export function SecurityResultsGrid({
 }
 const defaultColumn: ColDef<SecurityListing> = {
   type: TEXT_COLUMN,
-  sortable: true,
+  sortable: false,
   resizable: true,
-  filter: "agTextColumnFilter",
-  filterParams: {
-    maxNumConditions: 1,
-    filterOptions: [
-      "contains",
-      "notContains",
-      "equals",
-      "notEqual",
-      "startsWith",
-      "endsWith",
-    ],
-  },
+  filter: false,
+  floatingFilter: false,
+  suppressHeaderFilterButton: true,
+  suppressHeaderMenuButton: true,
   valueFormatter: ({ value }) => value ?? "Unknown",
 };

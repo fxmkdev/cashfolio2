@@ -139,6 +139,33 @@ describe("E2E valuation provider interception", () => {
     });
   });
 
+  it("mocks requested Securities pages and exact exchange choices", async () => {
+    enableMocks();
+    const rows = await (
+      await fetch(
+        "https://api.marketstack.com/v2/tickerslist?search=E2E.PAGE&limit=20&offset=20",
+      )
+    ).json();
+    expect(rows.pagination).toMatchObject({ offset: 20, count: 4, total: 24 });
+    expect(rows.data[0].ticker).toBe("E2E.PAGE.21");
+    const selected = await (
+      await fetch(
+        "https://api.marketstack.com/v2/tickerslist?search=E2E.SEC&exchange=XSWX&limit=20&offset=0",
+      )
+    ).json();
+    expect(selected.data).toHaveLength(1);
+    expect(selected.data[0].stock_exchange.mic).toBe("XSWX");
+    const exchanges = await (
+      await fetch(
+        "https://api.marketstack.com/v2/exchanges?limit=1000&offset=0",
+      )
+    ).json();
+    expect(exchanges.data.map((row: { mic: string }) => row.mic)).toEqual([
+      "XNAS",
+      "XSWX",
+    ]);
+  });
+
   it("bypasses unrelated HTTP requests", async () => {
     const server = createServer((_request, response) => {
       response.end("local response");

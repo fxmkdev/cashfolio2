@@ -10,7 +10,7 @@ import {
 import { SecuritySearchView } from "../view";
 import { createFixtureSource } from "./source";
 import { createPriceHistory, exchangeOptions, listings } from "./fixtures";
-import { selectListing, setListFilter } from "./interaction-helpers";
+import { selectListing } from "./interaction-helpers";
 
 function ControllerHarness({
   scenario = "normal",
@@ -18,52 +18,46 @@ function ControllerHarness({
   scenario?:
     | "normal"
     | "obsolete"
-    | "unavailable"
     | "resultsError"
     | "obsoleteSearch"
-    | "filtersError"
+    | "exchangesError"
     | "historyError"
     | "partial"
     | "unusable"
     | "cooldown";
 }) {
+  const [searchRequests, setSearchRequests] = useState(0);
+  const [exchangeRequests, setExchangeRequests] = useState(0);
   const [historyRequests, setHistoryRequests] = useState(0);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const [services] = useState<SecuritiesServices>(() => {
-    let filterCalls = 0;
+    let exchangeCalls = 0;
     let historyCalls = 0;
     let pageCalls = 0;
-    let statusCalls = 0;
     return {
-      async catalogue() {
-        statusCalls++;
-        return {
-          version:
-            scenario === "unavailable" && statusCalls === 1 ? null : "fixture",
-          updatedAt: "2026-10-30T04:17:00Z",
-          stale: true,
-          exchanges: exchangeOptions,
-        };
+      async exchanges() {
+        exchangeCalls++;
+        setExchangeRequests(exchangeCalls);
+        if (scenario === "exchangesError" && exchangeCalls === 1)
+          throw new Error("Temporary exchange lookup failure.");
+        return exchangeOptions;
       },
       async search(query, signal) {
         pageCalls++;
+        setSearchRequests(pageCalls);
         if (scenario === "obsoleteSearch" && pageCalls === 1)
           await new Promise<void>((resolve) => setPending(() => resolve));
         if (scenario === "resultsError" && pageCalls === 1)
-          throw new Error("Temporary catalogue query failure.");
+          throw new Error("Temporary securities query failure.");
         return createFixtureSource(query.criteria).loadPage(
           query,
           scenario === "obsoleteSearch" ? new AbortController().signal : signal,
         );
       },
-      async filters(scope, signal) {
-        filterCalls++;
-        if (scenario === "filtersError" && filterCalls === 1)
-          throw new Error("Temporary filter lookup failure.");
-        return createFixtureSource(scope.criteria).loadFilterOptions(signal);
-      },
-      async history({ id }, signal) {
-        const listing = listings.find((row) => row.id === id)!;
+      async history({ selectionToken }, signal) {
+        const listing = listings.find(
+          (row) => row.selectionToken === selectionToken,
+        )!;
         historyCalls++;
         setHistoryRequests(historyCalls);
         if (scenario === "historyError" && historyCalls === 1)
@@ -116,6 +110,12 @@ function ControllerHarness({
   const controller = useSecuritiesController(services);
   return (
     <>
+      <output aria-label="Fixture Search Requests" hidden>
+        {searchRequests}
+      </output>
+      <output aria-label="Fixture Exchange Requests" hidden>
+        {exchangeRequests}
+      </output>
       <output aria-label="Fixture History Requests" hidden>
         {historyRequests}
       </output>
@@ -205,38 +205,20 @@ export const ObsoleteHistoryResponse: Story = {
     ).not.toBeInTheDocument();
   },
 };
-export const CatalogueUnavailable: Story = {
-  args: { scenario: "unavailable" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "catalogue is not available",
-    );
-    await expect(
-      canvas.queryByText("No securities found."),
-    ).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Retry Search" }));
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 31 of 31 listings",
-      ),
-    );
-  },
-};
 export const ResultsRequestError: Story = {
   args: { scenario: "resultsError" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "Temporary catalogue query failure",
+      "Temporary securities query failure",
     );
     await userEvent.click(
       canvas.getByRole("button", { name: "Retry Results" }),
     );
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 31 of 31 listings",
+        "31 listings",
       ),
     );
   },
@@ -257,14 +239,14 @@ export const ObsoleteSearchResponse: Story = {
     await userEvent.type(input, "Harbor{Enter}");
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 4 of 4 listings",
+        "4 listings",
       ),
     );
     await userEvent.click(
       canvas.getByRole("button", { name: "Release Previous Response" }),
     );
     await expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-      "Showing 4 of 4 listings",
+      "4 listings",
     );
     await expect(canvas.getByLabelText("Submitted Search")).toHaveTextContent(
       "Harbor",
@@ -272,40 +254,25 @@ export const ObsoleteSearchResponse: Story = {
   },
 };
 
-export const FilterOptionsRetry: Story = {
-  args: { scenario: "filtersError" },
+export const ExchangeDirectoryRetry: Story = {
+  args: { scenario: "exchangesError" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 31 of 31 listings",
-      ),
-    );
-    const viewport =
-      canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!;
-    viewport.scrollLeft = viewport.scrollWidth;
-    let header: HTMLElement | null = null;
-    await waitFor(() => {
-      header = canvasElement.querySelector('.ag-header-cell[col-id="country"]');
-      expect(header).not.toBeNull();
-    });
-    header!.focus();
-    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await userEvent.click(canvas.getByRole("combobox", { name: "Exchange" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "Filter options could not be loaded",
+      "Exchanges could not be loaded",
     );
     await userEvent.keyboard("{Escape}");
     await userEvent.click(
-      canvas.getByRole("button", { name: "Retry Results" }),
+      canvas.getByRole("button", { name: "Retry Exchanges" }),
     );
     await waitFor(() =>
       expect(canvas.queryByRole("alert")).not.toBeInTheDocument(),
     );
-    await setListFilter(canvasElement, "country", ["Switzerland"]);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-        "Showing 7 of 31 listings",
+        "31 listings",
       ),
     );
   },
@@ -424,5 +391,57 @@ export const HistoryRetryCooldown: Story = {
     await expect(
       canvas.getByLabelText("Fixture History Requests"),
     ).toHaveTextContent("2");
+  },
+};
+
+export const ExplicitDiscoveryRequests: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByLabelText("Fixture Search Requests"),
+    ).toHaveTextContent("0");
+    await expect(
+      canvas.getByLabelText("Fixture Exchange Requests"),
+    ).toHaveTextContent("0");
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent("0");
+    const input = canvas.getByRole("textbox", { name: "Security" });
+    await userEvent.type(input, "Alpine");
+    await expect(
+      canvas.getByLabelText("Fixture Search Requests"),
+    ).toHaveTextContent("0");
+    const exchange = canvas.getByRole("combobox", { name: "Exchange" });
+    await userEvent.click(exchange);
+    await userEvent.type(exchange, "Swiss");
+    await userEvent.click(
+      await within(document.body).findByRole("option", {
+        name: "SIX Swiss Exchange (XSWX)",
+      }),
+    );
+    await expect(
+      canvas.getByLabelText("Fixture Exchange Requests"),
+    ).toHaveTextContent("1");
+    await expect(
+      canvas.getByLabelText("Fixture Search Requests"),
+    ).toHaveTextContent("0");
+    await userEvent.click(input);
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
+        "2 listings",
+      ),
+    );
+    await expect(
+      canvas.getByLabelText("Fixture Search Requests"),
+    ).toHaveTextContent("1");
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent("0");
+    await userEvent.click(exchange);
+    await userEvent.keyboard("{Escape}");
+    await expect(
+      canvas.getByLabelText("Fixture Exchange Requests"),
+    ).toHaveTextContent("1");
   },
 };

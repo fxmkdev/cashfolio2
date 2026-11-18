@@ -1,5 +1,6 @@
 export type SecurityListing = {
   id: string;
+  selectionToken: string;
   name: string;
   symbol: string;
   exchange: string | null;
@@ -25,58 +26,16 @@ export type SecurityHistoryStatus =
       retryAt: string;
     };
 export const RESULTS_PAGE_SIZE = 20;
-export const SECURITY_COLUMNS = [
-  "name",
-  "symbol",
-  "exchange",
-  "country",
-  "hasHistory",
-] as const;
-export type SecurityColumn = (typeof SECURITY_COLUMNS)[number];
-export type TextFilter = {
-  operation:
-    | "contains"
-    | "notContains"
-    | "equals"
-    | "notEqual"
-    | "startsWith"
-    | "endsWith";
-  value: string;
-};
-export type SecuritiesFilters = {
-  name?: TextFilter;
-  symbol?: TextFilter;
-  exchange?: string[];
-  country?: string[];
-  hasHistory?: string[];
-};
-export type SecuritiesScope = {
-  version: string;
+export type SecuritiesQuery = {
   criteria: SecuritySearchCriteria;
-};
-export type SecuritiesQuery = SecuritiesScope & {
   offset: number;
   limit: number;
-  filters: SecuritiesFilters;
-  sorts: { field: SecurityColumn; direction: "asc" | "desc" }[];
 };
 export type SecuritiesPage = {
-  version: string;
   rows: SecurityListing[];
-  filteredCount: number;
   totalCount: number;
 };
-export type SecuritiesFilterOptions = {
-  exchange: string[];
-  country: string[];
-  hasHistory: string[];
-};
-export type SecuritiesCatalogueStatus = {
-  version: string | null;
-  updatedAt: string | null;
-  stale: boolean;
-  exchanges: { value: string; label: string }[];
-};
+export type SecuritiesExchanges = { value: string; label: string }[];
 export type SecurityHistory = {
   listing: SecurityListing;
   points: PricePoint[];

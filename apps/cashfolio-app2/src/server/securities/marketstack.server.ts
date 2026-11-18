@@ -4,7 +4,6 @@ import {
   parseHistoryRows,
   historyOmissionDiagnostics,
 } from "./history-data.server";
-import { getExchangeLabel } from "../../shared/securities/contracts";
 import {
   checkResourceBudget,
   consumeProviderAttempt,
@@ -23,12 +22,11 @@ import {
 } from "../valuation/constants";
 export { parseHistoryRows, type HistorySeries } from "./history-data.server";
 
-export type CatalogueRow = {
+export type ListingMetadata = {
   symbol: string;
   name: string;
   exchange: string | null;
-  mic: string;
-  exchangeLabel: string;
+  mic: string | null;
   country: string | null;
   hasHistory: boolean | null;
 };
@@ -77,23 +75,10 @@ export function parseMarketstackPage(
     },
   };
 }
-/** The provider emits empty TEST-exchange fixtures, not security listings. */
-export function isCataloguePlaceholder(raw: unknown): boolean {
+export function parseListingRow(raw: unknown): ListingMetadata {
   const row = object(raw);
-  const symbol = row.ticker ?? row.symbol;
-  const exchange = row.stock_exchange;
-  return (
-    (symbol == null || symbol === "") &&
-    (row.name == null || row.name === "") &&
-    exchange != null &&
-    typeof exchange === "object" &&
-    !Array.isArray(exchange) &&
-    (exchange as Record<string, unknown>).mic === "TEST"
-  );
-}
-export function parseCatalogueRow(raw: unknown): CatalogueRow {
-  const row = object(raw);
-  const symbol = text(row.ticker ?? row.symbol, 64);
+  const rawSymbol = row.ticker ?? row.symbol;
+  const symbol = text(rawSymbol, 64) ? (rawSymbol as string) : null;
   if (
     !symbol ||
     symbol.includes(",") ||
@@ -103,7 +88,7 @@ export function parseCatalogueRow(raw: unknown): CatalogueRow {
   )
     throw new Error("Marketstack returned an invalid symbol.");
   const exchange = row.stock_exchange == null ? {} : object(row.stock_exchange);
-  const mic = text(exchange.mic, 64) ?? "";
+  const mic = text(exchange.mic, 64) ? (exchange.mic as string) : "";
   if (mic && !/^[A-Za-z0-9._-]{1,64}$/.test(mic))
     throw new Error("Marketstack returned an invalid exchange identifier.");
   if (row.has_eod != null && typeof row.has_eod !== "boolean")
@@ -113,8 +98,7 @@ export function parseCatalogueRow(raw: unknown): CatalogueRow {
     symbol,
     name: text(row.name) ?? symbol,
     exchange: name,
-    mic,
-    exchangeLabel: getExchangeLabel({ exchange: name, mic: mic || null }),
+    mic: mic || null,
     country: text(exchange.country),
     hasHistory: row.has_eod == null ? null : (row.has_eod as boolean),
   };
@@ -188,7 +172,9 @@ export async function fetchMarketstackPage(
       ? "RATE_LIMIT_RETRY"
       : path === "eod"
         ? "SECURITY_HISTORY"
-        : "CATALOGUE_REFRESH";
+        : path === "tickerslist"
+          ? "SECURITY_SEARCH"
+          : "SECURITY_EXCHANGES";
     try {
       const query = new URLSearchParams({ ...params, access_key: key });
       const response = await fetch(
@@ -256,10 +242,7 @@ export async function fetchMarketstackPage(
           throw error;
         }
         let usableRows = page.data.length;
-        if (path === "tickerslist")
-          page.data.forEach((row) => {
-            if (!isCataloguePlaceholder(row)) parseCatalogueRow(row);
-          });
+        if (path === "tickerslist") page.data.forEach(parseListingRow);
         if (
           path === "eod" &&
           params.symbols &&
@@ -335,38 +318,4 @@ export async function fetchMarketstackPage(
       signal: options.signal ?? getResourceSignal(),
     });
   }
-}
-/** Exchange metadata is loaded once per refresh, never once per listing. */
-export async function fetchExchangeCountries(
-  options: MarketstackOptions,
-): Promise<Map<string, string>> {
-  const countries = new Map<string, string>();
-  let offset = 0;
-  let total: number | undefined;
-  do {
-    const page = await fetchMarketstackPage(
-      "exchanges",
-      { limit: "1000", offset: String(offset) },
-      options,
-    );
-    if (
-      (total !== undefined && page.pagination.total !== total) ||
-      (!page.data.length && offset < page.pagination.total)
-    )
-      throw new Error("Marketstack returned incomplete exchange metadata.");
-    total ??= page.pagination.total;
-    for (const value of page.data) {
-      const row = object(value);
-      const mic = text(row.mic, 64);
-      // Marketstack also uses vendor codes such as XETRA and NMFQS. Keep
-      // their exact identities; never truncate them to an ISO MIC.
-      const code =
-        typeof row.country_code === "string" ? row.country_code.trim() : "";
-      const country =
-        text(row.country) ?? (/^[A-Z]{2,3}$/.test(code) ? code : null);
-      if (mic && country) countries.set(mic, country);
-    }
-    offset += page.data.length;
-  } while (offset < total);
-  return countries;
 }

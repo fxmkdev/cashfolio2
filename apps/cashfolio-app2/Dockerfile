@@ -47,7 +47,6 @@ RUN pnpm --filter cashfolio-app2 build
 RUN pnpm --filter cashfolio-app2 test:build-boundary
 RUN pnpm --filter cashfolio-app2 build:staging-seed
 RUN pnpm --filter cashfolio-app2 build:provider-usage-cleanup
-RUN pnpm --filter cashfolio-app2 build:securities-refresh
 
 FROM base AS migration-tools
 
@@ -94,8 +93,6 @@ COPY --from=build /app/apps/cashfolio-app2/prisma.config.ts apps/cashfolio-app2/
 COPY --from=build /app/apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh
 COPY --from=build /app/apps/cashfolio-app2/dist/staging-seed apps/cashfolio-app2/dist/staging-seed
 COPY --from=build /app/apps/cashfolio-app2/dist/provider-usage-cleanup apps/cashfolio-app2/dist/provider-usage-cleanup
-
-COPY --from=build /app/apps/cashfolio-app2/dist/securities-refresh apps/cashfolio-app2/dist/securities-refresh
 
 EXPOSE 3000
 CMD [ "node", ".output/server/index.mjs" ]

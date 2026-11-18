@@ -306,14 +306,12 @@ migration, rather than downloading an unreviewed latest release. Its runtime
 requirement is satisfied by the Node 26.13.0 image pin. Review Corepack's
 publication age and runtime compatibility when changing this bootstrap pin.
 
-## Securities Catalogue Refresh
+## Securities Discovery
 
-The app image includes the standalone Securities catalogue refresh payload.
-After deployment/migration and warm-up, every environment automatically runs
-`--if-missing`: a published catalogue skips all provider calls, while a missing
-catalogue is initialized once under the database lock. Initialization failure
-fails the deployment check while leaving the deployed app running; rerun the
-failed deployment job after resolving the cause. Production's subsequent full
-refresh runs daily at 04:17 UTC; staging and preview use manual dispatch. See
-[Securities operations](securities.md#operations) for dispatch commands,
-deadlines, locking and failure recovery.
+Securities search and history are on demand. Deployment/warm-up performs no
+Marketstack initialization, preflight or refresh, and the image contains no
+catalogue worker. Existing catalogue tables and applied migrations remain
+intact; no cleanup/reset is required. The additive discovery request-reason
+migration uses the normal Prisma deployment path. See
+[Securities](securities.md) for cache lifetimes, signed selection references and
+fixture-only verification.

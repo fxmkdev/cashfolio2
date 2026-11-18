@@ -246,18 +246,6 @@ jobs:
             ${{ inputs.app_environment_url || inputs.base_url ||
             format('https://{0}/', inputs.canonical_hostname ||
             vars.CANONICAL_HOSTNAME) }}
-      - name: Set up initialization runner
-        uses: ./.github/actions/setup
-      - name: Install initialization runner dependencies
-        run: pnpm --filter cashfolio-app2 install --frozen-lockfile
-      - name: Initialize missing Securities catalogue
-        run:
-          pnpm --filter cashfolio-app2 exec node
-          scripts/run-securities-refresh.ts --if-missing
-        env:
-          FLY_APP: ${{ inputs.fly_app || vars.FLY_APP }}
-          FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"

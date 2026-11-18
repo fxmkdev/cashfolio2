@@ -9,11 +9,9 @@ vi.mock("../valuation/provider-usage.server", () => ({
 }));
 import {
   fetchMarketstackPage,
-  parseCatalogueRow,
-  isCataloguePlaceholder,
+  parseListingRow,
   parseHistoryRows,
   parseMarketstackPage,
-  fetchExchangeCountries,
 } from "./marketstack.server";
 const price = {
   symbol: "ABC",
@@ -93,7 +91,7 @@ describe("Marketstack Securities contract", () => {
   );
   test("normalizes exact provider identity and preserves unknown metadata", () => {
     expect(
-      parseCatalogueRow({
+      parseListingRow({
         ticker: "ABC.L",
         name: "ABC",
         stock_exchange: { name: "London", mic: "XLON" },
@@ -101,12 +99,12 @@ describe("Marketstack Securities contract", () => {
     ).toMatchObject({
       symbol: "ABC.L",
       mic: "XLON",
-      exchangeLabel: "London (XLON)",
+      exchange: "London",
       country: null,
       hasHistory: null,
     });
-    expect(parseCatalogueRow({ ticker: "ABC", has_eod: false })).toMatchObject({
-      exchangeLabel: "Unknown",
+    expect(parseListingRow({ ticker: "ABC", has_eod: false })).toMatchObject({
+      exchange: null,
       hasHistory: false,
     });
     for (const row of [
@@ -114,27 +112,7 @@ describe("Marketstack Securities contract", () => {
       { ticker: "ABC", stock_exchange: { mic: "XNYS,XNAS" } },
       { ticker: "ABC", has_eod: "yes" },
     ])
-      expect(() => parseCatalogueRow(row)).toThrow();
-  });
-  test("loads country codes from paginated exchange metadata without guessing countries", async () => {
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        Response.json({
-          data: [{ mic: "XNAS", country: null, country_code: "US" }],
-          pagination: { offset: 0, count: 1, total: 2 },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          data: [{ mic: "XUNK", country: null, country_code: null }],
-          pagination: { offset: 1, count: 1, total: 2 },
-        }),
-      );
-    expect([...(await fetchExchangeCountries({}))]).toEqual([["XNAS", "US"]]);
-    expect(record).toHaveBeenCalledTimes(2);
-    expect(record).toHaveBeenCalledWith(
-      expect.objectContaining({ requestReason: "CATALOGUE_REFRESH" }),
-    );
+      expect(() => parseListingRow(row)).toThrow();
   });
   test("represents a provider-confirmed no-data response as missing history", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -145,42 +123,16 @@ describe("Marketstack Securities contract", () => {
       expect.objectContaining({ outcome: "NO_DATA" }),
     );
   });
-  test("preserves vendor exchange identifiers and unknown country placeholders", async () => {
-    expect(
-      parseCatalogueRow({
-        ticker: "ABC",
-        stock_exchange: { name: "Xetra", mic: "XETRA" },
-      }),
-    ).toMatchObject({ mic: "XETRA", exchangeLabel: "Xetra (XETRA)" });
-    expect(
-      parseCatalogueRow({ ticker: "ABC", stock_exchange: { mic: "NMFQS" } })
-        .mic,
-    ).toBe("NMFQS");
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      Response.json({
-        data: [
-          { mic: "XETRA", country: null, country_code: "DE" },
-          { mic: "NMFQS", country: null, country_code: "US" },
-          { mic: "INDX", country: null, country_code: "INDX" },
-        ],
-        pagination: { offset: 0, count: 3, total: 3 },
-      }),
-    );
-    expect([...(await fetchExchangeCountries({}))]).toEqual([
-      ["XETRA", "DE"],
-      ["NMFQS", "US"],
-    ]);
-  });
   test("preserves spaces in provider symbols while rejecting delimiters and control characters", async () => {
     expect(
-      parseCatalogueRow({
+      parseListingRow({
         ticker: "NEE 6.219",
         name: "NextEra Energy Inc",
         stock_exchange: { mic: "XNYS" },
       }).symbol,
     ).toBe("NEE 6.219");
     for (const ticker of ["ABC,DEF", "ABC\nDEF", "ABC\tDEF"])
-      expect(() => parseCatalogueRow({ ticker })).toThrow("invalid symbol");
+      expect(() => parseListingRow({ ticker })).toThrow("invalid symbol");
     const fetch = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -198,27 +150,16 @@ describe("Marketstack Securities contract", () => {
     expect(url.searchParams.get("symbols")).toBe("NEE 6.219");
     expect(url.searchParams.get("exchange")).toBe("XNYS");
   });
-  test("recognizes only nameless, symbolless TEST placeholders and preserves raw pagination", async () => {
-    const placeholder = { name: null, stock_exchange: { mic: "TEST" } };
-    expect(isCataloguePlaceholder(placeholder)).toBe(true);
-    expect(
-      isCataloguePlaceholder({
-        ticker: "ABC",
-        stock_exchange: { mic: "TEST" },
-      }),
-    ).toBe(false);
-    expect(
-      isCataloguePlaceholder({ name: null, stock_exchange: { mic: "XNYS" } }),
-    ).toBe(false);
-    expect(() =>
-      parseCatalogueRow({ name: null, stock_exchange: { mic: "XNYS" } }),
-    ).toThrow("invalid symbol");
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      Response.json(page([placeholder, { ticker: "ABC", name: "ABC" }])),
+  test("rejects malformed listing pages without trying to replenish them", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json(page([{ name: null, stock_exchange: { mic: "TEST" } }])),
+      );
+    await expect(fetchMarketstackPage("tickerslist", {})).rejects.toThrow(
+      "invalid symbol",
     );
-    const result = await fetchMarketstackPage("tickerslist", {});
-    expect(result.data).toHaveLength(2);
-    expect(result.pagination.count).toBe(2);
+    expect(fetch).toHaveBeenCalledOnce();
   });
   test("rejects inconsistent or malformed pagination", () => {
     expect(parseMarketstackPage(page([]), 0).pagination.total).toBe(0);
@@ -337,8 +278,8 @@ describe("Marketstack Securities contract", () => {
         input.requestReason,
       ]),
     ).toEqual([
-      ["TIMEOUT", 0, "CATALOGUE_REFRESH"],
-      ["NO_DATA", 1, "CATALOGUE_REFRESH"],
+      ["TIMEOUT", 0, "SECURITY_SEARCH"],
+      ["NO_DATA", 1, "SECURITY_SEARCH"],
     ]);
   });
   test("recovers from temporary HTTP and network failures without retrying malformed data", async () => {

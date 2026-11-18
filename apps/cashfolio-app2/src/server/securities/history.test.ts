@@ -1,17 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { PrismaClient } from "../../.prisma-client/client";
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
   redis: vi.fn(),
-  snapshot: vi.fn(),
+  resolve: vi.fn(),
   get: vi.fn(),
   set: vi.fn(),
 }));
 vi.mock("../../redis.server", () => ({ getRedisClient: mocks.redis }));
-vi.mock("./store.server", async (original) => ({
-  ...(await original<typeof import("./store.server")>()),
-  readSnapshot: mocks.snapshot,
-}));
+vi.mock("./selection.server", () => ({ resolveListing: mocks.resolve }));
 vi.mock("./marketstack.server", async (original) => ({
   ...(await original<typeof import("./marketstack.server")>()),
   fetchMarketstackPage: mocks.fetch,
@@ -26,20 +22,18 @@ import { Temporal } from "../../shared/temporal";
 import { securityHistory } from "./history.server";
 const row = {
   id: "listing",
-  snapshotId: "version",
+  selectionToken: "reference",
+  currency: null,
+  securityType: null,
   name: "ABC",
   symbol: "ABC",
   exchange: "NASDAQ",
-  exchangeLabel: "NASDAQ (XNAS)",
   mic: "XNAS",
   country: null,
   hasHistory: true,
 };
-const find = vi.fn();
-const db = {
-  securityCatalogueListing: { findFirst: find },
-} as unknown as PrismaClient;
-const input = { version: "version", id: "listing" };
+const find = mocks.resolve;
+const input = { selectionToken: "reference" };
 const price = {
   symbol: "ABC",
   exchange: "XNAS",
@@ -60,8 +54,7 @@ beforeEach(() => {
   vi.spyOn(Temporal.Now, "instant").mockImplementation(() =>
     Temporal.Instant.fromEpochMilliseconds(Date.now()),
   );
-  mocks.snapshot.mockResolvedValue({});
-  find.mockResolvedValue(row);
+  find.mockReturnValue(row);
   mocks.redis.mockResolvedValue({ get: mocks.get, set: mocks.set });
   mocks.get.mockResolvedValue(null);
   mocks.set.mockResolvedValue(undefined);
@@ -73,6 +66,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 describe("selected Securities history", () => {
   test("keeps later-page omissions without shifting offsets and caches partial results", async () => {
@@ -88,7 +82,7 @@ describe("selected Securities history", () => {
         ],
         pagination: { offset: 2, count: 2, total: 4 },
       });
-    const result = await securityHistory(db, input);
+    const result = await securityHistory(input);
     expect(result).toMatchObject({
       status: "ready",
       points: [
@@ -103,7 +97,7 @@ describe("selected Securities history", () => {
     expect(mocks.fetch.mock.calls[1]![1]).toMatchObject({ offset: "2" });
     mocks.get.mockResolvedValue(mocks.set.mock.calls[0]![1]);
     mocks.fetch.mockClear();
-    expect(await securityHistory(db, input)).toEqual(result);
+    expect(await securityHistory(input)).toEqual(result);
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.set.mock.calls[0]![2]).toEqual({ EX: 86400 });
   });
@@ -124,7 +118,7 @@ describe("selected Securities history", () => {
             total: reason === "no-data" ? 0 : 1,
           },
         });
-      const first = await securityHistory(db, input);
+      const first = await securityHistory(input);
       expect(first).toMatchObject({
         status: "unavailable",
         reason,
@@ -135,10 +129,10 @@ describe("selected Securities history", () => {
       mocks.get.mockResolvedValue(mocks.set.mock.calls[0]![1]);
       mocks.fetch.mockClear();
       vi.advanceTimersByTime(299000);
-      expect(await securityHistory(db, input)).toEqual(first);
+      expect(await securityHistory(input)).toEqual(first);
       expect(mocks.fetch).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1000);
-      await securityHistory(db, input);
+      await securityHistory(input);
       expect(mocks.fetch).toHaveBeenCalledOnce();
     },
   );
@@ -146,11 +140,11 @@ describe("selected Securities history", () => {
     "does not cache %s failures",
     async (message) => {
       mocks.fetch.mockRejectedValue(new Error(message));
-      await expect(securityHistory(db, input)).rejects.toThrow(message);
+      await expect(securityHistory(input)).rejects.toThrow(message);
       expect(mocks.set).not.toHaveBeenCalled();
     },
   );
-  test("resolves stored identity, follows all pages and caches the full five-year window", async () => {
+  test("resolves signed identity, follows all pages and caches the full five-year window", async () => {
     mocks.fetch
       .mockResolvedValueOnce({
         data: [price],
@@ -160,10 +154,8 @@ describe("selected Securities history", () => {
         data: [{ ...price, date: "2026-11-11", close: 11 }],
         pagination: { offset: 1, count: 1, total: 2 },
       });
-    const result = await securityHistory(db, input);
-    expect(find).toHaveBeenCalledWith({
-      where: { id: "listing", snapshotId: "version" },
-    });
+    const result = await securityHistory(input);
+    expect(find).toHaveBeenCalledWith("reference");
     expect(result).toMatchObject({
       from: "2021-11-16",
       through: "2026-11-16",
@@ -195,45 +187,45 @@ describe("selected Securities history", () => {
         securityType: null,
       }),
     );
-    expect((await securityHistory(db, input)).listing.currency).toBeNull();
+    expect((await securityHistory(input)).listing.currency).toBeNull();
     expect(mocks.fetch).not.toHaveBeenCalled();
     const firstKey = mocks.get.mock.calls[0]![0];
-    find.mockResolvedValue({ ...row, mic: "XLON" });
+    find.mockReturnValue({ ...row, mic: "XLON" });
     mocks.fetch.mockResolvedValue({
       data: [{ ...price, exchange: "XLON" }],
       pagination: { offset: 0, count: 1, total: 1 },
     });
-    await securityHistory(db, input);
+    await securityHistory(input);
     expect(mocks.get.mock.calls[1]![0]).not.toBe(firstKey);
     vi.setSystemTime(new Date("2026-11-17T00:00:00Z"));
-    await securityHistory(db, input);
+    await securityHistory(input);
     expect(mocks.get.mock.calls[2]![0]).not.toBe(mocks.get.mock.calls[1]![0]);
   });
   test("cache failures and corrupt entries fall back to live retrieval", async () => {
     mocks.redis.mockRejectedValueOnce(new Error("offline"));
-    await securityHistory(db, input);
+    await securityHistory(input);
     mocks.get.mockResolvedValueOnce("{invalid");
-    await securityHistory(db, input);
+    await securityHistory(input);
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
   });
   test("keeps unavailable listings copyable, but never guesses an exchange", async () => {
-    find.mockResolvedValueOnce({ ...row, hasHistory: false });
-    expect((await securityHistory(db, input)).points).toEqual([]);
+    find.mockReturnValueOnce({ ...row, hasHistory: false });
+    expect((await securityHistory(input)).points).toEqual([]);
     expect(mocks.fetch).not.toHaveBeenCalled();
-    find.mockResolvedValueOnce({ ...row, mic: "" });
-    await expect(securityHistory(db, input)).rejects.toThrow("no exchange MIC");
-    find.mockResolvedValueOnce(null);
-    await expect(securityHistory(db, input)).rejects.toThrow(
-      "no longer available",
-    );
+    find.mockReturnValueOnce({ ...row, mic: "" });
+    await expect(securityHistory(input)).rejects.toThrow("no exchange MIC");
+    find.mockImplementationOnce(() => {
+      throw new Error("Search again.");
+    });
+    await expect(securityHistory(input)).rejects.toThrow("Search again");
   });
-  test("loads unknown availability, does not cache missing history or provider failures", async () => {
-    find.mockResolvedValue({ ...row, hasHistory: null });
+  test("loads unknown availability, caches no-data and leaves provider failures uncached", async () => {
+    find.mockReturnValue({ ...row, hasHistory: null });
     mocks.fetch.mockResolvedValueOnce({
       data: [],
       pagination: { offset: 0, count: 0, total: 0 },
     });
-    expect((await securityHistory(db, input)).points).toEqual([]);
+    expect((await securityHistory(input)).points).toEqual([]);
     expect(mocks.set).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
@@ -241,7 +233,7 @@ describe("selected Securities history", () => {
     );
     mocks.set.mockClear();
     mocks.fetch.mockRejectedValueOnce(new Error("quota"));
-    await expect(securityHistory(db, input)).rejects.toThrow("quota");
+    await expect(securityHistory(input)).rejects.toThrow("quota");
     expect(mocks.set).not.toHaveBeenCalled();
   });
   test("rejects partial, changing and exchange-mismatched history", async () => {
@@ -254,7 +246,7 @@ describe("selected Securities history", () => {
         data: [],
         pagination: { offset: 1, count: 0, total: 2 },
       });
-    await expect(securityHistory(db, input)).resolves.toMatchObject({
+    await expect(securityHistory(input)).resolves.toMatchObject({
       status: "unavailable",
       reason: "invalid-data",
     });
@@ -262,7 +254,7 @@ describe("selected Securities history", () => {
       data: [{ ...price, exchange: "XLON" }],
       pagination: { offset: 0, count: 1, total: 1 },
     });
-    await expect(securityHistory(db, input)).resolves.toMatchObject({
+    await expect(securityHistory(input)).resolves.toMatchObject({
       status: "unavailable",
       reason: "invalid-data",
     });
@@ -272,4 +264,39 @@ describe("selected Securities history", () => {
       { EX: 300 },
     );
   });
+});
+
+test("verified references preserve exact identities and reject tampering before any history work", async () => {
+  vi.stubEnv("SESSION_SECRET", "test-only-key");
+  const { issueListing, resolveListing } =
+    await vi.importActual<typeof import("./selection.server")>(
+      "./selection.server",
+    );
+  find.mockImplementation(resolveListing);
+  const listing = issueListing({
+    symbol: "NEE 6.219",
+    name: "Example",
+    exchange: "Fund Exchange",
+    mic: "NMFQS",
+    country: null,
+    hasHistory: null,
+  });
+  mocks.fetch.mockResolvedValueOnce({
+    data: [{ ...price, symbol: listing.symbol, exchange: listing.mic }],
+    pagination: { offset: 0, count: 1, total: 1 },
+  });
+  await expect(
+    securityHistory({ selectionToken: listing.selectionToken }),
+  ).resolves.toMatchObject({ listing: { symbol: "NEE 6.219", mic: "NMFQS" } });
+  expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+    "eod",
+    expect.objectContaining({ symbols: "NEE 6.219", exchange: "NMFQS" }),
+  );
+  mocks.fetch.mockClear();
+  mocks.get.mockClear();
+  await expect(
+    securityHistory({ selectionToken: listing.selectionToken + "tampered" }),
+  ).rejects.toThrow("Search again");
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(mocks.get).not.toHaveBeenCalled();
 });
