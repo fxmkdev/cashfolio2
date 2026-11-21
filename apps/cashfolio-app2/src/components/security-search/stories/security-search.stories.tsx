@@ -21,7 +21,7 @@ export const Default: Story = { ...searchAndFilterView };
 
 export const SearchAndFilter: Story = {
   ...searchAndFilterView,
-  name: "Search And Filter Interaction Test",
+  name: "Search and Filter Interaction Test",
   tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -90,7 +90,7 @@ export const SearchAndFilter: Story = {
 
 export const BrowseAndSelect: Story = {
   ...searchAndFilterView,
-  name: "Browse And Select Interaction Test",
+  name: "Browse and Select Interaction Test",
   tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -138,12 +138,12 @@ export const LongName: Story = {
 
 export const ChartAndCopyPreview: Story = {
   ...chartAndCopyView,
-  name: "Chart And Copy",
+  name: "Chart and Copy",
 };
 
 export const ChartAndCopy: Story = {
   ...chartAndCopyView,
-  name: "Chart And Copy Interaction Test",
+  name: "Chart and Copy Interaction Test",
   tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);

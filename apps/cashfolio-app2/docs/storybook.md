@@ -133,12 +133,12 @@ ID overrides or change Chromatic approval policy to conceal it.
 ### Securities Story-ID Migration
 
 The Securities catalogue now shares the `Screens/Securities` title across its
-six colocated modules. All 61 existing story exports, including PR #508's
+eight colocated modules. All 61 existing story exports, including PR #508's
 `NarrowViewportPreview` and `NarrowViewport`, retain their export-derived
 suffix. Their IDs change from `routes-securities--<suffix>` to
 `screens-securities--<suffix>`. For example,
 `routes-securities--search-and-filter` becomes
-`screens-securities--search-and-filter`; its display name is now **Search And
+`screens-securities--search-and-filter`; its display name is now **Search and
 Filter Interaction Test**. External deep links must use the new prefix, and
 Chromatic treats the regrouped entries as new identities. There are no ID
 overrides or redirects. The old Securities Autodocs entry is removed because
@@ -161,3 +161,7 @@ same fixture and environment share one viewing example. Read-only assertions
 remain in viewing stories; all 47 automated workflows retain their original
 exports and assertions behind the `regression` filter. PR #508's mobile preview
 and test still share the pinned 390 × 844 viewport through `globals.viewport`.
+
+Controller/history and navigation/loading scenarios use separate story modules,
+sharing metadata and viewing configurations. Moving exports between these
+modules does not change story IDs, display names, tags, or test eligibility.

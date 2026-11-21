@@ -245,12 +245,12 @@ export const IsinWithoutHistory: Story = {
 };
 export const IsinOnMobilePreview: Story = {
   ...isinOnMobileView,
-  name: "ISIN On Mobile",
+  name: "ISIN on Mobile",
 };
 
 export const IsinOnMobile: Story = {
   ...isinOnMobileView,
-  name: "ISIN On Mobile Interaction Test",
+  name: "ISIN on Mobile Interaction Test",
   tags: ["regression", "!autodocs"],
   play: HistoryBeforeMetadata.play,
 };
