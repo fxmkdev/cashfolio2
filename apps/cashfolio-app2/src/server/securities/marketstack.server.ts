@@ -64,7 +64,8 @@ export function parseMarketstackPage(
     pagination.offset !== offset ||
     pagination.count !== root.data.length ||
     root.data.length > 1000 ||
-    (pagination.count as number) + offset > (pagination.total as number)
+    (root.data.length > 0 &&
+      (pagination.count as number) + offset > (pagination.total as number))
   )
     throw new Error("Marketstack returned inconsistent pagination.");
   return {
@@ -274,6 +275,12 @@ async function requestMarketstack<T>(
         try {
           raw = await response.json();
         } catch {
+          // A deterministic HTTP error remains terminal even when a proxy or
+          // provider sends HTML instead of its usual JSON error envelope.
+          if (!response.ok) {
+            const failure = providerError({}, response.status);
+            if (failure) throw failure;
+          }
           unreadable = true;
           throw new Error("Marketstack returned an unreadable response.");
         }

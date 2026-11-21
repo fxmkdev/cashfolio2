@@ -97,6 +97,26 @@ test("explicit empty search omits optional parameters and caches empty pages", a
   await searchListings({ ...query, criteria: { query: "", exchange: null } });
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
+test("caches a requested empty page beyond a reduced total without scanning a replacement", async () => {
+  mocks.fetch.mockResolvedValueOnce(page([], 40, 5));
+  const input = { ...query, offset: 40 };
+  await expect(searchListings(input)).resolves.toEqual({
+    rows: [],
+    totalCount: 5,
+  });
+  expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith("tickerslist", {
+    search: "Example",
+    limit: "20",
+    offset: "40",
+  });
+  expect(mocks.set.mock.calls[0]![2]).toEqual({ EX: 86400 });
+  mocks.get.mockResolvedValueOnce(mocks.set.mock.calls[0]![1]);
+  await expect(searchListings(input)).resolves.toEqual({
+    rows: [],
+    totalCount: 5,
+  });
+  expect(mocks.fetch).toHaveBeenCalledOnce();
+});
 test("cache hits issue trusted references without provider calls; keys isolate query, exchange and page", async () => {
   const first = await searchListings(query);
   const key = mocks.get.mock.calls[0]![0];

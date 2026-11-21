@@ -92,7 +92,9 @@ Each cache miss fetches only that page, in provider order. No background page
 prefetch, catalogue scan, local column filtering/sorting or row-price enrichment
 runs. Pagination totals come from the provider and are not snapshot-pinned;
 provider changes can move rows between independently cached pages. Malformed
-listing pages fail visibly without scanning replacement pages.
+listing pages fail visibly without scanning replacement pages. Valid empty pages
+beyond a reduced total retain their requested offset and are cached; the UI
+requires explicit recovery to the first page.
 
 Validated pages, including empty results, are cached in Redis for **24 hours**
 under `securities:marketstack:search:v1:`, keyed by exact submitted search,
@@ -209,9 +211,11 @@ cooldown story compresses five minutes to two seconds to exercise expiry.
 
 Provider requests reuse `MARKETSTACK_API_KEY`, timeout/rate-limit retry
 constants, resource-budget accounting and sanitized provider usage. A timed-out
-request, network failure, unreadable HTTP payload or HTTP 5xx response retries
-the same page at most twice, with bounded delays inside the existing deadline.
-Cancellation and structurally invalid provider data never retry. Every HTTP
+request, network failure, unreadable successful HTTP payload or HTTP 5xx
+response retries the same page at most twice, with bounded delays inside the
+existing deadline. Cancellation, structurally invalid provider data and
+deterministic HTTP 4xx errors never retry, including when the error body is not
+JSON. HTTP 429 retains its separate bounded rate-limit retry policy. Every HTTP
 attempt is reported with `SECURITY_SEARCH`, `SECURITY_EXCHANGES`,
 `SECURITY_HISTORY`, `SECURITY_METADATA` or `RATE_LIMIT_RETRY`. Configuration,
 subscription/quota, malformed data and transient errors have separate safe

@@ -9,6 +9,7 @@ vi.mock("../valuation/provider-usage.server", () => ({
 }));
 import {
   fetchMarketstackPage,
+  fetchMarketstackTicker,
   parseListingRow,
   parseHistoryRows,
   parseMarketstackPage,
@@ -46,6 +47,60 @@ describe("Marketstack Securities contract", () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: "HTTP_ERROR", httpStatus: 401 }),
     );
+  });
+  test.each([
+    [401, "credentials"],
+    [403, "subscription"],
+    [404, "could not be retrieved"],
+  ] as const)(
+    "non-JSON HTTP %s errors do not consume transient retries",
+    async (status, message) => {
+      const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(
+        async () =>
+          new Response("<html>private-provider-body secret-test-key</html>", {
+            status,
+          }),
+      );
+      for (const request of [
+        () => fetchMarketstackPage("tickerslist", { limit: "20", offset: "0" }),
+        () => fetchMarketstackTicker("ABC", "XNAS"),
+      ]) {
+        fetch.mockClear();
+        record.mockClear();
+        await expect(request()).rejects.toThrow(message);
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(record).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            outcome: "HTTP_ERROR",
+            httpStatus: status,
+            retryCount: 0,
+          }),
+        );
+        expect(JSON.stringify(record.mock.calls)).not.toMatch(
+          /private-provider-body|secret-test-key/,
+        );
+      }
+    },
+  );
+  test("empty pages beyond the current total retain their requested offset", async () => {
+    const raw = { data: [], pagination: { offset: 40, count: 0, total: 5 } };
+    expect(parseMarketstackPage(raw, 40)).toEqual(raw);
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json(raw));
+    await expect(
+      fetchMarketstackPage("tickerslist", { limit: "20", offset: "40" }),
+    ).resolves.toEqual(raw);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "NO_DATA" }),
+    );
+    expect(() =>
+      parseMarketstackPage(
+        { ...raw, data: [price], pagination: { ...raw.pagination, count: 1 } },
+        40,
+      ),
+    ).toThrow("inconsistent pagination");
   });
   test.each([true, false])(
     "reports usable versus entirely omitted pages once: %s",
