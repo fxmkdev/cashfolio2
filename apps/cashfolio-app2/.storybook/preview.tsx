@@ -225,6 +225,11 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     path: "/report",
     component: () => <Story />,
   });
+  const accountBookSecuritiesRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/securities",
+    component: () => <Story />,
+  });
   const accountBookHistoryRoute = createRoute({
     getParentRoute: () => accountBookRoute,
     path: "/history",
@@ -333,6 +338,7 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     accountBookTransactionsRoute,
     accountBookReportRoute,
     accountBookHistoryRoute,
+    accountBookSecuritiesRoute,
     accountBookPeriodRoute,
     accountBookTimelineRoute,
     accountBookSettingsRoute,

@@ -41,6 +41,7 @@ are imported from the package's public export.
 | `reporting/`                   | Periods, History scopes, grouping, breakdowns, and gain/loss response contracts                               |
 | `transactions/`                | Booking fields, transaction periods, bulk-action models, and transaction invariants                           |
 | `units/`                       | Unit formatting, decimal precision, and valuation display models                                              |
+| `securities/`                  | Securities search/history transport contracts and provider-neutral labels                                     |
 | `resources/`                   | Resource limits, transport errors, fetch helpers, and mutation errors                                         |
 | `navigation/`                  | Document titles, ledger return targets, and expansion preference adapters                                     |
 | `users/`                       | User lifecycle response contracts shared by server implementations and UI                                     |

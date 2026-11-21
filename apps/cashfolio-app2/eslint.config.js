@@ -103,6 +103,7 @@ export default tseslint.config(
             "period-gain-loss-reconciliation",
             "period-history",
             "period-opening-balance-net-worth",
+            "securities",
             "statement-import",
             "transactions",
             "transactions-data",

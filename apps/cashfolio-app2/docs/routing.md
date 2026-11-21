@@ -76,6 +76,20 @@ and continuation, merge batches, and finalize scope normalization. Other errors
 stop the load; explicit retry starts from the beginning. There are no retained
 checkpoints, quota waits, backoff timers, or automatic revision restarts.
 
+### Securities
+
+`/$accountBookId/securities` adds **Securities** after History in account-book
+navigation. The parent route authorizes access; reference data is shared across
+books. The client-only page composes the shared Securities view/controller with
+public server functions. Validated `q` presence commits a search (including an
+empty query), with optional `exchange`, `page`, `selectedSymbol`, `selectedMic`
+and `range`. Drafts remain local; search/selection/page/range/close push route
+state, and refresh/Back/Forward restore it. Tokens and provider display data are
+never placed in URLs. A bare URL stays idle and defaults the user's persisted
+exchange preference; submitted URLs are authoritative, with omitted exchange
+meaning All Exchanges. See [Securities discovery](securities.md) for bounded
+selection restoration, cache lifetimes, mobile focus and Storybook scenarios.
+
 ### Route Structure
 
 - `index.tsx` - authenticated home route; redirects to the first accessible

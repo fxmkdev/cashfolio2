@@ -48,6 +48,7 @@ function storedSession(): StoredSession {
       roles: [],
       deletionPending: false,
       locale: null,
+      securitiesExchangeMic: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
