@@ -114,35 +114,26 @@ test("partial history crosses the server boundary without losing valid prices or
 test("search is explicit, exchange selection is submitted and pagination does not load history", async ({
   page,
 }) => {
-  const attempts = () =>
-    prisma.valuationProviderRequest.count({
-      where: {
-        provider: "MARKETSTACK",
-        requestReason: {
-          in: ["SECURITY_SEARCH", "SECURITY_HISTORY", "SECURITY_METADATA"],
-        },
-      },
-    });
-  const historyAttempts = () =>
-    prisma.valuationProviderRequest.count({
-      where: { provider: "MARKETSTACK", requestReason: "SECURITY_HISTORY" },
-    });
-  const metadataAttempts = () =>
-    prisma.valuationProviderRequest.count({
-      where: { provider: "MARKETSTACK", requestReason: "SECURITY_METADATA" },
-    });
-  const metadataBefore = await metadataAttempts();
-  const before = await attempts();
+  let listingRequests = 0;
+  let selectedRequests = 0;
+  // Browser-local counters stay isolated when other Securities suites run in parallel.
+  page.on("request", (request) => {
+    const url = request.url();
+    if (!url.includes("/_serverFn/")) return;
+    if (url.includes("criteria")) listingRequests++;
+    if (url.includes("selectionToken")) selectedRequests++;
+  });
   await page.goto(`/${accountBookId}/securities`);
   const input = page.getByRole("textbox", { name: "Security", exact: true });
   await input.fill("E2E.PAGE");
   await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
-  expect(await attempts()).toBe(before);
+  expect(listingRequests).toBe(0);
+  expect(selectedRequests).toBe(0);
   await input.press("Enter");
   await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
     "24 listings",
   );
-  const historyBefore = await historyAttempts();
+  expect(listingRequests).toBe(1);
   await page.getByRole("button", { name: "Next Page" }).click();
   await expect(
     page
@@ -152,8 +143,8 @@ test("search is explicit, exchange selection is submitted and pagination does no
   await expect(
     page.getByRole("button", { name: "Page 2", exact: true }),
   ).toHaveAttribute("data-active");
-  expect(await historyAttempts()).toBe(historyBefore);
-  expect(await metadataAttempts()).toBe(metadataBefore);
+  expect(listingRequests).toBe(2);
+  expect(selectedRequests).toBe(0);
   const header = page.getByRole("columnheader", { name: /^Symbol/ });
   await header.click();
   await expect(header).not.toHaveAttribute("aria-sort");
@@ -166,23 +157,29 @@ test("search is explicit, exchange selection is submitted and pagination does no
   await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
     "24 listings",
   );
+  expect(listingRequests).toBe(2);
+  expect(selectedRequests).toBe(0);
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
     "1 listing",
   );
-  const selectedMetadataBefore = await metadataAttempts();
+  expect(listingRequests).toBe(3);
   await page
     .locator('[row-id] [col-id="name"]')
     .filter({ hasText: "E2E Example Security" })
     .click();
   const details = page.getByRole("region", { name: "Security Details" });
   await expect(details.getByLabel("Latest Closing Price")).toContainText("CHF");
-  await expect.poll(metadataAttempts).toBeGreaterThan(selectedMetadataBefore);
-  const selectedMetadataAttempts = await metadataAttempts();
-  const selectedHistoryAttempts = await historyAttempts();
+  await expect(details.getByLabel("ISIN", { exact: true })).not.toHaveAttribute(
+    "aria-busy",
+  );
+  expect(selectedRequests).toBe(2);
   await selectSegmentedControlOption(details, "5Y");
-  expect(await historyAttempts()).toBe(selectedHistoryAttempts);
-  expect(await metadataAttempts()).toBe(selectedMetadataAttempts);
+  await expect(
+    page.getByTestId("global-loading-indicator"),
+  ).not.toHaveAttribute("data-mounted");
+  expect(selectedRequests).toBe(2);
+  expect(listingRequests).toBe(3);
 });
 
 test("ISIN is verified for the selected exchange and metadata failure leaves price history usable", async ({
