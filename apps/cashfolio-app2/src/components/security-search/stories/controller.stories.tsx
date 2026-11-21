@@ -83,14 +83,38 @@ export const ResultsRequestError: Story = {
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "Temporary securities query failure",
     );
+    const results = canvas.getByRole("region", { name: "Security Results" });
+    await expect(results).toHaveAttribute("aria-busy", "false");
+    await waitFor(() =>
+      expect(
+        within(results).queryAllByTestId("security-result-skeleton"),
+      ).toHaveLength(0),
+    );
+    await expect(
+      within(results).queryByText(/Loading\.{3}|ERR/),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Retry Results" }),
+    );
+    await waitFor(() =>
+      expect(
+        within(results).getAllByTestId("security-result-skeleton").length,
+      ).toBeGreaterThan(0),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "true");
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Release Previous Response" }),
     );
     await waitFor(() =>
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
         "31 listings",
       ),
     );
+    await expect(results).toHaveAttribute("aria-busy", "false");
+    await expect(
+      within(results).queryAllByTestId("security-result-skeleton"),
+    ).toHaveLength(0);
+    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
   },
 };
 

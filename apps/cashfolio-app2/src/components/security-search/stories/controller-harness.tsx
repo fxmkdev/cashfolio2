@@ -27,6 +27,8 @@ export function ControllerHarness({
     | "normal"
     | "obsolete"
     | "resultsError"
+    | "pagePending"
+    | "pageError"
     | "obsoleteSearch"
     | "exchangesError"
     | "historyError"
@@ -104,9 +106,17 @@ export function ControllerHarness({
         setOffsets((values) => [...values, query.offset]);
         pageCalls++;
         setSearchRequests(pageCalls);
-        if (scenario === "obsoleteSearch" && pageCalls === 1)
+        if (
+          (scenario === "obsoleteSearch" && pageCalls === 1) ||
+          ((scenario === "pagePending" || scenario === "resultsError") &&
+            pageCalls === 2) ||
+          (scenario === "pageError" && (pageCalls === 2 || pageCalls === 3))
+        )
           await new Promise<void>((resolve) => setPending(() => resolve));
-        if (scenario === "resultsError" && pageCalls === 1)
+        if (
+          (scenario === "resultsError" && pageCalls === 1) ||
+          (scenario === "pageError" && pageCalls === 2)
+        )
           throw new Error("Temporary securities query failure.");
         return createFixtureSource(query.criteria).loadPage(
           query,

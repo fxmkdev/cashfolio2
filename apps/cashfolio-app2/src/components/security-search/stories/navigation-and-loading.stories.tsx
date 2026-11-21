@@ -171,6 +171,33 @@ export const PendingCounts: Story = {
     await expect(
       canvas.queryByText("No securities found."),
     ).not.toBeInTheDocument();
+    const results = canvas.getByRole("region", { name: "Security Results" });
+    await waitFor(() =>
+      expect(
+        within(results).getAllByTestId("security-result-skeleton").length,
+      ).toBeGreaterThan(0),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "true");
+    await expect(
+      within(results).getByRole("columnheader", { name: /^Name/ }),
+    ).toBeVisible();
+    await expect(
+      within(results).queryByText(/Loading\.{3}|Unknown|No securities found/),
+    ).not.toBeInTheDocument();
+    await expect(results.querySelector(".ag-loading-icon")).toBeNull();
+    for (const skeleton of within(results).getAllByTestId(
+      "security-result-skeleton",
+    ))
+      await expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    await expect(
+      canvas.queryByRole("region", { name: "Security Details" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(canvas.getByTestId("fixture-global-progress")).toHaveAttribute(
+        "data-mounted",
+        "true",
+      ),
+    );
     await userEvent.click(
       await canvas.findByRole("button", { name: "Release Previous Response" }),
     );
@@ -178,6 +205,13 @@ export const PendingCounts: Story = {
       expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
         "31 listings",
       ),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "false");
+    await expect(
+      within(results).queryAllByTestId("security-result-skeleton"),
+    ).toHaveLength(0);
+    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
+      "[0]",
     );
   },
 };
@@ -339,5 +373,114 @@ export const UnavailableRestoredPage: Story = {
       "[20,0]",
     );
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};
+
+export const PendingPageKeepsSelection: Story = {
+  args: { scenario: "pagePending" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
+    const details = await selectListing(canvasElement, "ALP:XNAS");
+    await expect(
+      details.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("USD");
+    await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
+    const results = canvas.getByRole("region", { name: "Security Results" });
+    await waitFor(() =>
+      expect(
+        within(results).getAllByTestId("security-result-skeleton").length,
+      ).toBeGreaterThan(0),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "true");
+    await expect(
+      within(results).queryByText(/Loading\.{3}|Unknown/),
+    ).not.toBeInTheDocument();
+    await expect(results.querySelector(".ag-loading-icon")).toBeNull();
+    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
+      "[0,20]",
+    );
+    await userEvent.click(
+      within(results).getAllByTestId("security-result-skeleton")[0]!,
+    );
+    await expect(
+      details.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("USD");
+    await expect(
+      canvas.getByLabelText("Fixture History Requests"),
+    ).toHaveTextContent("1");
+    await expect(
+      canvas.getByLabelText("Fixture Metadata Requests"),
+    ).toHaveTextContent("1");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Release Previous Response" }),
+    );
+    await waitFor(() => expect(results).toHaveAttribute("aria-busy", "false"));
+    await expect(
+      within(results).queryAllByTestId("security-result-skeleton"),
+    ).toHaveLength(0);
+    await expect(
+      details.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("USD");
+    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
+      "[0,20]",
+    );
+  },
+};
+export const PendingCountsDark: Story = {
+  args: { scenario: "obsoleteSearch" },
+  parameters: { colorScheme: "dark" },
+  play: PendingCounts.play,
+};
+
+export const FailedPageRetryKeepsSelection: Story = {
+  args: { scenario: "pageError" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
+    const details = await selectListing(canvasElement, "ALP:XNAS");
+    await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Release Previous Response" }),
+    );
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "Temporary securities query failure",
+    );
+    const results = canvas.getByRole("region", { name: "Security Results" });
+    await waitFor(() =>
+      expect(
+        within(results).queryAllByTestId("security-result-skeleton"),
+      ).toHaveLength(0),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "false");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Retry Results" }),
+    );
+    await waitFor(() =>
+      expect(
+        within(results).getAllByTestId("security-result-skeleton").length,
+      ).toBeGreaterThan(0),
+    );
+    await expect(results).toHaveAttribute("aria-busy", "true");
+    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
+      "[0,20,20]",
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Release Previous Response" }),
+    );
+    await waitFor(() => expect(results).toHaveAttribute("aria-busy", "false"));
+    await expect(
+      within(results).queryAllByTestId("security-result-skeleton"),
+    ).toHaveLength(0);
+    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+    await expect(
+      details.getByLabelText("Latest Closing Price"),
+    ).toHaveTextContent("USD");
+    await expect(
+      canvas.getByRole("button", { name: /^Page 2$/ }),
+    ).toHaveAttribute("data-active");
+    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
+      "[0,20,20]",
+    );
   },
 };

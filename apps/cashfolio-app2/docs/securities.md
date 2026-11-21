@@ -75,7 +75,13 @@ register outstanding work with the global loading indicator. Independent
 requests retain their registration until settled or cancelled; unmount releases
 registrations. Initial result counts remain pending until the page completes,
 never displaying a false zero. A resolving identity uses neutral details
-skeletons. Obsolete responses cannot overwrite another selection's values.
+skeletons. Pending grid cells use decorative Mantine skeletons aligned under
+visible column headers, with the results region marked busy. Full-width loading
+rows and repeated spinner/text indicators are disabled. Placeholder rows cannot
+be selected; failed rows remove skeletons while existing error/retry controls
+remain available. Retry reloads the failed visible page without purging the
+store or returning to page one. Obsolete responses cannot overwrite another
+selection's values.
 
 ## On-demand provider pages and cache
 

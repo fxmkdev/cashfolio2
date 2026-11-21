@@ -13,6 +13,7 @@ import {
   type ColDef,
   type GridApi,
   type IServerSideDatasource,
+  type ILoadingCellRendererParams,
 } from "ag-grid-enterprise";
 import {
   Alert,
@@ -190,10 +191,7 @@ export function SecurityResultsGrid({
       {error && (
         <Alert color="red" role="alert">
           <Text size="sm">{error}</Text>
-          <Button
-            variant="light"
-            onClick={() => api?.refreshServerSide({ purge: true })}
-          >
+          <Button variant="light" onClick={() => api?.retryServerSideLoads()}>
             Retry Results
           </Button>
           {page > 1 && (
@@ -232,6 +230,7 @@ export function SecurityResultsGrid({
         tabIndex={-1}
         role="region"
         aria-label="Security Results"
+        aria-busy={pending > 0}
       >
         <DataGrid
           modules={[
@@ -245,6 +244,7 @@ export function SecurityResultsGrid({
           serverSideInitialRowCount={initialPage * RESULTS_PAGE_SIZE}
           rowModelType="serverSide"
           serverSideDatasource={datasource}
+          suppressServerSideFullWidthLoadingRow
           cacheBlockSize={RESULTS_PAGE_SIZE}
           maxBlocksInCache={3}
           columnDefs={columns}
@@ -252,6 +252,7 @@ export function SecurityResultsGrid({
           getRowId={({ data }) => data.id}
           rowSelection={{
             mode: "singleRow",
+            isRowSelectable: ({ data }) => !!data,
             checkboxes: false,
             enableClickSelection: true,
           }}
@@ -295,6 +296,7 @@ export function SecurityResultsGrid({
 }
 const defaultColumn: ColDef<SecurityListing> = {
   type: TEXT_COLUMN,
+  loadingCellRenderer: SecurityLoadingCell,
   sortable: false,
   resizable: true,
   filter: false,
@@ -303,3 +305,18 @@ const defaultColumn: ColDef<SecurityListing> = {
   suppressHeaderMenuButton: true,
   valueFormatter: ({ value }) => value ?? "Unknown",
 };
+
+function SecurityLoadingCell({
+  node,
+}: ILoadingCellRendererParams<SecurityListing>) {
+  if (node.failedLoad) return null;
+  return (
+    <div
+      className={classes.loadingCell}
+      aria-hidden="true"
+      data-testid="security-result-skeleton"
+    >
+      <Skeleton height={12} width="70%" animate={false} />
+    </div>
+  );
+}
