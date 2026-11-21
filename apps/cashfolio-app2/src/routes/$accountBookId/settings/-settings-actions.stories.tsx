@@ -136,7 +136,7 @@ export const MoreMenu: Story = {
 };
 
 export const MoreMenuDarkView: Story = {
-  ...MoreMenu,
+  ...Default,
   parameters: { colorScheme: "dark" },
   name: "More Menu Dark Playground",
   tags: ["!regression"],
@@ -147,67 +147,11 @@ export const MoreMenuDark: Story = {
   ...MoreMenuDarkView,
   name: "More Menu Dark Interaction Test",
   tags: ["regression", "!autodocs"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const tablist = canvas.getByRole("tablist", {
-      name: "Account Book Settings",
-    });
-    const tabs = within(tablist);
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(tabs.getAllByRole("tab")).toHaveLength(3);
-    await expect(
-      tabs.queryByRole("tab", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(tabs.getByRole("tab", { name: "General" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(
-      canvas.queryByRole("heading", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      body.queryByRole("menuitem", { name: "Delete Account Book…" }),
-    ).not.toBeInTheDocument();
-    const more = canvas.getByRole("button", {
-      name: "More Account Book Actions",
-    });
-    await expect(more).toHaveTextContent("More");
-    await expect(tablist.contains(more)).toBe(false);
-    const [red, green] = getComputedStyle(more)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(red).toBeLessThanOrEqual(green);
-    await expect(tablist.scrollWidth).toBeLessThanOrEqual(tablist.clientWidth);
-    await expect(
-      canvasElement.ownerDocument.documentElement.scrollWidth,
-    ).toBeLessThanOrEqual(window.innerWidth);
-    more.focus();
-    await userEvent.keyboard("{Enter}");
-    const deletion = await body.findByRole("menuitem", {
-      name: "Delete Account Book…",
-    });
-    await waitFor(() => expect(deletion).toBeVisible());
-    const [itemRed, itemGreen, itemBlue] = getComputedStyle(deletion)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(itemRed).toBeGreaterThan(itemGreen);
-    await expect(itemRed).toBeGreaterThan(itemBlue);
-    const menu = body.getByRole("menu");
-    await waitFor(() =>
-      expect(menu.contains(canvasElement.ownerDocument.activeElement)).toBe(
-        true,
-      ),
-    );
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() =>
-      expect(body.queryByRole("menu")).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(more).toHaveFocus());
-  },
+  play: MoreMenu.play,
 };
 
 export const MoreMenuMobileView: Story = {
-  ...MoreMenu,
+  ...Default,
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   name: "More Menu Mobile Playground",
   tags: ["!regression"],
@@ -218,68 +162,12 @@ export const MoreMenuMobile: Story = {
   ...MoreMenuMobileView,
   name: "More Menu Mobile Interaction Test",
   tags: ["regression", "!autodocs"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const tablist = canvas.getByRole("tablist", {
-      name: "Account Book Settings",
-    });
-    const tabs = within(tablist);
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(tabs.getAllByRole("tab")).toHaveLength(3);
-    await expect(
-      tabs.queryByRole("tab", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(tabs.getByRole("tab", { name: "General" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(
-      canvas.queryByRole("heading", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      body.queryByRole("menuitem", { name: "Delete Account Book…" }),
-    ).not.toBeInTheDocument();
-    const more = canvas.getByRole("button", {
-      name: "More Account Book Actions",
-    });
-    await expect(more).toHaveTextContent("More");
-    await expect(tablist.contains(more)).toBe(false);
-    const [red, green] = getComputedStyle(more)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(red).toBeLessThanOrEqual(green);
-    await expect(tablist.scrollWidth).toBeLessThanOrEqual(tablist.clientWidth);
-    await expect(
-      canvasElement.ownerDocument.documentElement.scrollWidth,
-    ).toBeLessThanOrEqual(window.innerWidth);
-    more.focus();
-    await userEvent.keyboard("{Enter}");
-    const deletion = await body.findByRole("menuitem", {
-      name: "Delete Account Book…",
-    });
-    await waitFor(() => expect(deletion).toBeVisible());
-    const [itemRed, itemGreen, itemBlue] = getComputedStyle(deletion)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(itemRed).toBeGreaterThan(itemGreen);
-    await expect(itemRed).toBeGreaterThan(itemBlue);
-    const menu = body.getByRole("menu");
-    await waitFor(() =>
-      expect(menu.contains(canvasElement.ownerDocument.activeElement)).toBe(
-        true,
-      ),
-    );
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() =>
-      expect(body.queryByRole("menu")).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(more).toHaveFocus());
-  },
+  play: MoreMenu.play,
 };
 
 export const MoreMenuMobileDarkView: Story = {
   globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
-  ...MoreMenu,
+  ...Default,
   parameters: {
     colorScheme: "dark",
   },
@@ -292,63 +180,7 @@ export const MoreMenuMobileDark: Story = {
   ...MoreMenuMobileDarkView,
   name: "More Menu Mobile Dark Interaction Test",
   tags: ["regression", "!autodocs"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const tablist = canvas.getByRole("tablist", {
-      name: "Account Book Settings",
-    });
-    const tabs = within(tablist);
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(tabs.getAllByRole("tab")).toHaveLength(3);
-    await expect(
-      tabs.queryByRole("tab", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(tabs.getByRole("tab", { name: "General" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(
-      canvas.queryByRole("heading", { name: "Danger Zone" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      body.queryByRole("menuitem", { name: "Delete Account Book…" }),
-    ).not.toBeInTheDocument();
-    const more = canvas.getByRole("button", {
-      name: "More Account Book Actions",
-    });
-    await expect(more).toHaveTextContent("More");
-    await expect(tablist.contains(more)).toBe(false);
-    const [red, green] = getComputedStyle(more)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(red).toBeLessThanOrEqual(green);
-    await expect(tablist.scrollWidth).toBeLessThanOrEqual(tablist.clientWidth);
-    await expect(
-      canvasElement.ownerDocument.documentElement.scrollWidth,
-    ).toBeLessThanOrEqual(window.innerWidth);
-    more.focus();
-    await userEvent.keyboard("{Enter}");
-    const deletion = await body.findByRole("menuitem", {
-      name: "Delete Account Book…",
-    });
-    await waitFor(() => expect(deletion).toBeVisible());
-    const [itemRed, itemGreen, itemBlue] = getComputedStyle(deletion)
-      .color.match(/[\d.]+/g)!
-      .map(Number);
-    await expect(itemRed).toBeGreaterThan(itemGreen);
-    await expect(itemRed).toBeGreaterThan(itemBlue);
-    const menu = body.getByRole("menu");
-    await waitFor(() =>
-      expect(menu.contains(canvasElement.ownerDocument.activeElement)).toBe(
-        true,
-      ),
-    );
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() =>
-      expect(body.queryByRole("menu")).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(more).toHaveFocus());
-  },
+  play: MoreMenu.play,
 };
 
 export const DeleteConfirmation: Story = {
