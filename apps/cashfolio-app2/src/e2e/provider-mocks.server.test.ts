@@ -166,6 +166,29 @@ describe("E2E valuation provider interception", () => {
     ]);
   });
 
+  it("mocks selected ticker metadata, missing ISINs and metadata outages", async () => {
+    enableMocks();
+    const ticker = await (
+      await fetch("https://api.marketstack.com/v2/tickers/E2E.SEC")
+    ).json();
+    expect(ticker).toMatchObject({
+      symbol: "E2E.SEC",
+      stock_exchange: { mic: "XNAS" },
+      isin: "US0000000000",
+    });
+    const missing = await (
+      await fetch("https://api.marketstack.com/v2/tickers/E2E.ISIN.EMPTY")
+    ).json();
+    expect(missing.isin).toBeNull();
+    expect(
+      (await fetch("https://api.marketstack.com/v2/tickers/E2E.PARTIAL"))
+        .status,
+    ).toBe(503);
+    expect(
+      (await fetch("https://api.marketstack.com/v2/tickers/UNMATCHED")).status,
+    ).toBe(404);
+  });
+
   it("bypasses unrelated HTTP requests", async () => {
     const server = createServer((_request, response) => {
       response.end("local response");

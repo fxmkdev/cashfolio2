@@ -6,6 +6,7 @@ import type {
   SecuritiesQuery,
   SecuritiesPage,
   SecurityHistory,
+  SecurityMetadata,
 } from "@/shared/securities/contracts";
 import type {
   HistoryState,
@@ -20,6 +21,10 @@ export type SecuritiesServices = {
     input: SecuritiesQuery,
     signal: AbortSignal,
   ) => Promise<SecuritiesPage>;
+  metadata: (
+    input: { selectionToken: string },
+    signal: AbortSignal,
+  ) => Promise<SecurityMetadata>;
   history: (
     input: { selectionToken: string },
     signal: AbortSignal,
@@ -58,6 +63,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   const [selectedListing, setSelectedListing] =
     useState<SecurityListing | null>(null);
+  const [metadata, setMetadata] = useState<SecurityMetadata | null>(null);
   const [page, setPage] = useState(1);
   const [range, setRange] = useState<PriceRange>("1Y");
   const [historyThrough, setHistoryThrough] = useState<string | null>(null);
@@ -68,15 +74,19 @@ export function useSecuritiesController(services: SecuritiesServices) {
   });
   const searchRequest = useRef<AbortController | null>(null);
   const historyRequest = useRef<AbortController | null>(null);
+  const metadataRequest = useRef<AbortController | null>(null);
   const rows = useRef(new Map<string, SecurityListing>());
   const closeDetails = useCallback(() => {
     historyRequest.current?.abort();
+    metadataRequest.current?.abort();
+    setMetadata(null);
     setSelectedListing(null);
   }, []);
   useEffect(
     () => () => {
       searchRequest.current?.abort();
       historyRequest.current?.abort();
+      metadataRequest.current?.abort();
       exchangeRequest.current?.abort();
     },
     [services],
@@ -107,6 +117,25 @@ export function useSecuritiesController(services: SecuritiesServices) {
       });
     },
     [services, closeDetails],
+  );
+  const loadMetadata = useCallback(
+    async (listing: SecurityListing) => {
+      metadataRequest.current?.abort();
+      const request = new AbortController();
+      metadataRequest.current = request;
+      setMetadata(null);
+      try {
+        const response = await services.metadata(
+          { selectionToken: listing.selectionToken },
+          request.signal,
+        );
+        if (!request.signal.aborted && response.listingId === listing.id)
+          setMetadata(response);
+      } catch {
+        // Optional metadata never blocks details or history; keep Unknown.
+      }
+    },
+    [services],
   );
   const loadHistory = useCallback(
     async (listing: SecurityListing) => {
@@ -163,6 +192,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
     exchangeStatus,
     onLoadExchanges: loadExchanges,
     selectedListing,
+    metadata,
     history,
     page,
     range,
@@ -180,6 +210,7 @@ export function useSecuritiesController(services: SecuritiesServices) {
       if (!listing) return;
       setSelectedListing(listing);
       setRange("1Y");
+      void loadMetadata(listing);
       void loadHistory(listing);
     },
     onRangeChange: setRange,

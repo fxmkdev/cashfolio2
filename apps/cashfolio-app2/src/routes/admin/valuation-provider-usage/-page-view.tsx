@@ -45,6 +45,7 @@ const reasonLabels = {
   SECURITY_SEARCH: "Security search",
   SECURITY_EXCHANGES: "Security exchanges",
   SECURITY_HISTORY: "Security history",
+  SECURITY_METADATA: "Security Metadata",
   RATE_LIMIT_RETRY: "Rate-limit retry",
 } as const;
 

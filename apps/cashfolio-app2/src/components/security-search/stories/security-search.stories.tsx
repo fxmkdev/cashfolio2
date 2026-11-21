@@ -357,9 +357,13 @@ export const UnknownAvailability: Story = {
     const details = within(
       canvas.getByRole("region", { name: "Security Details" }),
     );
-    await expect(details.getAllByText("Unknown", { exact: true })).toHaveLength(
-      3,
-    );
+    for (const label of [
+      "ISIN",
+      "Security Type",
+      "Quote Currency",
+      "Historical Prices",
+    ])
+      await expect(details.getByLabelText(label)).toHaveTextContent("Unknown");
     await expect(
       details.getByRole("img", { name: /closing price chart/ }),
     ).toBeVisible();

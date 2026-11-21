@@ -1,6 +1,12 @@
 /** Deterministic provider responses used only by the build-gated E2E runtime. */
 export const e2eSecuritiesListings = [
   {
+    ticker: "E2E.ISIN.EMPTY",
+    name: "E2E Missing ISIN",
+    stock_exchange: { name: "NASDAQ", mic: "XNAS", country: "US" },
+    has_eod: false,
+  },
+  {
     ticker: "E2E.PARTIAL",
     name: "E2E Partial History ETF",
     stock_exchange: { name: "SIX Swiss Exchange", mic: "XSWX", country: "CH" },

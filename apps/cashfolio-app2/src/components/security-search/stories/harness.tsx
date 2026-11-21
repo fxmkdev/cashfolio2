@@ -9,6 +9,7 @@ import type {
 } from "../types";
 import {
   createPriceHistory,
+  fixtureIsin,
   exchangeOptions,
   listings,
   pricesForRange,
@@ -87,6 +88,14 @@ export function SecuritySearchHarness({
       page={page}
       selectedListing={selectedListing}
       history={history}
+      metadata={
+        selectedListing
+          ? {
+              listingId: selectedListing.id,
+              isin: fixtureIsin(selectedListing),
+            }
+          : null
+      }
       range={range}
       onSearch={runSearch}
       onPageChange={setPage}

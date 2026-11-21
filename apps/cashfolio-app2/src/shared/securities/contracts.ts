@@ -36,6 +36,7 @@ export type SecuritiesPage = {
   totalCount: number;
 };
 export type SecuritiesExchanges = { value: string; label: string }[];
+export type SecurityMetadata = { listingId: string; isin: string | null };
 export type SecurityHistory = {
   listing: SecurityListing;
   points: PricePoint[];

@@ -25,6 +25,7 @@ import type {
   SecurityListing,
   SecuritySearchCriteria,
 } from "./types";
+import type { SecurityMetadata } from "@/shared/securities/contracts";
 import classes from "./security-search.module.css";
 
 export type SecuritySearchViewProps = {
@@ -35,6 +36,7 @@ export type SecuritySearchViewProps = {
   page: number;
   selectedListing: SecurityListing | null;
   history: HistoryState;
+  metadata: SecurityMetadata | null;
   range: PriceRange;
   onSearch: (criteria: SecuritySearchCriteria) => void;
   onPageChange: (page: number) => void;
@@ -177,6 +179,11 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
             key={selectedListing.id}
             listing={selectedListing}
             history={props.history}
+            isin={
+              props.metadata?.listingId === selectedListing.id
+                ? props.metadata.isin
+                : null
+            }
             range={props.range}
             onClose={props.onCloseDetails}
             onRangeChange={props.onRangeChange}

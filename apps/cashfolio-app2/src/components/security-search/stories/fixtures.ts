@@ -87,6 +87,14 @@ listings.push(
   },
 );
 
+/** Illustrative ISIN-shaped identifiers, not provider coverage claims. */
+export function fixtureIsin(listing: SecurityListing): string | null {
+  return listing.id === "MYST:XLON" || listing.id === "OLD:unknown"
+    ? null
+    : listing.mic === "XSWX"
+      ? "CH0000000000"
+      : "US0000000000";
+}
 export const exchangeOptions = exchanges.map(({ mic, exchange }) => ({
   value: mic,
   label: getExchangeLabel({ exchange, mic }),

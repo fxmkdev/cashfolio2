@@ -26,6 +26,7 @@ import classes from "./security-search.module.css";
 export function SecurityDetails({
   listing,
   history,
+  isin,
   range,
   onRangeChange,
   onRetryHistory,
@@ -34,6 +35,7 @@ export function SecurityDetails({
 }: {
   listing: SecurityListing;
   history: HistoryState;
+  isin: string | null;
   range: PriceRange;
   onRangeChange: (range: PriceRange) => void;
   onRetryHistory: () => void;
@@ -53,8 +55,9 @@ export function SecurityDetails({
     history.status === "ready"
       ? historyChartData(history.points, history.omissions)
       : [];
-  const fields = [
+  const fields: [string, string | null][] = [
     ["Symbol", listing.symbol],
+    ["ISIN", isin],
     ["Exchange", getExchangeLabel(listing)],
     ["Country", listing.country],
     ["Security Type", listing.securityType],
@@ -142,7 +145,7 @@ export function SecurityDetails({
                   label
                 )}
               </Text>
-              <Text component="dd" size="sm" fw={500}>
+              <Text component="dd" size="sm" fw={500} aria-label={label}>
                 {value ?? "Unknown"}
               </Text>
             </div>

@@ -2,7 +2,7 @@
 
 The authenticated **Securities** page at `/$accountBookId/securities` searches
 Marketstack on demand. The account-book parent route authorizes book access;
-every discovery/history RPC independently requires an active authenticated user.
+every Securities RPC independently requires an active authenticated user.
 Reference data has no user, book or financial-account associations. Discovery
 and **Copy Symbol** do not change account creation or valuation.
 
@@ -15,9 +15,10 @@ and **Copy Symbol** do not change account creation or valuation.
   The private route supplies real services. Shared DataGrid uses server-side
   20-row blocks/pages with informational Name, Symbol, Exchange, Country and
   Historical Prices columns. All sorting and column filters are disabled.
-- Nothing loads listings or prices on navigation. Search/Enter submits the
-  name/symbol query and optional single exchange MIC. An explicitly submitted
-  empty query browses all listings. Editing draft controls does not fetch.
+- Nothing loads listings, metadata or prices on navigation. Search/Enter submits
+  the name/symbol query and optional single exchange MIC. An explicitly
+  submitted empty query browses all listings. Editing draft controls does not
+  fetch.
 - Opening Exchange first loads its directory; typing filters cached choices
   locally. Labels are Exchange Name (MIC); clearing means All Exchanges.
   Directory failures offer their own retry and do not block all-exchange search.
@@ -65,13 +66,45 @@ and a signed reference containing its listing metadata, format version and
 `SESSION_SECRET`. References are issued when serving a page; they do not require
 a catalogue row, Redis lookup or extra provider call to resolve. Signature
 comparison is timing-safe, and payload bounds, version, metadata and expiry are
-checked before history access. Invalid/expired references require a new search.
-Secret rotation invalidates outstanding references.
+checked before history or metadata access. Invalid/expired references require a
+new search. Secret rotation invalidates outstanding references.
 
 Symbols such as `NEE 6.219` and vendor exchange identifiers such as `XETRA` and
 `NMFQS` are preserved exactly. Client-supplied symbols or metadata cannot
 replace the signed identity. A valid reference still requires an authenticated
 active user; reference metadata itself is shared public reference data.
+
+## Selected-listing ISIN metadata
+
+Selecting a listing starts metadata and price history independently. The
+metadata RPC requires an active user and resolves the existing signed selection
+reference before accessing Redis or Marketstack. It requests only
+`GET /v2/tickers/{symbol}`, with the exact symbol encoded as a path component.
+The single-object response must contain the exact matching `symbol` and
+`stock_exchange.mic`; the symbol-scoped endpoint may return another exchange, in
+which case its ISIN is never displayed or cached. No exchange aliases, alternate
+endpoints or catalogue scans are used. A selected listing without a MIC stays
+Unknown without a provider request. Metadata loads even when the listing
+declares no historical prices.
+
+The details summary shows **ISIN** after Symbol. A trimmed ISIN must match the
+uppercase 12-character format (two letters, nine alphanumeric characters and a
+final digit); missing/null/blank values become Unknown. Matching validated
+metadata, including a missing ISIN, is cached for **seven days** under
+`securities:marketstack:metadata:v1:`, keyed by exact symbol/MIC. Cache reads
+revalidate both identity and the nullable ISIN. Cache corruption or Redis outage
+retains bounded provider fallback; provider/identity/format failures are not
+cached as successful missing metadata.
+
+ISIN state is separate from listing/history state. Unknown is shown while
+metadata loads or fails, without blocking details, Copy Symbol or price history.
+Switching listings, closing details, submitting a new search or unmounting
+aborts metadata work; obsolete responses are ignored. Pagination, range changes,
+Copy Symbol and history retries do not fetch metadata again. Metadata uses the
+existing shared user-scoped work, read budget, server-only credentials and
+bounded transport retries. Each actual attempt is logged with
+`SECURITY_METADATA` (or `RATE_LIMIT_RETRY`); valid missing ISINs are `NO_DATA`
+and invalid provider metadata is `PROVIDER_ERROR`.
 
 ## Selected-listing history
 
@@ -128,32 +161,35 @@ request, network failure, unreadable HTTP payload or HTTP 5xx response retries
 the same page at most twice, with bounded delays inside the existing deadline.
 Cancellation and structurally invalid provider data never retry. Every HTTP
 attempt is reported with `SECURITY_SEARCH`, `SECURITY_EXCHANGES`,
-`SECURITY_HISTORY` or `RATE_LIMIT_RETRY`. Configuration, subscription/quota,
-malformed data and transient errors have separate safe messages. Existing
-financial-account valuation is unchanged.
+`SECURITY_HISTORY`, `SECURITY_METADATA` or `RATE_LIMIT_RETRY`. Configuration,
+subscription/quota, malformed data and transient errors have separate safe
+messages. Existing financial-account valuation is unchanged.
 
 ## Deployment and schema compatibility
 
 There is no catalogue refresh worker, scheduled/manual refresh workflow,
 deployment initialization, preflight, smoke request or refresh payload in the
 app image. Deployment and warm-up do not access Marketstack. No manual bootstrap
-is needed: user actions request pages and selected history only when needed.
+is needed: user actions request pages, selected metadata and history when
+needed.
 
 The existing catalogue migration, Prisma models/tables, data and legacy
 `CATALOGUE_REFRESH` usage records remain intact temporarily. No runtime
 Securities path reads them. Do not reset databases, rewrite applied migrations,
 or run destructive cleanup. A new additive migration adds `SECURITY_SEARCH` and
-`SECURITY_EXCHANGES` usage reasons; normal Prisma deployment applies it.
+`SECURITY_EXCHANGES` usage reasons; a later additive migration introduces
+`SECURITY_METADATA`. Normal Prisma deployment applies both.
 
 ## Verification and cost
 
 Focused tests cover authentication, query/provider validation, exact requested
 pages/order, cache hits/TTLs/corruption, signed identity/expiry, history parsing
 and cooldowns. Mocked E2E uses build-gated ticker/exchange/history responses,
-requires no catalogue seed, and blocks unhandled provider traffic. Full suites,
-coverage, builds and mocked E2E runs remain CI checks. Playwright supplies an
-ephemeral `SESSION_SECRET` to its test server so signed listing references work
-even though E2E authentication itself is bypassed.
+includes selected ticker metadata, requires no catalogue seed, and blocks
+unhandled provider traffic. Full suites, coverage, builds and mocked E2E runs
+remain CI checks. Playwright supplies an ephemeral `SESSION_SECRET` to its test
+server so signed listing references work even though E2E authentication itself
+is bypassed.
 
 Make **no live Marketstack calls** during implementation or verification and
 trigger no refreshes. Verification uses fixtures/mocks only. Overage is **USD
@@ -161,5 +197,5 @@ trigger no refreshes. Verification uses fixtures/mocks only. Overage is **USD
 The pivot adds no aggregate runtime spending guard; provider/account limits
 control aggregate spending. Existing request budgets bound individual
 operations. Cache hits make no provider requests, while cache misses, directory
-pagination and bounded retries consume requests. There is no recurring full
-catalogue cost.
+pagination, selected-listing metadata cache misses and bounded retries consume
+requests. There is no recurring full catalogue cost.

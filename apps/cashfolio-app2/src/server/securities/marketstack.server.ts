@@ -1,4 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
+import { parseTickerMetadata, type TickerMetadata } from "./metadata-data";
 import {
   HistoryDataError,
   parseHistoryRows,
@@ -137,11 +138,90 @@ function providerError(raw: unknown, status: number): Error | null {
 }
 const TRANSIENT_MAX_RETRIES = 2;
 
-export async function fetchMarketstackPage(
+type Decoded<T> = { value: T; usableRows: number; errorMessage?: string };
+export function fetchMarketstackPage(
   path: "tickerslist" | "exchanges" | "eod",
   params: Record<string, string>,
   options: MarketstackOptions = {},
 ): Promise<MarketstackPage> {
+  return requestMarketstack(
+    path,
+    params,
+    options,
+    (raw) => {
+      let errorMessage: string | undefined;
+      let page: MarketstackPage;
+      try {
+        page = parseMarketstackPage(raw, Number(params.offset ?? 0));
+      } catch (error) {
+        if (path === "eod")
+          throw new HistoryDataError(
+            "Marketstack returned malformed price pagination.",
+          );
+        throw error;
+      }
+      let usableRows = page.data.length;
+      if (path === "tickerslist") page.data.forEach(parseListingRow);
+      if (
+        path === "eod" &&
+        params.symbols &&
+        params.exchange &&
+        params.date_from &&
+        params.date_to
+      ) {
+        const series = parseHistoryRows(
+          page.data,
+          params.symbols,
+          params.exchange,
+          params.date_from,
+          params.date_to,
+        );
+        usableRows = series.points.length;
+        if (series.omissions.length) {
+          const diagnostics = historyOmissionDiagnostics(page.data, series);
+          console.warn("Marketstack history observations omitted.", {
+            symbol: params.symbols,
+            mic: params.exchange,
+            ...diagnostics,
+          });
+          errorMessage = `Unusable closing prices omitted: missing=${diagnostics.counts.missing}, non-positive=${diagnostics.counts["non-positive"]}, invalid=${diagnostics.counts.invalid}.`;
+        }
+      }
+      return { value: page, usableRows, errorMessage };
+    },
+    path === "eod"
+      ? "SECURITY_HISTORY"
+      : path === "tickerslist"
+        ? "SECURITY_SEARCH"
+        : "SECURITY_EXCHANGES",
+    params.symbols,
+  );
+}
+export function fetchMarketstackTicker(
+  symbol: string,
+  mic: string,
+  options: MarketstackOptions = {},
+): Promise<TickerMetadata> {
+  return requestMarketstack(
+    `tickers/${encodeURIComponent(symbol)}`,
+    {},
+    options,
+    (raw) => {
+      const value = parseTickerMetadata(raw, symbol, mic);
+      return { value, usableRows: value.isin ? 1 : 0 };
+    },
+    "SECURITY_METADATA",
+    symbol,
+  );
+}
+async function requestMarketstack<T>(
+  path: string,
+  params: Record<string, string>,
+  options: MarketstackOptions,
+  decode: (raw: unknown) => Decoded<T>,
+  reason: RecordValuationProviderRequestInput["requestReason"],
+  symbol?: string,
+): Promise<T> {
   const key = await getProviderApiKey({
     envVarName: "MARKETSTACK_API_KEY",
     missingKeyWarning:
@@ -168,13 +248,7 @@ export async function fetchMarketstackPage(
     let errorMessage: string | undefined;
     let unreadable = false;
     let rateLimited = false;
-    const requestReason = previousRateLimit
-      ? "RATE_LIMIT_RETRY"
-      : path === "eod"
-        ? "SECURITY_HISTORY"
-        : path === "tickerslist"
-          ? "SECURITY_SEARCH"
-          : "SECURITY_EXCHANGES";
+    const requestReason = previousRateLimit ? "RATE_LIMIT_RETRY" : reason;
     try {
       const query = new URLSearchParams({ ...params, access_key: key });
       const response = await fetch(
@@ -227,49 +301,17 @@ export async function fetchMarketstackPage(
           Number(params.offset ?? 0) === 0
         ) {
           outcome = "NO_DATA";
-          return { data: [], pagination: { offset: 0, count: 0, total: 0 } };
+          return decode({
+            data: [],
+            pagination: { offset: 0, count: 0, total: 0 },
+          }).value;
         }
         const error = providerError(raw, response.status);
         if (error) throw error;
-        let page: MarketstackPage;
-        try {
-          page = parseMarketstackPage(raw, Number(params.offset ?? 0));
-        } catch (error) {
-          if (path === "eod")
-            throw new HistoryDataError(
-              "Marketstack returned malformed price pagination.",
-            );
-          throw error;
-        }
-        let usableRows = page.data.length;
-        if (path === "tickerslist") page.data.forEach(parseListingRow);
-        if (
-          path === "eod" &&
-          params.symbols &&
-          params.exchange &&
-          params.date_from &&
-          params.date_to
-        ) {
-          const series = parseHistoryRows(
-            page.data,
-            params.symbols,
-            params.exchange,
-            params.date_from,
-            params.date_to,
-          );
-          usableRows = series.points.length;
-          if (series.omissions.length) {
-            const diagnostics = historyOmissionDiagnostics(page.data, series);
-            console.warn("Marketstack history observations omitted.", {
-              symbol: params.symbols,
-              mic: params.exchange,
-              ...diagnostics,
-            });
-            errorMessage = `Unusable closing prices omitted: missing=${diagnostics.counts.missing}, non-positive=${diagnostics.counts["non-positive"]}, invalid=${diagnostics.counts.invalid}.`;
-          }
-        }
-        outcome = usableRows ? "RETRIEVED" : "NO_DATA";
-        return page;
+        const decoded = decode(raw);
+        outcome = decoded.usableRows ? "RETRIEVED" : "NO_DATA";
+        errorMessage = decoded.errorMessage;
+        return decoded.value;
       }
     } catch (error) {
       errorMessage =
@@ -308,7 +350,7 @@ export async function fetchMarketstackPage(
         valuationDate: requestedAt,
         durationMs: Date.now() - requestedAt.getTime(),
         retryCount: retry,
-        symbol: params.symbols,
+        symbol,
         httpStatus,
         errorMessage,
       });

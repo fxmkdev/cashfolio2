@@ -34,6 +34,27 @@ function enforceHandledValuationProviderRequests(request: Request): void {
 }
 
 const e2eValuationProviderServer = setupServer(
+  http.get("https://api.marketstack.com/v2/tickers/:symbol", ({ params }) => {
+    const symbol = String(params.symbol);
+    if (symbol === "E2E.PARTIAL")
+      return HttpResponse.json(
+        { error: { code: "temporarily_unavailable" } },
+        { status: 503 },
+      );
+    const row = e2eSecuritiesListings.find(
+      (listing) => listing.ticker === symbol,
+    );
+    if (!row)
+      return HttpResponse.json(
+        { error: { code: "no_data_found" } },
+        { status: 404 },
+      );
+    return HttpResponse.json({
+      symbol,
+      stock_exchange: row.stock_exchange,
+      isin: symbol === "E2E.ISIN.EMPTY" ? null : "US0000000000",
+    });
+  }),
   http.get("https://api.marketstack.com/v2/tickerslist", ({ request }) => {
     const url = new URL(request.url);
     const search = (url.searchParams.get("search") ?? "").toLowerCase();

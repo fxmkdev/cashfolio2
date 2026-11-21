@@ -7,6 +7,7 @@ import {
   exchangeDirectory,
 } from "./securities/discovery.server";
 import { securityHistory } from "./securities/history.server";
+import { securityMetadata } from "./securities/metadata.server";
 
 export const getSecuritiesExchanges = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -27,4 +28,11 @@ export const getSecurityHistory = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureUser();
     return securityHistory(data);
+  });
+
+export const getSecurityMetadata = createServerFn({ method: "GET" })
+  .validator(readSelection)
+  .handler(async ({ data }) => {
+    await ensureUser();
+    return securityMetadata(data);
   });

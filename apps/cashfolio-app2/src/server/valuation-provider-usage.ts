@@ -228,7 +228,9 @@ export const getValuationProviderUsage = createServerFn({
             ? "Security Search"
             : row.requestReason === "SECURITY_EXCHANGES"
               ? "Security Exchanges"
-              : toUnitLabel(row),
+              : row.requestReason === "SECURITY_METADATA"
+                ? "Security Metadata"
+                : toUnitLabel(row),
       currency: row.currency,
       cryptocurrency: row.cryptocurrency,
       symbol: row.symbol,
