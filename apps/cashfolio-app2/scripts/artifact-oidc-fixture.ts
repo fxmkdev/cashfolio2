@@ -16,7 +16,7 @@ export async function startOidcFixture(t: TestContext) {
     requests.push(path);
     response.setHeader("Content-Type", "application/json");
     switch (path) {
-      case "/.well-known/openid-configuration":
+      case "/oidc/.well-known/openid-configuration":
         response.end(
           JSON.stringify({
             issuer: endpoint,
@@ -73,7 +73,7 @@ export async function startOidcFixture(t: TestContext) {
       default:
         response
           .writeHead(404)
-          .end(JSON.stringify({ error: "Unexpected OIDC request" }));
+          .end(JSON.stringify({ error: `Unexpected OIDC request: ${path}` }));
     }
   });
   await new Promise<void>((resolve, reject) => {
