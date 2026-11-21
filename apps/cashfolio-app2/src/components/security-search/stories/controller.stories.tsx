@@ -1,31 +1,27 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { controllerStoryMeta } from "./story-meta";
+import {
+  serverSideBrowsingView,
+  resultsRequestErrorView,
+  obsoleteSearchResponseView,
+  exchangeDirectoryRetryView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-import { ControllerHarness } from "./controller-harness";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "The production controller and server-side grid run against deterministic local service doubles. No Marketstack or backend calls are made.",
-      },
-    },
-  },
-} satisfies Meta<typeof ControllerHarness>;
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const ControllerDefault: Story = {
+  ...serverSideBrowsingView,
+  name: "Controller Default",
+};
+
 export const ServerSideBrowsing: Story = {
+  ...serverSideBrowsingView,
+  name: "Server Side Browsing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -44,39 +40,16 @@ export const ServerSideBrowsing: Story = {
     ).toBeVisible();
   },
 };
-export const ObsoleteHistoryResponse: Story = {
-  args: { scenario: "obsolete" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await selectListing(canvasElement, "ALP:XNAS");
-    await expect(canvas.getByLabelText("Loading Price History")).toBeVisible();
-    await selectListing(canvasElement, "ALP:XSWX");
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Latest Closing Price")).toHaveTextContent(
-        "CHF",
-      ),
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Release Previous Response" }),
-    );
-    await expect(
-      canvas.getByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("CHF");
-    await expect(
-      within(
-        canvas.getByRole("region", { name: "Security Details" }),
-      ).getByText("SIX Swiss Exchange (XSWX)", { exact: true }),
-    ).toBeVisible();
-    // Closing/new search cancels the selection; a response cannot reopen it.
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await expect(
-      canvas.queryByRole("region", { name: "Security Details" }),
-    ).not.toBeInTheDocument();
-  },
+
+export const ResultsRequestErrorPreview: Story = {
+  ...resultsRequestErrorView,
+  name: "Results Request Error",
 };
+
 export const ResultsRequestError: Story = {
-  args: { scenario: "resultsError" },
+  ...resultsRequestErrorView,
+  name: "Results Request Error Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -118,8 +91,15 @@ export const ResultsRequestError: Story = {
   },
 };
 
+export const ObsoleteSearchResponsePreview: Story = {
+  ...obsoleteSearchResponseView,
+  name: "Obsolete Search Response",
+};
+
 export const ObsoleteSearchResponse: Story = {
-  args: { scenario: "obsoleteSearch" },
+  ...obsoleteSearchResponseView,
+  name: "Obsolete Search Response Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", {
@@ -148,8 +128,15 @@ export const ObsoleteSearchResponse: Story = {
   },
 };
 
+export const ExchangeDirectoryRetryPreview: Story = {
+  ...exchangeDirectoryRetryView,
+  name: "Exchange Directory Retry",
+};
+
 export const ExchangeDirectoryRetry: Story = {
-  args: { scenario: "exchangesError" },
+  ...exchangeDirectoryRetryView,
+  name: "Exchange Directory Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox", { name: "Exchange" }));
@@ -171,127 +158,11 @@ export const ExchangeDirectoryRetry: Story = {
     );
   },
 };
-export const SelectedHistoryRetry: Story = {
-  args: { scenario: "historyError" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await selectListing(canvasElement, "ALP:XSWX");
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "Temporary price lookup failure",
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Retry Price History" }),
-    );
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Latest Closing Price")).toHaveTextContent(
-        "CHF",
-      ),
-    );
-    await expect(
-      canvas.getByLabelText("Fixture Metadata Requests"),
-    ).toHaveTextContent("1");
-  },
-};
-
-export const PartialPriceHistory: Story = {
-  args: { scenario: "partial" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await selectListing(canvasElement, "ALP:XSWX");
-    await expect(
-      await canvas.findByText("Partial Price History"),
-    ).toBeVisible();
-    await expect(
-      canvas.getByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("125.67 CHF");
-    await expect(
-      canvas.getByRole("img", { name: /closing price chart/ }),
-    ).toBeVisible();
-    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    const requests = canvas.getByLabelText(
-      "Fixture History Requests",
-    ).textContent;
-    await userEvent.click(canvas.getByRole("radio", { name: "1M" }));
-    await expect(
-      canvas.getByText(
-        "No usable closing prices are available for this range.",
-      ),
-    ).toBeVisible();
-    await expect(
-      canvas.queryByLabelText("Latest Closing Price"),
-    ).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("radio", { name: "5Y" }));
-    await expect(
-      canvas.getByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("125.67 CHF");
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent(requests!);
-  },
-};
-export const PartialPriceHistoryDark: Story = {
-  args: { scenario: "partial" },
-  parameters: { colorScheme: "dark" },
-  play: PartialPriceHistory.play,
-};
-export const PartialPriceHistoryMobile: Story = {
-  args: { scenario: "partial" },
-  globals: { viewport: { value: "cashfolioMobile" } },
-  play: PartialPriceHistory.play,
-};
-export const UnusablePriceHistory: Story = {
-  args: { scenario: "unusable" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await selectListing(canvasElement, "ALP:XSWX");
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "no usable closing prices",
-    );
-    await expect(
-      canvas.getByRole("button", { name: "Retry Price History" }),
-    ).toBeDisabled();
-    await expect(canvas.getByText(/Retry available at/)).toBeVisible();
-    await expect(
-      canvas.getByRole("button", { name: "Copy Symbol" }),
-    ).toBeEnabled();
-  },
-};
-export const HistoryRetryCooldown: Story = {
-  args: { scenario: "cooldown" },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "The fixture compresses the server cooldown to two seconds to exercise expiry; production uses five minutes. Expiry enables Retry without making a request.",
-      },
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search" }));
-    await selectListing(canvasElement, "ALP:XSWX");
-    const retry = await canvas.findByRole("button", {
-      name: "Retry Price History",
-    });
-    await expect(retry).toBeDisabled();
-    await waitFor(() => expect(retry).toBeEnabled(), { timeout: 5000 });
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("1");
-    await userEvent.click(retry);
-    await expect(
-      await canvas.findByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("CHF");
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("2");
-  },
-};
 
 export const ExplicitDiscoveryRequests: Story = {
+  ...serverSideBrowsingView,
+  name: "Explicit Discovery Requests Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(

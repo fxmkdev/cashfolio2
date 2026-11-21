@@ -1,43 +1,28 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import type { StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UserLocaleProvider } from "@/user-locale-context";
-import { SecuritySearchHarness } from "./harness";
+import { securitySearchStoryMeta } from "./story-meta";
+import {
+  searchAndFilterView,
+  chartAndCopyView,
+  keyboardSelectionView,
+  searchErrorView,
+  chartErrorView,
+  copyFailureView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
 
-const meta = {
-  title: "Routes/Securities",
-  component: SecuritySearchHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component: `Securities page presentation with a fixture-backed server-side datasource. All listings, symbol/exchange combinations and prices are illustrative local fixtures, not live Marketstack data or verified coverage.
-
-Open **Routes / Securities / Default**. Select Search with an empty query to browse all sample listings, or enter a name/symbol and optionally choose an exchange. Changes apply only on Search or Enter. Select a grid row (click, or focus a cell and press Space) to open the persistent right-side details pane. On mobile, details replace the results; Back to Results preserves the grid state. Grid pages retain selection; a submitted search resets selection and pagination. Columns are informational and have no sorting or filters. Explore price ranges and Copy Symbol.
-
-These stories use deterministic local data and never call the backend or Marketstack. Loading/error stories are fixed scenarios; Retry Search and Retry Price History recover locally. Clipboard feedback is simulated in the copy-specific stories. Other stories use the browser clipboard.
-
-Run locally with Node 26: pnpm --filter cashfolio-app2 storybook.`,
-      },
-    },
-  },
-  tags: ["autodocs"],
-} satisfies Meta<typeof SecuritySearchHarness>;
+const meta = { ...securitySearchStoryMeta, title: "Screens/Securities" };
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = { ...searchAndFilterView };
 
 export const SearchAndFilter: Story = {
+  ...searchAndFilterView,
+  name: "Search and Filter Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -104,6 +89,9 @@ export const SearchAndFilter: Story = {
 };
 
 export const BrowseAndSelect: Story = {
+  ...searchAndFilterView,
+  name: "Browse and Select Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -148,12 +136,15 @@ export const LongName: Story = {
   args: { initialSearch: "ready", initialSelectedId: "RIV:XETR" },
 };
 
+export const ChartAndCopyPreview: Story = {
+  ...chartAndCopyView,
+  name: "Chart and Copy",
+};
+
 export const ChartAndCopy: Story = {
-  args: {
-    initialSearch: "ready",
-    initialSelectedId: "ALP:XNAS",
-    copySymbol: fn().mockResolvedValue(undefined),
-  },
+  ...chartAndCopyView,
+  name: "Chart and Copy Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const details = within(
@@ -176,8 +167,15 @@ export const ChartAndCopy: Story = {
   },
 };
 
+export const KeyboardSelectionPreview: Story = {
+  ...keyboardSelectionView,
+  name: "Keyboard Selection",
+};
+
 export const KeyboardSelection: Story = {
-  args: { initialSearch: "ready", initialQuery: "ALP" },
+  ...keyboardSelectionView,
+  name: "Keyboard Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     let cell: HTMLElement | null = null;
     await waitFor(() => {
@@ -202,8 +200,15 @@ export const SearchLoading: Story = {
   args: { initialSearch: "loading", initialQuery: "Alpine" },
 };
 
+export const SearchErrorPreview: Story = {
+  ...searchErrorView,
+  name: "Search Error",
+};
+
 export const SearchError: Story = {
-  args: { initialSearch: "error", initialQuery: "Alpine" },
+  ...searchErrorView,
+  name: "Search Error Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Retry Search" }));
@@ -224,12 +229,15 @@ export const ChartLoading: Story = {
   },
 };
 
+export const ChartErrorPreview: Story = {
+  ...chartErrorView,
+  name: "Chart Error",
+};
+
 export const ChartError: Story = {
-  args: {
-    initialSearch: "ready",
-    initialSelectedId: "ALP:XNAS",
-    initialHistory: "error",
-  },
+  ...chartErrorView,
+  name: "Chart Error Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -289,14 +297,15 @@ export const MissingMetadata: Story = {
   },
 };
 
+export const CopyFailurePreview: Story = {
+  ...copyFailureView,
+  name: "Copy Failure",
+};
+
 export const CopyFailure: Story = {
-  args: {
-    initialSearch: "ready",
-    initialSelectedId: "ALP:XNAS",
-    copySymbol: async () => {
-      throw new Error("Clipboard unavailable");
-    },
-  },
+  ...copyFailureView,
+  name: "Copy Failure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Copy Symbol" }));

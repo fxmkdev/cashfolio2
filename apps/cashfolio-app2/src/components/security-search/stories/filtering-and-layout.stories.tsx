@@ -1,24 +1,26 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { SecuritySearchHarness } from "./harness";
+import { securitySearchStoryMeta } from "./story-meta";
+import {
+  informationalColumnsView,
+  newSearchResetsGridView,
+  mobileBrowsingStateView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-const meta = {
-  title: "Routes/Securities",
-  component: SecuritySearchHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  args: { initialSearch: "ready" },
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof SecuritySearchHarness>;
+
+const meta = { ...securitySearchStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const InformationalColumnsPreview: Story = {
+  ...informationalColumnsView,
+  name: "Informational Columns",
+};
+
 export const InformationalColumns: Story = {
+  ...informationalColumnsView,
+  name: "Informational Columns Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>
@@ -42,6 +44,9 @@ export const InformationalColumns: Story = {
   },
 };
 export const PersistentDetails: Story = {
+  ...informationalColumnsView,
+  name: "Persistent Details Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const grid = canvas.getByRole("region", { name: "Security Results" });
@@ -69,8 +74,15 @@ export const PersistentDetails: Story = {
     );
   },
 };
+export const NewSearchResetsGridPreview: Story = {
+  ...newSearchResetsGridView,
+  name: "New Search Resets Grid",
+};
+
 export const NewSearchResetsGrid: Story = {
-  args: { initialSelectedId: "ALP:XNAS" },
+  ...newSearchResetsGridView,
+  name: "New Search Resets Grid Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Next Page" }));
@@ -106,8 +118,15 @@ export const NewSearchResetsGrid: Story = {
     );
   },
 };
+export const MobileBrowsingStatePreview: Story = {
+  ...mobileBrowsingStateView,
+  name: "Mobile Browsing State",
+};
+
 export const MobileBrowsingState: Story = {
-  globals: { viewport: { value: "cashfolioMobile" } },
+  ...mobileBrowsingStateView,
+  name: "Mobile Browsing State Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const grid = canvas.getByRole("region", { name: "Security Results" });

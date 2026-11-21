@@ -1,24 +1,23 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { ControllerHarness } from "./controller-harness";
+import { controllerStoryMeta } from "./story-meta";
+import {
+  serverSideBrowsingView,
+  metadataFailureKeepsHistoryView,
+  metadataBeforeHistoryView,
+  historyBeforeMetadataView,
+  isinOnMobileView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ControllerHarness>;
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SelectedIsin: Story = {
+  ...serverSideBrowsingView,
+  name: "Selected ISIN Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -46,6 +45,9 @@ export const SelectedIsin: Story = {
   },
 };
 export const MissingIsin: Story = {
+  ...serverSideBrowsingView,
+  name: "Missing ISIN Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
@@ -59,8 +61,15 @@ export const MissingIsin: Story = {
     ).toBeVisible();
   },
 };
+export const MetadataFailureKeepsHistoryPreview: Story = {
+  ...metadataFailureKeepsHistoryView,
+  name: "Metadata Failure Keeps History",
+};
+
 export const MetadataFailureKeepsHistory: Story = {
-  args: { scenario: "metadataError" },
+  ...metadataFailureKeepsHistoryView,
+  name: "Metadata Failure Keeps History Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -77,8 +86,15 @@ export const MetadataFailureKeepsHistory: Story = {
     ).toBeEnabled();
   },
 };
+export const MetadataBeforeHistoryPreview: Story = {
+  ...metadataBeforeHistoryView,
+  name: "Metadata Before History",
+};
+
 export const MetadataBeforeHistory: Story = {
-  args: { scenario: "metadataFirst" },
+  ...metadataBeforeHistoryView,
+  name: "Metadata Before History Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -120,8 +136,15 @@ export const MetadataBeforeHistory: Story = {
     ).toHaveTextContent("1");
   },
 };
+export const HistoryBeforeMetadataPreview: Story = {
+  ...historyBeforeMetadataView,
+  name: "History Before Metadata",
+};
+
 export const HistoryBeforeMetadata: Story = {
-  args: { scenario: "metadataLate" },
+  ...historyBeforeMetadataView,
+  name: "History Before Metadata Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -160,7 +183,9 @@ export const HistoryBeforeMetadata: Story = {
   },
 };
 export const ObsoleteMetadataResponse: Story = {
-  args: { scenario: "metadataLate" },
+  ...historyBeforeMetadataView,
+  name: "Obsolete Metadata Response Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -178,7 +203,9 @@ export const ObsoleteMetadataResponse: Story = {
   },
 };
 export const ClosedMetadataResponse: Story = {
-  args: { scenario: "metadataLate" },
+  ...historyBeforeMetadataView,
+  name: "Closed Metadata Response Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -195,6 +222,9 @@ export const ClosedMetadataResponse: Story = {
   },
 };
 export const IsinWithoutHistory: Story = {
+  ...serverSideBrowsingView,
+  name: "ISIN Without History Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
@@ -213,14 +243,22 @@ export const IsinWithoutHistory: Story = {
     ).toHaveTextContent("1");
   },
 };
+export const IsinOnMobilePreview: Story = {
+  ...isinOnMobileView,
+  name: "ISIN on Mobile",
+};
+
 export const IsinOnMobile: Story = {
-  globals: { viewport: { value: "cashfolioMobile" } },
+  ...isinOnMobileView,
+  name: "ISIN on Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: HistoryBeforeMetadata.play,
-  args: { scenario: "metadataLate" },
 };
 
 export const NewSearchCancelsMetadata: Story = {
-  args: { scenario: "metadataLate" },
+  ...historyBeforeMetadataView,
+  name: "New Search Cancels Metadata Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));

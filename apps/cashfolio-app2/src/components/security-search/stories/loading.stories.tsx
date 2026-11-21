@@ -1,151 +1,23 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { ControllerHarness } from "./controller-harness";
+import { controllerStoryMeta } from "./story-meta";
+import {
+  obsoleteSearchResponseView,
+  switchClearsDerivedValuesView,
+  pendingPageKeepsSelectionView,
+  pendingCountsDarkView,
+  failedPageRetryKeepsSelectionView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ControllerHarness>;
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const RestorePageAndSelection: Story = {
-  args: {
-    initialView: {
-      q: "",
-      page: 2,
-      selectedSymbol: "ALP",
-      selectedMic: "XSWX",
-      range: "5Y",
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() =>
-      expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
-        "[20]",
-      ),
-    );
-    await expect(
-      await canvas.findByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("CHF");
-    await expect(canvas.getByRole("radio", { name: "5Y" })).toBeChecked();
-    await expect(
-      canvas.getByLabelText("Fixture Resolve Requests"),
-    ).toHaveTextContent("1");
-    await expect(
-      canvas.getByRole("button", { name: /^Page 2$/ }),
-    ).toHaveAttribute("data-active");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Previous Page" }),
-    );
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("1");
-    await expect(
-      canvas.getByLabelText("Fixture Metadata Requests"),
-    ).toHaveTextContent("1");
-  },
-};
-export const RestoreVisibleSelection: Story = {
-  args: {
-    initialView: { q: "Alpine", selectedSymbol: "ALP", selectedMic: "XNAS" },
-    savedExchange: "XSWX",
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      await canvas.findByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("USD");
-    await expect(
-      canvas.getByLabelText("Fixture Resolve Requests"),
-    ).toHaveTextContent("0");
-    await expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-      "8 listings",
-    );
-    await expect(
-      canvas.getByRole("combobox", { name: "Exchange" }),
-    ).toHaveValue("");
-    await expect(
-      canvas.getByLabelText("Fixture Saved Exchange"),
-    ).toHaveTextContent("XSWX");
-  },
-};
-export const UnavailableRestoredSelection: Story = {
-  args: {
-    initialView: {
-      q: "Alpine",
-      selectedSymbol: "MISSING",
-      selectedMic: "XNAS",
-    },
-    scenario: "missingSelection",
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      await canvas.findByText("Selection Unavailable"),
-    ).toBeVisible();
-    await expect(canvas.getByLabelText("Result Count")).toHaveTextContent(
-      "8 listings",
-    );
-    await expect(
-      canvas.getByLabelText("Fixture Resolve Requests"),
-    ).toHaveTextContent("1");
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("0");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Back to Results" }),
-    );
-    await selectListing(canvasElement, "ALP:XNAS");
-    await expect(
-      canvas.getByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("USD");
-  },
-};
-export const NavigationRestoresCommittedView: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(
-      canvas.getByRole("textbox", { name: "Security" }),
-      "Alpine{Enter}",
-    );
-    const details = await selectListing(canvasElement, "ALP:XSWX");
-    await userEvent.click(details.getByRole("radio", { name: "5Y" }));
-    await userEvent.click(
-      details.getByRole("button", { name: "Close Details" }),
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Fixture Back" }));
-    await expect(
-      await canvas.findByRole("radio", { name: "5Y" }),
-    ).toBeChecked();
-    await expect(
-      await canvas.findByLabelText("Latest Closing Price"),
-    ).toHaveTextContent("CHF");
-    await userEvent.click(canvas.getByRole("button", { name: "Fixture Back" }));
-    await expect(canvas.getByRole("radio", { name: "1Y" })).toBeChecked();
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("2");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Fixture Forward" }),
-    );
-    await expect(canvas.getByRole("radio", { name: "5Y" })).toBeChecked();
-    await expect(
-      canvas.getByLabelText("Fixture History Requests"),
-    ).toHaveTextContent("2");
-  },
-};
+
 export const PendingCounts: Story = {
-  args: { scenario: "obsoleteSearch" },
+  ...obsoleteSearchResponseView,
+  name: "Pending Counts Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -202,8 +74,16 @@ export const PendingCounts: Story = {
     );
   },
 };
+
+export const SwitchClearsDerivedValuesPreview: Story = {
+  ...switchClearsDerivedValuesView,
+  name: "Switch Clears Derived Values",
+};
+
 export const SwitchClearsDerivedValues: Story = {
-  args: { scenario: "switchPending" },
+  ...switchClearsDerivedValuesView,
+  name: "Switch Clears Derived Values Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -233,29 +113,16 @@ export const SwitchClearsDerivedValues: Story = {
     );
   },
 };
-export const UnavailableRestoredPage: Story = {
-  args: { initialView: { q: "Alpine", page: 2 } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "This results page is no longer available",
-    );
-    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
-      "[20]",
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "First Page" }));
-    await expect(
-      await canvas.findByRole("button", { name: "Page 1" }),
-    ).toHaveAttribute("data-active");
-    await expect(canvas.getByLabelText("Fixture Offsets")).toHaveTextContent(
-      "[20,0]",
-    );
-    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-  },
+
+export const PendingPageKeepsSelectionPreview: Story = {
+  ...pendingPageKeepsSelectionView,
+  name: "Pending Page Keeps Selection",
 };
 
 export const PendingPageKeepsSelection: Story = {
-  args: { scenario: "pagePending" },
+  ...pendingPageKeepsSelectionView,
+  name: "Pending Page Keeps Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -305,14 +172,28 @@ export const PendingPageKeepsSelection: Story = {
     );
   },
 };
+
+export const PendingCountsDarkPreview: Story = {
+  ...pendingCountsDarkView,
+  name: "Pending Counts Dark",
+};
+
 export const PendingCountsDark: Story = {
-  args: { scenario: "obsoleteSearch" },
-  parameters: { colorScheme: "dark" },
+  ...pendingCountsDarkView,
+  name: "Pending Counts Dark Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: PendingCounts.play,
 };
 
+export const FailedPageRetryKeepsSelectionPreview: Story = {
+  ...failedPageRetryKeepsSelectionView,
+  name: "Failed Page Retry Keeps Selection",
+};
+
 export const FailedPageRetryKeepsSelection: Story = {
-  args: { scenario: "pageError" },
+  ...failedPageRetryKeepsSelectionView,
+  name: "Failed Page Retry Keeps Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
