@@ -79,7 +79,7 @@ const preview: Preview & {
       // Storybook evaluates this function's source as JavaScript during indexing.
       storySort: (a, b) => {
         const roots = ["Start Here", "Components", "Screens"];
-        const priority = ["Overview", "Default", "Create", "Edit"];
+        const priority = ["Docs", "Overview", "Default", "Create", "Edit"];
         const left = [...a.title.split("/"), a.name];
         const right = [...b.title.split("/"), b.name];
         for (

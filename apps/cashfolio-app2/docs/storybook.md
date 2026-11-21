@@ -12,8 +12,11 @@ Use explicit, readable Title Case titles without implementation suffixes such as
 `PageView`. Group stories by their owning responsibility or screen, then by
 concern. For example, use `Components/Controls/Currency Select`,
 `Screens/Ledger/Account Switcher`, and `Screens/Accounts/Organize/Navigation`.
-Overview, Default, Create, and Edit sort first; remaining entries sort
-alphabetically. Preserve existing exported story names when reorganizing.
+Docs, Overview, Default, Create, and Edit sort first, in that order; remaining
+entries sort alphabetically. When available, Docs is the component's default
+landing entry. Components without Docs retain their existing ordering, and
+direct story links still open the requested story. Preserve existing exported
+story names when reorganizing.
 
 Each component should have a representative default and applicable states such
 as empty, loading, disabled, pending, and error. Prefer directly inspectable
