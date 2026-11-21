@@ -329,9 +329,9 @@ export const CommittedCreationRefreshRecovery: Story = {
           canvas.getByRole("button", { name: "New Asset Class" }),
         ).toBeEnabled(),
       );
-      await expect(
-        await canvas.findByText("New Class", { exact: true }),
-      ).toBeVisible();
+      await waitFor(() =>
+        expect(canvas.getByText("New Class", { exact: true })).toBeVisible(),
+      );
       await expect(api.save).toHaveBeenCalledTimes(1);
     } finally {
       api.load = load;

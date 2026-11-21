@@ -1,6 +1,7 @@
 import { Center, SegmentedControl } from "@mantine/core";
 import { IconChartBar, IconChartDonut, IconTable } from "@tabler/icons-react";
 import type { ReactNode } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type {
   AllocationChartType,
   BreakdownChartType,
@@ -43,11 +44,13 @@ export function ChartTypeSegmentedControl<TValue extends string>({
   options,
   onChange,
 }: ChartTypeSegmentedControlProps<TValue>) {
+  const isHydrated = useHydrated();
   const allowedValues = new Set<string>(options.map((option) => option.value));
 
   return (
     <SegmentedControl
       size="sm"
+      disabled={!isHydrated}
       aria-label={ariaLabel}
       value={value}
       onChange={(nextValue) => {

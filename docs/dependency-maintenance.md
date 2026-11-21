@@ -1,8 +1,8 @@
 # Dependency maintenance
 
-The October 2026 refresh updates stable releases within the existing major
-versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-now use 26 following the runtime migration; pnpm stays on stable 12.16.1.
+The November 21, 2026 refresh updates eligible stable patches and minors within
+the existing major versions. Node runtime and typings remain on 26, Prisma on 7,
+and the native TypeScript 7 / TypeScript 6 compiler-API aliases are retained.
 Package families such as Mantine, React, Prisma, Storybook, AG Grid, AG Charts,
 and Vitest must be updated together.
 
@@ -10,27 +10,30 @@ The refreshed manifest versions are:
 
 | Package family                           | Version                   |
 | ---------------------------------------- | ------------------------- |
-| Mantine                                  | 9.7.1                     |
-| React / React DOM / their typings        | 19.3.0                    |
-| TanStack Router / Start                  | 1.170.41 / 1.168.60       |
-| Prisma CLI / client / PostgreSQL adapter | 7.10.0                    |
-| Vite                                     | 8.3.4                     |
-| Storybook                                | 10.6.2                    |
-| Playwright                               | 1.64.0                    |
-| AG Grid / AG Charts                      | 36.2.0 / 14.2.0           |
-| Vitest / coverage / browser              | 5.0.5                     |
+| Mantine                                  | 9.7.2                     |
+| React / React DOM / their typings        | 19.3.1 / 19.3.1 / 19.3.0  |
+| TanStack Router / Start                  | 1.170.46 / 1.169.7        |
+| Prisma CLI / client / PostgreSQL adapter | 7.10.1                    |
+| Vite                                     | 8.3.8                     |
+| Storybook                                | 10.6.8                    |
+| Playwright                               | 1.65.1                    |
+| AG Grid / AG Charts                      | 36.3.0 / 14.3.0           |
+| Vitest / coverage / browser              | 5.1.1                     |
 | TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2             |
-| MSW                                      | 3.0.3                     |
-| Logto / Chromatic / dotenv               | 4.0.0 / 18.13.3 / 18.0.6  |
-| ESLint / typescript-eslint / utils       | 10.13.0 / 8.72.1 / 8.72.1 |
-| Tabler React icons                       | 3.50.0                    |
-| Redis / PostgreSQL driver                | 6.3.0 / 8.23.1            |
-| Node runtime / typings                   | 26.13.0 / 26.6.5          |
-| pnpm / Prettier                          | 12.16.1 / 3.9.9           |
+| MSW                                      | 3.0.7                     |
+| Logto / Chromatic / dotenv               | 4.0.2 / 18.15.1 / 18.0.10 |
+| ESLint / typescript-eslint / utils       | 10.15.0 / 8.72.2 / 8.72.2 |
+| Tabler React icons                       | 3.52.0                    |
+| Redis / PostgreSQL driver                | 6.3.1 / 8.23.1            |
+| Node runtime / typings                   | 26.13.1 / 26.6.6          |
+| pnpm / Prettier                          | 12.22.0 / 3.10.1          |
+| Commander / Papa Parse                   | 15.1.0 / 5.7.1            |
+| temporal-polyfill / PostCSS / globals    | 1.0.8 / 8.5.33 / 17.14.0  |
 
-Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.2 with the
-Playwright browser provider 5.0.5. Vitest, coverage, and browser packages are
-upgraded together to stable 5.0.5 alongside MSW 3.0.3. See the app's
+Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.8 with the
+Playwright browser provider 5.1.1. Vitest, coverage, and browser packages are
+upgraded together to stable 5.1.1 alongside MSW 3.0.7. Nitro remains pinned at
+`3.0.260429-beta`, with its scoped H3 override unchanged. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -44,24 +47,19 @@ Remove an override only after confirming the lockfile resolves patched versions
 and the relevant checks pass. Preserve the release-age policy; existing
 exceptions for the project's releaser package should name its current pin.
 
-Prisma 7.10 still requests `deepmerge-ts@7.1.5`, so a scoped
-`@prisma/config>deepmerge-ts` override selects the patched `8.0.2` release.
-Prisma uses the public `deepmerge` export to load plain configuration objects.
-The version 8 changes to Map merging and renamed custom-merge types do not
-affect this configuration shape. Configuration loading, client generation,
-schema validation, and migration SQL generation must remain covered when
-revisiting this override. Remove it when Prisma resolves a patched release
-without the override. See the
-[version 8 release notes](https://github.com/RebeccaStevens/deepmerge-ts/releases/tag/v8.0.0)
-and
+Prisma 7.10.1 requests patched `deepmerge-ts@8.0.2` directly, so the scoped
+`@prisma/config>deepmerge-ts` override is removed. Both workspace and
+independent Docker migration-tool resolutions retain 8.0.2 without the override.
+Prisma configuration loading, client generation, schema validation, and offline
+migration SQL generation pass with this upstream dependency. See the
 [recursive merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx).
 
-Prisma CLI, client, and PostgreSQL adapter remain on 7.10.0. As checked on
-2026-11-21, the available stable Prisma 7 update, 7.10.1, still requests
-`effect@3.20.0` through `@prisma/config`, so it does not fix
+Prisma CLI, client, and PostgreSQL adapter use 7.10.1. As checked on 2026-11-21,
+this stable Prisma 7 release still requests `effect@3.20.0` through
+`@prisma/config`, so it does not fix
 [GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw). The
 advisory affects Effect versions through 3.22.0 and is patched in 3.22.1. A
-scoped `@prisma/config>effect` override selects 3.22.4, keeping Effect on major
+scoped `@prisma/config>effect` override selects 3.22.5, keeping Effect on major
 version 3 without adding an application dependency or a global override. Prisma
 configuration parsing uses Effect's public `Schema`, `Either`, and
 `effect/Function` APIs; configuration loading, client generation, schema
@@ -71,16 +69,96 @@ patched Effect without it. Docker's separate migration-tools stage copies the
 workspace override policy, so the same fix applies to its independent install.
 The release-age policy and build-script approvals remain unchanged.
 
-Local verification on Node 26.13.0 / pnpm 12.16.1 passed frozen-lockfile
-installation, Prisma version/configuration loading, client generation without
-`DATABASE_URL`, schema validation with a dummy PostgreSQL URL, offline migration
-SQL generation from the schema, and the app typecheck. No database connection or
-schema change was required. Production builds, coverage, database integration,
-E2E, and Storybook verification remain assigned to CI.
+## November 21 stable refresh
+
+Registry publication timestamps were checked against the unchanged 1440-minute
+release-age policy at 2026-11-21 21:23 UTC. All selected stable releases meet
+that threshold. Among the newest selections, Storybook 10.6.8 was published on
+November 20 around 08:14–08:22 UTC, and baseline-browser-mapping 2.11.39 on
+November 19 at 22:04 UTC. pnpm 12.22.0 was published on November 17 at 20:01
+UTC. Resolution and frozen installation pass pnpm's supply-chain policy checks.
+No release-age exceptions, build approvals, agent-skill approvals, or
+experimental installation settings were added.
+
+typescript-eslint and its directly pinned utils package update together to
+8.72.2, published on November 9. Version 8.73.0 is deferred because its parser
+requires the native compiler peer
+`>=7.1.0-dev.20261009.1 || >=7.1.0-beta <7.1.0-dev`, which excludes the retained
+stable TypeScript 7.0.2 alias. The selected lockfile has no peer dependency
+issues. TanStack Start 1.169.7 requests Router 1.170.46, matching the direct
+Router update; its optional Rsbuild peer is not installed.
+
+Mantine's initially eligible 9.8.2 update is deferred after browser verification
+found that normal Tab navigation could no longer enter the Other Allocation grid
+inside its modal. Controlled runs with the other refreshed dependencies retained
+reproduce the failure on Mantine 9.7.3, 9.7.5, and 9.8.2, while 9.7.1 and 9.7.2
+pass the original Tab/arrow-key assertions. All seven direct Mantine packages
+and the transitive store use 9.7.2, published on October 11. No private Grid
+module imports, broader module bundles, focus-trap overrides, or weakened
+keyboard assertions are introduced. Revisit the newer Mantine versions after
+this modal/grid focus regression is resolved.
+
+Exact declarations and caret ranges retain their existing styles. Node 26.13.1
+is aligned between the managed runtime and Docker; Node engines and CI remain on
+major 26. pnpm's integrity-qualified package-manager declaration, engine,
+platform lock entries, and Docker pin agree on 12.22.0. Docker's migration tools
+use Prisma 7.10.1 and dotenv 18.0.10 with the same workspace override policy.
+Corepack remains 0.36.0. macOS and Linux native compiler entries remain present.
+Redis server and PostgreSQL image tags are unchanged.
+
+Existing security override targets receive eligible same-major updates while
+their selectors retain their scope. These include Babel 7.29.13, Effect 3.22.5,
+Hono 4.13.19, Hono Node server 1.19.19, glob 14.0.6, minimatch 11.0.9, Rollup
+4.68.7, Seroval 1.8.2, ws 8.23.0, tar 7.5.23, undici 7.30.2, Vite 8.3.8,
+brace-expansion 5.0.13, browserslist 4.29.6, baseline-browser-mapping 2.11.39,
+and mysql2 3.24.6.
+
+Local verification on managed Node 26.13.1 / pnpm 12.22.0 passed workspace and
+filtered-app frozen installations, native TypeScript 7.0.2 version checks in all
+three packages, TypeScript 6 API imports in app and CLI, all three typechecks,
+app lint and runtime-cycle checks, CLI startup help, formatting of the edited
+manifests/policy/notes, and `git diff --check`. The generated lockfile retains
+pnpm's serialization. Prisma configuration loading, client generation without
+`DATABASE_URL`, schema validation with a dummy PostgreSQL URL, and offline
+migration SQL generation also passed without a database connection or schema
+change. All 7 contracts tests, all 16 CLI tests, and 579 focused app tests
+across 41 files passed. App coverage included authentication and MSW
+interception, grid behavior, chart options, CSV parsing, Temporal date/reporting
+logic, and custom ESLint rules.
+
+After rebasing onto main's Securities search feature, Prisma generation, app
+typecheck, lint, and runtime-cycle checks passed again. The expanded focused
+run, including Securities search regressions, passed all 696 tests across 55
+files.
+
+The subsequent self-review rebases onto main's Securities mobile viewport fix
+and addresses additional browser failures. Report grouping and chart-type
+selectors use the existing `useHydrated` guard so clicks cannot be lost before
+their lazy boundary hydrates; the segmented-control E2E helper waits for the
+radio input itself to be enabled before clicking its label. A delayed-script E2E
+regression checks the disabled SSR state and the first grouping/chart-type
+selection after hydration. Hierarchy stories wait for animated grid rows and
+hover actions to become visible while retaining their existing assertions.
+Storybook failure uploads explicitly include hidden files under `.vitest`,
+preserving screenshots for future CI investigations. App typecheck, scoped
+ESLint, workflow lint, and all 26 focused Storybook tests across four files pass
+with these fixes. The selected family has no peer dependency issues, and the
+workspace audit still reports zero findings. Full browser and database-backed
+verification, including the delayed-script E2E regression, remains assigned to
+final-revision CI.
+
+The workspace audit reports zero findings before and after the refresh. A
+separate lockfile-only resolution and audit of Docker's Prisma 7.10.1 / dotenv
+18.0.10 migration payload also reports zero findings and resolves Effect 3.22.5
+and deepmerge-ts 8.0.2. This verifies its independent dependency graph rather
+than a Docker build. Production/Docker builds, full coverage, database-backed
+integration, E2E, browser Temporal checks, and full Storybook verification
+remain assigned to final-revision CI; no CI results are claimed for this local
+refresh.
 
 ## Remaining audit findings
 
-As of 2026-11-21, the workspace audit before the scoped Effect update reported
+Historical verification on 2026-11-21 before the scoped Effect update reported
 one high finding, GHSA-7589-6fvf-x4pw, through
 `prisma@7.10.0 > @prisma/config@7.10.0 > effect@3.20.0`. After the update,
 `pnpm audit --json` reports zero findings across all severities. A separate
@@ -107,7 +185,7 @@ These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because
 advisories and published fixes can change.
 
-## Refresh verification
+## October refresh verification
 
 Prisma generation, app typecheck/lint/format, all 994 unit tests, the coverage
 ratchet, production build, Storybook build and all 89 interaction tests, and all

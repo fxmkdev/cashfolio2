@@ -81,15 +81,17 @@ export const OrganizeCompactLayoutAndIcons: Story = {
       canvas.queryByRole("button", { name: "Undo" }),
     ).not.toBeInTheDocument();
     await userEvent.hover(row);
-    await expect(
-      canvas.getByRole("button", { name: "Move Checking" }),
-    ).toBeVisible();
-    await expect(
-      canvas.getByRole("button", { name: "Archive Checking" }),
-    ).toBeVisible();
-    await expect(
-      canvas.getByRole("button", { name: "Delete Checking" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(
+        canvas.getByRole("button", { name: "Move Checking" }),
+      ).toBeVisible();
+      expect(
+        canvas.getByRole("button", { name: "Archive Checking" }),
+      ).toBeVisible();
+      expect(
+        canvas.getByRole("button", { name: "Delete Checking" }),
+      ).toBeVisible();
+    });
     await expect(
       canvas.queryByText("Move To…", { exact: true }),
     ).not.toBeInTheDocument();

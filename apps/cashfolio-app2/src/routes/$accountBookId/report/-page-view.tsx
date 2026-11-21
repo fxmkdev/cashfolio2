@@ -23,6 +23,7 @@ import {
   getCurrencyDecimals,
 } from "@/shared/units/unit-format";
 import { useUserLocale } from "@/user-locale-context";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { PeriodAllocationBreakdownCard } from "./-breakdown/-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown/-breakdown-card";
@@ -68,6 +69,7 @@ export function ReportPageView({
   onBreakdownAccountDoubleClick,
   onGainLossUnitAccountDoubleClick,
 }: ReportPageViewProps) {
+  const isHydrated = useHydrated();
   const userLocale = useUserLocale();
   const {
     selectedGrouping,
@@ -226,6 +228,7 @@ export function ReportPageView({
           >
             <Select
               label="Group Accounts By"
+              disabled={!isHydrated}
               w={{ base: "100%", sm: "13rem" }}
               data={reportingGroupingOptions}
               value={selectedGrouping}
