@@ -255,19 +255,30 @@ provider tests verify responses, interception, initialization, and cleanup.
 ### Deployment Build Smoke Test
 
 Docker runs `test:build-boundary` immediately after the normal build. This small
-test copies `.output` outside the workspace, checks that server chunks bundle
-the shared book-cache contracts, and starts the standalone server with
-`APP_ENVIRONMENT=e2e`. It requires a nonzero exit with the expected
-startup-guard error. Startup has a ten-second timeout and needs no database or
-browser. For a local investigation:
+test copies `.output` outside the workspace, checks bundled book-cache contracts
+and exclusion of synthetic authentication/provider mocks and MSW assets, rejects
+`APP_ENVIRONMENT=e2e` before listening, and verifies normal startup and public
+asset serving. It needs no database or browser. For a local investigation:
 
 ```bash
 pnpm --filter cashfolio-app2 build
 pnpm --filter cashfolio-app2 test:build-boundary
 ```
 
-Focused unit tests cover normal authentication, mock-key exclusion, and startup
-validation. The existing E2E suite verifies the correctly configured E2E build.
+Playwright runs `test:e2e-build-boundary` against its existing E2E build before
+starting the test server. It checks the isolated artifact's traced interceptor
+WASM, unsafe environment/host/base-URL rejection, and valid startup outside the
+workspace. The full E2E suite continues to exercise valuation provider mocks.
+
+The `Standalone authentication` CI job builds the normal artifact once and runs
+both `test:build-boundary` and `test:artifact-auth` against it. The latter
+requires `ARTIFACT_AUTH_DATABASE_URL` pointing to an explicitly disposable,
+migrated, loopback PostgreSQL database. Its real HTTP OIDC fixture exercises
+sign-in, sign-up, callback session rotation, sign-out and copied-cookie
+rejection over HTTP, including redirect locations, separate secure cookies and
+`no-store`. It also checks anonymous routing with an ignored synthetic identity
+cookie, invalid callbacks and GET sign-out rejection. No real provider
+credentials or E2E runtime capabilities are used.
 
 ### Database Lifecycle
 

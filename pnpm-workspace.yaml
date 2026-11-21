@@ -29,7 +29,6 @@ overrides:
   hono: "4.13.19"
   minimatch: "11.0.9"
   "minimatch@9.0.5": "9.0.9"
-  "nitro>h3": "2.0.1-rc.20"
   "rollup@4.54.0": "4.68.7"
   seroval: "1.8.2"
   "storybook>ws": "8.23.0"
