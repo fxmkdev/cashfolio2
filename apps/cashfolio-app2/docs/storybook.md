@@ -18,6 +18,12 @@ landing entry. Components without Docs retain their existing ordering, and
 direct story links still open the requested story. Preserve existing exported
 story names when reorganizing.
 
+Large story collections may use several colocated story files with the same
+explicit sidebar title. Keep exported story names unique within that title so
+IDs and direct links stay stable. Share metadata, fixtures, and viewing
+configuration through named story-support modules rather than importing another
+story file; keep each scenario's helpers beside its consuming stories.
+
 Each component should have a representative default and applicable states such
 as empty, loading, disabled, pending, and error. Prefer directly inspectable
 states over requiring a long workflow to reach them. Use existing fixtures and
