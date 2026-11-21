@@ -56,13 +56,44 @@ without the override. See the
 and
 [recursive merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx).
 
+Prisma CLI, client, and PostgreSQL adapter remain on 7.10.0. As checked on
+2026-11-21, the available stable Prisma 7 update, 7.10.1, still requests
+`effect@3.20.0` through `@prisma/config`, so it does not fix
+[GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw). The
+advisory affects Effect versions through 3.22.0 and is patched in 3.22.1. A
+scoped `@prisma/config>effect` override selects 3.22.4, keeping Effect on major
+version 3 without adding an application dependency or a global override. Prisma
+configuration parsing uses Effect's public `Schema`, `Either`, and
+`effect/Function` APIs; configuration loading, client generation, schema
+validation, and offline migration SQL generation must remain covered when
+revisiting this override. Remove it once a compatible Prisma 7 update resolves
+patched Effect without it. Docker's separate migration-tools stage copies the
+workspace override policy, so the same fix applies to its independent install.
+The release-age policy and build-script approvals remain unchanged.
+
+Local verification on Node 26.13.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma version/configuration loading, client generation without
+`DATABASE_URL`, schema validation with a dummy PostgreSQL URL, offline migration
+SQL generation from the schema, and the app typecheck. No database connection or
+schema change was required. Production builds, coverage, database integration,
+E2E, and Storybook verification remain assigned to CI.
+
 ## Remaining audit findings
 
-As of 2026-10-31, after the Storybook, Zod, and fast-uri security updates,
-`pnpm audit` reports four moderate findings: two in Seroval, one in minimatch,
-and one in glob. There are no high, critical, or low findings. Those remaining
-packages are outside the focused Zod/fast-uri update; this is not a clean audit
-or an assessment of production exploitability.
+As of 2026-11-21, the workspace audit before the scoped Effect update reported
+one high finding, GHSA-7589-6fvf-x4pw, through
+`prisma@7.10.0 > @prisma/config@7.10.0 > effect@3.20.0`. After the update,
+`pnpm audit --json` reports zero findings across all severities. A separate
+lockfile-only resolution and audit of the Docker migration-tool dependencies
+(`prisma@7.10.0` and `dotenv@18.0.6`) with the copied workspace policy and pnpm
+12.16.1 also reports zero findings and resolves Effect 3.22.4. This checks the
+independent dependency graph; it is not a Docker build or database test.
+
+Historical verification on 2026-10-31, after the Storybook, Zod, and fast-uri
+security updates, reported four moderate findings: two in Seroval, one in
+minimatch, and one in glob. There were no high, critical, or low findings. Those
+packages were outside the focused Zod/fast-uri update; those counts describe the
+dependency graph at that time.
 
 Historical verification on 2026-10-10 reported no findings after the scoped
 Prisma override and removal of the Storybook runner. Runner removal eliminated

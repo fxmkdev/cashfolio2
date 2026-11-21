@@ -165,6 +165,7 @@ settings:
 overrides:
   '@babel/core': 7.29.7
   '@prisma/config>deepmerge-ts': 8.0.2
+  '@prisma/config>effect': 3.22.4
   '@prisma/dev>@hono/node-server': 1.19.17
   '@prisma/dev>hono': 4.13.13
   ajv>fast-uri: 3.1.9
@@ -2650,8 +2651,8 @@ packages:
     engines: {node: '>=12'}
     hasBin: true
 
-  effect@3.20.0:
-    resolution: {integrity: sha512-qMLfDJscrNG8p/aw+IkT9W7fgj50Z4wG5bLBy0Txsxz8iUHjDIkOgO3SV0WZfnQbNG2VJYb0b+rDLMrhM4+Krw==}
+  effect@3.22.4:
+    resolution: {integrity: sha512-RNshu7AXVxxDh6aS4lothhJ+QoZ4xSykbWNaaVdvDN72RMyVwhCGdALkyl1TbEydgAmRIdD1eTyJqBUGwSBGDA==}
 
   electron-to-chromium@1.5.451:
     resolution: {integrity: sha512-vUNKPrUzw8ByEMOxloq0a71iD/mPuPxVkbDm3G5YhnxTzOw/I6qAg2MUS0cYj/c267lWmw26yW4Vv7foxTxPLg==}
@@ -5130,7 +5131,7 @@ snapshots:
     dependencies:
       c12: 3.3.4(magicast@0.5.5)
       deepmerge-ts: 8.0.2
-      effect: 3.20.0
+      effect: 3.22.4
       empathic: 2.0.0
     transitivePeerDependencies:
       - magicast
@@ -6528,7 +6529,7 @@ snapshots:
 
   dotenv@18.0.6: {}
 
-  effect@3.20.0:
+  effect@3.22.4:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
