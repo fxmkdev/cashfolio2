@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useArgs } from "storybook/preview-api";
 import { StoryValue } from "../testing/story-value";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { USER_LOCALE_OPTIONS } from "@/user-locale";
 import { FormattedNumberInput } from "./formatted-number-input";
 
 const meta = {
@@ -22,7 +23,17 @@ const meta = {
     disabled: { control: "boolean" },
     readOnly: { control: "boolean" },
     locale: {
-      control: "text",
+      options: ["toolbar", ...USER_LOCALE_OPTIONS.map(({ value }) => value)],
+      mapping: { toolbar: undefined },
+      control: {
+        type: "select",
+        labels: {
+          toolbar: "Toolbar Locale",
+          ...Object.fromEntries(
+            USER_LOCALE_OPTIONS.map(({ value, label }) => [value, label]),
+          ),
+        },
+      },
       description:
         "Optional override of the user locale selected in the toolbar.",
     },
@@ -31,6 +42,7 @@ const meta = {
     label: "Amount",
     name: "amount",
     value: "1234.56",
+    locale: "toolbar",
     hideControls: true,
     onChange: fn(),
   },

@@ -73,7 +73,9 @@ Input playgrounds use `useArgs` so typing and Controls edit the same value. Keep
 React input state in the shared `StoryValue` wrapper, separate from Storybook
 hooks, so portable browser tests also rerender after selection. Callbacks remain
 observable with `fn()`. Complex JSX and fixture objects should not be exposed as
-editable Controls.
+editable Controls. Locale Controls should offer the supported locales and a
+toolbar-default option instead of free text that can produce invalid locale
+tags.
 
 ## Docs
 

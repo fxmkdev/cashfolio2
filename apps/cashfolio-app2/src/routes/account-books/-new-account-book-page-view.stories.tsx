@@ -71,6 +71,12 @@ const meta = {
   title: "Screens/Account Books/New Account Book",
   component: NewAccountBookStory,
   parameters: {
+    docs: {
+      description: {
+        component:
+          "This harness fixes date-entry formatting to en-US for repeatable submission checks, overriding the Locale toolbar for the Start Date field.",
+      },
+    },
     layout: "fullscreen",
     controls: { disable: true },
     router: { initialPath: "/account-books/new" },
@@ -175,6 +181,10 @@ export const Submit: Story = {
 };
 
 export const PendingView: Story = {
+  parameters: {
+    manualSetup:
+      "Enter an account book name, then choose Create. The submission stays pending until the story remounts.",
+  },
   args: {
     onSubmit: fn<(values: NewAccountBookSubmission) => Promise<void>>(
       () => new Promise<void>(() => undefined),
