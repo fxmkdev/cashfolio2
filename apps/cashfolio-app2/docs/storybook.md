@@ -165,3 +165,10 @@ and test still share the pinned 390 × 844 viewport through `globals.viewport`.
 Controller/history and navigation/loading scenarios use separate story modules,
 sharing metadata and viewing configurations. Moving exports between these
 modules does not change story IDs, display names, tags, or test eligibility.
+
+The controller harness composes story-only service factories for preferences,
+discovery, and selection. Its fixture hook owns request counters and pending
+response releases; fixture controls expose the same navigation buttons and
+hidden diagnostics to interaction tests. Keep service instances and their
+scenario counters isolated per mounted harness, including the shared pending
+gate for metadata/history switching.
