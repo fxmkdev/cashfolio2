@@ -1,7 +1,15 @@
+import { prisma } from "@/prisma.server";
+import { ensureSameOriginRequestFromServerContext } from "@/security/same-origin.server";
+import { restoreSecurity } from "./securities/restore.server";
 import { createServerFn } from "@tanstack/react-start";
 import { ensureUser } from "../users/functions.server";
 import { startReadBudget } from "./resource-context.server";
-import { readQuery, readSelection } from "./securities/input";
+import {
+  readQuery,
+  readSelection,
+  readIdentity,
+  readExchangePreference,
+} from "./securities/input";
 import {
   searchListings,
   exchangeDirectory,
@@ -35,4 +43,30 @@ export const getSecurityMetadata = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureUser();
     return securityMetadata(data);
+  });
+
+export const resolveSecuritySelection = createServerFn({ method: "GET" })
+  .validator(readIdentity)
+  .handler(async ({ data }) => {
+    await ensureUser();
+    startReadBudget();
+    return restoreSecurity(data);
+  });
+
+export const getSecuritiesPreference = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const user = await ensureUser();
+  return readExchangePreference({ exchange: user.securitiesExchangeMic });
+});
+export const updateSecuritiesPreference = createServerFn({ method: "POST" })
+  .validator(readExchangePreference)
+  .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
+    const user = await ensureUser();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { securitiesExchangeMic: data.exchange },
+    });
+    return data;
   });

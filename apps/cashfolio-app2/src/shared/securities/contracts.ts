@@ -10,6 +10,7 @@ export type SecurityListing = {
   currency: string | null;
   hasHistory: boolean | null;
 };
+export type SecuritiesPreference = { exchange: string | null };
 export type SecuritySearchCriteria = { query: string; exchange: string | null };
 export type PriceRange = "1M" | "6M" | "1Y" | "5Y";
 export type PricePoint = { date: string; close: number };

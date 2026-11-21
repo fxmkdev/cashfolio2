@@ -3,8 +3,9 @@
 The authenticated **Securities** page at `/$accountBookId/securities` searches
 Marketstack on demand. The account-book parent route authorizes book access;
 every Securities RPC independently requires an active authenticated user.
-Reference data has no user, book or financial-account associations. Discovery
-and **Copy Symbol** do not change account creation or valuation.
+Reference data is shared across users and books; the exchange view preference
+belongs to the authenticated user. Discovery and **Copy Symbol** do not change
+account creation or valuation.
 
 ## Ownership and browsing
 
@@ -15,13 +16,14 @@ and **Copy Symbol** do not change account creation or valuation.
   The private route supplies real services. Shared DataGrid uses server-side
   20-row blocks/pages with informational Name, Symbol, Exchange, Country and
   Historical Prices columns. All sorting and column filters are disabled.
-- Nothing loads listings, metadata or prices on navigation. Search/Enter submits
-  the name/symbol query and optional single exchange MIC. An explicitly
-  submitted empty query browses all listings. Editing draft controls does not
-  fetch.
-- Opening Exchange first loads its directory; typing filters cached choices
-  locally. Labels are Exchange Name (MIC); clearing means All Exchanges.
-  Directory failures offer their own retry and do not block all-exchange search.
+- A bare route loads no listings, metadata or prices. A submitted URL restores
+  only its requested page and selection. Search/Enter submits the name/symbol
+  query and optional single exchange MIC. An explicitly submitted empty query
+  browses all listings. Editing draft controls does not fetch.
+- Opening Exchange first loads its directory; a URL or saved MIC also loads
+  labels on entry. Typing filters cached choices locally. Labels are Exchange
+  Name (MIC); clearing means All Exchanges. Directory failures offer their own
+  retry and do not block all-exchange search.
 - Submission resets pagination and selection. Page changes preserve the selected
   listing. Desktop details scroll independently; below `64em`, details hide the
   mounted grid. Back/close restores focus and browsing state.
@@ -32,6 +34,48 @@ Open **Routes/Securities** in Storybook. Fixtures emulate provider ordering,
 explicit submission, exchange choices and requested pages, plus chart/copy,
 responsive layouts, partial history and cooldowns. They never call Marketstack
 or the backend and make no provider-coverage or currency claims.
+
+## Route state, restoration and preferences
+
+The validated route search owns the committed browsing view: `q`, `exchange`,
+`page`, `selectedSymbol`, `selectedMic` and `range`. Presence of `q` (including
+`q=`) means submitted search; omitted exchange then always means All Exchanges.
+Without `q`, the route is idle. Draft text/exchange edits stay outside the URL.
+Search resets page, selection and range. Selection, pagination, range and close
+push browser history so refresh and Back/Forward reconstruct the same view.
+Range/page changes retaining selection do not repeat history or metadata work.
+The grid's initial pagination state and initial row count request the URL's page
+directly, without fetching page one first. A page outside the returned total
+fails with explicit First Page recovery, rather than automatically fetching a
+clamped page.
+
+URLs contain exact symbol/MIC locators, never expiring selection tokens or
+provider display metadata. A restored selection first uses a freshly signed
+matching row on its loaded page. Otherwise an authenticated, budgeted resolver
+requests at most one cached/provider `tickerslist` page (`search=symbol`,
+optional exchange, limit 20, offset 0). Only an exact symbol/MIC match can issue
+a trusted reference. There are no scans, alternate identities or metadata/price
+requests for other rows. If the listing is absent, results remain usable
+alongside Retry Selection and Back to Results. Refresh can obtain fresh
+references after an earlier token expires.
+
+Nullable `User.securitiesExchangeMic` is a preference shared across that user's
+devices and account books; null means All Exchanges. Authenticated RPCs infer
+ownership, validate the bounded exact MIC and enforce same-origin POST updates.
+Interactive exchange choices/clears save immediately, independently of Search.
+Writes serialize and coalesce intermediate choices so an old completion cannot
+overwrite the latest choice. Save failures remain nonblocking with explicit
+retry. URL restoration never writes the preference. The preference defaults only
+an idle route; submitted URLs override it, including explicit All Exchanges. A
+pending preference uses a skeleton, and directory failures preserve the MIC with
+a MIC label rather than silently changing the selection.
+
+Results, selection resolution, directory, preferences, metadata and history
+register outstanding work with the global loading indicator. Independent
+requests retain their registration until settled or cancelled; unmount releases
+registrations. Initial result counts remain pending until the page completes,
+never displaying a false zero. A resolving identity uses neutral details
+skeletons. Obsolete responses cannot overwrite another selection's values.
 
 ## On-demand provider pages and cache
 
@@ -96,15 +140,17 @@ revalidate both identity and the nullable ISIN. Cache corruption or Redis outage
 retains bounded provider fallback; provider/identity/format failures are not
 cached as successful missing metadata.
 
-ISIN state is separate from listing/history state. Unknown is shown while
-metadata loads or fails, without blocking details, Copy Symbol or price history.
-Switching listings, closing details, submitting a new search or unmounting
-aborts metadata work; obsolete responses are ignored. Pagination, range changes,
-Copy Symbol and history retries do not fetch metadata again. Metadata uses the
-existing shared user-scoped work, read budget, server-only credentials and
-bounded transport retries. Each actual attempt is logged with
-`SECURITY_METADATA` (or `RATE_LIMIT_RETRY`); valid missing ISINs are `NO_DATA`
-and invalid provider metadata is `PROVIDER_ERROR`.
+ISIN state is separate from the base listing and history enrichment. A pending
+ISIN, quote currency, security type or chart uses a Mantine skeleton; Unknown
+means its request has settled without a trustworthy value. Selection changes
+clear derived values immediately. Metadata failure does not block details, Copy
+Symbol or price history. Switching listings, closing details, submitting a new
+search or unmounting aborts metadata work; obsolete responses are ignored.
+Pagination, range changes, Copy Symbol and history retries do not fetch metadata
+again. Metadata uses the existing shared user-scoped work, read budget,
+server-only credentials and bounded transport retries. Each actual attempt is
+logged with `SECURITY_METADATA` (or `RATE_LIMIT_RETRY`); valid missing ISINs are
+`NO_DATA` and invalid provider metadata is `PROVIDER_ERROR`.
 
 ## Selected-listing history
 
@@ -178,18 +224,20 @@ The existing catalogue migration, Prisma models/tables, data and legacy
 Securities path reads them. Do not reset databases, rewrite applied migrations,
 or run destructive cleanup. A new additive migration adds `SECURITY_SEARCH` and
 `SECURITY_EXCHANGES` usage reasons; a later additive migration introduces
-`SECURITY_METADATA`. Normal Prisma deployment applies both.
+`SECURITY_METADATA`. Normal Prisma deployment applies these and the additive
+nullable user preference column; existing users default to All Exchanges.
 
 ## Verification and cost
 
 Focused tests cover authentication, query/provider validation, exact requested
-pages/order, cache hits/TTLs/corruption, signed identity/expiry, history parsing
-and cooldowns. Mocked E2E uses build-gated ticker/exchange/history responses,
-includes selected ticker metadata, requires no catalogue seed, and blocks
-unhandled provider traffic. Full suites, coverage, builds and mocked E2E runs
-remain CI checks. Playwright supplies an ephemeral `SESSION_SECRET` to its test
-server so signed listing references work even though E2E authentication itself
-is bypassed.
+pages/order, cache hits/TTLs/corruption, signed identity/expiry, bounded URL
+restoration, user-owned preference updates and asynchronous display races,
+history parsing and cooldowns. Mocked E2E uses build-gated
+ticker/exchange/history responses, includes selected ticker metadata, requires
+no catalogue seed, and blocks unhandled provider traffic. Full suites, coverage,
+builds and mocked E2E runs remain CI checks. Playwright supplies an ephemeral
+`SESSION_SECRET` to its test server so signed listing references work even
+though E2E authentication itself is bypassed.
 
 Make **no live Marketstack calls** during implementation or verification and
 trigger no refreshes. Verification uses fixtures/mocks only. Overage is **USD

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Temporal } from "@/shared/temporal";
+import { NavigationProgress } from "@mantine/nprogress";
+import type { SecuritiesRouteSearch } from "@/shared/securities/route-search";
 import { Button } from "@mantine/core";
 import {
   useSecuritiesController,
@@ -16,7 +18,11 @@ import {
 
 export function ControllerHarness({
   scenario = "normal",
+  initialView = {},
+  savedExchange = null,
 }: {
+  initialView?: SecuritiesRouteSearch;
+  savedExchange?: string | null;
   scenario?:
     | "normal"
     | "obsolete"
@@ -29,19 +35,64 @@ export function ControllerHarness({
     | "cooldown"
     | "metadataError"
     | "metadataLate"
-    | "metadataFirst";
+    | "metadataFirst"
+    | "preferencePending"
+    | "preferenceLoadError"
+    | "preferenceSaveError"
+    | "preferenceRapid"
+    | "switchPending"
+    | "missingSelection";
 }) {
+  const [entries, setEntries] = useState([initialView]);
+  const [index, setIndex] = useState(0);
+  const [offsets, setOffsets] = useState<number[]>([]);
+  const [resolveRequests, setResolveRequests] = useState(0);
+  const [saved, setSaved] = useState(savedExchange);
   const [searchRequests, setSearchRequests] = useState(0);
   const [exchangeRequests, setExchangeRequests] = useState(0);
   const [metadataRequests, setMetadataRequests] = useState(0);
   const [historyRequests, setHistoryRequests] = useState(0);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const [services] = useState<SecuritiesServices>(() => {
+    let preferenceCalls = 0;
+    let saveCalls = 0;
+    let resolveCalls = 0;
+    let switchGate: Promise<void> | null = null;
+    const waitForSwitch = () =>
+      (switchGate ??= new Promise<void>((resolve) =>
+        setPending(() => resolve),
+      ));
     let exchangeCalls = 0;
     let metadataCalls = 0;
     let historyCalls = 0;
     let pageCalls = 0;
     return {
+      async preference() {
+        preferenceCalls++;
+        if (scenario === "preferencePending" && preferenceCalls === 1)
+          await new Promise<void>((resolve) => setPending(() => resolve));
+        if (scenario === "preferenceLoadError" && preferenceCalls === 1)
+          throw new Error("Read failed");
+        return { exchange: savedExchange };
+      },
+      async savePreference(value) {
+        saveCalls++;
+        if (scenario === "preferenceRapid" && saveCalls === 1)
+          await new Promise<void>((resolve) => setPending(() => resolve));
+        if (scenario === "preferenceSaveError" && saveCalls === 1)
+          throw new Error("Write failed");
+        setSaved(value.exchange);
+        return value;
+      },
+      async resolve(identity) {
+        setResolveRequests(++resolveCalls);
+        return scenario === "missingSelection"
+          ? null
+          : (listings.find(
+              (row) =>
+                row.symbol === identity.symbol && row.mic === identity.mic,
+            ) ?? null);
+      },
       async exchanges() {
         exchangeCalls++;
         setExchangeRequests(exchangeCalls);
@@ -50,6 +101,7 @@ export function ControllerHarness({
         return exchangeOptions;
       },
       async search(query, signal) {
+        setOffsets((values) => [...values, query.offset]);
         pageCalls++;
         setSearchRequests(pageCalls);
         if (scenario === "obsoleteSearch" && pageCalls === 1)
@@ -66,6 +118,8 @@ export function ControllerHarness({
           (row) => row.selectionToken === selectionToken,
         )!;
         setMetadataRequests(++metadataCalls);
+        if (scenario === "switchPending" && metadataCalls === 2)
+          await waitForSwitch();
         if (scenario === "metadataError")
           throw new Error("Metadata unavailable");
         if (scenario === "metadataLate" && metadataCalls === 1)
@@ -78,6 +132,8 @@ export function ControllerHarness({
           (row) => row.selectionToken === selectionToken,
         )!;
         historyCalls++;
+        if (scenario === "switchPending" && historyCalls === 2)
+          await waitForSwitch();
         setHistoryRequests(historyCalls);
         if (scenario === "historyError" && historyCalls === 1)
           throw new Error("Temporary price lookup failure.");
@@ -129,9 +185,40 @@ export function ControllerHarness({
       },
     };
   });
-  const controller = useSecuritiesController(services);
+  const controller = useSecuritiesController(services, {
+    view: entries[index]!,
+    navigate: (next) => {
+      setEntries((values) => [...values.slice(0, index + 1), next]);
+      setIndex(index + 1);
+    },
+  });
   return (
     <>
+      <NavigationProgress
+        withinPortal={false}
+        data-testid="fixture-global-progress"
+      />
+      <Button disabled={index === 0} onClick={() => setIndex(index - 1)}>
+        Fixture Back
+      </Button>
+      <Button
+        disabled={index === entries.length - 1}
+        onClick={() => setIndex(index + 1)}
+      >
+        Fixture Forward
+      </Button>
+      <output aria-label="Fixture URL" hidden>
+        {JSON.stringify(entries[index])}
+      </output>
+      <output aria-label="Fixture Offsets" hidden>
+        {JSON.stringify(offsets)}
+      </output>
+      <output aria-label="Fixture Resolve Requests" hidden>
+        {resolveRequests}
+      </output>
+      <output aria-label="Fixture Saved Exchange" hidden>
+        {saved ?? "All"}
+      </output>
       <output aria-label="Fixture Search Requests" hidden>
         {searchRequests}
       </output>

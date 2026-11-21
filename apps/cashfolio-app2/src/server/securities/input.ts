@@ -1,5 +1,13 @@
+import {
+  isExchangeMic,
+  isSecuritySymbol,
+  type SecurityIdentity,
+} from "../../shared/securities/route-search";
 import { assertRecord } from "../input-validation";
-import type { SecuritiesQuery } from "../../shared/securities/contracts";
+import type {
+  SecuritiesQuery,
+  SecuritiesPreference,
+} from "../../shared/securities/contracts";
 
 export function readQuery(value: unknown): SecuritiesQuery {
   assertRecord(value);
@@ -48,4 +56,24 @@ export function readSelection(value: unknown): { selectionToken: string } {
   )
     throw new Error("Invalid listing reference. Search again.");
   return { selectionToken: value.selectionToken };
+}
+
+export function readIdentity(value: unknown): SecurityIdentity {
+  assertRecord(value);
+  if (
+    Object.keys(value).some((key) => !["symbol", "mic"].includes(key)) ||
+    !isSecuritySymbol(value.symbol) ||
+    !(value.mic === null || isExchangeMic(value.mic))
+  )
+    throw new Error("Invalid security identity. Search again.");
+  return { symbol: value.symbol, mic: value.mic };
+}
+export function readExchangePreference(value: unknown): SecuritiesPreference {
+  assertRecord(value);
+  if (
+    Object.keys(value).some((key) => key !== "exchange") ||
+    !(value.exchange === null || isExchangeMic(value.exchange))
+  )
+    throw new Error("Invalid securities exchange preference.");
+  return { exchange: value.exchange };
 }

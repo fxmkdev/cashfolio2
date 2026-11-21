@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { readQuery, readSelection } from "./input";
+import {
+  readQuery,
+  readSelection,
+  readIdentity,
+  readExchangePreference,
+} from "./input";
 const base = {
   criteria: { query: "  abc  ", exchange: null },
   offset: 0,
@@ -43,4 +48,41 @@ describe("Securities input boundaries", () => {
     ])
       expect(() => readSelection(input)).toThrow();
   });
+});
+
+test("restoration validates exact bounded symbol/MIC and rejects caller metadata", () => {
+  expect(readIdentity({ symbol: " BRK B ", mic: "XNYS" })).toEqual({
+    symbol: " BRK B ",
+    mic: "XNYS",
+  });
+  expect(readIdentity({ symbol: "A", mic: null })).toEqual({
+    symbol: "A",
+    mic: null,
+  });
+  for (const value of [
+    { symbol: "A,B", mic: null },
+    { symbol: "A", mic: "../X" },
+    { symbol: "A", mic: null, name: "Forged" },
+    { symbol: " ", mic: null },
+    { symbol: "A".repeat(65), mic: null },
+  ])
+    expect(() => readIdentity(value)).toThrow("Invalid security identity");
+});
+test("preference writes accept only the exact bounded nullable MIC, never a caller user ID", () => {
+  expect(readExchangePreference({ exchange: "XNAS" })).toEqual({
+    exchange: "XNAS",
+  });
+  expect(readExchangePreference({ exchange: null })).toEqual({
+    exchange: null,
+  });
+  for (const value of [
+    { exchange: " XNAS " },
+    { exchange: "" },
+    { exchange: "X".repeat(65) },
+    { exchange: "XNAS", userId: "other" },
+    {},
+  ])
+    expect(() => readExchangePreference(value)).toThrow(
+      "Invalid securities exchange preference",
+    );
 });

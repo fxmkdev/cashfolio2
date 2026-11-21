@@ -9,6 +9,7 @@ export async function selectListing(canvasElement: HTMLElement, id: string) {
     expect(cell).toBeVisible();
   });
   await userEvent.click(cell!);
+  await within(canvasElement).findByRole("button", { name: "Copy Symbol" });
   return within(
     await within(canvasElement).findByRole("region", {
       name: "Security Details",

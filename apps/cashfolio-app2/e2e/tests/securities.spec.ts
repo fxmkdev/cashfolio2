@@ -1,3 +1,4 @@
+import { createId } from "@paralleldrive/cuid2";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
@@ -6,6 +7,12 @@ let accountBookId: string;
 test.beforeAll(async ({ e2eExternalId }) => {
   accountBookId = (await seedDatabase({ userExternalId: e2eExternalId }))
     .accountBookId;
+});
+test.beforeEach(async ({ e2eExternalId }) => {
+  await prisma.user.update({
+    where: { externalId: e2eExternalId },
+    data: { securitiesExchangeMic: null },
+  });
 });
 test("Securities sidebar navigation, exact exchange details and locally selected chart ranges", async ({
   page,
@@ -243,4 +250,267 @@ test("missing ISIN remains Unknown for a selected listing without price history"
   await expect(
     details.getByRole("button", { name: "Copy Symbol" }),
   ).toBeEnabled();
+});
+
+test("URL refresh restores query, exact selection, page and local chart range", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${accountBookId}/securities?q=E2E.PAGE&page=2&selectedSymbol=E2E.SEC&selectedMic=XNAS&range=5Y`,
+  );
+  await expect(
+    page.getByRole("button", { name: "Page 2", exact: true }),
+  ).toHaveAttribute("data-active");
+  await expect(
+    page
+      .locator('[row-id] [col-id="symbol"]')
+      .filter({ hasText: "E2E.PAGE.21" }),
+  ).toBeVisible();
+  const details = page.getByRole("region", { name: "Security Details" });
+  await expect(details.getByLabel("ISIN", { exact: true })).toHaveText(
+    "US0000000000",
+  );
+  await expect(details.getByLabel("Latest Closing Price")).toContainText("USD");
+  await expect(
+    details.getByRole("radio", { name: "5Y", exact: true }),
+  ).toBeChecked();
+  await page.reload();
+  await expect(details.getByLabel("Latest Closing Price")).toContainText("USD");
+  await expect(
+    details.getByRole("radio", { name: "5Y", exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Page 2", exact: true }),
+  ).toHaveAttribute("data-active");
+  await details.getByRole("button", { name: "Close Details" }).click();
+  await expect(page).not.toHaveURL(/selectedSymbol/);
+  await page.goBack();
+  await expect(details.getByLabel("ISIN", { exact: true })).toHaveText(
+    "US0000000000",
+  );
+  await selectSegmentedControlOption(details, "1M");
+  await expect(page).toHaveURL(/range=1M/);
+  await page.goBack();
+  await expect(
+    details.getByRole("radio", { name: "5Y", exact: true }),
+  ).toBeChecked();
+  await page.goForward();
+  await expect(
+    details.getByRole("radio", { name: "1M", exact: true }),
+  ).toBeChecked();
+});
+
+test("exchange choices persist on the user and submitted URLs override the saved default", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const other = await prisma.user.create({
+    data: {
+      id: createId(),
+      externalId: `securities-preference-${createId()}`,
+      securitiesExchangeMic: "XNYS",
+    },
+  });
+  const secondBook = await seedDatabase({ userExternalId: e2eExternalId });
+  await page.goto(`/${accountBookId}/securities`);
+  const exchange = page.getByRole("combobox", { name: "Exchange" });
+  await exchange.click();
+  await exchange.fill("Swiss");
+  await page.getByRole("option", { name: "SIX Swiss Exchange (XSWX)" }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { externalId: e2eExternalId },
+          })
+        ).securitiesExchangeMic,
+    )
+    .toBe("XSWX");
+  await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
+  await page.reload();
+  await expect(exchange).toHaveValue("SIX Swiss Exchange (XSWX)");
+  await page.goto(`/${secondBook.accountBookId}/securities`);
+  await expect(exchange).toHaveValue("SIX Swiss Exchange (XSWX)");
+  expect(
+    (await prisma.user.findUniqueOrThrow({ where: { id: other.id } }))
+      .securitiesExchangeMic,
+  ).toBe("XNYS");
+  await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
+  await page.goto(`/${accountBookId}/securities?q=E2E.SEC`);
+  await expect(exchange).toHaveValue("");
+  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  expect(
+    (
+      await prisma.user.findUniqueOrThrow({
+        where: { externalId: e2eExternalId },
+      })
+    ).securitiesExchangeMic,
+  ).toBe("XSWX");
+  await page.goto(`/${accountBookId}/securities`);
+  await expect(exchange).toHaveValue("SIX Swiss Exchange (XSWX)");
+  await page.getByRole("button", { name: "Clear Exchange" }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { externalId: e2eExternalId },
+          })
+        ).securitiesExchangeMic,
+    )
+    .toBeNull();
+  await page.reload();
+  await expect(exchange).toHaveValue("");
+  await prisma.user.delete({ where: { id: other.id } });
+});
+
+test("a missing URL selection leaves browsable results and an actionable close", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${accountBookId}/securities?q=E2E.SEC&selectedSymbol=E2E.MISSING&selectedMic=XNAS`,
+  );
+  await expect(
+    page.getByText("Selection Unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  await page.getByRole("button", { name: "Back to Results" }).click();
+  await expect(page).not.toHaveURL(/selectedSymbol/);
+  await page
+    .locator('[row-id] [col-id="name"]')
+    .filter({ hasText: "E2E Example Security" })
+    .first()
+    .click();
+  await expect(page.getByLabel("Latest Closing Price")).toContainText("USD");
+});
+
+test("a delayed security switch clears enrichment and keeps progress until both requests finish", async ({
+  page,
+}) => {
+  await page.goto(`/${accountBookId}/securities?q=E2E.SEC`);
+  const rows = page
+    .locator('[row-id] [col-id="name"]')
+    .filter({ hasText: "E2E Example Security" });
+  await rows.nth(1).click();
+  const details = page.getByRole("region", { name: "Security Details" });
+  await expect(
+    details.getByLabel("Quote Currency", { exact: true }),
+  ).toHaveText("CHF");
+  await expect(details.getByLabel("ISIN", { exact: true })).toHaveText(
+    "Unknown",
+  );
+  let releaseHistory!: () => void;
+  let releaseMetadata!: () => void;
+  const historyGate = new Promise<void>((resolve) => {
+    releaseHistory = resolve;
+  });
+  const metadataGate = new Promise<void>((resolve) => {
+    releaseMetadata = resolve;
+  });
+  let waitingHistory = false;
+  let waitingMetadata = false;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!route.request().url().includes("selectionToken"))
+      return route.continue();
+    const response = await route.fetch();
+    if ((await response.text()).includes("listingId")) {
+      waitingMetadata = true;
+      await metadataGate;
+    } else {
+      waitingHistory = true;
+      await historyGate;
+    }
+    await route.fulfill({ response });
+  });
+  try {
+    await rows.nth(0).click();
+    await expect.poll(() => waitingHistory && waitingMetadata).toBe(true);
+    for (const label of ["ISIN", "Quote Currency", "Security Type"]) {
+      await expect(details.getByLabel(label, { exact: true })).toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+      await expect(
+        details.getByLabel(label, { exact: true }),
+      ).not.toContainText(/CHF|Unknown/);
+    }
+    await expect(details.getByLabel("Loading Price History")).toBeVisible();
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    releaseHistory();
+    await expect(
+      details.getByLabel("Quote Currency", { exact: true }),
+    ).toHaveText("USD");
+    await expect(details.getByLabel("ISIN", { exact: true })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    await expect(page.getByTestId("global-loading-indicator")).toHaveAttribute(
+      "data-mounted",
+      "true",
+    );
+    releaseMetadata();
+    await expect(details.getByLabel("ISIN", { exact: true })).toHaveText(
+      "US0000000000",
+    );
+    await expect(
+      page.getByTestId("global-loading-indicator"),
+    ).not.toHaveAttribute("data-mounted");
+  } finally {
+    releaseHistory();
+    releaseMetadata();
+    await page.unroute("**/_serverFn/**");
+  }
+});
+
+test("a failed preference save stays nonblocking and retries explicitly", async ({
+  page,
+  e2eExternalId,
+}) => {
+  let writes = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (
+      route.request().method() !== "POST" ||
+      !route.request().postData()?.includes("exchange")
+    )
+      return route.continue();
+    if (++writes === 1)
+      return route.fulfill({
+        status: 503,
+        contentType: "text/plain",
+        body: "Preference unavailable",
+      });
+    return route.continue();
+  });
+  await page.goto(`/${accountBookId}/securities`);
+  const exchange = page.getByRole("combobox", { name: "Exchange" });
+  await exchange.click();
+  await exchange.fill("Swiss");
+  await page.getByRole("option", { name: "SIX Swiss Exchange (XSWX)" }).click();
+  await expect(
+    page.getByText("Exchange Preference Not Saved", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Security", exact: true })
+    .fill("E2E.SEC");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByLabel("Result Count")).toHaveText("1 listing");
+  await page.getByRole("button", { name: "Retry Saving Preference" }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { externalId: e2eExternalId },
+          })
+        ).securitiesExchangeMic,
+    )
+    .toBe("XSWX");
+  await expect(
+    page.getByText("Exchange Preference Not Saved", { exact: true }),
+  ).toHaveCount(0);
+  expect(writes).toBe(2);
 });

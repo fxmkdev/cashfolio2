@@ -160,8 +160,14 @@ and bounded offsets aligned to page boundaries. No column filters, sort fields,
 facets or catalogue scans are accepted. Each listing cache miss fetches only the
 requested provider page. Search pages, including empty results, last 24 hours;
 the separately paginated exchange directory lasts seven days and is bounded to
-10,000 entries. Exchanges load only when the control is opened. Navigation and
-draft edits fetch no listings, metadata or prices.
+10,000 entries. Exchanges load when the control opens or a saved/URL MIC needs
+its label. Bare navigation and draft edits fetch no listings, metadata or
+prices. Submitted URLs request only their browsed page. Selection restoration
+uses that page's fresh signed row when available; otherwise it requests at most
+one 20-row search page for the exact symbol and optional MIC, requiring an exact
+match without additional scans. The normal search cache and budget apply. User
+exchange preferences are stored on User with authenticated reads and same-origin
+updates; those operations make no provider calls.
 
 Signed selected-listing references expire after 24 hours and are validated
 before requesting history or ISIN metadata. No catalogue query or separate
@@ -178,13 +184,15 @@ hits consume no provider attempts. Redis failure preserves bounded provider
 fallback.
 
 ISIN metadata uses an independent authenticated RPC and read budget, so failure
-cannot block details or history. Only selection triggers the ticker lookup;
-navigation, drafts, paging, range changes and history retries do not. Signed
-symbol/MIC identity must match the ticker response exactly. Validated metadata,
-including missing ISINs, lasts seven days in a separate Redis namespace; failed
-or mismatched responses are not cached as missing ISINs. Missing selected MICs
-skip retrieval. The existing timeouts, bounded retries, shared user-scoped work
-and per-attempt reporting apply, using `SECURITY_METADATA`. See
+cannot block details or history. Only selection triggers the ticker lookup; bare
+navigation, drafts, paging, range changes and history retries do not. A
+URL-restored selection triggers the same selected-only metadata/history work.
+Signed symbol/MIC identity must match the ticker response exactly. Validated
+metadata, including missing ISINs, lasts seven days in a separate Redis
+namespace; failed or mismatched responses are not cached as missing ISINs.
+Missing selected MICs skip retrieval. The existing timeouts, bounded retries,
+shared user-scoped work and per-attempt reporting apply, using
+`SECURITY_METADATA`. See
 [Securities metadata](securities.md#selected-listing-isin-metadata) for
 validation and cancellation behavior.
 

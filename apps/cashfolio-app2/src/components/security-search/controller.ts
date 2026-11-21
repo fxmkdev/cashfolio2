@@ -1,26 +1,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createId } from "@paralleldrive/cuid2";
-import { Temporal } from "@/shared/temporal";
 import type {
   SecuritiesExchanges,
+  SecuritiesPreference,
   SecuritiesQuery,
   SecuritiesPage,
   SecurityHistory,
   SecurityMetadata,
-} from "@/shared/securities/contracts";
-import type {
-  HistoryState,
-  PriceRange,
-  SearchState,
   SecurityListing,
   SecuritySearchCriteria,
-} from "./types";
+} from "@/shared/securities/contracts";
+import {
+  selectedIdentity,
+  type SecurityIdentity,
+  type SecuritiesRouteSearch,
+} from "@/shared/securities/route-search";
+import { useGlobalLoading } from "../navigation/global-loading";
+import { useExchangePreference } from "./use-exchange-preference";
+import {
+  useSecuritySelection,
+  type SelectionSource,
+} from "./use-security-selection";
+import type { SearchState } from "./types";
 export type SecuritiesServices = {
   exchanges: (signal: AbortSignal) => Promise<SecuritiesExchanges>;
   search: (
     input: SecuritiesQuery,
     signal: AbortSignal,
   ) => Promise<SecuritiesPage>;
+  resolve: (
+    input: SecurityIdentity,
+    signal: AbortSignal,
+  ) => Promise<SecurityListing | null>;
+  preference: (signal: AbortSignal) => Promise<SecuritiesPreference>;
+  savePreference: (
+    input: SecuritiesPreference,
+    signal: AbortSignal,
+  ) => Promise<SecuritiesPreference>;
   metadata: (
     input: { selectionToken: string },
     signal: AbortSignal,
@@ -30,11 +46,18 @@ export type SecuritiesServices = {
     signal: AbortSignal,
   ) => Promise<SecurityHistory>;
 };
-const message = (error: unknown) =>
-  error instanceof Error
-    ? error.message
-    : "Securities could not be loaded. Try again.";
-export function useSecuritiesController(services: SecuritiesServices) {
+export type SecuritiesNavigation = {
+  view: SecuritiesRouteSearch;
+  navigate: (next: SecuritiesRouteSearch) => void;
+};
+export function useSecuritiesController(
+  services: SecuritiesServices,
+  navigation?: SecuritiesNavigation,
+) {
+  const [localView, setLocalView] = useState<SecuritiesRouteSearch>({});
+  const view = navigation?.view ?? localView;
+  const navigate = navigation?.navigate ?? setLocalView;
+  const preference = useExchangePreference(services);
   const [exchanges, setExchanges] = useState<SecuritiesExchanges>([]);
   const [exchangeStatus, setExchangeStatus] = useState<
     "idle" | "loading" | "ready" | "error"
@@ -60,174 +83,115 @@ export function useSecuritiesController(services: SecuritiesServices) {
         if (exchangeRequest.current === request) exchangeRequest.current = null;
       });
   }, [services, exchangeStatus]);
-  const [search, setSearch] = useState<SearchState>({ status: "idle" });
-  const [selectedListing, setSelectedListing] =
-    useState<SecurityListing | null>(null);
-  const [metadata, setMetadata] = useState<SecurityMetadata | null>(null);
-  const [page, setPage] = useState(1);
-  const [range, setRange] = useState<PriceRange>("1Y");
-  const [historyThrough, setHistoryThrough] = useState<string | null>(null);
-  const [loadedHistory, setLoadedHistory] = useState<HistoryState>({
-    status: "ready",
-    points: [],
-    omissions: [],
-  });
-  const searchRequest = useRef<AbortController | null>(null);
-  const historyRequest = useRef<AbortController | null>(null);
-  const metadataRequest = useRef<AbortController | null>(null);
-  const rows = useRef(new Map<string, SecurityListing>());
-  const closeDetails = useCallback(() => {
-    historyRequest.current?.abort();
-    metadataRequest.current?.abort();
-    setMetadata(null);
-    setSelectedListing(null);
-  }, []);
-  useEffect(
-    () => () => {
-      searchRequest.current?.abort();
-      historyRequest.current?.abort();
-      metadataRequest.current?.abort();
-      exchangeRequest.current?.abort();
-    },
-    [services],
-  );
-  const runSearch = useCallback(
-    (criteria: SecuritySearchCriteria) => {
-      searchRequest.current?.abort();
-      const request = new AbortController();
-      searchRequest.current = request;
-      closeDetails();
-      setPage(1);
-      rows.current.clear();
-      setSearch({
+  useEffect(() => () => exchangeRequest.current?.abort(), [services]);
+  const defaultExchange =
+    view.q === undefined
+      ? (preference.preference?.exchange ?? null)
+      : (view.exchange ?? null);
+  useEffect(() => {
+    if (defaultExchange && exchangeStatus === "idle") loadExchanges();
+  }, [defaultExchange, exchangeStatus, loadExchanges]);
+  useGlobalLoading(exchangeStatus === "loading");
+  const [refresh, setRefresh] = useState(0);
+  const context = useMemo(() => {
+    if (view.q === undefined) return null;
+    const request = new AbortController();
+    let firstDone!: () => void;
+    const selection: SelectionSource = {
+      key: `${createId()}:${refresh}`,
+      rows: new Map(),
+      firstPage: new Promise<void>((resolve) => {
+        firstDone = resolve;
+      }),
+    };
+    const criteria = { query: view.q, exchange: view.exchange ?? null };
+    return {
+      ...selection,
+      request,
+      search: {
         status: "ready",
         criteria,
         source: {
-          key: createId(),
+          key: selection.key,
           async loadPage(query, signal) {
-            const response = await services.search(
-              { criteria, ...query },
-              AbortSignal.any([signal, request.signal]),
-            );
-            if (!request.signal.aborted && !signal.aborted)
-              for (const row of response.rows) rows.current.set(row.id, row);
-            return response;
+            try {
+              const response = await services.search(
+                { criteria, ...query },
+                AbortSignal.any([signal, request.signal]),
+              );
+              if (!request.signal.aborted && !signal.aborted)
+                for (const row of response.rows)
+                  selection.rows.set(row.id, row);
+              return response;
+            } finally {
+              firstDone();
+            }
           },
         },
-      });
-    },
-    [services, closeDetails],
-  );
-  const loadMetadata = useCallback(
-    async (listing: SecurityListing) => {
-      metadataRequest.current?.abort();
-      const request = new AbortController();
-      metadataRequest.current = request;
-      setMetadata(null);
-      try {
-        const response = await services.metadata(
-          { selectionToken: listing.selectionToken },
-          request.signal,
-        );
-        if (!request.signal.aborted && response.listingId === listing.id)
-          setMetadata(response);
-      } catch {
-        // Optional metadata never blocks details or history; keep Unknown.
-      }
-    },
-    [services],
-  );
-  const loadHistory = useCallback(
-    async (listing: SecurityListing) => {
-      historyRequest.current?.abort();
-      const request = new AbortController();
-      historyRequest.current = request;
-      setHistoryThrough(null);
-      if (listing.hasHistory === false) {
-        setLoadedHistory({ status: "ready", points: [], omissions: [] });
-        return;
-      }
-      setLoadedHistory({ status: "loading" });
-      try {
-        const response = await services.history(
-          { selectionToken: listing.selectionToken },
-          request.signal,
-        );
-        if (request.signal.aborted) return;
-        setHistoryThrough(response.through);
-        setSelectedListing(response.listing);
-        setLoadedHistory(response);
-      } catch (error) {
-        if (!request.signal.aborted)
-          setLoadedHistory({ status: "error", message: message(error) });
-      }
-    },
-    [services],
-  );
-  const history = useMemo<HistoryState>(() => {
-    if (loadedHistory.status !== "ready") return loadedHistory;
-    const through = historyThrough
-      ? Temporal.PlainDate.from(historyThrough)
-      : Temporal.Now.plainDateISO("UTC");
-    const duration = {
-      "1M": { months: 1 },
-      "6M": { months: 6 },
-      "1Y": { years: 1 },
-      "5Y": { years: 5 },
-    }[range];
-    const from = through.subtract(duration).toString();
-    return {
-      ...loadedHistory,
-      points: loadedHistory.points.filter(
-        (point) => point.date >= from && point.date <= through.toString(),
-      ),
-      omissions: loadedHistory.omissions.filter(
-        (point) => point.date >= from && point.date <= through.toString(),
-      ),
+      } satisfies SearchState,
     };
-  }, [loadedHistory, range, historyThrough]);
+  }, [view.q, view.exchange, services, refresh]);
+  useEffect(() => () => context?.request.abort(), [context]);
+  const identity = useMemo(
+    () =>
+      selectedIdentity({
+        selectedSymbol: view.selectedSymbol,
+        selectedMic: view.selectedMic,
+      }),
+    [view.selectedSymbol, view.selectedMic],
+  );
+  const range = view.range ?? "1Y";
+  const selection = useSecuritySelection(services, identity, context, range);
   return {
-    search,
+    ...preference,
+    ...selection,
+    controlsKey: JSON.stringify([view, refresh]),
+    defaultExchange,
+    preferencePending: view.q === undefined && preference.preferencePending,
+    search: context?.search ?? { status: "idle" as const },
     exchanges,
     exchangeStatus,
     onLoadExchanges: loadExchanges,
-    selectedListing,
-    metadata,
-    history,
-    page,
+    page: view.page ?? 1,
     range,
     onSearch: (criteria: SecuritySearchCriteria) => {
-      void runSearch(criteria);
-    },
-    onPageChange: setPage,
-    onCloseDetails: closeDetails,
-    onSelect: (id: string | null) => {
-      if (!id) {
-        closeDetails();
-        return;
-      }
-      const listing = rows.current.get(id);
-      if (!listing) return;
-      setSelectedListing(listing);
-      setRange("1Y");
-      void loadMetadata(listing);
-      void loadHistory(listing);
-    },
-    onRangeChange: setRange,
-    onRetrySearch: () => {
-      if (search.status !== "idle") void runSearch(search.criteria);
-    },
-    onRetryHistory: () => {
+      // A route-changing submission commits through the router. Refreshing local
+      // state first could briefly re-request the previous URL's selected listing.
       if (
-        loadedHistory.status === "unavailable" &&
-        Temporal.Instant.compare(
-          Temporal.Instant.from(loadedHistory.retryAt),
-          Temporal.Now.instant(),
-        ) > 0
+        view.q === criteria.query &&
+        (view.exchange ?? null) === criteria.exchange &&
+        !view.page &&
+        !view.selectedSymbol &&
+        !view.range
       )
-        return;
-      if (selectedListing) void loadHistory(selectedListing);
+        setRefresh((value) => value + 1);
+      navigate({
+        q: criteria.query,
+        ...(criteria.exchange ? { exchange: criteria.exchange } : {}),
+      });
     },
+    onPageChange: (page: number) =>
+      navigate({ ...view, page: page > 1 ? page : undefined }),
+    onCloseDetails: () =>
+      navigate({
+        ...view,
+        selectedSymbol: undefined,
+        selectedMic: undefined,
+        range: undefined,
+      }),
+    onSelect: (id: string | null) => {
+      const listing = id ? context?.rows.get(id) : null;
+      if (id && !listing) return;
+      navigate({
+        ...view,
+        selectedSymbol: listing?.symbol,
+        selectedMic: listing?.mic ?? undefined,
+        range: undefined,
+      });
+    },
+    onRangeChange: (range: "1M" | "6M" | "1Y" | "5Y") =>
+      navigate({ ...view, range: range === "1Y" ? undefined : range }),
+    onRetrySearch: () => setRefresh((value) => value + 1),
     onCopySymbol: (symbol: string) => navigator.clipboard.writeText(symbol),
   };
 }

@@ -50,7 +50,7 @@ export const ObsoleteHistoryResponse: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
     await selectListing(canvasElement, "ALP:XNAS");
-    await expect(canvas.getByText("Loading price history…")).toBeVisible();
+    await expect(canvas.getByLabelText("Loading Price History")).toBeVisible();
     await selectListing(canvasElement, "ALP:XSWX");
     await waitFor(() =>
       expect(canvas.getByLabelText("Latest Closing Price")).toHaveTextContent(
@@ -130,7 +130,7 @@ export const ExchangeDirectoryRetry: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox", { name: "Exchange" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "Exchanges could not be loaded",
+      "Exchange names could not be loaded",
     );
     await userEvent.keyboard("{Escape}");
     await userEvent.click(

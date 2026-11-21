@@ -14,7 +14,15 @@ import {
   type GridApi,
   type IServerSideDatasource,
 } from "ag-grid-enterprise";
-import { Alert, Button, Group, Pagination, Text } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  Group,
+  Pagination,
+  Skeleton,
+  Text,
+} from "@mantine/core";
+import { useGlobalLoading } from "../navigation/global-loading";
 import { useUserLocale } from "@/user-locale-context";
 import { getHistoryLabel } from "@/shared/securities/contracts";
 import { DataGrid } from "../grid/data-grid";
@@ -46,7 +54,10 @@ export function SecurityResultsGrid({
   const locale = useUserLocale();
   const [api, setApi] = useState<GridApi<SecurityListing> | null>(null);
   const container = useRef<HTMLDivElement>(null);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [pending, setPending] = useState(0);
+  useGlobalLoading(pending > 0);
+  const [initialPage] = useState(page);
   const latestRequest = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const requests = useRef(new Set<AbortController>());
@@ -88,6 +99,7 @@ export function SecurityResultsGrid({
       async getRows(params) {
         const controller = new AbortController();
         requests.current.add(controller);
+        setPending((value) => value + 1);
         const requestId = ++latestRequest.current;
         try {
           const result = await source.loadPage(
@@ -95,6 +107,21 @@ export function SecurityResultsGrid({
             controller.signal,
           );
           if (controller.signal.aborted) return;
+          if (
+            (params.request.startRow ?? 0) > 0 &&
+            (params.request.startRow ?? 0) >= result.totalCount
+          ) {
+            if (requestId === latestRequest.current) {
+              setTotalCount(result.totalCount);
+              setError(
+                "This results page is no longer available. Return to the first page or submit a new search.",
+              );
+            }
+            // Reporting a reduced row count as success would make AG Grid fetch
+            // a clamped page automatically. Recovery must remain an explicit action.
+            params.fail();
+            return;
+          }
           if (requestId === latestRequest.current) {
             setError(null);
             setTotalCount(result.totalCount);
@@ -114,6 +141,7 @@ export function SecurityResultsGrid({
           params.fail();
         } finally {
           requests.current.delete(controller);
+          if (!controller.signal.aborted) setPending((value) => value - 1);
         }
       },
     }),
@@ -168,12 +196,34 @@ export function SecurityResultsGrid({
           >
             Retry Results
           </Button>
+          {page > 1 && (
+            <Button variant="light" onClick={() => onPageChange(1)}>
+              First Page
+            </Button>
+          )}
         </Alert>
       )}
       <Group justify="space-between" mih={30}>
-        <Text size="sm" role="status" aria-label="Result Count">
-          {number.format(totalCount)}{" "}
-          {totalCount === 1 ? "listing" : "listings"}
+        <Text
+          size="sm"
+          role="status"
+          aria-label="Result Count"
+          aria-busy={totalCount === null && !error}
+        >
+          {totalCount === null ? (
+            !error && (
+              <Skeleton
+                height={16}
+                width={90}
+                aria-label="Loading Result Count"
+              />
+            )
+          ) : (
+            <>
+              {number.format(totalCount)}{" "}
+              {totalCount === 1 ? "listing" : "listings"}
+            </>
+          )}
         </Text>
       </Group>
       <div
@@ -189,6 +239,10 @@ export function SecurityResultsGrid({
             ServerSideRowModelModule,
             ServerSideRowModelApiModule,
           ]}
+          initialState={{
+            pagination: { page: initialPage - 1, pageSize: RESULTS_PAGE_SIZE },
+          }}
+          serverSideInitialRowCount={initialPage * RESULTS_PAGE_SIZE}
           rowModelType="serverSide"
           serverSideDatasource={datasource}
           cacheBlockSize={RESULTS_PAGE_SIZE}
@@ -208,10 +262,6 @@ export function SecurityResultsGrid({
           localeText={{ noRowsToShow: "No securities found." }}
           onGridReady={({ api: readyApi }) => setApi(readyApi)}
           onModelUpdated={({ api: gridApi }) => syncSelection(gridApi)}
-          onPaginationChanged={({ api: gridApi }) => {
-            const next = gridApi.paginationGetCurrentPage() + 1;
-            if (next !== page) onPageChange(next);
-          }}
           onSelectionChanged={({ api: gridApi, source: eventSource }) => {
             if (
               eventSource === "rowClicked" ||
@@ -226,7 +276,7 @@ export function SecurityResultsGrid({
         <Text size="sm" c="dimmed">
           Select a listing to view details and prices.
         </Text>
-        {totalCount > 0 && (
+        {totalCount !== null && totalCount > 0 && (
           <Pagination
             aria-label="Results Pages"
             getControlProps={(control) => ({

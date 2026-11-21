@@ -86,9 +86,22 @@ export const MetadataBeforeHistory: Story = {
     await waitFor(() =>
       expect(details.getByLabelText("ISIN")).toHaveTextContent("US0000000000"),
     );
-    await expect(canvas.getByText("Loading price history…")).toBeVisible();
+    await expect(canvas.getByLabelText("Loading Price History")).toBeVisible();
+    await waitFor(() =>
+      expect(canvas.getByTestId("fixture-global-progress")).toHaveAttribute(
+        "data-mounted",
+        "true",
+      ),
+    );
     await userEvent.click(
       canvas.getByRole("button", { name: "Release Previous Response" }),
+    );
+    await waitFor(
+      () =>
+        expect(
+          canvas.getByTestId("fixture-global-progress"),
+        ).not.toHaveAttribute("data-mounted"),
+      { timeout: 2500 },
     );
     await waitFor(() =>
       expect(details.getByLabelText("Latest Closing Price")).toHaveTextContent(
@@ -118,9 +131,28 @@ export const HistoryBeforeMetadata: Story = {
         "USD",
       ),
     );
-    await expect(details.getByLabelText("ISIN")).toHaveTextContent("Unknown");
+    await expect(details.getByLabelText("ISIN")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    await expect(details.getByLabelText("ISIN")).not.toHaveTextContent(
+      "Unknown",
+    );
+    await waitFor(() =>
+      expect(canvas.getByTestId("fixture-global-progress")).toHaveAttribute(
+        "data-mounted",
+        "true",
+      ),
+    );
     await userEvent.click(
       canvas.getByRole("button", { name: "Release Previous Response" }),
+    );
+    await waitFor(
+      () =>
+        expect(
+          canvas.getByTestId("fixture-global-progress"),
+        ).not.toHaveAttribute("data-mounted"),
+      { timeout: 2500 },
     );
     await waitFor(() =>
       expect(details.getByLabelText("ISIN")).toHaveTextContent("US0000000000"),

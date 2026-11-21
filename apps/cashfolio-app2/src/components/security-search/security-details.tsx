@@ -5,7 +5,7 @@ import {
   Badge,
   Button,
   Group,
-  Loader,
+  Skeleton,
   Paper,
   SegmentedControl,
   Stack,
@@ -27,6 +27,7 @@ export function SecurityDetails({
   listing,
   history,
   isin,
+  metadataPending = false,
   range,
   onRangeChange,
   onRetryHistory,
@@ -36,6 +37,7 @@ export function SecurityDetails({
   listing: SecurityListing;
   history: HistoryState;
   isin: string | null;
+  metadataPending?: boolean;
   range: PriceRange;
   onRangeChange: (range: PriceRange) => void;
   onRetryHistory: () => void;
@@ -55,13 +57,13 @@ export function SecurityDetails({
     history.status === "ready"
       ? historyChartData(history.points, history.omissions)
       : [];
-  const fields: [string, string | null][] = [
+  const fields: [string, string | null, boolean?][] = [
     ["Symbol", listing.symbol],
-    ["ISIN", isin],
+    ["ISIN", isin, metadataPending],
     ["Exchange", getExchangeLabel(listing)],
     ["Country", listing.country],
-    ["Security Type", listing.securityType],
-    ["Quote Currency", listing.currency],
+    ["Security Type", listing.securityType, history.status === "loading"],
+    ["Quote Currency", listing.currency, history.status === "loading"],
     ["Historical Prices", getHistoryLabel(listing.hasHistory)],
   ];
 
@@ -134,7 +136,7 @@ export function SecurityDetails({
           </Alert>
         )}
         <dl className={classes.summary}>
-          {fields.map(([label, value]) => (
+          {fields.map(([label, value, pending]) => (
             <div key={label}>
               <Text component="dt" size="sm" c="dimmed">
                 {label === "Historical Prices" ? (
@@ -145,8 +147,22 @@ export function SecurityDetails({
                   label
                 )}
               </Text>
-              <Text component="dd" size="sm" fw={500} aria-label={label}>
-                {value ?? "Unknown"}
+              <Text
+                component="dd"
+                size="sm"
+                fw={500}
+                aria-label={label}
+                aria-busy={pending || undefined}
+              >
+                {pending ? (
+                  <Skeleton
+                    height={16}
+                    width={100}
+                    aria-label={`Loading ${label}`}
+                  />
+                ) : (
+                  (value ?? "Unknown")
+                )}
               </Text>
             </div>
           ))}
@@ -161,9 +177,17 @@ export function SecurityDetails({
             <Group justify="space-between">
               <Group gap="sm">
                 <Title order={3}>Price History</Title>
-                <Badge variant="light" color="gray">
-                  {listing.currency ?? "Currency Unknown"}
-                </Badge>
+                {history.status === "loading" ? (
+                  <Skeleton
+                    height={20}
+                    width={56}
+                    aria-label="Loading Price Currency"
+                  />
+                ) : (
+                  <Badge variant="light" color="gray">
+                    {listing.currency ?? "Currency Unknown"}
+                  </Badge>
+                )}
               </Group>
               <SegmentedControl
                 aria-label="Price Range"
@@ -176,10 +200,7 @@ export function SecurityDetails({
               Unadjusted closing prices
             </Text>
             {history.status === "loading" ? (
-              <Group role="status" mih={160} justify="center">
-                <Loader size="sm" />
-                <Text>Loading price history…</Text>
-              </Group>
+              <Skeleton height={200} aria-label="Loading Price History" />
             ) : history.status === "error" ? (
               <Alert color="red" title="Price History Unavailable" role="alert">
                 <Stack gap="sm" align="start">

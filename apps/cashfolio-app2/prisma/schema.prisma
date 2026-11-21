@@ -79,6 +79,7 @@ model User {
   externalId String @unique
 
   locale String?
+  securitiesExchangeMic String?
 
   accountBookLinks UserAccountBookLink[]
 

@@ -124,6 +124,12 @@ where appropriate. Keep actionable errors and retry controls in the page; these
 are recovery UI, not loading indicators. Local action controls may still show
 their own pending state to prevent duplicate submissions.
 
+For Securities, field skeletons distinguish pending ISIN/currency/type from
+settled Unknown values. Switching listings clears prior enrichment immediately;
+unresolved identities use neutral details skeletons. Initial result counts stay
+pending. Results, resolution, directory, preference, metadata and history tasks
+all register globally, so one completion cannot end another request's progress.
+
 See [Global Navigation Progress](../routing.md#global-navigation-progress) for
 router behavior, timing, and overlapping task handling.
 
