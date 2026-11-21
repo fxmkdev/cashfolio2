@@ -310,10 +310,22 @@ export const CopyFailure: Story = {
   },
 };
 
-export const NarrowViewport: Story = {
+export const NarrowViewportPreview: Story = {
+  name: "Narrow Viewport",
   args: { initialSearch: "ready", initialSelectedId: "RIV:XETR" },
-  parameters: { viewport: { defaultViewport: "cashfolioMobile" } },
-  play: async ({ canvasElement }) => {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
+};
+
+export const NarrowViewport: Story = {
+  ...NarrowViewportPreview,
+  name: "Narrow Viewport Interaction Test",
+  tags: ["regression", "!autodocs"],
+  play: async ({ canvasElement, globals }) => {
+    await expect(globals.viewport?.value).toBe("cashfolioMobile");
+    if (import.meta.env.MODE === "test") {
+      await expect(window.innerWidth).toBe(390);
+      await expect(window.innerHeight).toBe(844);
+    }
     const canvas = within(canvasElement);
     await expect(
       canvas.getByRole("img", { name: /closing price chart/ }),
