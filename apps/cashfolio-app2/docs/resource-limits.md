@@ -151,3 +151,49 @@ database query or preempt synchronous CPU work. Budgets apply per incoming
 request, not across users or instances, and do not cap aggregate provider
 subscription spending. Revisit shared admission if access becomes public or
 observed usage makes it necessary.
+
+## Securities reference data
+
+Authenticated Securities RPCs accept a name/symbol query (255 characters), an
+optional exact provider exchange identifier (64 characters), fixed 20-row pages
+and bounded offsets aligned to page boundaries. No column filters, sort fields,
+facets or catalogue scans are accepted. Each listing cache miss fetches only the
+requested provider page. Search pages, including empty results, last 24 hours;
+the separately paginated exchange directory lasts seven days and is bounded to
+10,000 entries. Exchanges load only when the control is opened. Navigation and
+draft edits fetch no listings, metadata or prices.
+
+Signed selected-listing references expire after 24 hours and are validated
+before requesting history or ISIN metadata. No catalogue query or separate
+provider identity lookup is needed. History uses the normal 60-second read
+deadline, provider-attempt ledger, shared user-scoped work and bounded
+Marketstack timeouts/retries. Its separate versioned Redis cache preserves
+usable complete/partial history for 24 hours; no-data, all-unusable and
+deterministic data failures have a five-minute cooldown. Retry cannot bypass the
+cooldown; expiry does not automatically fetch. Transient/configuration/quota
+errors remain uncached. At most 5,000 raw history observations are loaded,
+including omitted prices; pagination uses raw counts. Diagnostics emit counts
+and at most five safe date/reason/type/numeric samples per affected page. Cache
+hits consume no provider attempts. Redis failure preserves bounded provider
+fallback.
+
+ISIN metadata uses an independent authenticated RPC and read budget, so failure
+cannot block details or history. Only selection triggers the ticker lookup;
+navigation, drafts, paging, range changes and history retries do not. Signed
+symbol/MIC identity must match the ticker response exactly. Validated metadata,
+including missing ISINs, lasts seven days in a separate Redis namespace; failed
+or mismatched responses are not cached as missing ISINs. Missing selected MICs
+skip retrieval. The existing timeouts, bounded retries, shared user-scoped work
+and per-attempt reporting apply, using `SECURITY_METADATA`. See
+[Securities metadata](securities.md#selected-listing-isin-metadata) for
+validation and cancellation behavior.
+
+No bulk refresh, scheduled refresh, deployment initialization or Marketstack
+smoke/preflight runs remain. Overage is USD 0.003996 per HTTP request; retries,
+selected metadata requests and exchange-directory pages also count. The stated
+maximum additional-cost limit is USD 20; this change adds no aggregate runtime
+spending guard. Existing per-request budgets do not enforce an account-wide
+monetary cap. Use the provider/account limit for aggregate spending.
+Implementation and verification must use fixtures/mocks with zero live
+Marketstack calls. See [Securities operations and caching](securities.md) for
+details.

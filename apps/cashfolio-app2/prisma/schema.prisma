@@ -66,6 +66,11 @@ enum ValuationProviderRequestOutcome {
 enum ValuationProviderRequestReason {
   INITIAL_PROBE
   BACKTRACK_PROBE
+  CATALOGUE_REFRESH
+  SECURITY_SEARCH
+  SECURITY_EXCHANGES
+  SECURITY_HISTORY
+  SECURITY_METADATA
   RATE_LIMIT_RETRY
 }
 
@@ -307,4 +312,37 @@ model ValuationProviderRequest {
   @@index([provider, requestedAt])
   @@index([outcome, requestedAt])
   @@index([requestReason, requestedAt])
+}
+
+// Global reference data, independent of users and account books.
+model SecurityCatalogueSnapshot {
+  id          String                     @id
+  createdAt   DateTime                   @default(now())
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  rowCount    Int                        @default(0)
+  listings    SecurityCatalogueListing[]
+
+  @@index([publishedAt])
+  @@index([expiresAt])
+}
+
+model SecurityCatalogueListing {
+  id            String                    @id
+  snapshotId    String
+  snapshot      SecurityCatalogueSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  symbol        String
+  name          String
+  exchange      String?
+  mic           String                    @default("")
+  exchangeLabel String
+  country       String?
+  hasHistory    Boolean?
+
+  @@unique([snapshotId, symbol, mic])
+  @@index([snapshotId, name])
+  @@index([snapshotId, symbol])
+  @@index([snapshotId, country])
+  @@index([snapshotId, mic])
+  @@index([snapshotId, exchangeLabel])
 }

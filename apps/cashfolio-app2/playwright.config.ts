@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -50,6 +51,8 @@ export default defineConfig({
       DATABASE_URL: databaseUrl,
       BASE_URL: baseUrl,
       APP_ENVIRONMENT: "e2e",
+      // Auth is bypassed in E2E, but listing references still use real signing.
+      SESSION_SECRET: randomBytes(32).toString("hex"),
       HOST: webServerHost.replace(/^\[|\]$/g, ""),
       NITRO_HOST: webServerHost.replace(/^\[|\]$/g, ""),
       PORT: webServerPort,

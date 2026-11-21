@@ -76,6 +76,15 @@ and continuation, merge batches, and finalize scope normalization. Other errors
 stop the load; explicit retry starts from the beginning. There are no retained
 checkpoints, quota waits, backoff timers, or automatic revision restarts.
 
+### Securities
+
+`/$accountBookId/securities` adds **Securities** after History in account-book
+navigation. The parent route authorizes access; catalogue data is shared across
+books. The client-only page composes the shared Securities view/controller with
+public server functions. Its grid and persistent details pane fill the app
+shell's available height. See [Securities discovery](securities.md) for
+versioned queries, mobile state restoration and Storybook scenarios.
+
 ### Route Structure
 
 - `index.tsx` - authenticated home route; redirects to the first accessible

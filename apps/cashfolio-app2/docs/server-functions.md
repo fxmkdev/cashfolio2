@@ -55,3 +55,10 @@ topic pages.
 - <a id="accumulated-gl-historical-basis-cache"></a>[Accumulated G/L historical basis cache](server/holdings-and-gain-loss.md#accumulated-gl-historical-basis-cache)
 - <a id="balance-based-asset-and-liability-reporting"></a>[Balance-based Asset and Liability Reporting](server/reporting.md#balance-based-asset-and-liability-reporting)
 - <a id="unified-account-management-queries"></a>[Unified account management queries](server/account-mutations.md#unified-account-management-queries)
+
+## Securities Reference Data
+
+`src/server/securities.ts` exposes authenticated catalogue status/exchanges,
+versioned server-side grid queries/facets and selected-listing history. Shared
+contracts live in `src/shared/securities/`; private implementations remain in
+the server domain. See [Securities discovery](securities.md).
