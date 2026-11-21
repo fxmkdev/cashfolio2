@@ -1,56 +1,41 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Alert,
   Button,
   Skeleton,
   Paper,
-  Select,
   Stack,
   Text,
-  TextInput,
   Title,
 } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
-import { useGlobalLoading } from "../navigation/global-loading";
+import {
+  SecuritySearchControls,
+  type SecuritySearchControlsProps,
+} from "./search-controls";
 import { TopPageHeader } from "../layout/top-page-header";
 import {
   SecurityResultsGrid,
   type SecurityResultsGridHandle,
 } from "./results-grid";
 import { SecurityDetails } from "./security-details";
-import type {
-  HistoryState,
-  PriceRange,
-  SearchState,
-  SecurityListing,
-  SecuritySearchCriteria,
-} from "./types";
+import type { HistoryState, PriceRange, SecurityListing } from "./types";
 import type { SecurityMetadata } from "@/shared/securities/contracts";
 import classes from "./security-search.module.css";
 
-export type SecuritySearchViewProps = {
-  search: SearchState;
-  controlsKey?: string;
-  defaultExchange?: string | null;
-  preferencePending?: boolean;
+export type SecuritySearchViewProps = SecuritySearchControlsProps & {
   preferenceLoadError?: boolean;
   preferenceSaveError?: boolean;
-  onExchangeChange?: (exchange: string | null) => void;
   onRetryPreferenceLoad?: () => void;
   onRetryPreferenceSave?: () => void;
   selectionPending?: boolean;
   selectionError?: string | null;
   onRetrySelection?: () => void;
   metadataPending?: boolean;
-  exchangeStatus?: "idle" | "loading" | "ready" | "error";
-  onLoadExchanges?: () => void;
-  exchanges: { value: string; label: string }[];
   page: number;
   selectedListing: SecurityListing | null;
   history: HistoryState;
   metadata: SecurityMetadata | null;
   range: PriceRange;
-  onSearch: (criteria: SecuritySearchCriteria) => void;
   onPageChange: (page: number) => void;
   onSelect: (id: string | null) => void;
   onCloseDetails: () => void;
@@ -62,23 +47,6 @@ export type SecuritySearchViewProps = {
 
 export function SecuritySearchView(props: SecuritySearchViewProps) {
   const { search, selectedListing } = props;
-  const [query, setQuery] = useState(
-    search.status === "idle" ? "" : search.criteria.query,
-  );
-  const [exchange, setExchange] = useState<string | null>(
-    search.status === "idle" ? null : search.criteria.exchange,
-  );
-  const submittedQuery = search.status === "idle" ? "" : search.criteria.query;
-  const initialExchange =
-    props.defaultExchange ??
-    (search.status === "idle" ? null : search.criteria.exchange);
-  useEffect(() => {
-    setQuery(submittedQuery);
-  }, [submittedQuery, props.controlsKey]);
-  useEffect(() => {
-    setExchange(initialExchange);
-  }, [initialExchange, props.controlsKey]);
-  useGlobalLoading(search.status === "loading");
   const grid = useRef<SecurityResultsGridHandle>(null);
   const previousSelection = useRef<string | null>(null);
   const selectedId =
@@ -119,78 +87,7 @@ export function SecuritySearchView(props: SecuritySearchViewProps) {
         }
       >
         <div className={classes.resultsPane}>
-          <Paper withBorder p="md">
-            <form
-              className={classes.searchForm}
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!props.preferencePending)
-                  props.onSearch({ query: query.trim(), exchange });
-              }}
-            >
-              <TextInput
-                label="Security"
-                placeholder="Search by name or symbol"
-                leftSection={<IconSearch size={16} />}
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-              />
-              {props.preferencePending ? (
-                <Stack gap={6}>
-                  <Text size="sm" fw={500}>
-                    Exchange
-                  </Text>
-                  <Skeleton
-                    height={36}
-                    aria-label="Loading Exchange Preference"
-                  />
-                </Stack>
-              ) : (
-                <Select
-                  label="Exchange"
-                  placeholder="All Exchanges"
-                  searchable
-                  clearable
-                  clearButtonProps={{
-                    "aria-label": "Clear Exchange",
-                    "aria-hidden": false,
-                    tabIndex: 0,
-                  }}
-                  data={
-                    exchange &&
-                    !props.exchanges.some((option) => option.value === exchange)
-                      ? [
-                          ...props.exchanges,
-                          { value: exchange, label: exchange },
-                        ]
-                      : props.exchanges
-                  }
-                  value={exchange}
-                  onChange={(value) => {
-                    setExchange(value);
-                    props.onExchangeChange?.(value);
-                  }}
-                  onDropdownOpen={props.onLoadExchanges}
-                  rightSection={
-                    props.exchangeStatus === "loading" ? (
-                      <Skeleton
-                        height={12}
-                        width={12}
-                        aria-label="Loading Exchanges"
-                      />
-                    ) : undefined
-                  }
-                />
-              )}
-              <Button
-                disabled={props.preferencePending}
-                type="submit"
-                loading={search.status === "loading"}
-              >
-                Search
-              </Button>
-            </form>
-          </Paper>
+          <SecuritySearchControls {...props} />
           {props.preferenceLoadError && (
             <Alert color="red" title="Exchange Preference Unavailable">
               <Text size="sm">
