@@ -13,8 +13,10 @@ import {
 } from "@mantine/core";
 import { IconArrowLeft, IconCopy, IconX } from "@tabler/icons-react";
 import { SecurityHistoryPanel } from "./history-panel";
-import { getExchangeLabel } from "./exchange-label";
-import { getHistoryLabel } from "@/shared/securities/contracts";
+import {
+  getExchangeLabel,
+  getHistoryLabel,
+} from "@/shared/securities/contracts";
 import type { HistoryState, PriceRange, SecurityListing } from "./types";
 import classes from "./security-search.module.css";
 

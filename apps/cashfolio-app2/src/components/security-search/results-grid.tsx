@@ -25,10 +25,12 @@ import {
 } from "@mantine/core";
 import { useGlobalLoading } from "../navigation/global-loading";
 import { useUserLocale } from "@/user-locale-context";
-import { getHistoryLabel } from "@/shared/securities/contracts";
+import {
+  getExchangeLabel,
+  getHistoryLabel,
+} from "@/shared/securities/contracts";
 import { DataGrid } from "../grid/data-grid";
 import { TEXT_COLUMN } from "../grid/column-types";
-import { getExchangeLabel } from "./exchange-label";
 import {
   RESULTS_PAGE_SIZE,
   type SecurityListing,

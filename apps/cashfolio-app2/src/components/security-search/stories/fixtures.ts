@@ -1,6 +1,6 @@
 import { Temporal } from "@/shared/temporal";
 import type { PricePoint, PriceRange, SecurityListing } from "../types";
-import { getExchangeLabel } from "../exchange-label";
+import { getExchangeLabel } from "@/shared/securities/contracts";
 
 // Illustrative listings only: these symbols, MIC combinations and prices do not
 // assert Marketstack coverage. Keep all fixtures out of production imports.
