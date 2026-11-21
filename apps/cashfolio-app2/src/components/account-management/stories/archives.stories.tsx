@@ -7,13 +7,23 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Archived Accounts/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const ArchivedGroups: Story = {
+export const Default: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ArchivedGroups: Story = {
+  ...Default,
+  name: "Archived Groups Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -32,7 +42,9 @@ export const ArchivedGroups: Story = {
 };
 
 export const ArchivedGroupActions: Story = {
-  render: () => <AccountsPageStoryHarness initialMode="archived" />,
+  ...Default,
+  name: "Archived Group Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -86,7 +98,7 @@ export const ArchivedGroupActions: Story = {
   },
 };
 
-export const VirtualArchivedAppearance: Story = {
+export const VirtualArchivedAppearanceView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -111,6 +123,15 @@ export const VirtualArchivedAppearance: Story = {
       ]}
     />
   ),
+  name: "Virtual Archived Appearance Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const VirtualArchivedAppearance: Story = {
+  ...VirtualArchivedAppearanceView,
+  name: "Virtual Archived Appearance Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findAllByText("Archived", { exact: true });
@@ -171,10 +192,19 @@ export const VirtualArchivedAppearance: Story = {
   },
 };
 
-export const ArchivedGroupsHaveNoChildCreation: Story = {
+export const ArchivedGroupsHaveNoChildCreationView: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="archived" expandGroups />
   ),
+  name: "Archived Groups Have No Child Creation Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ArchivedGroupsHaveNoChildCreation: Story = {
+  ...ArchivedGroupsHaveNoChildCreationView,
+  name: "Archived Groups Have No Child Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("treegrid");
     await waitFor(() =>

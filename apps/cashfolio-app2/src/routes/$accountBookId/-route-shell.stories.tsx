@@ -108,7 +108,8 @@ async function findUserMenuButton(canvasElement: HTMLElement) {
 }
 
 const meta = {
-  title: "Routes/AccountBookShell",
+  title: "Screens/App Shell/Account Book Shell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountBookShellSmokeHarness,
   loaders: [
     () => {
@@ -276,6 +277,8 @@ export const RouteSmoke: Story = {
       "returnTo",
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DesktopRailSmoke: Story = {
@@ -355,16 +358,16 @@ export const DesktopRailSmoke: Story = {
     ).not.toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: "Settings" })).toBeVisible();
   },
+  name: "Desktop Rail Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const MobileFooterControlsSmoke: Story = {
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   loaders: [resetDesktopRailPreference],
   parameters: {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
-    },
-    viewport: {
-      defaultViewport: "cashfolioMobile",
     },
   },
   render: () => <AccountBookShellSmokeHarness />,
@@ -386,6 +389,8 @@ export const MobileFooterControlsSmoke: Story = {
     await userEvent.click(await findUserMenuButton(canvasElement));
     await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
   },
+  name: "Mobile Footer Controls Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NeutralLedgerNavigation: Story = {

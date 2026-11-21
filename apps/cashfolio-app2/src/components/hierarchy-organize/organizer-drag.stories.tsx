@@ -10,12 +10,22 @@ import {
 } from "./story-harness";
 const meta = {
   ...organizerStoryMeta,
-  title: "Routes/Accounts/Organize",
+  title: "Screens/Accounts/Organize/Hierarchy",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: Harness,
 };
 export default meta;
 
+export const DragIntoGroupView: Story = {
+  name: "Drag Into Group Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const DragIntoGroup: Story = {
+  ...DragIntoGroupView,
+  name: "Drag Into Group Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const source = await row(canvasElement, "checking");
     const target = await row(canvasElement, "destination");
@@ -56,6 +66,9 @@ export const DragIntoGroup: Story = {
 };
 
 export const DragReorderAndCancel: Story = {
+  ...DragIntoGroupView,
+  name: "Drag Reorder And Cancel Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const source = await row(canvasElement, "checking");
     const target = await row(canvasElement, "investments");
@@ -103,6 +116,9 @@ export const DragReorderAndCancel: Story = {
 };
 
 export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
+  ...DragIntoGroupView,
+  name: "Drag Selected Subtree And Move To Top Level Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await select(canvasElement, "investments");
     await select(canvasElement, "nested");
@@ -172,13 +188,22 @@ export const DragSelectedSubtreeAndMoveToTopLevel: Story = {
   },
 };
 
-export const NarrowDragFeedbackKeepsRowsStationary: Story = {
+export const NarrowDragFeedbackKeepsRowsStationaryView: Story = {
   args: { api: createOrganizerStoryApi() },
   render: (args) => (
     <Box w={650}>
       <Harness {...args} useProvidedApi />
     </Box>
   ),
+  name: "Narrow Drag Feedback Keeps Rows Stationary Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const NarrowDragFeedbackKeepsRowsStationary: Story = {
+  ...NarrowDragFeedbackKeepsRowsStationaryView,
+  name: "Narrow Drag Feedback Keeps Rows Stationary Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await select(canvasElement, "checking");

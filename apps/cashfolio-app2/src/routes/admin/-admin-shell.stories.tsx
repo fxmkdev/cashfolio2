@@ -38,7 +38,8 @@ function AdminShellSmokeHarness() {
 }
 
 const meta = {
-  title: "Routes/AdminShell",
+  title: "Screens/Admin/Shell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AdminShellSmokeHarness,
 } satisfies Meta<typeof AdminShellSmokeHarness>;
 
@@ -107,4 +108,6 @@ export const RouteSmoke: Story = {
       expect(canvas.getByTestId("router-path")).toHaveTextContent("/");
     });
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

@@ -7,15 +7,29 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Gain and Loss/States",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const GainLossFailure: Story = {
+export const GainLossFailureView: Story = {
+  parameters: {
+    manualSetup:
+      "Open Gain/Loss Details to inspect unavailable calculation dates. Close the dialog, then choose Retry to load the fixture successfully.",
+  },
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="error" />
   ),
+  name: "Gain Loss Failure Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossFailure: Story = {
+  ...GainLossFailureView,
+  name: "Gain Loss Failure Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     expect(canvas.queryByText("Dates unavailable")).not.toBeInTheDocument();
@@ -30,10 +44,23 @@ export const GainLossFailure: Story = {
   },
 };
 
-export const GainLossPartial: Story = {
+export const GainLossPartialView: Story = {
+  parameters: {
+    manualSetup:
+      "Open Gain/Loss Details to inspect the partial valuation feedback.",
+  },
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="partial" />
   ),
+  name: "Gain Loss Partial Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossPartial: Story = {
+  ...GainLossPartialView,
+  name: "Gain Loss Partial Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
@@ -110,12 +137,29 @@ export const SignedLiabilityBalances: Story = {
   },
 };
 
-export const LocalizedLiabilityGainLoss: Story = {
+export const LocalizedLiabilityGainLossView: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The nested de-CH user locale intentionally overrides the Locale toolbar.",
+      },
+    },
+  },
   render: () => (
     <UserLocaleProvider locale="de-CH">
       <AccountsPageStoryHarness initialMode="active" initialTab="BALANCE" />
     </UserLocaleProvider>
   ),
+  name: "Localized Liability Gain Loss Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const LocalizedLiabilityGainLoss: Story = {
+  ...LocalizedLiabilityGainLossView,
+  name: "Localized Liability Gain Loss Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Since 1.1.2026 · As of 31.3.2026");

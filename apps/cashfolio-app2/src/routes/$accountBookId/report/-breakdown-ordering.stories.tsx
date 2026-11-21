@@ -45,7 +45,8 @@ const overview = {
 };
 
 const meta = {
-  title: "Routes/ReportBreakdownOrdering",
+  title: "Screens/Report/Breakdowns/Ordering",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: ReportPageView,
   args: {
     accountBookId: bookId,
@@ -102,14 +103,29 @@ async function expectTopToBottom(
   }
 }
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const ExpensesLargestFirst: Story = {
+  ...Default,
+  name: "Expenses Largest First Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) =>
     expectTopToBottom(canvasElement, "Expenses"),
 };
 export const IncomeLargestFirst: Story = {
+  ...Default,
+  name: "Income Largest First Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => expectTopToBottom(canvasElement, "Income"),
 };
 export const CashFlowSignedOrder: Story = {
+  ...Default,
+  name: "Cash Flow Signed Order Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) =>
     expectTopToBottom(canvasElement, "Cash Flow"),
 };

@@ -85,7 +85,17 @@ const data: AccountGainLossDetails = {
 };
 
 const meta = {
-  title: "Components/GainLoss/AccountGainLoss",
+  title: "Components/Gain and Loss/Account Gain and Loss",
+  parameters: {
+    docs: {
+      story: { inline: false, iframeHeight: "640px" },
+      description: {
+        component:
+          "Account Gain and Loss is owned by the gain-loss module. Inspect its visual states and use Controls for supported props. Callback and fixture objects are supplied by the story.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: AccountGainLossSummaryView,
   args: {
     data,
@@ -141,7 +151,7 @@ export const MissingBasis: Story = {
     },
   },
 };
-export const CalculationDrawer: Story = {
+export const CalculationDrawerView: Story = {
   render: () => (
     <Drawer
       opened
@@ -153,6 +163,15 @@ export const CalculationDrawer: Story = {
       <AccountGainLossCalculation data={data} onOpenTransaction={() => {}} />
     </Drawer>
   ),
+  name: "Calculation Drawer Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const CalculationDrawer: Story = {
+  ...CalculationDrawerView,
+  name: "Calculation Drawer Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     const calculation = await body.findByRole("dialog", {
@@ -175,7 +194,7 @@ export const CalculationDrawer: Story = {
   },
 };
 
-export const TransferClosesOppositePosition: Story = {
+export const TransferClosesOppositePositionView: Story = {
   render: () => {
     const sale = data.realizedEvents[0]!;
     const transferred = {
@@ -226,6 +245,15 @@ export const TransferClosesOppositePosition: Story = {
       />
     );
   },
+  name: "Transfer Closes Opposite Position Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const TransferClosesOppositePosition: Story = {
+  ...TransferClosesOppositePositionView,
+  name: "Transfer Closes Opposite Position Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -263,7 +291,7 @@ const recorded = {
   amount: 600,
 };
 const openRecordedTransaction = fn();
-export const RecordedOnly: Story = {
+export const RecordedOnlyView: Story = {
   args: {
     data: {
       ...data,
@@ -293,6 +321,15 @@ export const RecordedOnly: Story = {
       onOpenTransaction={openRecordedTransaction}
     />
   ),
+  name: "Recorded Only Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const RecordedOnly: Story = {
+  ...RecordedOnlyView,
+  name: "Recorded Only Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     openRecordedTransaction.mockClear();
     const canvas = within(canvasElement);

@@ -6,9 +6,13 @@ import { AccountsPageStoryHarness } from "./harness";
 
 const normalPath = "/storybook-book/accounts?tab=BALANCE&mode=active";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Navigation",
   component: AccountsPageView,
-  parameters: { router: { initialPath: normalPath } },
+  parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: normalPath },
+  },
   args: { organizerApi: createOrganizerStoryApi() },
   render: (args) => (
     <AccountsPageStoryHarness
@@ -56,6 +60,8 @@ export const OrganizeBackForwardAndDone: Story = {
     );
     await expect(canvas.getByRole("treegrid")).toBe(financialGrid);
   },
+  name: "Organize Back Forward And Done Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DirectOrganizeEntry: Story = {
@@ -71,6 +77,8 @@ export const DirectOrganizeEntry: Story = {
       "organize",
     );
   },
+  name: "Direct Organize Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const BackCancelsOrganizeLoading: Story = {
@@ -151,6 +159,8 @@ export const BackCancelsOrganizeLoading: Story = {
       api.load = original;
     }
   },
+  name: "Back Cancels Organize Loading Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeRetryKeepsHistoryEntry: Story = {
@@ -171,6 +181,8 @@ export const OrganizeRetryKeepsHistoryEntry: Story = {
       expect(canvas.getByTestId("history-index")).toHaveTextContent("0"),
     );
   },
+  name: "Organize Retry Keeps History Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 // Memory history supports blockers for push/replace. The E2E also exercises
@@ -262,14 +274,20 @@ function pendingNavigation(
 export const OrganizeNavigationWaitsForMove: Story = {
   args: { organizerApi: createOrganizerStoryApi() },
   play: pendingNavigation("move"),
+  name: "Organize Navigation Waits For Move Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const OrganizeNavigationWaitsForArchive: Story = {
   args: { organizerApi: createOrganizerStoryApi() },
   play: pendingNavigation("archive"),
+  name: "Organize Navigation Waits For Archive Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const OrganizeNavigationWaitsForRecovery: Story = {
   args: { organizerApi: createOrganizerStoryApi("network") },
   play: pendingNavigation("recovery"),
+  name: "Organize Navigation Waits For Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const DirectOrganizeAssetClassIsExcluded: Story = {
@@ -299,4 +317,6 @@ export const DirectOrganizeAssetClassIsExcluded: Story = {
       canvas.queryByRole("button", { name: "Organize" }),
     ).not.toBeInTheDocument();
   },
+  name: "Direct Organize Asset Class Is Excluded Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

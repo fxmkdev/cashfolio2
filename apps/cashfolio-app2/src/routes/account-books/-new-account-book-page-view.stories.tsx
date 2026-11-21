@@ -68,9 +68,19 @@ function NewAccountBookStory({
 }
 
 const meta = {
-  title: "Routes/NewAccountBookPageView",
+  title: "Screens/Account Books/New Account Book",
   component: NewAccountBookStory,
-  parameters: { router: { initialPath: "/account-books/new" } },
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "This harness fixes date-entry formatting to en-US for repeatable submission checks, overriding the Locale toolbar for the Start Date field.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: "/account-books/new" },
+  },
   args: {
     onSubmit: fn<(values: NewAccountBookSubmission) => Promise<void>>(
       async () => undefined,
@@ -88,7 +98,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const FirstBookView: Story = {
+  name: "First Book Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const FirstBook: Story = {
+  ...FirstBookView,
+  name: "First Book Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByLabelText(/Account Book Name/)).toHaveValue("");
@@ -124,6 +143,9 @@ export const ReturnToBook: Story = {
 };
 
 export const Validation: Story = {
+  ...FirstBookView,
+  name: "Validation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
@@ -135,6 +157,9 @@ export const Validation: Story = {
 };
 
 export const Submit: Story = {
+  ...FirstBookView,
+  name: "Submit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
@@ -155,12 +180,25 @@ export const Submit: Story = {
   },
 };
 
-export const Pending: Story = {
+export const PendingView: Story = {
+  parameters: {
+    manualSetup:
+      "Enter an account book name, then choose Create. The submission stays pending until the story remounts.",
+  },
   args: {
     onSubmit: fn<(values: NewAccountBookSubmission) => Promise<void>>(
       () => new Promise<void>(() => undefined),
     ),
   },
+  name: "Pending Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const Pending: Story = {
+  ...PendingView,
+  name: "Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const name = canvas.getByLabelText(/Account Book Name/);
@@ -179,6 +217,9 @@ export const Pending: Story = {
 };
 
 export const FailureAndRetry: Story = {
+  ...FirstBookView,
+  name: "Failure And Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     args.onSubmit.mockRejectedValueOnce(
       new Error("Creation is temporarily unavailable."),
@@ -223,4 +264,6 @@ export const RouteSmoke: Story = {
       ),
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

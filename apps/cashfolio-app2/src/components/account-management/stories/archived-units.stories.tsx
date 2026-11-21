@@ -14,12 +14,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Archived Accounts/Units",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const AssetClassFullyArchivedUnits: Story = {
+export const Default: Story = {
   beforeEach: () => {
     sessionStorage.removeItem("storybook:account-grouping:assetClass");
   },
@@ -43,6 +44,15 @@ export const AssetClassFullyArchivedUnits: Story = {
       }))}
     />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const AssetClassFullyArchivedUnits: Story = {
+  ...Default,
+  name: "Asset Class Fully Archived Units Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const classId = assetClassRowId("EQUITIES");

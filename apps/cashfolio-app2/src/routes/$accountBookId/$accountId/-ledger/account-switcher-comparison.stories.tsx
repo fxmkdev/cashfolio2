@@ -9,7 +9,17 @@ import {
 
 const tree = createSwitcherStoryTree();
 const meta: Meta<typeof LedgerAccountSwitcher> = {
-  title: "Routes/LedgerAccountSwitcher",
+  title: "Screens/Ledger/Account Switcher",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
+  },
   component: LedgerAccountSwitcher,
 };
 export default meta;
@@ -96,9 +106,13 @@ export const NativeDesignLight: Story = {
       within(branch).getByRole("button", { name: "Collapse" }),
     ).toBeVisible();
   },
+  name: "Native Design Light Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NativeDesignDark: Story = {
   ...NativeDesignLight,
   parameters: { colorScheme: "dark" },
+  name: "Native Design Dark Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

@@ -67,14 +67,23 @@ function PeriodFilterExample({
 }
 
 const meta = {
-  title: "Routes/ExplicitPeriodFilter",
+  title: "Components/Controls/Period Filter",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Shared period-selection action for Ledger and Transactions. The supplied availability and selected period determine navigation, empty, and out-of-range states. Screen-specific routing stays in the owner. This harness fixes en-CH formatting for period navigation checks, overriding the Locale toolbar.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: PeriodFilterExample,
   args: { initialPeriod: "2026-05", onPeriodChange: fn() },
 } satisfies Meta<typeof PeriodFilterExample>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const FilteredLedger: Story = {
+export const FilteredLedgerView: Story = {
   render: (args) => (
     <>
       <PeriodFilterExample {...args} />
@@ -82,6 +91,15 @@ export const FilteredLedger: Story = {
       <style>{buttonStyles}</style>
     </>
   ),
+  name: "Filtered Ledger Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const FilteredLedger: Story = {
+  ...FilteredLedgerView,
+  name: "Filtered Ledger Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -144,8 +162,17 @@ export const FilteredLedger: Story = {
   },
 };
 
-export const UnfilteredLedger: Story = {
+export const UnfilteredLedgerView: Story = {
   args: { initialPeriod: undefined },
+  name: "Unfiltered Ledger Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const UnfilteredLedger: Story = {
+  ...UnfilteredLedgerView,
+  name: "Unfiltered Ledger Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -176,8 +203,17 @@ export const UnfilteredLedger: Story = {
   },
 };
 
-export const TransactionsDefault: Story = {
+export const TransactionsDefaultView: Story = {
   args: { initialPeriod: undefined, transactions: true },
+  name: "Transactions Default Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const TransactionsDefault: Story = {
+  ...TransactionsDefaultView,
+  name: "Transactions Default Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -223,11 +259,20 @@ export const UnavailableLedger: Story = {
   },
 };
 
-export const EmptyLedgerPeriod: Story = {
+export const EmptyLedgerPeriodView: Story = {
   args: {
     initialPeriod: "2024-01",
     navigationMinDate: new Date("2024-03-10T00:00:00Z"),
   },
+  name: "Empty Ledger Period Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const EmptyLedgerPeriod: Story = {
+  ...EmptyLedgerPeriodView,
+  name: "Empty Ledger Period Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByTestId("period-picker-trigger")).toHaveTextContent(
@@ -242,8 +287,17 @@ export const EmptyLedgerPeriod: Story = {
   },
 };
 
-export const OutOfRangeLedger: Story = {
+export const OutOfRangeLedgerView: Story = {
   args: { initialPeriod: "2020-01" },
+  name: "Out Of Range Ledger Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OutOfRangeLedger: Story = {
+  ...OutOfRangeLedgerView,
+  name: "Out Of Range Ledger Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("status")).toHaveTextContent("2024-01");

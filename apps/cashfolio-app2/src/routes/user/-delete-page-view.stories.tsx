@@ -26,9 +26,13 @@ function UserDeleteRouteSmoke() {
 }
 
 const meta = {
-  title: "Routes/UserDeletePageView",
+  title: "Screens/User/Delete",
   component: UserDeletePageView,
-  parameters: { router: { initialPath: "/user/delete" } },
+  parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
+    router: { initialPath: "/user/delete" },
+  },
   args: { deleted: false, preview },
   decorators: [
     (Story) => (
@@ -42,7 +46,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const MixedBooksView: Story = {
+  name: "Mixed Books Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const MixedBooks: Story = {
+  ...MixedBooksView,
+  name: "Mixed Books Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Private Book")).toBeVisible();
@@ -119,4 +132,6 @@ export const RouteSmoke: Story = {
     ).toBeVisible();
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument();
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

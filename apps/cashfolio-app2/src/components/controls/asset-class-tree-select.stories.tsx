@@ -1,9 +1,20 @@
+import { useArgs } from "storybook/preview-api";
+import { StoryValue } from "../testing/story-value";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { AssetClassTreeSelect } from "./asset-class-tree-select";
 
 const meta = {
-  title: "Components/AssetClassTreeSelect",
+  title: "Components/Controls/Asset Class Tree Select",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Select an asset class from a hierarchy. Supports parent selection, path search, keyboard navigation, and an unclassified value.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: AssetClassTreeSelect,
   args: {
     label: "Asset Class",
@@ -23,7 +34,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const HierarchyAndParentSelectionView: Story = {
+  parameters: {
+    manualSetup:
+      "Open Asset Class to expand Equities and choose a parent or child. Type a hierarchy path to search; use Clear to return to Unclassified.",
+  },
+  name: "Hierarchy And Parent Selection Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const HierarchyAndParentSelection: Story = {
+  ...HierarchyAndParentSelectionView,
+  name: "Hierarchy And Parent Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -50,6 +74,9 @@ export const HierarchyAndParentSelection: Story = {
 };
 
 export const PathSearchAndKeyboard: Story = {
+  ...HierarchyAndParentSelectionView,
+  name: "Path Search And Keyboard Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -66,8 +93,21 @@ export const PathSearchAndKeyboard: Story = {
   },
 };
 
-export const ClearAndUnclassified: Story = {
+export const ClearAndUnclassifiedView: Story = {
+  parameters: {
+    manualSetup:
+      "Clear Swiss Shares to inspect the empty value, then choose Unclassified from the tree.",
+  },
   args: { defaultValue: "swiss" },
+  name: "Clear And Unclassified Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ClearAndUnclassified: Story = {
+  ...ClearAndUnclassifiedView,
+  name: "Clear And Unclassified Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -81,5 +121,27 @@ export const ClearAndUnclassified: Story = {
     await userEvent.click(input);
     await userEvent.click(body.getByRole("option", { name: "Unclassified" }));
     await expect(args.onChange).toHaveBeenLastCalledWith("");
+  },
+};
+
+export const Default: Story = {
+  args: { value: null },
+  render: function Render(args) {
+    const [, updateArgs] = useArgs();
+    return (
+      <StoryValue value={args.value}>
+        {(value, setValue) => (
+          <AssetClassTreeSelect
+            {...args}
+            value={value}
+            onChange={(value) => {
+              setValue(value);
+              updateArgs({ value });
+              args.onChange?.(value);
+            }}
+          />
+        )}
+      </StoryValue>
+    );
   },
 };

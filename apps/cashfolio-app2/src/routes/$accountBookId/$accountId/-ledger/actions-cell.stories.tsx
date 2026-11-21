@@ -30,7 +30,8 @@ const row: LedgerRow = {
 };
 
 const meta = {
-  title: "Components/LedgerActionsCell",
+  title: "Screens/Ledger/Actions Cell",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerActionsCell,
   args: {
     row,
@@ -84,7 +85,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const Actions: Story = {
+  ...Default,
+  name: "Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -146,6 +156,9 @@ export const Actions: Story = {
 };
 
 export const KeyboardAndReveal: Story = {
+  ...Default,
+  name: "Keyboard And Reveal Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -182,6 +195,9 @@ export const KeyboardAndReveal: Story = {
 };
 
 export const OpeningBalances: Story = {
+  ...Default,
+  name: "Opening Balances Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

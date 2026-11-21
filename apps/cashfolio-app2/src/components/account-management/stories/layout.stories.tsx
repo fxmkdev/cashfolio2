@@ -8,7 +8,8 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Overview",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
@@ -42,6 +43,8 @@ export const RouteSmoke: Story = {
       '"mode":"active"',
     );
   },
+  name: "Route Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const MixedBalanceHierarchy: Story = {
@@ -233,4 +236,6 @@ export const ConstrainedWidthWithGainLoss: Story = {
     await userEvent.keyboard("{Escape}");
     viewport.scrollLeft = 0;
   },
+  name: "Constrained Width With Gain Loss Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

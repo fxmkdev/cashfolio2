@@ -4,15 +4,29 @@ import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AccountsPageView } from "../view";
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Gain and Loss/Loading",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: AccountsPageView,
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const GainLossLoading: Story = {
+export const Default: Story = {
+  parameters: {
+    manualSetup:
+      "Open Gain/Loss Details to inspect the loading calculation dates. Close the dialog when finished.",
+  },
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="loading" />
   ),
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossLoading: Story = {
+  ...Default,
+  name: "Gain Loss Loading Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Loading calculation dates…");
@@ -23,7 +37,7 @@ export const GainLossLoading: Story = {
   },
 };
 
-export const GainLossLoadingToReady: Story = {
+export const GainLossLoadingToReadyView: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
@@ -31,6 +45,15 @@ export const GainLossLoadingToReady: Story = {
       toggleGainLossLoading
     />
   ),
+  name: "Gain Loss Loading To Ready Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossLoadingToReady: Story = {
+  ...GainLossLoadingToReadyView,
+  name: "Gain Loss Loading To Ready Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     let header = await canvas.findByRole("columnheader", {
@@ -104,13 +127,9 @@ export const GainLossLoadingToReady: Story = {
 };
 
 export const GainLossCompletesWithDetailsOpen: Story = {
-  render: () => (
-    <AccountsPageStoryHarness
-      initialMode="active"
-      gainLossState="loading"
-      toggleGainLossLoading
-    />
-  ),
+  ...GainLossLoadingToReadyView,
+  name: "Gain Loss Completes With Details Open Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);

@@ -66,7 +66,16 @@ function StoryComponent({
 }
 
 const meta = {
-  title: "Components/AccountTreeActionsCells",
+  title: "Components/Grid/Account Tree Actions Cells",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Row actions for active and archived account trees. Supply the permitted callbacks and disabled reasons; hover or focus the row to reveal its actions. Child creation follows the hierarchy action guidelines.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   component: StoryComponent,
   args: {
     variant: "active",
@@ -125,6 +134,8 @@ export const InteractionSmoke: Story = {
     await expect(args.onArchive).toHaveBeenCalled();
     await expect(args.onDelete).toHaveBeenCalled();
   },
+  name: "Interaction Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const ArchivedInteractionSmoke: Story = {
@@ -159,10 +170,21 @@ export const ArchivedInteractionSmoke: Story = {
     await expect(args.onDelete).toHaveBeenCalled();
     await expect(args.onUnarchive).toHaveBeenCalled();
   },
+  name: "Archived Interaction Smoke Interaction Test",
+  tags: ["regression", "!autodocs"],
+};
+
+export const ChildCreationView: Story = {
+  args: { onAddAccount: fn(), onAddGroup: fn() },
+  name: "Child Creation Playground",
+  tags: ["!regression"],
+  play: undefined,
 };
 
 export const ChildCreation: Story = {
-  args: { onAddAccount: fn(), onAddGroup: fn() },
+  ...ChildCreationView,
+  name: "Child Creation Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
@@ -177,8 +199,17 @@ export const ChildCreation: Story = {
   },
 };
 
-export const DisabledExplanations: Story = {
+export const DisabledExplanationsView: Story = {
   args: { archivable: false, deletable: false },
+  name: "Disabled Explanations Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const DisabledExplanations: Story = {
+  ...DisabledExplanationsView,
+  name: "Disabled Explanations Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const trigger = within(canvasElement).getByRole("button", {
@@ -246,8 +277,17 @@ export const DisabledExplanations: Story = {
   },
 };
 
-export const UnarchivePending: Story = {
+export const UnarchivePendingView: Story = {
   args: { variant: "archived", unarchivePending: true },
+  name: "Unarchive Pending Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const UnarchivePending: Story = {
+  ...UnarchivePendingView,
+  name: "Unarchive Pending Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(

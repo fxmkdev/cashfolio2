@@ -79,9 +79,11 @@ function CategoryEditHarness({
 }
 
 const meta = {
-  title: "Routes/Categories/Edit Submission",
+  title: "Screens/Categories/Editors",
   component: CategoryEditHarness,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: {
       initialPath:
         "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
@@ -184,16 +186,24 @@ function committedRefreshRecovery(target: Target): NonNullable<Story["play"]> {
 export const CategoryEditWaitsForNavigation: Story = {
   args: { scenario: createScenario() },
   play: pendingNavigation("category"),
+  name: "Category Edit Waits For Navigation Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const GroupEditWaitsForTabChange: Story = {
   args: { scenario: createScenario() },
   play: pendingNavigation("group"),
+  name: "Group Edit Waits For Tab Change Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const CategoryEditRecoversCommittedSave: Story = {
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("category"),
+  name: "Category Edit Recovers Committed Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 export const GroupEditRecoversCommittedSave: Story = {
   args: { scenario: createScenario() },
   play: committedRefreshRecovery("group"),
+  name: "Group Edit Recovers Committed Save Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

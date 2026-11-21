@@ -10,9 +10,11 @@ import { expandAssignmentGroup } from "./interaction-helpers";
 import { organizeAccountNodes } from "./organize-action-fixtures";
 
 const meta: Meta<typeof AccountsPageView> = {
-  title: "Routes/AccountsPageView",
+  title: "Screens/Accounts/Organize/Creation",
   component: AccountsPageView,
   parameters: {
+    layout: "fullscreen",
+    controls: { disable: true },
     router: { initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active" },
   },
 };
@@ -109,6 +111,8 @@ export const OrganizeCreationActions: Story = {
     await expect(dialog.getByLabelText("Parent Group")).toHaveValue("");
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
   },
+  name: "Organize Creation Actions Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const OrganizeCreationPendingAndRecovery: Story = {
@@ -178,6 +182,8 @@ export const OrganizeCreationPendingAndRecovery: Story = {
       release();
     }
   },
+  name: "Organize Creation Pending And Recovery Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 function ExistingEditHarness({
@@ -238,6 +244,8 @@ export const OrganizeRetainsAndRefreshesExistingEdit: Story = {
       await region.findByText("Retained Checking Draft", { exact: true }),
     ).toBeVisible();
   },
+  name: "Organize Retains And Refreshes Existing Edit Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 export const NormalEditSubmissionQueuesOrganizeEntry: Story = {
@@ -299,4 +307,6 @@ export const NormalEditSubmissionQueuesOrganizeEntry: Story = {
       release();
     }
   },
+  name: "Normal Edit Submission Queues Organize Entry Interaction Test",
+  tags: ["regression", "!autodocs"],
 };

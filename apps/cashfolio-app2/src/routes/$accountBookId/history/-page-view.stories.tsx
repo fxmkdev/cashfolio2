@@ -48,7 +48,17 @@ const history: PeriodHistoryResponse = {
 };
 
 const meta = {
-  title: "Routes/HistoryPageView",
+  title: "Screens/History/Overview",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Light/Dark variants and any explicit colorScheme parameter override the Theme toolbar for repeatable visual comparison.",
+      },
+    },
+    layout: "fullscreen",
+    controls: { disable: true },
+  },
   component: HistoryPageView,
   args: {
     accountBookId: "storybook-book",
@@ -175,6 +185,8 @@ export const PreservesLegendAcrossEmptyView: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Show Income" }));
     await waitFor(() => expect(cumulative()).toBeChecked());
   },
+  name: "Preserves Legend Across Empty View Interaction Test",
+  tags: ["regression", "!autodocs"],
 };
 
 const creditCardHistory: PeriodHistoryResponse = {

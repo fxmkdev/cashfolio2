@@ -1,21 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, Text } from "@mantine/core";
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
-import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { defaultAssetClassIds } from "@/shared/classification/asset-class";
-import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { LedgerPageView } from "./page-view";
 import { LedgerPageStoryHarness } from "./page-view.story-harness";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import { defaultAssetClassIds } from "@/shared/classification/asset-class";
+import { ledgerPageStoryMeta } from "./page-view.story-meta";
 
 const meta: Meta<typeof LedgerPageView> = {
-  title: "Routes/LedgerPageView",
-  component: LedgerPageView,
+  ...ledgerPageStoryMeta,
+  title: "Screens/Ledger/Overview",
 };
-
 export default meta;
-
 type Story = StoryObj<typeof meta>;
 
 export const HappyPath: Story = {
@@ -114,244 +109,6 @@ export const EquityWithoutAssetClass: Story = {
   },
 };
 
-export const AccountActionsMenu: Story = {
-  args: { onOpenImportPage: fn() },
-  render: (args) => (
-    <LedgerPageStoryHarness onOpenImportPage={args.onOpenImportPage} />
-  ),
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const actionButtons = within(
-      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
-    );
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Import Statement" }),
-    );
-    await expect(args.onOpenImportPage).toHaveBeenCalledTimes(1);
-    await expect(
-      actionButtons.queryByRole("button", { name: "Edit" }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
-    });
-    await expect(screen.getAllByRole("menuitem")[0]).toHaveTextContent("Edit");
-    await expect(
-      screen.queryByRole("menuitem", { name: "Import Statement" }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
-    const dialog = await screen.findByRole("dialog", { name: "Edit Account" });
-    await waitFor(() => expect(dialog).toBeVisible());
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Cancel" }),
-    );
-    await waitFor(() => expect(dialog).not.toBeInTheDocument());
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-    });
-  },
-};
-
-export const ArchivedAccountActionsMenu: Story = {
-  render: () => <LedgerPageStoryHarness accountActive={false} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await expect(
-      canvas.getByRole("heading", { name: "Checking" }),
-    ).toBeVisible();
-    await expect(canvas.getByText("Archived")).toBeVisible();
-    await expect(
-      canvas.getByRole("button", { name: "Import Statement" }),
-    ).toBeEnabled();
-    await expect(
-      canvas.queryByRole("link", { name: "Accounts" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      canvas.queryByRole("link", { name: "Archive" }),
-    ).not.toBeInTheDocument();
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Unarchive" })).toBeVisible();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
-    });
-  },
-};
-
-export const DisabledAccountActionsMenu: Story = {
-  render: () => <LedgerPageStoryHarness accountActionsDisabled={true} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeDisabled();
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeDisabled();
-    });
-  },
-};
-
-export const MissingStatementImportCsvFormat: Story = {
-  render: () => <LedgerPageStoryHarness hasStatementImportCsvFormat={false} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const actionButtons = within(
-      canvas.getByRole("button", { name: "Account Actions" }).parentElement!,
-    );
-    await expect(
-      actionButtons.getByRole("button", { name: "Edit" }),
-    ).toBeEnabled();
-    await expect(
-      canvas.queryByRole("button", { name: "Import Statement" }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-    const importItem = await screen.findByRole("menuitem", {
-      name: "Import Statement",
-    });
-    await expect(importItem).toBeDisabled();
-    await userEvent.hover(importItem.parentElement!);
-    await waitFor(() =>
-      expect(
-        screen.getByRole("tooltip", {
-          name: "Statement imports require a CSV format configured on this account.",
-        }),
-      ).toBeVisible(),
-    );
-  },
-};
-
-function categoryActionsMenuPlay(
-  equitySubtype: EquityAccountSubtype,
-): NonNullable<Story["play"]> {
-  return async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const actionButtons = within(
-      canvas.getByRole("button", { name: "Category Actions" }).parentElement!,
-    );
-    await expect(
-      actionButtons.getByRole("button", { name: "Edit" }),
-    ).toBeEnabled();
-    await expect(
-      canvas.queryByRole("button", { name: "Import Statement" }),
-    ).not.toBeInTheDocument();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Category Actions" }),
-    );
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
-      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
-    });
-    if (equitySubtype !== EquityAccountSubtype.GAIN_LOSS) {
-      await expect(
-        screen.getByRole("menuitem", { name: "Manage Category" }),
-      ).toBeEnabled();
-    } else {
-      await expect(
-        screen.queryByRole("menuitem", { name: "Manage Category" }),
-      ).not.toBeInTheDocument();
-      await expect(
-        screen.getByRole("menu").querySelector(".mantine-Menu-divider"),
-      ).not.toBeInTheDocument();
-    }
-    await expect(
-      screen.queryByRole("menuitem", { name: "Import Statement" }),
-    ).not.toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(actionButtons.getByRole("button", { name: "Edit" }));
-    const dialog = await screen.findByRole("dialog", { name: "Edit Category" });
-    await waitFor(() => expect(dialog).toBeVisible());
-  };
-}
-
-export const CategoryActionsMenu: Story = {
-  render: () => (
-    <LedgerPageStoryHarness
-      accountType={AccountType.EQUITY}
-      equitySubtype={EquityAccountSubtype.EXPENSE}
-    />
-  ),
-  play: categoryActionsMenuPlay(EquityAccountSubtype.EXPENSE),
-};
-
-export const IncomeCategoryActionsMenu: Story = {
-  render: () => (
-    <LedgerPageStoryHarness
-      accountType={AccountType.EQUITY}
-      equitySubtype={EquityAccountSubtype.INCOME}
-    />
-  ),
-  play: categoryActionsMenuPlay(EquityAccountSubtype.INCOME),
-};
-
-export const GainLossCategoryActionsMenu: Story = {
-  render: () => (
-    <LedgerPageStoryHarness
-      accountType={AccountType.EQUITY}
-      equitySubtype={EquityAccountSubtype.GAIN_LOSS}
-    />
-  ),
-  play: categoryActionsMenuPlay(EquityAccountSubtype.GAIN_LOSS),
-};
-
-export const DisabledEditMenuAction: Story = {
-  render: () => (
-    <LedgerPageStoryHarness accountEditDisabledReason="This account cannot be edited." />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      canvas.getByRole("button", { name: "Import Statement" }),
-    ).toBeEnabled();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Account Actions" }),
-    );
-    const editItem = await screen.findByRole("menuitem", {
-      name: "Edit",
-    });
-    await expect(editItem).toBeDisabled();
-    await userEvent.hover(editItem.parentElement!);
-    await waitFor(() =>
-      expect(
-        screen.getByRole("tooltip", {
-          name: "This account cannot be edited.",
-        }),
-      ).toBeVisible(),
-    );
-  },
-};
-
 export const SimpleModalState: Story = {
   render: () => <LedgerPageStoryHarness startWithSimpleModal={true} />,
 };
@@ -364,62 +121,7 @@ export const EditModalState: Story = {
   render: () => <LedgerPageStoryHarness startWithEditModal={true} />,
 };
 
-export const PeriodFilterRouteSmoke: Story = {
-  parameters: {
-    router: {
-      initialPath: "/storybook-book/account-checking",
-    },
-  },
-  render: () => (
-    <LedgerPageStoryHarness
-      routeSmoke={true}
-      includePeriodFilterControls={true}
-      accountType={AccountType.EQUITY}
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "(none)",
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "All Periods" }));
-    await expect(
-      await screen.findByRole("button", { name: "Clear Filter" }),
-    ).toBeDisabled();
-
-    await userEvent.click(screen.getByRole("radio", { name: "Year" }));
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "(none)",
-    );
-
-    await userEvent.click(screen.getByRole("radio", { name: "Month" }));
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "(none)",
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /Feb/i }));
-
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "2026-02",
-    );
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Previous Period" }),
-    );
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "2026-01",
-    );
-
-    await userEvent.click(canvas.getByRole("button", { name: "January 2026" }));
-    await userEvent.click(screen.getByRole("button", { name: "Clear Filter" }));
-    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
-      "(none)",
-    );
-  },
-};
-
-export const ExpenseCategoryContext: Story = {
+export const ExpenseCategoryContextView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -427,6 +129,15 @@ export const ExpenseCategoryContext: Story = {
       returnLabel="Report"
     />
   ),
+  name: "Expense Category Context Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ExpenseCategoryContext: Story = {
+  ...ExpenseCategoryContextView,
+  name: "Expense Category Context Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -447,7 +158,7 @@ export const ExpenseCategoryContext: Story = {
 };
 
 export const IncomeCategoryMobile: Story = {
-  parameters: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "cashfolioMobile", isRotated: false } },
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -466,7 +177,7 @@ export const IncomeCategoryMobile: Story = {
   },
 };
 
-export const OpeningBalancesDirectVisit: Story = {
+export const OpeningBalancesDirectVisitView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -474,6 +185,15 @@ export const OpeningBalancesDirectVisit: Story = {
       accountActionsDisabled
     />
   ),
+  name: "Opening Balances Direct Visit Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const OpeningBalancesDirectVisit: Story = {
+  ...OpeningBalancesDirectVisitView,
+  name: "Opening Balances Direct Visit Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -492,7 +212,7 @@ export const OpeningBalancesDirectVisit: Story = {
   },
 };
 
-export const GainLossContext: Story = {
+export const GainLossContextView: Story = {
   render: () => (
     <LedgerPageStoryHarness
       accountType={AccountType.EQUITY}
@@ -501,6 +221,15 @@ export const GainLossContext: Story = {
       accountActionsDisabled
     />
   ),
+  name: "Gain Loss Context Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const GainLossContext: Story = {
+  ...GainLossContextView,
+  name: "Gain Loss Context Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -515,66 +244,5 @@ export const GainLossContext: Story = {
     await expect(
       screen.queryByRole("menuitem", { name: "Manage Category" }),
     ).not.toBeInTheDocument();
-  },
-};
-
-function StableLedgerNavigationHarness() {
-  const navigate = useNavigate();
-  const navigationState = useLedgerNavigationState();
-  const [initialState] = useState(() => navigationState);
-  const [renders, setRenders] = useState(0);
-  return (
-    <>
-      <Button onClick={() => setRenders((count) => count + 1)}>
-        Render Modal State
-      </Button>
-      <Button
-        onClick={async () => {
-          await navigate({
-            to: "/$accountBookId/report",
-            params: { accountBookId: "storybook-book" },
-            search: { period: "2026-02" },
-          });
-          setRenders((count) => count + 1);
-        }}
-      >
-        Change Source Period
-      </Button>
-      <Text data-testid="source-href">
-        {navigationState().ledgerReturnTarget?.href}
-      </Text>
-      <Text data-testid="local-render-count">{renders}</Text>
-      <Text data-testid="stable-navigation-state">
-        {String(initialState === navigationState)}
-      </Text>
-    </>
-  );
-}
-
-export const StableNavigationState: Story = {
-  parameters: {
-    router: { initialPath: "/storybook-book/report?period=2026-01" },
-  },
-  render: () => <StableLedgerNavigationHarness />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Render Modal State" }),
-    );
-    await expect(canvas.getByTestId("local-render-count")).toHaveTextContent(
-      "1",
-    );
-    await expect(
-      canvas.getByTestId("stable-navigation-state"),
-    ).toHaveTextContent("true");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Change Source Period" }),
-    );
-    await expect(canvas.getByTestId("source-href")).toHaveTextContent(
-      "/storybook-book/report?period=2026-02",
-    );
-    await expect(
-      canvas.getByTestId("stable-navigation-state"),
-    ).toHaveTextContent("true");
   },
 };

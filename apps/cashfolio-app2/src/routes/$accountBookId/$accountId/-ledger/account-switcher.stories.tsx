@@ -12,7 +12,8 @@ import {
 
 const tree = createSwitcherStoryTree();
 const meta: Meta<typeof LedgerAccountSwitcher> = {
-  title: "Routes/LedgerAccountSwitcher",
+  title: "Screens/Ledger/Account Switcher",
+  parameters: { layout: "fullscreen", controls: { disable: true } },
   component: LedgerAccountSwitcher,
   args: { account: switcherStoryAccount, tree, onSelectAccount: fn() },
 };
@@ -33,7 +34,16 @@ async function expectOpen() {
   );
 }
 
+export const Default: Story = {
+  name: "Default",
+  tags: ["!regression"],
+  play: undefined,
+};
+
 export const BrowseAndSearch: Story = {
+  ...Default,
+  name: "Browse And Search Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole("button", {
@@ -117,6 +127,9 @@ export const BrowseAndSearch: Story = {
 };
 
 export const KeyboardAndDismissal: Story = {
+  ...Default,
+  name: "Keyboard And Dismissal Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const trigger = within(canvasElement).getByRole("button", {
       name: "Switch Account: Checking",
@@ -173,6 +186,9 @@ export const KeyboardAndDismissal: Story = {
 };
 
 export const CurrentAccountAndOutsideDismissal: Story = {
+  ...Default,
+  name: "Current Account And Outside Dismissal Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const trigger = within(canvasElement).getByRole("button", {
       name: "Switch Account: Checking",
@@ -198,7 +214,7 @@ export const CurrentAccountAndOutsideDismissal: Story = {
   },
 };
 
-export const ScrollToCurrentAccount: Story = {
+export const ScrollToCurrentAccountView: Story = {
   args: {
     account: { id: "last-account", name: "Last Account" },
     tree: buildLedgerAccountSwitcherData({
@@ -221,6 +237,15 @@ export const ScrollToCurrentAccount: Story = {
       })),
     }),
   },
+  name: "Scroll To Current Account Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ScrollToCurrentAccount: Story = {
+  ...ScrollToCurrentAccountView,
+  name: "Scroll To Current Account Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", {
@@ -245,7 +270,7 @@ export const ScrollToCurrentAccount: Story = {
   },
 };
 
-export const SelectAndReopen: Story = {
+export const SelectAndReopenView: Story = {
   render: function SelectAndReopenHarness() {
     const [account, setAccount] = useState(switcherStoryAccount);
     return (
@@ -266,6 +291,15 @@ export const SelectAndReopen: Story = {
       </Box>
     );
   },
+  name: "Select And Reopen Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const SelectAndReopen: Story = {
+  ...SelectAndReopenView,
+  name: "Select And Reopen Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const open = async () => {
@@ -306,8 +340,17 @@ export const SelectAndReopen: Story = {
   },
 };
 
-export const ArchivedLedger: Story = {
+export const ArchivedLedgerView: Story = {
   args: { account: { id: "retired", name: "Retired Account" } },
+  name: "Archived Ledger Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const ArchivedLedger: Story = {
+  ...ArchivedLedgerView,
+  name: "Archived Ledger Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -340,7 +383,7 @@ export const ArchivedLedger: Story = {
   },
 };
 
-export const NoActiveAccounts: Story = {
+export const NoActiveAccountsView: Story = {
   args: {
     account: { id: "retired", name: "Retired Account" },
     tree: buildLedgerAccountSwitcherData({
@@ -365,6 +408,15 @@ export const NoActiveAccounts: Story = {
       ],
     }),
   },
+  name: "No Active Accounts Playground",
+  tags: ["!regression"],
+  play: undefined,
+};
+
+export const NoActiveAccounts: Story = {
+  ...NoActiveAccountsView,
+  name: "No Active Accounts Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement, args }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", {
