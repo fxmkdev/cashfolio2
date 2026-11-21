@@ -1,19 +1,14 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { ControllerHarness } from "./controller-harness";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ControllerHarness>;
+import { controllerStoryMeta } from "./story-meta";
+import {
+  preferenceHydrationView,
+  rapidPreferenceSavesView,
+  preferenceSaveRetryView,
+  preferenceReadRetryView,
+} from "./story-support";
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
 async function chooseExchange(canvasElement: HTMLElement, name: string) {
@@ -29,8 +24,15 @@ async function chooseExchange(canvasElement: HTMLElement, name: string) {
     }),
   );
 }
+export const PreferenceHydrationPreview: Story = {
+  ...preferenceHydrationView,
+  name: "Preference Hydration",
+};
+
 export const PreferenceHydration: Story = {
-  args: { scenario: "preferencePending", savedExchange: "XSWX" },
+  ...preferenceHydrationView,
+  name: "Preference Hydration Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -68,8 +70,15 @@ export const PreferenceHydration: Story = {
     ).toHaveTextContent("0");
   },
 };
+export const RapidPreferenceSavesPreview: Story = {
+  ...rapidPreferenceSavesView,
+  name: "Rapid Preference Saves",
+};
+
 export const RapidPreferenceSaves: Story = {
-  args: { scenario: "preferenceRapid" },
+  ...rapidPreferenceSavesView,
+  name: "Rapid Preference Saves Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await chooseExchange(canvasElement, "Swiss");
@@ -90,8 +99,15 @@ export const RapidPreferenceSaves: Story = {
     ).toHaveTextContent("0");
   },
 };
+export const PreferenceSaveRetryPreview: Story = {
+  ...preferenceSaveRetryView,
+  name: "Preference Save Retry",
+};
+
 export const PreferenceSaveRetry: Story = {
-  args: { scenario: "preferenceSaveError" },
+  ...preferenceSaveRetryView,
+  name: "Preference Save Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await chooseExchange(canvasElement, "Swiss");
@@ -117,8 +133,15 @@ export const PreferenceSaveRetry: Story = {
     ).not.toBeInTheDocument();
   },
 };
+export const PreferenceReadRetryPreview: Story = {
+  ...preferenceReadRetryView,
+  name: "Preference Read Retry",
+};
+
 export const PreferenceReadRetry: Story = {
-  args: { scenario: "preferenceLoadError", savedExchange: "XSWX" },
+  ...preferenceReadRetryView,
+  name: "Preference Read Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(

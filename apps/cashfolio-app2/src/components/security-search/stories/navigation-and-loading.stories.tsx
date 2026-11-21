@@ -1,32 +1,32 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { ControllerHarness } from "./controller-harness";
+import { controllerStoryMeta } from "./story-meta";
+import {
+  restorePageAndSelectionView,
+  unavailableRestoredSelectionView,
+  serverSideBrowsingView,
+  obsoleteSearchResponseView,
+  switchClearsDerivedValuesView,
+  unavailableRestoredPageView,
+  pendingPageKeepsSelectionView,
+  pendingCountsDarkView,
+  failedPageRetryKeepsSelectionView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ControllerHarness>;
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const RestorePageAndSelectionPreview: Story = {
+  ...restorePageAndSelectionView,
+  name: "Restore Page And Selection",
+};
+
 export const RestorePageAndSelection: Story = {
-  args: {
-    initialView: {
-      q: "",
-      page: 2,
-      selectedSymbol: "ALP",
-      selectedMic: "XSWX",
-      range: "5Y",
-    },
-  },
+  ...restorePageAndSelectionView,
+  name: "Restore Page And Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(() =>
@@ -79,15 +79,15 @@ export const RestoreVisibleSelection: Story = {
     ).toHaveTextContent("XSWX");
   },
 };
+export const UnavailableRestoredSelectionPreview: Story = {
+  ...unavailableRestoredSelectionView,
+  name: "Unavailable Restored Selection",
+};
+
 export const UnavailableRestoredSelection: Story = {
-  args: {
-    initialView: {
-      q: "Alpine",
-      selectedSymbol: "MISSING",
-      selectedMic: "XNAS",
-    },
-    scenario: "missingSelection",
-  },
+  ...unavailableRestoredSelectionView,
+  name: "Unavailable Restored Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -112,6 +112,9 @@ export const UnavailableRestoredSelection: Story = {
   },
 };
 export const NavigationRestoresCommittedView: Story = {
+  ...serverSideBrowsingView,
+  name: "Navigation Restores Committed View Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
@@ -145,7 +148,9 @@ export const NavigationRestoresCommittedView: Story = {
   },
 };
 export const PendingCounts: Story = {
-  args: { scenario: "obsoleteSearch" },
+  ...obsoleteSearchResponseView,
+  name: "Pending Counts Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -202,8 +207,15 @@ export const PendingCounts: Story = {
     );
   },
 };
+export const SwitchClearsDerivedValuesPreview: Story = {
+  ...switchClearsDerivedValuesView,
+  name: "Switch Clears Derived Values",
+};
+
 export const SwitchClearsDerivedValues: Story = {
-  args: { scenario: "switchPending" },
+  ...switchClearsDerivedValuesView,
+  name: "Switch Clears Derived Values Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -233,8 +245,15 @@ export const SwitchClearsDerivedValues: Story = {
     );
   },
 };
+export const UnavailableRestoredPagePreview: Story = {
+  ...unavailableRestoredPageView,
+  name: "Unavailable Restored Page",
+};
+
 export const UnavailableRestoredPage: Story = {
-  args: { initialView: { q: "Alpine", page: 2 } },
+  ...unavailableRestoredPageView,
+  name: "Unavailable Restored Page Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
@@ -254,8 +273,15 @@ export const UnavailableRestoredPage: Story = {
   },
 };
 
+export const PendingPageKeepsSelectionPreview: Story = {
+  ...pendingPageKeepsSelectionView,
+  name: "Pending Page Keeps Selection",
+};
+
 export const PendingPageKeepsSelection: Story = {
-  args: { scenario: "pagePending" },
+  ...pendingPageKeepsSelectionView,
+  name: "Pending Page Keeps Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -305,14 +331,27 @@ export const PendingPageKeepsSelection: Story = {
     );
   },
 };
+export const PendingCountsDarkPreview: Story = {
+  ...pendingCountsDarkView,
+  name: "Pending Counts Dark",
+};
+
 export const PendingCountsDark: Story = {
-  args: { scenario: "obsoleteSearch" },
-  parameters: { colorScheme: "dark" },
+  ...pendingCountsDarkView,
+  name: "Pending Counts Dark Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: PendingCounts.play,
 };
 
+export const FailedPageRetryKeepsSelectionPreview: Story = {
+  ...failedPageRetryKeepsSelectionView,
+  name: "Failed Page Retry Keeps Selection",
+};
+
 export const FailedPageRetryKeepsSelection: Story = {
-  args: { scenario: "pageError" },
+  ...failedPageRetryKeepsSelectionView,
+  name: "Failed Page Retry Keeps Selection Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));

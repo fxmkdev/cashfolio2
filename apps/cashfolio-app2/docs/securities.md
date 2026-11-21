@@ -30,7 +30,11 @@ account creation or valuation.
 - Abort signals cancel replaced searches/history and unmounted work. Obsolete
   responses cannot replace another listing or update the current grid summary.
 
-Open **Routes/Securities** in Storybook. Fixtures emulate provider ordering,
+Open **Screens / Securities / Default** in Storybook. Viewing examples wait for
+manual interaction; setup notes explain how to reach pending, retry, and
+navigation states. Clear the `regression` exclusion in the sidebar tag filter to
+reveal automated **Interaction Test** stories. Both viewing and regression
+stories remain eligible for CI tests. Fixtures emulate provider ordering,
 explicit submission, exchange choices and requested pages, plus chart/copy,
 responsive layouts, partial history and cooldowns. They never call Marketstack
 or the backend and make no provider-coverage or currency claims.

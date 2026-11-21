@@ -1,31 +1,34 @@
-import { Box } from "@mantine/core";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { controllerStoryMeta } from "./story-meta";
+import {
+  serverSideBrowsingView,
+  obsoleteHistoryResponseView,
+  resultsRequestErrorView,
+  obsoleteSearchResponseView,
+  exchangeDirectoryRetryView,
+  selectedHistoryRetryView,
+  partialPriceHistoryView,
+  partialPriceHistoryDarkView,
+  partialPriceHistoryMobileView,
+  unusablePriceHistoryView,
+  historyRetryCooldownView,
+} from "./story-support";
 import { selectListing } from "./interaction-helpers";
-import { ControllerHarness } from "./controller-harness";
-const meta = {
-  title: "Routes/Securities",
-  component: ControllerHarness,
-  decorators: [
-    (Story) => (
-      <Box h="100dvh" style={{ display: "flex", flexDirection: "column" }}>
-        <Story />
-      </Box>
-    ),
-  ],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "The production controller and server-side grid run against deterministic local service doubles. No Marketstack or backend calls are made.",
-      },
-    },
-  },
-} satisfies Meta<typeof ControllerHarness>;
+
+const meta = { ...controllerStoryMeta, title: "Screens/Securities" };
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const ControllerDefault: Story = {
+  ...serverSideBrowsingView,
+  name: "Controller Default",
+};
+
 export const ServerSideBrowsing: Story = {
+  ...serverSideBrowsingView,
+  name: "Server Side Browsing Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -44,8 +47,15 @@ export const ServerSideBrowsing: Story = {
     ).toBeVisible();
   },
 };
+export const ObsoleteHistoryResponsePreview: Story = {
+  ...obsoleteHistoryResponseView,
+  name: "Obsolete History Response",
+};
+
 export const ObsoleteHistoryResponse: Story = {
-  args: { scenario: "obsolete" },
+  ...obsoleteHistoryResponseView,
+  name: "Obsolete History Response Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -75,8 +85,15 @@ export const ObsoleteHistoryResponse: Story = {
     ).not.toBeInTheDocument();
   },
 };
+export const ResultsRequestErrorPreview: Story = {
+  ...resultsRequestErrorView,
+  name: "Results Request Error",
+};
+
 export const ResultsRequestError: Story = {
-  args: { scenario: "resultsError" },
+  ...resultsRequestErrorView,
+  name: "Results Request Error Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -118,8 +135,15 @@ export const ResultsRequestError: Story = {
   },
 };
 
+export const ObsoleteSearchResponsePreview: Story = {
+  ...obsoleteSearchResponseView,
+  name: "Obsolete Search Response",
+};
+
 export const ObsoleteSearchResponse: Story = {
-  args: { scenario: "obsoleteSearch" },
+  ...obsoleteSearchResponseView,
+  name: "Obsolete Search Response Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("textbox", {
@@ -148,8 +172,15 @@ export const ObsoleteSearchResponse: Story = {
   },
 };
 
+export const ExchangeDirectoryRetryPreview: Story = {
+  ...exchangeDirectoryRetryView,
+  name: "Exchange Directory Retry",
+};
+
 export const ExchangeDirectoryRetry: Story = {
-  args: { scenario: "exchangesError" },
+  ...exchangeDirectoryRetryView,
+  name: "Exchange Directory Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox", { name: "Exchange" }));
@@ -171,8 +202,15 @@ export const ExchangeDirectoryRetry: Story = {
     );
   },
 };
+export const SelectedHistoryRetryPreview: Story = {
+  ...selectedHistoryRetryView,
+  name: "Selected History Retry",
+};
+
 export const SelectedHistoryRetry: Story = {
-  args: { scenario: "historyError" },
+  ...selectedHistoryRetryView,
+  name: "Selected History Retry Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -194,8 +232,15 @@ export const SelectedHistoryRetry: Story = {
   },
 };
 
+export const PartialPriceHistoryPreview: Story = {
+  ...partialPriceHistoryView,
+  name: "Partial Price History",
+};
+
 export const PartialPriceHistory: Story = {
-  args: { scenario: "partial" },
+  ...partialPriceHistoryView,
+  name: "Partial Price History Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -231,18 +276,37 @@ export const PartialPriceHistory: Story = {
     ).toHaveTextContent(requests!);
   },
 };
+export const PartialPriceHistoryDarkPreview: Story = {
+  ...partialPriceHistoryDarkView,
+  name: "Partial Price History Dark",
+};
+
 export const PartialPriceHistoryDark: Story = {
-  args: { scenario: "partial" },
-  parameters: { colorScheme: "dark" },
+  ...partialPriceHistoryDarkView,
+  name: "Partial Price History Dark Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: PartialPriceHistory.play,
 };
+export const PartialPriceHistoryMobilePreview: Story = {
+  ...partialPriceHistoryMobileView,
+  name: "Partial Price History Mobile",
+};
+
 export const PartialPriceHistoryMobile: Story = {
-  args: { scenario: "partial" },
-  globals: { viewport: { value: "cashfolioMobile" } },
+  ...partialPriceHistoryMobileView,
+  name: "Partial Price History Mobile Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: PartialPriceHistory.play,
 };
+export const UnusablePriceHistoryPreview: Story = {
+  ...unusablePriceHistoryView,
+  name: "Unusable Price History",
+};
+
 export const UnusablePriceHistory: Story = {
-  args: { scenario: "unusable" },
+  ...unusablePriceHistoryView,
+  name: "Unusable Price History Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -259,16 +323,15 @@ export const UnusablePriceHistory: Story = {
     ).toBeEnabled();
   },
 };
+export const HistoryRetryCooldownPreview: Story = {
+  ...historyRetryCooldownView,
+  name: "History Retry Cooldown",
+};
+
 export const HistoryRetryCooldown: Story = {
-  args: { scenario: "cooldown" },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "The fixture compresses the server cooldown to two seconds to exercise expiry; production uses five minutes. Expiry enables Retry without making a request.",
-      },
-    },
-  },
+  ...historyRetryCooldownView,
+  name: "History Retry Cooldown Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Search" }));
@@ -292,6 +355,9 @@ export const HistoryRetryCooldown: Story = {
 };
 
 export const ExplicitDiscoveryRequests: Story = {
+  ...serverSideBrowsingView,
+  name: "Explicit Discovery Requests Interaction Test",
+  tags: ["regression", "!autodocs"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
