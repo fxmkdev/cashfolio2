@@ -292,6 +292,7 @@ jobs:
         with:
           name: cashfolio-app2-storybook-failures
           path: apps/cashfolio-app2/.vitest
+          include-hidden-files: true
           if-no-files-found: ignore
 
   github-actions-lint:

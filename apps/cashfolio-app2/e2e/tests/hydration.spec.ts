@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { seedDatabase, type SeededData } from "../support/db";
 import { expect, test, type Page } from "../support/fixtures";
 import { agGridRowByText } from "../support/grid";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
@@ -63,6 +64,32 @@ for (const entity of ["Account", "Category"] as const) {
     ).toBeVisible();
   });
 }
+
+test("report selectors stay disabled until hydration and preserve the first selection", async ({
+  page,
+}) => {
+  const grouping = page.getByRole("combobox", { name: "Group Accounts By" });
+  const allocation = page.getByRole("radiogroup", {
+    name: "Allocation Chart Type",
+  });
+  const table = allocation.getByRole("radio", { name: "Table" });
+
+  await beforeHydration(page, async () => {
+    await page.goto(`/${seeded.accountBookId}/report?period=2026-01`, {
+      waitUntil: "commit",
+    });
+    await expect(grouping).toBeVisible();
+    await expect(grouping).toBeDisabled();
+    await expect(table).toBeDisabled();
+  });
+
+  await expect(grouping).toBeEnabled();
+  await grouping.click();
+  await page.getByRole("option", { name: "Asset Class", exact: true }).click();
+  await expect(grouping).toHaveValue("Asset Class");
+  await selectSegmentedControlOption(allocation, "Table");
+  await expect(table).toBeChecked();
+});
 
 test("settings stay disabled until hydration and preserve the first edit", async ({
   page,

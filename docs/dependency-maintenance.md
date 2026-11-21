@@ -10,7 +10,7 @@ The refreshed manifest versions are:
 
 | Package family                           | Version                   |
 | ---------------------------------------- | ------------------------- |
-| Mantine                                  | 9.8.2                     |
+| Mantine                                  | 9.7.2                     |
 | React / React DOM / their typings        | 19.3.1 / 19.3.1 / 19.3.0  |
 | TanStack Router / Start                  | 1.170.46 / 1.169.7        |
 | Prisma CLI / client / PostgreSQL adapter | 7.10.1                    |
@@ -73,12 +73,12 @@ The release-age policy and build-script approvals remain unchanged.
 
 Registry publication timestamps were checked against the unchanged 1440-minute
 release-age policy at 2026-11-21 21:23 UTC. All selected stable releases meet
-that threshold. Among the newest selections, Mantine 9.8.2 was published on
-November 20 around 12:07–12:11 UTC, Storybook 10.6.8 around 08:14–08:22 UTC, and
-baseline-browser-mapping 2.11.39 on November 19 at 22:04 UTC. pnpm 12.22.0 was
-published on November 17 at 20:01 UTC. Resolution and frozen installation pass
-pnpm's supply-chain policy checks. No release-age exceptions, build approvals,
-agent-skill approvals, or experimental installation settings were added.
+that threshold. Among the newest selections, Storybook 10.6.8 was published on
+November 20 around 08:14–08:22 UTC, and baseline-browser-mapping 2.11.39 on
+November 19 at 22:04 UTC. pnpm 12.22.0 was published on November 17 at 20:01
+UTC. Resolution and frozen installation pass pnpm's supply-chain policy checks.
+No release-age exceptions, build approvals, agent-skill approvals, or
+experimental installation settings were added.
 
 typescript-eslint and its directly pinned utils package update together to
 8.72.2, published on November 9. Version 8.73.0 is deferred because its parser
@@ -87,6 +87,16 @@ requires the native compiler peer
 stable TypeScript 7.0.2 alias. The selected lockfile has no peer dependency
 issues. TanStack Start 1.169.7 requests Router 1.170.46, matching the direct
 Router update; its optional Rsbuild peer is not installed.
+
+Mantine's initially eligible 9.8.2 update is deferred after browser verification
+found that normal Tab navigation could no longer enter the Other Allocation grid
+inside its modal. Controlled runs with the other refreshed dependencies retained
+reproduce the failure on Mantine 9.7.3, 9.7.5, and 9.8.2, while 9.7.1 and 9.7.2
+pass the original Tab/arrow-key assertions. All seven direct Mantine packages
+and the transitive store use 9.7.2, published on October 11. No private Grid
+module imports, broader module bundles, focus-trap overrides, or weakened
+keyboard assertions are introduced. Revisit the newer Mantine versions after
+this modal/grid focus regression is resolved.
 
 Exact declarations and caret ranges retain their existing styles. Node 26.13.1
 is aligned between the managed runtime and Docker; Node engines and CI remain on
@@ -120,6 +130,22 @@ After rebasing onto main's Securities search feature, Prisma generation, app
 typecheck, lint, and runtime-cycle checks passed again. The expanded focused
 run, including Securities search regressions, passed all 696 tests across 55
 files.
+
+The subsequent self-review rebases onto main's Securities mobile viewport fix
+and addresses additional browser failures. Report grouping and chart-type
+selectors use the existing `useHydrated` guard so clicks cannot be lost before
+their lazy boundary hydrates; the segmented-control E2E helper waits for the
+radio input itself to be enabled before clicking its label. A delayed-script E2E
+regression checks the disabled SSR state and the first grouping/chart-type
+selection after hydration. Hierarchy stories wait for animated grid rows and
+hover actions to become visible while retaining their existing assertions.
+Storybook failure uploads explicitly include hidden files under `.vitest`,
+preserving screenshots for future CI investigations. App typecheck, scoped
+ESLint, workflow lint, and all 26 focused Storybook tests across four files pass
+with these fixes. The selected family has no peer dependency issues, and the
+workspace audit still reports zero findings. Full browser and database-backed
+verification, including the delayed-script E2E regression, remains assigned to
+final-revision CI.
 
 The workspace audit reports zero findings before and after the refresh. A
 separate lockfile-only resolution and audit of Docker's Prisma 7.10.1 / dotenv

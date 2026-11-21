@@ -20,6 +20,8 @@ export async function selectSegmentedControlOption(
     return;
   }
 
+  await expect(option).toBeEnabled();
+
   if ((await optionLabel.count()) > 0) {
     await optionLabel.click();
   } else {
