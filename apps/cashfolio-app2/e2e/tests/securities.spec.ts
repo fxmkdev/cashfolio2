@@ -28,7 +28,9 @@ test("Securities sidebar navigation, exact exchange details and locally selected
     .getByRole("textbox", { name: "Security", exact: true })
     .fill("E2E.SEC");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "2 listings",
+  );
   await page
     .locator('[row-id] [col-id="name"]')
     .filter({ hasText: "E2E Example Security" })
@@ -138,7 +140,9 @@ test("search is explicit, exchange selection is submitted and pagination does no
   await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
   expect(await attempts()).toBe(before);
   await input.press("Enter");
-  await expect(page.getByLabel("Result Count")).toHaveText("24 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "24 listings",
+  );
   const historyBefore = await historyAttempts();
   await page.getByRole("button", { name: "Next Page" }).click();
   await expect(
@@ -160,9 +164,13 @@ test("search is explicit, exchange selection is submitted and pagination does no
   await exchange.click();
   await exchange.fill("Swiss");
   await page.getByRole("option", { name: "SIX Swiss Exchange (XSWX)" }).click();
-  await expect(page.getByLabel("Result Count")).toHaveText("24 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "24 listings",
+  );
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByLabel("Result Count")).toHaveText("1 listing");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "1 listing",
+  );
   const selectedMetadataBefore = await metadataAttempts();
   await page
     .locator('[row-id] [col-id="name"]')
@@ -186,7 +194,9 @@ test("ISIN is verified for the selected exchange and metadata failure leaves pri
     .getByRole("textbox", { name: "Security", exact: true })
     .fill("E2E.SEC");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "2 listings",
+  );
   const rows = page
     .locator('[row-id] [col-id="name"]')
     .filter({ hasText: "E2E Example Security" });
@@ -339,7 +349,9 @@ test("exchange choices persist on the user and submitted URLs override the saved
   await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
   await page.goto(`/${accountBookId}/securities?q=E2E.SEC`);
   await expect(exchange).toHaveValue("");
-  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "2 listings",
+  );
   expect(
     (
       await prisma.user.findUniqueOrThrow({
@@ -374,7 +386,9 @@ test("a missing URL selection leaves browsable results and an actionable close",
   await expect(
     page.getByText("Selection Unavailable", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Result Count")).toHaveText("2 listings");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "2 listings",
+  );
   await page.getByRole("button", { name: "Back to Results" }).click();
   await expect(page).not.toHaveURL(/selectedSymbol/);
   await page
@@ -497,7 +511,9 @@ test("a failed preference save stays nonblocking and retries explicitly", async 
     .getByRole("textbox", { name: "Security", exact: true })
     .fill("E2E.SEC");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByLabel("Result Count")).toHaveText("1 listing");
+  await expect(page.getByLabel("Result Count", { exact: true })).toHaveText(
+    "1 listing",
+  );
   await page.getByRole("button", { name: "Retry Saving Preference" }).click();
   await expect
     .poll(
@@ -513,4 +529,63 @@ test("a failed preference save stays nonblocking and retries explicitly", async 
     page.getByText("Exchange Preference Not Saved", { exact: true }),
   ).toHaveCount(0);
   expect(writes).toBe(2);
+});
+
+test("rapid exchange choices serialize saves and persist only the latest queued choice", async ({
+  page,
+  e2eExternalId,
+}) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const writes: string[] = [];
+  await page.route("**/_serverFn/**", async (route) => {
+    const request = route.request();
+    if (
+      request.method() !== "POST" ||
+      !request.postData()?.includes("exchange")
+    )
+      return route.continue();
+    writes.push(request.postData()!);
+    if (writes.length === 1) await gate;
+    return route.continue();
+  });
+  try {
+    await page.goto(`/${accountBookId}/securities`);
+    const exchange = page.getByRole("combobox", { name: "Exchange" });
+    await exchange.click();
+    await exchange.fill("Swiss");
+    await page
+      .getByRole("option", { name: "SIX Swiss Exchange (XSWX)" })
+      .click();
+    await expect.poll(() => writes.length).toBe(1);
+    await page.getByRole("button", { name: "Clear Exchange" }).click();
+    await exchange.click();
+    await exchange.fill("NASDAQ");
+    await page
+      .getByRole("option", { name: "NASDAQ (XNAS)", exact: true })
+      .click();
+    expect(writes).toHaveLength(1);
+    release();
+    await expect
+      .poll(
+        async () =>
+          (
+            await prisma.user.findUniqueOrThrow({
+              where: { externalId: e2eExternalId },
+            })
+          ).securitiesExchangeMic,
+      )
+      .toBe("XNAS");
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toContain("XSWX");
+    expect(writes[1]).toContain("XNAS");
+    await expect(page.getByLabel("Submitted Search")).toHaveCount(0);
+    await page.reload();
+    await expect(exchange).toHaveValue("NASDAQ (XNAS)");
+  } finally {
+    release();
+    await page.unroute("**/_serverFn/**");
+  }
 });
