@@ -7,7 +7,7 @@ import {
 } from "../../../shared/accounts/account-returns";
 import type { ReturnAccount } from "../../../shared/accounts/account-return-groups";
 import type { HoldingRateResolver } from "../../holdings/types";
-import type { PreparedReturnTransactions } from "./return-transactions.server";
+import type { PreparedReturnTransactions } from "./return-transaction-types";
 import { calculateMoneyWeightedReturn } from "./return-irr.server";
 import { ResourceLimitError } from "../../resource-error";
 import { createReturnScopeValuer } from "./return-valuation.server";

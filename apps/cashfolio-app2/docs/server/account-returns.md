@@ -85,6 +85,26 @@ remain usable independently. Initial cache-only probes use a separate read path
 from deduplicated cache-populating jobs, so a simultaneous reload cannot replace
 a finishing calculation's loader with a cache-miss result.
 
+### Internal orchestration
+
+The query coordinator keeps lease acquisition, the post-acquisition checkpoint
+reread, error invalidation, and release in one visible control flow. Context and
+continuation validation live in `return-work-context.server.ts`; bounded scope
+execution lives in `return-work-batch.server.ts`; checkpoint updates and
+response assembly live in `return-work-response.server.ts`. Both calculation
+passes share one counter and timer, and ready or recovered results publish
+before provider work. Internal work contracts live in the type-only
+`return-work-types.ts`.
+
+Transaction normalization remains ordered: collect position changes, handle
+recorded G/L adjustments exclusively, then decompose transfers and price
+residual executions. Dedicated adjustment, transfer, and execution helpers
+receive the same accumulator and conversion callbacks. Internal transaction
+contracts live in the type-only `return-transaction-types.ts`. These boundaries
+preserve movement identities, Decimal operation order, diagnostics, and
+settlement bridges; they do not introduce new persisted schemas or cache
+versions.
+
 See
 [return calculation behavior](../valuation-reference-balances.md#money-weighted-return)
 for timing, attribution, in-transit balances, unavailable values, and

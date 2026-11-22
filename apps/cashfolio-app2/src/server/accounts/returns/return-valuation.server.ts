@@ -5,7 +5,7 @@ import { checkResourceBudget } from "../../resource-context.server";
 import type {
   ReturnPositionChange,
   ReturnBridge,
-} from "./return-transactions.server";
+} from "./return-transaction-types";
 
 /** Prefix quantities and shared rate promises avoid replaying lots or re-fetching prices. */
 export function createReturnScopeValuer(args: {

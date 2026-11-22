@@ -43,10 +43,8 @@ vi.mock("./return-cache.server", async (original) => ({
   getOrLoadAccountReturnSummaries: mocks.cache,
   getCachedAccountReturnSummaries: mocks.readCache,
 }));
-import {
-  queryAccountReturnWork,
-  type ReturnWorkArgs,
-} from "./account-returns.server";
+import { queryAccountReturnWork } from "./account-returns.server";
+import type { ReturnWorkArgs } from "./return-work-types";
 let index = 0;
 const scope = {
   accountBookId: "book",
