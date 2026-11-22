@@ -147,7 +147,7 @@ export async function readHistorySeries(
 export async function storeHistorySeries(
   series: HistorySeries,
   points: { date: string; value: number }[],
-  coverage?: HistoryCoverage,
+  coverage: HistoryCoverage[] = [],
 ): Promise<void> {
   const entries = points.map((p) => ({
     timestamp: Date.parse(`${p.date}T00:00:00Z`),
@@ -164,17 +164,10 @@ export async function storeHistorySeries(
       points: [...merged.values()].sort((a, b) => a.timestamp - b.timestamp),
       coverage: [
         ...old.coverage.filter((c) => c.expiresAt > Date.now()),
-        ...(coverage
-          ? [
-              {
-                ...coverage,
-                expiresAt: Math.min(
-                  coverage.expiresAt,
-                  Date.now() + 15 * 60 * 1000,
-                ),
-              },
-            ]
-          : []),
+        ...coverage.map((proof) => ({
+          ...proof,
+          expiresAt: Math.min(proof.expiresAt, Date.now() + 15 * 60 * 1000),
+        })),
       ],
     },
     expires: Date.now() + 15 * 60 * 1000,
@@ -195,12 +188,16 @@ export async function storeHistorySeries(
         ),
       );
     }
-    if (coverage) {
+    if (coverage.length) {
       const key = historyCoverageKey(series.key);
-      await redis.zAdd(key, {
-        score: coverage.expiresAt,
-        value: JSON.stringify(coverage),
-      });
+      await Promise.all(
+        coverage.map((proof) =>
+          redis.zAdd(key, {
+            score: proof.expiresAt,
+            value: JSON.stringify(proof),
+          }),
+        ),
+      );
       await Promise.all([
         redis.zRemRangeByScore(key, "-inf", Date.now()),
         redis.zRemRangeByRank(key, 0, -4097),

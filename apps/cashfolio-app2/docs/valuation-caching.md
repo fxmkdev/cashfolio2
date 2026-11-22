@@ -522,12 +522,18 @@ dates and publication cutoff. They are written only after all pages, currencies,
 symbols, dates, prices, and pagination are validated and every quote write
 completes. Atomic `ZADD`/`ZREM` operations need only the existing read/write
 Redis ACL; no Lua, transactions, or permission changes are required. Truncation
-and failed pages create no proof. A proof lets backtracking skip verified empty
-dates without guessing from weekdays. Exact quotes remain stable TimeSeries
-dependencies; carried quotes are `covered` dependencies whose validity includes
-the proof expiry. Explicit provider no-data retains the existing
-security-versus-FX/crypto behavior. Coverage lasts at most 24 hours (explicit
-no-data one hour), with a bounded 15-minute process-local fallback.
+and failed pages create no proof, including a no-data response before the
+advertised pagination total is reached. Quote writes and their coverage proofs
+share one failure boundary: failed quote persistence skips Redis proof writes
+while retaining the bounded local fallback. Quotes fetched again are persisted
+even when present locally, since local data may survive a failed Redis write.
+Malformed provider responses are recorded once as provider errors. A proof lets
+backtracking skip verified empty dates without guessing from weekdays. Exact
+quotes remain stable TimeSeries dependencies; carried quotes are `covered`
+dependencies whose validity includes the proof expiry. Explicit provider no-data
+retains the existing security-versus-FX/crypto behavior. Coverage lasts at most
+24 hours (explicit no-data one hour), with a bounded 15-minute process-local
+fallback.
 
 Operational clearing must call `clearHistorySeries`, which removes the raw price
 series, its coverage proof, and local fallback together. A whole valuation-cache

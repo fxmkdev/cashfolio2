@@ -130,7 +130,8 @@ export function ReturnCalculation({
       </Text>
       <Text size="sm">
         Return includes price/FX performance and recorded G/L adjustments,
-        excluding dividends, interest, and separately booked fees. Transfers use
+        excluding dividends, interest, and separately booked fees. These
+        excluded items are neutralized as capital movements. Transfers use
         market value. Group returns include idle cash and holdings in transit,
         and cancel internal movements. FIFO G/L retains acquisition costs and
         can differ from performance during ownership. Total value accounts use

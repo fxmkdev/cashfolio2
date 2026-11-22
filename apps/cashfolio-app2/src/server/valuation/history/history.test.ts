@@ -197,6 +197,50 @@ it("does not establish coverage on transient failures and bounds retries", async
   expect(redis.zAdd).not.toHaveBeenCalled();
   expect(mocks.fetch).toHaveBeenCalledTimes(3);
 });
+it("does not persist coverage when quote writes fail, while retaining temporary local results", async () => {
+  const input = request(`WRITEFAIL${suffix}`);
+  const key = `valuation:marketstack:${input.symbol}:USD`;
+  mocks.fetch.mockResolvedValue({
+    complete: true,
+    points: { [key]: [{ date: "2026-10-30", value: 42 }] },
+  });
+  redis.ts.add.mockRejectedValueOnce(new Error("write failed"));
+  const loader = await createHistoricalLoader([input], "USD", "2026-11-06", {});
+  await loader.pump();
+  const result = await loader.lookup(input);
+  expect(result.rate?.toNumber()).toBe(42);
+  expect(result.validUntil).toBeLessThanOrEqual(Date.now() + 900_000);
+  expect(redis.zAdd).not.toHaveBeenCalled();
+  vi.setSystemTime(Date.now() + 901_000);
+  const expired = await createHistoricalLoader(
+    [input],
+    "USD",
+    "2026-11-06",
+    {},
+  );
+  await expect(expired.lookup(input)).rejects.toBeInstanceOf(HistoryPending);
+});
+it("persists locally retained quotes before publishing coverage after Redis recovers", async () => {
+  const input = request(`RECOVER${suffix}`);
+  const key = `valuation:marketstack:${input.symbol}:USD`;
+  mocks.fetch.mockResolvedValue({
+    complete: true,
+    points: { [key]: [{ date: "2026-10-30", value: 42 }] },
+  });
+  redis.ts.add.mockRejectedValueOnce(new Error("write failed"));
+  const first = await createHistoricalLoader([input], "USD", "2026-11-06", {});
+  await first.pump();
+  const retry = await createHistoricalLoader([input], "USD", "2026-11-07", {});
+  await retry.pump();
+  expect(redis.ts.add).toHaveBeenCalledTimes(2);
+  expect(stored.get(key)).toEqual([
+    { timestamp: time("2026-10-30"), value: 42 },
+  ]);
+  vi.setSystemTime(Date.now() + 901_000);
+  const warm = await createHistoricalLoader([input], "USD", "2026-11-07", {});
+  expect((await warm.lookup(input)).rate?.toNumber()).toBe(42);
+  expect(mocks.fetch).toHaveBeenCalledTimes(2);
+});
 it("uses bounded local data during Redis outage, then expires it and clears prices together with proofs", async () => {
   mocks.redis.mockResolvedValue(null);
   mocks.fetch.mockImplementation(async (t: HistoryTask) => ({

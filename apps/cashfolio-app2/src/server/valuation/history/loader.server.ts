@@ -21,6 +21,7 @@ import {
   type HistoryTask,
   type HistoryFailure,
   type HistoryRate,
+  type HistoryCoverage,
 } from "./types";
 
 const timestamp = (date: string) => Date.parse(`${date}T00:00:00Z`);
@@ -244,28 +245,20 @@ export async function createHistoricalLoader(
             await Promise.all(
               task.series.map(async (s) => {
                 const unavailable = new Set(batch.unavailable?.[s.key] ?? []);
-                const points = batch.points[s.key]!.filter(
-                  (p) =>
-                    !snapshots
-                      .get(s.key)!
-                      .points.some(
-                        (old) => old.timestamp === timestamp(p.date),
-                      ),
-                );
-                await storeHistorySeries(s, points);
+                const proofs: HistoryCoverage[] = [];
                 // Nullable range closes never prove a gap. Check those days
                 // individually, retaining the existing one-hour miss cooldown.
                 let from = task.from;
                 for (const date of [...unavailable].sort()) {
                   if (date > from)
-                    await storeHistorySeries(s, [], {
+                    proofs.push({
                       ...coverage,
                       from: timestamp(from),
                       to: timestamp(add(date, -1)),
                     });
                   from = add(date, 1);
                   if (task.mode === "day")
-                    await storeHistorySeries(s, [], {
+                    proofs.push({
                       ...coverage,
                       from: timestamp(date),
                       to: timestamp(date),
@@ -274,10 +267,13 @@ export async function createHistoricalLoader(
                     });
                 }
                 if (from <= task.to)
-                  await storeHistorySeries(s, [], {
+                  proofs.push({
                     ...coverage,
                     from: timestamp(from),
                   });
+                // Write the whole validated batch before its proofs. Local
+                // quotes may come from a previous failed Redis write.
+                await storeHistorySeries(s, batch.points[s.key]!, proofs);
               }),
             );
             if (task.mode === "range") {

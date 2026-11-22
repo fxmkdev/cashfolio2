@@ -8,6 +8,7 @@ import {
 import { Temporal } from "../../../shared/temporal";
 import type { ValuationProviderRequestOutcome } from "../provider-usage.server";
 import { checkResourceBudget } from "../../resource-context.server";
+import { rethrowResourceError } from "../../resource-error";
 import { HistoryFeatureUnavailable, type HistoryTask } from "./types";
 
 const object = (value: unknown): value is Record<string, unknown> =>
@@ -86,12 +87,14 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
     }
     const requestedAt = new Date();
     const started = Date.now();
+    let recorded = false;
     const record = async (args: {
       outcome: ValuationProviderRequestOutcome;
       httpStatus?: number;
       errorMessage?: string;
-    }) =>
-      recordValuationProviderRequest({
+    }) => {
+      recorded = true;
+      return recordValuationProviderRequest({
         provider,
         unitType:
           provider === "MARKETSTACK"
@@ -110,6 +113,7 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
             ? { cryptocurrency: codes }
             : { currency: codes }),
       });
+    };
     const response = await fetchProviderResponse({
       url,
       timeoutMs: 10_000,
@@ -121,190 +125,215 @@ export async function fetchHistory(task: HistoryTask): Promise<HistoryBatch> {
       },
       recordUsage: record,
     });
-    const body: unknown = await response.json();
-    if (object(body) && restricted(body.error) && task.mode === "range") {
-      await record({
-        outcome: "PROVIDER_ERROR",
-        httpStatus: response.status,
-        errorMessage:
-          "History range endpoint is not included in the current provider plan.",
-      });
-      throw new HistoryFeatureUnavailable(
-        "History range endpoint is not available on the current plan.",
-      );
-    }
-    if (
-      response.ok &&
-      object(body) &&
-      object(body.error) &&
-      isNoDataProviderError({
-        code: typeof body.error.code === "number" ? body.error.code : undefined,
-        info:
-          typeof body.error.info === "string"
-            ? body.error.info
-            : typeof body.error.message === "string"
-              ? body.error.message
-              : undefined,
-      })
-    ) {
-      await record({ outcome: "NO_DATA", httpStatus: response.status });
-      return { points, complete: true, noData: provider !== "MARKETSTACK" };
-    }
-    if (!response.ok || !object(body) || body.error || body.success === false) {
-      await record({
-        outcome: "HTTP_ERROR",
-        httpStatus: response.status,
-        errorMessage: "Historical price provider rejected the request.",
-      });
-      throw new Error(`Historical price provider failed (${response.status}).`);
-    }
-    if (provider === "MARKETSTACK") {
-      if (!Array.isArray(body.data))
-        throw new Error("Invalid stock history response.");
-      const pagination = body.pagination;
-      if (
-        task.mode === "range" &&
-        (!object(pagination) ||
-          !Number.isSafeInteger(pagination.total) ||
-          !Number.isSafeInteger(pagination.count) ||
-          pagination.offset !== offset ||
-          pagination.count !== body.data.length)
-      )
-        throw new Error("Invalid stock history pagination.");
-      if (object(pagination)) {
-        if (
-          typeof pagination.total !== "number" ||
-          pagination.total < offset + body.data.length ||
-          (expectedTotal !== undefined && pagination.total !== expectedTotal)
-        )
-          throw new Error("Inconsistent stock history pagination.");
-        expectedTotal = pagination.total;
+    try {
+      const body: unknown = await response.json();
+      if (object(body) && restricted(body.error) && task.mode === "range") {
+        await record({
+          outcome: "PROVIDER_ERROR",
+          httpStatus: response.status,
+          errorMessage:
+            "History range endpoint is not included in the current provider plan.",
+        });
+        throw new HistoryFeatureUnavailable(
+          "History range endpoint is not available on the current plan.",
+        );
       }
-      const seen = new Set<string>();
-      for (const item of body.data) {
-        if (!object(item) || typeof item.symbol !== "string")
-          throw new Error("Invalid stock history point.");
-        const date = day(item.date);
-        if (date < task.from || date > task.to)
-          throw new Error("Stock history is outside the requested range.");
-        const targets = task.series.filter((s) => s.code === item.symbol);
-        if (!targets.length)
-          throw new Error("Unexpected stock history symbol.");
-        for (const target of targets) {
-          const key = `${target.key}:${date}`;
+      if (
+        response.ok &&
+        object(body) &&
+        object(body.error) &&
+        isNoDataProviderError({
+          code:
+            typeof body.error.code === "number" ? body.error.code : undefined,
+          info:
+            typeof body.error.info === "string"
+              ? body.error.info
+              : typeof body.error.message === "string"
+                ? body.error.message
+                : undefined,
+        })
+      ) {
+        if (offset > 0)
+          throw new Error("Stock history pagination ended with no data.");
+        await record({ outcome: "NO_DATA", httpStatus: response.status });
+        return { points, complete: true, noData: provider !== "MARKETSTACK" };
+      }
+      if (
+        !response.ok ||
+        !object(body) ||
+        body.error ||
+        body.success === false
+      ) {
+        await record({
+          outcome: "HTTP_ERROR",
+          httpStatus: response.status,
+          errorMessage: "Historical price provider rejected the request.",
+        });
+        throw new Error(
+          `Historical price provider failed (${response.status}).`,
+        );
+      }
+      if (provider === "MARKETSTACK") {
+        if (!Array.isArray(body.data))
+          throw new Error("Invalid stock history response.");
+        const pagination = body.pagination;
+        if (
+          task.mode === "range" &&
+          (!object(pagination) ||
+            !Number.isSafeInteger(pagination.total) ||
+            !Number.isSafeInteger(pagination.count) ||
+            pagination.offset !== offset ||
+            pagination.count !== body.data.length)
+        )
+          throw new Error("Invalid stock history pagination.");
+        if (object(pagination)) {
           if (
-            typeof item.price_currency === "string" &&
-            item.price_currency.trim() &&
-            item.price_currency.trim().toUpperCase() !== target.currency
-          ) {
-            (unavailable[target.key] ??= []).push(date);
-            continue;
-          }
-          if (item.close === null) {
-            (unavailable[target.key] ??= []).push(date);
-            continue;
-          }
-          const value = parseMarketstackEodResponse({
-            response: { data: [item] },
-            symbol: target.code,
-            tradeCurrency: target.currency,
-            date: new Date(`${date}T00:00:00Z`),
-          });
-          if (typeof value !== "number") {
+            typeof pagination.total !== "number" ||
+            pagination.total < offset + body.data.length ||
+            (expectedTotal !== undefined && pagination.total !== expectedTotal)
+          )
+            throw new Error("Inconsistent stock history pagination.");
+          expectedTotal = pagination.total;
+        }
+        const seen = new Set<string>();
+        for (const item of body.data) {
+          if (!object(item) || typeof item.symbol !== "string")
+            throw new Error("Invalid stock history point.");
+          const date = day(item.date);
+          if (date < task.from || date > task.to)
+            throw new Error("Stock history is outside the requested range.");
+          const targets = task.series.filter((s) => s.code === item.symbol);
+          if (!targets.length)
+            throw new Error("Unexpected stock history symbol.");
+          for (const target of targets) {
+            const key = `${target.key}:${date}`;
             if (
-              typeof item.close === "number" &&
-              Number.isFinite(item.close) &&
-              item.close > 0
+              typeof item.price_currency === "string" &&
+              item.price_currency.trim() &&
+              item.price_currency.trim().toUpperCase() !== target.currency
             ) {
               (unavailable[target.key] ??= []).push(date);
               continue;
             }
-            throw new Error("Stock history currency or price is invalid.");
+            if (item.close === null) {
+              (unavailable[target.key] ??= []).push(date);
+              continue;
+            }
+            const value = parseMarketstackEodResponse({
+              response: { data: [item] },
+              symbol: target.code,
+              tradeCurrency: target.currency,
+              date: new Date(`${date}T00:00:00Z`),
+            });
+            if (typeof value !== "number") {
+              if (
+                typeof item.close === "number" &&
+                Number.isFinite(item.close) &&
+                item.close > 0
+              ) {
+                (unavailable[target.key] ??= []).push(date);
+                continue;
+              }
+              throw new Error("Stock history currency or price is invalid.");
+            }
+            if (
+              seen.has(key) ||
+              points[target.key]!.some((p) => p.date === date)
+            )
+              throw new Error("Duplicate stock history point.");
+            seen.add(key);
+            points[target.key]!.push({ date, value });
           }
-          if (seen.has(key) || points[target.key]!.some((p) => p.date === date))
-            throw new Error("Duplicate stock history point.");
-          seen.add(key);
-          points[target.key]!.push({ date, value });
         }
-      }
-      await record({
-        outcome: body.data.length ? "RETRIEVED" : "NO_DATA",
-        httpStatus: response.status,
-      });
-      if (
-        object(pagination) &&
-        typeof pagination.total === "number" &&
-        offset + body.data.length < pagination.total
-      ) {
-        if (!body.data.length)
-          throw new Error("Stock history pagination made no progress.");
-        offset += body.data.length;
-        continue;
-      }
-    } else {
-      const metadata = provider === "CURRENCYLAYER" ? body.source : body.target;
-      if (metadata !== undefined && metadata !== "USD")
-        throw new Error("History response has an unexpected base currency.");
-      const values = provider === "CURRENCYLAYER" ? body.quotes : body.rates;
-      if (!object(values))
-        throw new Error("Invalid historical rates response.");
-      if (
-        task.mode === "range" &&
-        (body.timeframe !== true ||
-          body.start_date !== task.from ||
-          body.end_date !== task.to)
-      )
-        throw new Error("Incomplete historical timeframe metadata.");
-      const entries =
-        task.mode === "day"
-          ? [[task.from, values] as const]
-          : Object.entries(values);
-      const dates = new Set<string>();
-      for (const [dateValue, row] of entries) {
-        const date = day(dateValue);
-        if (date < task.from || date > task.to || !object(row))
-          throw new Error("Invalid historical rate day.");
-        dates.add(date);
-        for (const target of task.series) {
-          const value =
-            row[
-              provider === "CURRENCYLAYER" ? `USD${target.code}` : target.code
-            ];
-          if (value === undefined || value === null)
-            throw new Error("Incomplete historical symbol coverage.");
-          if (
-            typeof value !== "number" ||
-            !Number.isFinite(value) ||
-            value <= 0
-          )
-            throw new Error("Invalid historical price.");
-          points[target.key]!.push({ date, value });
+        await record({
+          outcome: body.data.length ? "RETRIEVED" : "NO_DATA",
+          httpStatus: response.status,
+        });
+        if (
+          object(pagination) &&
+          typeof pagination.total === "number" &&
+          offset + body.data.length < pagination.total
+        ) {
+          if (!body.data.length)
+            throw new Error("Stock history pagination made no progress.");
+          offset += body.data.length;
+          continue;
         }
+      } else {
+        const metadata =
+          provider === "CURRENCYLAYER" ? body.source : body.target;
+        if (metadata !== undefined && metadata !== "USD")
+          throw new Error("History response has an unexpected base currency.");
+        const values = provider === "CURRENCYLAYER" ? body.quotes : body.rates;
+        if (!object(values))
+          throw new Error("Invalid historical rates response.");
+        if (
+          task.mode === "range" &&
+          (body.timeframe !== true ||
+            body.start_date !== task.from ||
+            body.end_date !== task.to)
+        )
+          throw new Error("Incomplete historical timeframe metadata.");
+        const entries =
+          task.mode === "day"
+            ? [[task.from, values] as const]
+            : Object.entries(values);
+        const dates = new Set<string>();
+        for (const [dateValue, row] of entries) {
+          const date = day(dateValue);
+          if (date < task.from || date > task.to || !object(row))
+            throw new Error("Invalid historical rate day.");
+          dates.add(date);
+          for (const target of task.series) {
+            const value =
+              row[
+                provider === "CURRENCYLAYER" ? `USD${target.code}` : target.code
+              ];
+            if (value === undefined || value === null)
+              throw new Error("Incomplete historical symbol coverage.");
+            if (
+              typeof value !== "number" ||
+              !Number.isFinite(value) ||
+              value <= 0
+            )
+              throw new Error("Invalid historical price.");
+            points[target.key]!.push({ date, value });
+          }
+        }
+        const expected =
+          Temporal.PlainDate.from(task.from).until(
+            Temporal.PlainDate.from(task.to),
+            { largestUnit: "day" },
+          ).days + 1;
+        if (dates.size !== expected)
+          throw new Error("Incomplete historical date coverage.");
+        await record({ outcome: "RETRIEVED", httpStatus: response.status });
       }
-      const expected =
-        Temporal.PlainDate.from(task.from).until(
-          Temporal.PlainDate.from(task.to),
-          { largestUnit: "day" },
-        ).days + 1;
-      if (dates.size !== expected)
-        throw new Error("Incomplete historical date coverage.");
-      await record({ outcome: "RETRIEVED", httpStatus: response.status });
+      const unresolved = Object.fromEntries(
+        Object.entries(unavailable)
+          .map(([key, dates]) => [
+            key,
+            [...new Set(dates)].filter(
+              (date) => !points[key]!.some((point) => point.date === date),
+            ),
+          ])
+          .filter(([, dates]) => dates.length),
+      );
+      return {
+        points,
+        complete: true,
+        ...(Object.keys(unresolved).length ? { unavailable: unresolved } : {}),
+      };
+    } catch (error) {
+      rethrowResourceError(error);
+      if (!recorded)
+        await record({
+          outcome: "PROVIDER_ERROR",
+          httpStatus: response.status,
+          errorMessage: "Historical price response could not be validated.",
+        });
+      throw error;
     }
-    const unresolved = Object.fromEntries(
-      Object.entries(unavailable)
-        .map(([key, dates]) => [
-          key,
-          [...new Set(dates)].filter(
-            (date) => !points[key]!.some((point) => point.date === date),
-          ),
-        ])
-        .filter(([, dates]) => dates.length),
-    );
-    return {
-      points,
-      complete: true,
-      ...(Object.keys(unresolved).length ? { unavailable: unresolved } : {}),
-    };
   }
   throw new Error("Historical price pagination exceeded the supported limit.");
 }

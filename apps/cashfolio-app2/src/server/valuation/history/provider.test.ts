@@ -56,6 +56,25 @@ it("rejects a failed later page without publishing a partial range", async () =>
     );
   await expect(fetchHistory(stock)).rejects.toThrow("429");
 });
+it("rejects no-data on a later page rather than completing a partial range", async () => {
+  mocks.fetch
+    .mockResolvedValueOnce(Response.json(page("2026-01-02")))
+    .mockResolvedValueOnce(
+      Response.json({ error: { code: 104, info: "No data available" } }),
+    );
+  await expect(fetchHistory(stock)).rejects.toThrow("pagination");
+  expect(mocks.record.mock.calls.map(([attempt]) => attempt.outcome)).toEqual([
+    "RETRIEVED",
+    "PROVIDER_ERROR",
+  ]);
+});
+it("records malformed JSON exactly once as a provider error", async () => {
+  mocks.fetch.mockResolvedValueOnce(new Response("invalid JSON"));
+  await expect(fetchHistory(stock)).rejects.toThrow();
+  expect(mocks.record).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ outcome: "PROVIDER_ERROR", httpStatus: 200 }),
+  );
+});
 it("separates unsupported features from auth, quota and transient failures", async () => {
   mocks.fetch.mockResolvedValueOnce(
     Response.json({ success: false, error: { code: 105 } }),
