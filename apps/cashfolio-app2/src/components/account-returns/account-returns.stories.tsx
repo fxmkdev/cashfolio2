@@ -236,9 +236,17 @@ export const GridLoading: Story = {
     });
     await expect(indicators).toHaveLength(3);
     for (const indicator of indicators) {
-      await expect(indicator).toHaveStyle({
-        justifyContent: "flex-end",
-        alignItems: "center",
+      await waitFor(async () => {
+        const loader = indicator.querySelector(".mantine-Loader-root");
+        if (!loader) throw new Error("Missing dotted loader");
+        const cell = indicator.getBoundingClientRect();
+        const dots = loader.getBoundingClientRect();
+        await expect(cell.width).toBeGreaterThan(0);
+        await expect(dots.width).toBeGreaterThan(0);
+        await expect(Math.abs(cell.right - dots.right)).toBeLessThanOrEqual(1);
+        await expect(
+          Math.abs(cell.top + cell.height / 2 - dots.top - dots.height / 2),
+        ).toBeLessThanOrEqual(1);
       });
       await expect(
         indicator.querySelector(".mantine-Loader-root")?.children,
