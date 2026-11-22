@@ -32,10 +32,14 @@ The refreshed manifest versions are:
 
 Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.8 with the
 Playwright browser provider 5.1.1. Vitest, coverage, and browser packages are
-upgraded together to stable 5.1.1 alongside MSW 3.0.7. Nitro remains pinned at
-`3.0.260429-beta`, with its scoped H3 override unchanged. See the app's
+upgraded together to stable 5.1.1 alongside MSW 3.0.7. Nitro is now pinned exactly to
+`3.0.261103-rc`. Its stable H3 2.0.8 and ocache 0.3.2 graph replaces the beta's
+scoped H3 workaround; TanStack's independent `h3-v2` alias remains unchanged.
+The RC resolves the installed Vite 8 builder and retains default FastResponse.
+Standalone authentication, artifact isolation, and MSW WASM checks accompany
+the upgrade. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
-before revisiting its beta pin or scoped H3 override.
+for migration details and CI acceptance requirements.
 
 The Storybook runner and its scoped Jest overrides are removed. Every existing
 story remains included; unit coverage stays separate and its baseline is

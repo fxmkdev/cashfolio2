@@ -54,9 +54,10 @@ change to the normal start command is required.
 Docker runs `test:build-boundary` after building the normal artifact. It copies
 `.output` outside the workspace and verifies that setting `APP_ENVIRONMENT=e2e`
 causes the standalone server to reject startup. It also checks lazy server
-chunks for unresolved book-cache package imports. The existing image-build
-dependency gates preview and staging deployments. Unit tests cover configuration
-cases; the E2E suite covers test-build behavior. See
+chunks for unresolved book-cache package imports, excludes E2E capabilities and
+MSW assets, and verifies normal startup and public asset serving. The existing
+image-build dependency gates preview and staging deployments. Unit tests cover
+configuration cases; the E2E suite covers test-build behavior. See
 [Testing](testing.md#deployment-build-smoke-test).
 
 ## Shared book-cache contracts
@@ -72,28 +73,38 @@ shared contract boundary and local checks.
 
 ## Nitro version pin
 
-The app intentionally pins `nitro` to an exact beta version instead of a range.
-As rechecked on 2026-10-10, the npm `latest` tag for `nitro` is still a dated
-beta release, while the stable `nitro@3.0.0` package declared only `vite: ^7`
-peer compatibility. This app runs on Vite 8, and the beta Nitro line declares
-`vite: ^7 || ^8`.
+The app pins `nitro` exactly to `3.0.261103-rc`, the current Vite 8-compatible
+release candidate checked on 2026-11-22. This replaces `3.0.260429-beta`. The RC
+has no Vite peer dependency: it resolves the project's installed builder, and
+the existing `nitro/vite` plugin uses Vite 8.3.8. Node 26 satisfies its minimum
+Node.js 22.22 requirement. See the
+[RC announcement](https://nitro.build/blog/v3-rc),
+[release notes](https://github.com/nitrojs/nitro/releases/tag/v3.0.261103-rc),
+and [migration guide](https://nitro.build/docs/migration).
 
-Because of that peer-compatibility difference, `nitro@3.0.0` is not the safer
-choice for this app despite lacking a `-beta` suffix. Keep the exact beta pin
-until Nitro publishes a non-beta release that declares Vite 8 compatibility and
-passes the app build, E2E, and preview deploy checks.
+Nitro now resolves stable H3 2.0.8 and ocache 0.3.2 together. The old `nitro>h3`
+override to `2.0.1-rc.20` is removed: it existed because the beta's ocache 0.1
+dependency could not satisfy newer H3. TanStack Start's separate `h3-v2` alias
+remains on its upstream-declared release; do not unify these independent
+dependency paths with a global override.
 
-When revisiting the pin, check the published peer dependencies before changing
-the package:
+The upgrade retains the default Node FastResponse implementation, explicit
+runtime plugins, normal and E2E output directories, and standalone Node command.
+No server-directory scanning, Nitro cache storage, or removed experimental Vite
+options are used. Keep the exact RC pin until a later release passes the same
+standalone, authentication, E2E, Docker, and preview checks. Recheck published
+metadata when updating rather than treating missing peers as incompatibility:
 
 ```bash
-pnpm view nitro version dist-tags peerDependencies --json
-pnpm view nitro@3.0.0 peerDependencies --json
+pnpm view nitro version dist-tags engines dependencies peerDependencies --json
 ```
 
-The pinned beta uses `ocache` 0.1. Newer stable H3 releases require `ocache`
-0.3, so `pnpm-workspace.yaml` pins `nitro>h3` to the patched `2.0.1-rc.20`
-release candidate. Revisit this scoped override together with the Nitro pin.
+The `Standalone authentication` CI job checks the normal artifact outside the
+workspace against disposable PostgreSQL and a local HTTP OIDC fixture. It
+exercises anonymous, sign-in/sign-up, callback, and POST sign-out redirects,
+separate secure cookie headers, session rotation/revocation, invalid callbacks,
+and `no-store` headers. Its database is explicit and loopback-only; it never
+uses the E2E authentication bypass. This check gates staging deployment.
 
 ## MSW runtime assets
 
@@ -104,7 +115,12 @@ bundling the JavaScript alone relocates that lookup and omits the binary.
 Tracing preserves the package layout and includes its WASM asset in
 `.output-e2e`, so the built E2E server can initialize provider mocks without the
 workspace installation. Keep this rule when updating MSW or Nitro, and verify
-built-server E2E startup before removing it.
+built-server E2E startup before removing it. Playwright runs
+`test:e2e-build-boundary` after its build: the check copies `.output-e2e`
+outside the workspace, validates the traced WASM binary, checks rejected unsafe
+configurations, and starts the valid isolated artifact to serve a public asset.
+Normal-artifact checks reject bundled synthetic authentication/provider mocks
+and MSW assets.
 
 ## Fly release migrations
 

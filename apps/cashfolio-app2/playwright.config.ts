@@ -42,7 +42,8 @@ export default defineConfig({
     video: process.env.CI ? "on-first-retry" : "retain-on-failure",
   },
   webServer: {
-    command: "pnpm build:e2e && node .output-e2e/server/index.mjs",
+    command:
+      "pnpm build:e2e && pnpm test:e2e-build-boundary && node .output-e2e/server/index.mjs",
     url: baseUrl,
     reuseExistingServer: false,
     timeout: 300_000,

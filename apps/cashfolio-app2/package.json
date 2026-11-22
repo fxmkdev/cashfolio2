@@ -39,6 +39,8 @@
     "test:staging-seed": "pnpm build:contracts && pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
     "build:e2e": "pnpm build:contracts && vite build --mode e2e",
     "test:build-boundary": "node --test scripts/build-boundary.test.ts",
+    "test:e2e-build-boundary": "node --test scripts/e2e-build-boundary.test.ts",
+    "test:artifact-auth": "node --test scripts/artifact-auth.test.ts",
     "build:contracts": "pnpm --filter @cashfolio/book-cache-contracts build"
   },
   "dependencies": {
@@ -91,7 +93,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
     "msw": "^3.0.7",
-    "nitro": "3.0.260429-beta",
+    "nitro": "3.0.261103-rc",
     "postcss": "^8.5.33",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
