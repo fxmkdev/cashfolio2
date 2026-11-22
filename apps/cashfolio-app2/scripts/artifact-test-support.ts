@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { cp, mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -49,6 +49,11 @@ export function assertRejectedStartup(
   );
   assert.notEqual(result.status, 0, "Server must reject this configuration");
   assert.match(result.stderr, expected);
+  assert.doesNotMatch(
+    result.stdout + result.stderr,
+    /Listening on:/,
+    "Unsafe configuration must not announce a listening server",
+  );
 }
 
 export async function availablePort() {
@@ -86,6 +91,19 @@ export async function startArtifact(
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  const processState = watchArtifact(t, child);
+  const request = (path: string, init?: RequestInit) =>
+    fetch(new URL(path, baseUrl), {
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+      ...init,
+    });
+  await waitForArtifact(request, processState);
+  return { baseUrl, request };
+}
+
+function watchArtifact(t: TestContext, child: ChildProcess) {
+  assert(child.stdout && child.stderr);
   let logs = "";
   child.stdout.on("data", (chunk) => (logs = (logs + chunk).slice(-128_000)));
   child.stderr.on("data", (chunk) => (logs = (logs + chunk).slice(-128_000)));
@@ -98,7 +116,8 @@ export async function startArtifact(
   });
   t.after(async () => {
     t.diagnostic(logs);
-    if (child.exitCode !== null || child.signalCode !== null) return;
+    if (spawnError || child.exitCode !== null || child.signalCode !== null)
+      return;
     child.kill("SIGTERM");
     await Promise.race([exited, setTimeout(5_000, undefined, { ref: false })]);
     if (child.exitCode === null && child.signalCode === null) {
@@ -106,24 +125,32 @@ export async function startArtifact(
       await exited;
     }
   });
-  const request = (path: string, init?: RequestInit) =>
-    fetch(new URL(path, baseUrl), {
-      redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
-      ...init,
-    });
+  return {
+    logs: () => logs,
+    assertRunning() {
+      assert.ifError(spawnError);
+      assert(child.exitCode === null && child.signalCode === null, logs);
+    },
+  };
+}
+
+async function waitForArtifact(
+  request: (path: string) => Promise<Response>,
+  processState: ReturnType<typeof watchArtifact>,
+) {
   for (let attempt = 0; attempt < 150; attempt++) {
-    assert.ifError(spawnError);
-    assert(child.exitCode === null && child.signalCode === null, logs);
+    processState.assertRunning();
     try {
       const response = await request("/site.webmanifest");
-      assert.equal(response.status, 200, logs);
+      assert.equal(response.status, 200, processState.logs());
       assert.equal((await response.json()).display, "standalone");
-      return { baseUrl, request };
+      return;
     } catch (error) {
       if (!(error instanceof TypeError)) throw error;
     }
     await setTimeout(100);
   }
-  assert.fail(`Standalone server failed to become ready:\n${logs}`);
+  assert.fail(
+    `Standalone server failed to become ready:\n${processState.logs()}`,
+  );
 }
