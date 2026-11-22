@@ -116,6 +116,47 @@ export function isAccountReturnDetails(
   );
 }
 
+async function summaryCacheContext(scope: AccountReturnScope) {
+  const asOfDate = formatUtcDateKey(startOfUtcDay(new Date()));
+  const publication = formatUtcDateKey(
+    createValuationLookupContext().latestFetchableDate,
+  );
+  const redis = await getRedisClient();
+  if (!redis) return;
+  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+  const generation = await getPeriodCacheGeneration({
+    accountBookId: scope.accountBookId,
+  });
+  if (generation === null) return;
+  const key = getAccountReturnCacheEntryKey({
+    cacheEnv,
+    accountBookId: scope.accountBookId,
+    generation,
+    asOfDate,
+    latestFetchableDate: publication,
+    scopeKey: `${scope.grouping}:${scope.accountState}`,
+  });
+  return { redis, generation, key, asOfDate, publication };
+}
+function readCachedSummary(
+  cache: NonNullable<Awaited<ReturnType<typeof summaryCacheContext>>>,
+) {
+  return readValidatedMoneyCache({
+    read: () => cache.redis.get(cache.key),
+    maxBytes: MAX_BYTES,
+    validate: (value: unknown): value is AccountReturnSummaries =>
+      isAccountReturnSummaries(value) && value.asOfDate === cache.asOfDate,
+    reportFailure: reportRead,
+  });
+}
+/** A probe cannot join a cache-populating job or replace its loader on a miss. */
+export async function getCachedAccountReturnSummaries(
+  scope: AccountReturnScope,
+) {
+  const cache = await summaryCacheContext(scope);
+  return cache ? readCachedSummary(cache) : undefined;
+}
+
 export async function getOrLoadAccountReturnSummaries(
   scope: AccountReturnScope,
   load: () => Promise<{
@@ -125,33 +166,11 @@ export async function getOrLoadAccountReturnSummaries(
     expiresAt?: number;
   }>,
 ): Promise<AccountReturnSummaries> {
-  const asOfDate = formatUtcDateKey(startOfUtcDay(new Date()));
-  const publication = formatUtcDateKey(
-    createValuationLookupContext().latestFetchableDate,
-  );
-  const redis = await getRedisClient();
-  if (!redis) return (await load()).data;
-  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
-  const generation = await getPeriodCacheGeneration({
-    accountBookId: scope.accountBookId,
-  });
-  if (generation === null) return (await load()).data;
-  const key = getAccountReturnCacheEntryKey({
-    cacheEnv,
-    accountBookId: scope.accountBookId,
-    generation,
-    asOfDate,
-    latestFetchableDate: publication,
-    scopeKey: `${scope.grouping}:${scope.accountState}`,
-  });
+  const cache = await summaryCacheContext(scope);
+  if (!cache) return (await load()).data;
+  const { redis, generation, key, asOfDate, publication } = cache;
   return shared(key, async () => {
-    const cached = await readValidatedMoneyCache({
-      read: () => redis.get(key),
-      maxBytes: MAX_BYTES,
-      validate: (value: unknown): value is AccountReturnSummaries =>
-        isAccountReturnSummaries(value) && value.asOfDate === asOfDate,
-      reportFailure: reportRead,
-    });
+    const cached = await readCachedSummary(cache);
     if (cached) return cached;
     const result = await load();
     if (

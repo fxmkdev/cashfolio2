@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   redis: vi.fn(),
   cutoff: vi.fn(),
   cache: vi.fn(),
+  readCache: vi.fn(),
   history: vi.fn(),
   lookup: vi.fn(),
   pump: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock("../../valuation/history/loader.server", () => ({
 vi.mock("./return-cache.server", async (original) => ({
   ...(await original<typeof import("./return-cache.server")>()),
   getOrLoadAccountReturnSummaries: mocks.cache,
+  getCachedAccountReturnSummaries: mocks.readCache,
 }));
 import {
   queryAccountReturnWork,
@@ -254,7 +256,7 @@ it("matches leaf G/L eligibility and includes idle cash plus archived holdings i
 it("takes a warm summary-cache hit without reading history or transaction data", async () => {
   mocks.inputs.mockResolvedValue(groupingReturnInputs());
   const cached = await complete(scope);
-  mocks.cache.mockResolvedValue(cached);
+  mocks.readCache.mockResolvedValue(cached);
   mocks.inputs.mockClear();
   mocks.history.mockClear();
   expect(summary(await queryAccountReturnWork(scope, "user"))).toEqual(cached);

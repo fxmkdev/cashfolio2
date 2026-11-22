@@ -22,6 +22,7 @@ vi.mock("../../valuation/lookup-context", () => ({
   createValuationLookupContext: () => ({ latestFetchableDate: mocks.cutoff() }),
 }));
 import {
+  getCachedAccountReturnSummaries,
   getOrLoadAccountReturnSummaries,
   isAccountReturnSummaries,
   isAccountReturnDetails,
@@ -69,6 +70,14 @@ describe("account return cache", () => {
       getOrLoadAccountReturnSummaries(scope, calculate),
       getOrLoadAccountReturnSummaries(scope, calculate),
     ]);
+    expect(calculate).toHaveBeenCalledOnce();
+  });
+  it("keeps cache-only probes separate from completing summary loads", async () => {
+    const probe = getCachedAccountReturnSummaries(scope);
+    const calculate = load();
+    const completed = getOrLoadAccountReturnSummaries(scope, calculate);
+    await expect(probe).resolves.toBeUndefined();
+    await expect(completed).resolves.toEqual(data());
     expect(calculate).toHaveBeenCalledOnce();
   });
   it("propagates workload failures instead of retrying uncached or persisting partial work", async () => {

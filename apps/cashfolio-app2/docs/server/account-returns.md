@@ -81,7 +81,9 @@ temporary dependencies expire no later than their earliest dependency or the
 work's 15-minute lifetime; reads never extend validity. Missing-price results
 and request failures cannot enter the successful summary cache. Cache failures
 fall back to calculation, while resource errors propagate. Balances and G/L
-remain usable independently.
+remain usable independently. Initial cache-only probes use a separate read path
+from deduplicated cache-populating jobs, so a simultaneous reload cannot replace
+a finishing calculation's loader with a cache-miss result.
 
 See
 [return calculation behavior](../valuation-reference-balances.md#money-weighted-return)

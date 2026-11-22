@@ -17,7 +17,10 @@ import { HistoryPending } from "../../valuation/history/types";
 import { resolveAccountGainLossDate } from "../gain-loss/range.server";
 import { loadAccountReturnInputs } from "./return-inputs.server";
 import { createReturnEngine, rateInput } from "./return-engine.server";
-import { getOrLoadAccountReturnSummaries } from "./return-cache.server";
+import {
+  getCachedAccountReturnSummaries,
+  getOrLoadAccountReturnSummaries,
+} from "./return-cache.server";
 import {
   returnWorkStore,
   type ReturnWorkState,
@@ -46,16 +49,6 @@ type Response = AccountReturnWorkResponse<
 >;
 const day = (date: Date) => date.toISOString().slice(0, 10);
 const shared = createUserScopedSharedWork<Response>();
-const CACHE_MISS = Symbol("return-cache-miss");
-async function cachedSummary(scope: AccountReturnScope) {
-  try {
-    return await getOrLoadAccountReturnSummaries(scope, async () => {
-      throw CACHE_MISS;
-    });
-  } catch (error) {
-    if (error !== CACHE_MISS) throw error;
-  }
-}
 async function advance(
   args: ReturnWorkArgs,
   userId: string,
@@ -89,7 +82,7 @@ async function advance(
   ]);
   const store = await returnWorkStore(args.accountBookId, userId);
   if (!args.continuation && !args.target) {
-    const data = await cachedSummary(args);
+    const data = await getCachedAccountReturnSummaries(args);
     if (data) return { status: "complete", data };
   }
   let id =
