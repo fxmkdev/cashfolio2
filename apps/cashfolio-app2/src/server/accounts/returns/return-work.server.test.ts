@@ -196,6 +196,7 @@ it("restarts a locally retained continuation from the previous calculation schem
   const previous = await store.read(first.continuation);
   if (!previous) throw new Error("Expected checkpoint");
   previous.context = returnArtifactId([
+    "money-weighted-v5",
     previous.binding,
     previous.revision,
     previous.asOfDate,

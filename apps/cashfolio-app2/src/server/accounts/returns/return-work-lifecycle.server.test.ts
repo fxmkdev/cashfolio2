@@ -65,7 +65,7 @@ async function interceptedStore() {
   vi.spyOn(workStores, "returnWorkStore").mockResolvedValue(store);
   return store;
 }
-it("resumes an existing v5 checkpoint with the original binding and context hash", async () => {
+it("resumes an existing v6 checkpoint with the original binding and context hash", async () => {
   const store = await interceptedStore();
   const binding = JSON.stringify([
     "user",
@@ -77,13 +77,13 @@ it("resumes an existing v5 checkpoint with the original binding and context hash
     false,
   ]);
   const context = returnArtifactId([
-    "money-weighted-v5",
+    "money-weighted-v6",
     binding,
     "revision",
     "2026-11-07",
     "2026-11-06",
   ]);
-  await store.save("existing-v5", {
+  await store.save("existing-v6", {
     binding,
     context,
     revision: "revision",
@@ -99,7 +99,7 @@ it("resumes an existing v5 checkpoint with the original binding and context hash
   });
   expect(
     await queryAccountReturnWork(
-      { ...args, continuation: "existing-v5" },
+      { ...args, continuation: "existing-v6" },
       "user",
     ),
   ).toMatchObject({ status: "complete", progress: { context, sequence: 5 } });

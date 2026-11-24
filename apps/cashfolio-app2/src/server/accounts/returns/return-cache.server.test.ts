@@ -35,7 +35,7 @@ const scope = {
   accountState: "all" as const,
 };
 const key =
-  "account:returns:v5:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
+  "account:returns:v6:test:book:revision:2026-05-11:2026-05-10:accountStructure:all";
 function data(): AccountReturnSummaries {
   return {
     referenceCurrency: "CHF",
@@ -104,21 +104,28 @@ describe("account return cache", () => {
     expect(calculate).not.toHaveBeenCalled();
     expect(mocks.get).toHaveBeenCalledWith(key);
   });
-  it("ignores legacy namespaces and rejects legacy dual-method payloads", async () => {
-    mocks.get.mockImplementation(async (requested) =>
-      requested === key.replace(":v5:", ":v4:") ? JSON.stringify(data()) : null,
-    );
-    const calculate = load();
-    await getOrLoadAccountReturnSummaries(scope, calculate);
-    expect(calculate).toHaveBeenCalledOnce();
-    expect(mocks.get).not.toHaveBeenCalledWith(key.replace(":v5:", ":v4:"));
-    expect(
-      isAccountReturnSummaries({
-        ...data(),
-        total: { ...data().total, twr: null, annualizedTwr: null },
-      }),
-    ).toBe(false);
-  });
+  it.each(["v4", "v5"])(
+    "ignores legacy %s summaries and rejects dual-method payloads",
+    async (previous) => {
+      mocks.get.mockImplementation(async (requested) =>
+        requested === key.replace(":v6:", `:${previous}:`)
+          ? JSON.stringify(data())
+          : null,
+      );
+      const calculate = load();
+      await getOrLoadAccountReturnSummaries(scope, calculate);
+      expect(calculate).toHaveBeenCalledOnce();
+      expect(mocks.get).not.toHaveBeenCalledWith(
+        key.replace(":v6:", `:${previous}:`),
+      );
+      expect(
+        isAccountReturnSummaries({
+          ...data(),
+          total: { ...data().total, twr: null, annualizedTwr: null },
+        }),
+      ).toBe(false);
+    },
+  );
   it("validates snapshot and capital-movement detail records", () => {
     const details = {
       ...data().total,

@@ -403,6 +403,11 @@ for the amounts and dates invested or withdrawn. It is not a comprehensive total
 investment return because dividends, interest, and separately booked fees remain
 excluded.
 
+Execution normalization retains complete transaction peers. A payment before
+book start for a holding received afterwards still needs its dated conversion in
+the historical plan. These pre-start dependencies do not extend the reporting
+range or add pre-start capital movements to the calculation tables.
+
 The calculation solves dated investor cash flows and terminal value with Decimal
 arithmetic, using actual days/365. Contributions and opening capital use
 day-start boundaries; withdrawals and terminal value use the following day
@@ -434,7 +439,7 @@ those checks. Complete losses remain −100%. Summary/planning calls do not
 construct detail records; detail calls reuse the same memoized valuations and
 preserve missing snapshots.
 
-Return summaries use version 5 of the revision-scoped cache, including grouping,
+Return summaries use version 6 of the revision-scoped cache, including grouping,
 account state, UTC as-of day, and publication cutoff. Stable complete results
 last 24 hours. Temporary complete results expire by the earliest dependency or
 15-minute work lifetime; reads do not renew them. Missing prices are never a

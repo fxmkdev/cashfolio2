@@ -142,12 +142,12 @@ export async function createReturnEngine(
   return { calculate };
 }
 
-/** Conservative capital lookup plan: retain transaction peers and dated G/L metadata. */
+/** Normalization consumes complete peers, including execution payments before book start. */
 export function capitalRateRequests(inputs: ReturnInputs) {
   const requests = new Map<string, ReturnRateRequest>();
   const add = (input: ReturnRateInput) => {
     const date = input.date.toISOString().slice(0, 10);
-    if (date < inputs.startDate || date > inputs.asOfDate) return;
+    if (date > inputs.asOfDate) return;
     if (
       input.unit === "CURRENCY" &&
       input.currency?.toUpperCase() === inputs.referenceCurrency

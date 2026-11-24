@@ -41,7 +41,7 @@ export async function createReturnWorkContext(
   const publication = day(createValuationLookupContext().latestFetchableDate);
   const revision = await readRevision(args, asOfDate);
   const context = returnArtifactId([
-    "money-weighted-v5",
+    "money-weighted-v6",
     binding,
     revision,
     asOfDate,

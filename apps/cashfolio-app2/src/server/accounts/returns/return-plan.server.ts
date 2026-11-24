@@ -167,7 +167,7 @@ export async function getReturnPlan(
 ) {
   const artifacts = await returnArtifacts(args.accountBookId);
   const id = returnArtifactId([
-    "plan-v2",
+    "plan-v3",
     revision,
     asOfDate,
     publication,

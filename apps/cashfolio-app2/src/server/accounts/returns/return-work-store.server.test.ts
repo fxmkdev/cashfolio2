@@ -47,12 +47,12 @@ it("uses Redis checkpoints across local eviction and rejects corrupt data", asyn
   for (let i = 0; i < 18; i++) await store.save(String(i), state());
   expect(await store.read("0")).toMatchObject({ revision: "r1", sequence: 1 });
   expect(redis.setEx).toHaveBeenCalledWith(
-    "account:returns-work:v5:test:redis-book:user:0",
+    "account:returns-work:v6:test:redis-book:user:0",
     900,
     expect.any(String),
   );
   entries.set(
-    "account:returns-work:v5:test:redis-book:user:0",
+    "account:returns-work:v6:test:redis-book:user:0",
     '{"phase":"invalid"}',
   );
   expect(await store.read("0")).toBeUndefined();
@@ -60,7 +60,7 @@ it("uses Redis checkpoints across local eviction and rejects corrupt data", asyn
   expect(await store.read("1")).toBeUndefined();
 });
 it("does not resume checkpoints from the previous Redis namespace", async () => {
-  const previousKey = "account:returns-work:v4:test:legacy-work:user:previous";
+  const previousKey = "account:returns-work:v5:test:legacy-work:user:previous";
   const redis = {
     get: vi.fn(async (key: string) =>
       key === previousKey ? JSON.stringify(state()) : null,
@@ -69,7 +69,7 @@ it("does not resume checkpoints from the previous Redis namespace", async () => 
   mocks.redis.mockResolvedValue(redis);
   const store = await returnWorkStore("legacy-work", "user");
   expect(await store.read("previous")).toBeUndefined();
-  expect(redis.get).toHaveBeenCalledWith(previousKey.replace(":v4:", ":v5:"));
+  expect(redis.get).toHaveBeenCalledWith(previousKey.replace(":v5:", ":v6:"));
 });
 it("retains newer local progress across stale Redis data, failed writes and a Redis outage", async () => {
   let encoded: string | null = null;
@@ -182,7 +182,7 @@ it("uses the production read/write-only Redis ACL and safely releases only its o
     ),
   ).toBe(true);
   // An abandoned token expires independently of a newer owner's token.
-  const leaseKey = "account:returns-work:v5:test:acl-book:user:lease:first";
+  const leaseKey = "account:returns-work:v6:test:acl-book:user:lease:first";
   lists.set(leaseKey, [
     JSON.stringify({ id: "abandoned", expires: Date.now() - 1 }),
   ]);

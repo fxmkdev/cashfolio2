@@ -44,14 +44,22 @@ mismatched work requests a restart; repeated invalidations restart at most
 twice. Every request authorizes book access again. Account details load relevant
 transactions with their complete peers.
 
-`account:returns-work:v5` stores small mutable envelopes (256 KiB limit), with a
+Historical plans include pre-book-start conversions consumed while normalizing
+those complete peers, such as a foreign-currency payment before book start for a
+security received afterwards. Dependency dates and displayed capital-movement
+dates have different bounds: reporting dates and in-range movement filtering
+remain unchanged. Future dates remain excluded from the capital dependency plan.
+
+`account:returns-work:v6` stores small mutable envelopes (256 KiB limit), with a
 15-minute lifetime. Separate immutable artifacts hold a coherent transaction
 basis, canonical membership plans, and individual scope results (8 MiB each).
 Account indexes retain complete transaction peers. Distinct memberships
 calculate once and attach all displayed IDs/names; both grouping modes share
-matching results. Plan/result artifact IDs use `plan-v2`/`result-v2`; the
+matching results. Plan/result artifact IDs use `plan-v3`/`result-v3`; the
 unchanged transaction basis remains `basis-v1`. Versioned calculation contexts
-restart incompatible old continuations, including locally retained work.
+restart incompatible old continuations, including locally retained work. Version
+6 and plan/result v3 prevent reuse of incomplete pre-start dependency plans or
+their derived results; the unchanged transaction basis remains reusable.
 Process-local artifacts are bounded to 64 MiB/4096 entries and 15 minutes,
 checkpoints to 16 entries, and work indexes to 64. Redis artifacts last at most
 24 hours. These keys participate in existing book/user deletion and restore
@@ -75,7 +83,7 @@ caches are unchanged, and all return-cache versions remain covered by
 deletion/restore cleanup.
 
 Implementations live under `src/server/accounts/returns/`. Return summaries use
-`account:returns:v5` with revision, date, cutoff, grouping, and account-state
+`account:returns:v6` with revision, date, cutoff, grouping, and account-state
 keys. Stable complete results retain the 24-hour TTL. Complete results with
 temporary dependencies expire no later than their earliest dependency or the
 work's 15-minute lifetime; reads never extend validity. Missing-price results
