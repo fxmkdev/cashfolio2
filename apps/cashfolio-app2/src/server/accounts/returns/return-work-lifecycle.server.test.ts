@@ -78,6 +78,7 @@ it("resumes an existing v6 checkpoint with the original binding and context hash
   ]);
   const context = returnArtifactId([
     "money-weighted-v6",
+    "plan-v4",
     binding,
     "revision",
     "2026-11-07",

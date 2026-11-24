@@ -3,7 +3,7 @@ import { createValuationLookupContext } from "../../valuation/lookup-context";
 import { resolveAccountGainLossDate } from "../gain-loss/range.server";
 import { loadAccountReturnInputs } from "./return-inputs.server";
 import { returnArtifactId } from "./return-artifacts.server";
-import { getReturnPlan } from "./return-plan.server";
+import { getReturnPlan, RETURN_PLAN_VERSION } from "./return-plan.server";
 import type { ReturnWorkState } from "./return-work-store.server";
 import type {
   ReturnWorkArgs,
@@ -42,6 +42,7 @@ export async function createReturnWorkContext(
   const revision = await readRevision(args, asOfDate);
   const context = returnArtifactId([
     "money-weighted-v6",
+    RETURN_PLAN_VERSION,
     binding,
     revision,
     asOfDate,

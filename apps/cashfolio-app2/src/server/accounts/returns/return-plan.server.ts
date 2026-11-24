@@ -7,15 +7,16 @@ import type {
 import { loadAccountReturnInputs } from "./return-inputs.server";
 import { returnArtifacts, returnArtifactId } from "./return-artifacts.server";
 import {
-  capitalRateRequests,
   createReturnEngine,
   returnTargets,
   returnRateKey,
-  rateInput,
   rateRequest,
   type ReturnInputs,
   type ReturnRateRequest,
+  type ReturnRateInput,
 } from "./return-engine.server";
+
+export const RETURN_PLAN_VERSION = "plan-v4";
 
 export type ReturnScopePlan = {
   key: string;
@@ -167,7 +168,7 @@ export async function getReturnPlan(
 ) {
   const artifacts = await returnArtifacts(args.accountBookId);
   const id = returnArtifactId([
-    "plan-v3",
+    RETURN_PLAN_VERSION,
     revision,
     asOfDate,
     publication,
@@ -207,22 +208,21 @@ export async function getReturnPlan(
     mapped.push({ id: target.id, name: target.name, kind: target.kind, key });
     if (scopes.has(key)) continue;
     const subset = scopeInputs(inputs, target.accountIds);
-    const engine = await createReturnEngine(subset, async () => toMoney(1));
-    const requests = new Map(
-      capitalRateRequests(subset).map((r) => [returnRateKey(rateInput(r)), r]),
-    );
-    const draft = await engine.calculate(
-      target,
-      async (input) => {
-        if (!(
-          input.unit === "CURRENCY" &&
-          input.currency?.toUpperCase() === inputs.referenceCurrency
-        ))
-          requests.set(returnRateKey(input), rateRequest(input));
-        return toMoney(1);
-      },
-      { valuationOnly: true },
-    );
+    const requests = new Map<string, ReturnRateRequest>();
+    const collectRate = async (input: ReturnRateInput) => {
+      if (!(
+        input.unit === "CURRENCY" &&
+        input.currency?.toUpperCase() === inputs.referenceCurrency
+      ))
+        requests.set(returnRateKey(input), rateRequest(input));
+      return toMoney(1);
+    };
+    // Follow the same normalization branches as execution, retaining complete
+    // peers and their pre-start payments without probing unused transfer dates.
+    const engine = await createReturnEngine(subset, collectRate);
+    const draft = await engine.calculate(target, collectRate, {
+      valuationOnly: true,
+    });
     scopes.set(key, {
       key,
       accountIds,

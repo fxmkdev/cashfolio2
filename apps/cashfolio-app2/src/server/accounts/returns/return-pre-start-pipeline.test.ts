@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { Temporal } from "../../../shared/temporal";
 import {
   emptyAccountReturnResult,
   type AccountReturnDetails,
@@ -7,10 +6,16 @@ import {
 } from "../../../shared/accounts/account-returns";
 import type { HistoryTask } from "../../valuation/history/types";
 import type { HistoryBatch } from "../../valuation/history/provider.server";
-import { clearHistorySeries } from "../../valuation/history/cache.server";
+import {
+  clearHistorySeries,
+  storeHistorySeries,
+} from "../../valuation/history/cache.server";
 import { account, booking } from "./return-test-support";
+import {
+  preStartReturnInputs,
+  preStartQuoteBatch,
+} from "./return-pre-start-test-support";
 import type { ReturnInputs } from "./return-engine.server";
-import { capitalRateRequests } from "./return-engine.server";
 import { getReturnPlan } from "./return-plan.server";
 import { queryAccountReturnWork } from "./account-returns.server";
 import type { ReturnWorkArgs } from "./return-work-types";
@@ -53,55 +58,7 @@ const ledger = (includeDetails = false): ReturnWorkArgs => ({
   period: "2026-01",
   includeDetails,
 });
-function fixture(withFee: boolean): ReturnInputs {
-  const stock = {
-    unit: "SECURITY" as const,
-    currency: null,
-    symbol,
-    tradeCurrency: "USD",
-  };
-  return {
-    accounts: [account("stock", stock), account("eur", { currency: "EUR" })],
-    groups: [
-      { id: "group", name: "Investments", parentGroupId: null, isActive: true },
-    ],
-    classes: [
-      { id: "equities", name: "Equities", parentId: null, sortOrder: 0 },
-    ],
-    transactions: [
-      {
-        bookings: [
-          booking("stock-in", "2026-01-02", "1", {
-            ...stock,
-            accountId: "stock",
-            transactionId: "purchase",
-          }),
-          booking("eur-out", "2025-12-31", withFee ? "-101" : "-100", {
-            currency: "EUR",
-            accountId: "eur",
-            transactionId: "purchase",
-          }),
-          ...(withFee
-            ? [
-                booking("fee", "2026-01-02", "1", {
-                  currency: "EUR",
-                  accountId: "fee",
-                  accountType: "EQUITY" as const,
-                  equityAccountSubtype: "EXPENSE" as const,
-                  transactionId: "purchase",
-                }),
-              ]
-            : []),
-        ],
-      },
-    ],
-    initialBalances: new Map(),
-    revision: "revision",
-    referenceCurrency: "USD",
-    startDate: "2026-01-01",
-    asOfDate: "2026-01-04",
-  };
-}
+
 async function complete(args: ReturnWorkArgs) {
   let continuation: string | undefined;
   for (let batch = 0; batch < 20; batch++) {
@@ -115,39 +72,18 @@ async function complete(args: ReturnWorkArgs) {
   }
   throw new Error("Return did not complete within bounded batches");
 }
-function quoteBatch(task: HistoryTask) {
-  const dates: string[] = [];
-  for (
-    let date = Temporal.PlainDate.from(task.from);
-    date.toString() <= task.to;
-    date = date.add({ days: 1 })
-  )
-    dates.push(date.toString());
-  return {
-    complete: true,
-    points: Object.fromEntries(
-      task.series.map((series) => [
-        series.key,
-        dates.flatMap((date) =>
-          series.provider === "CURRENCYLAYER"
-            ? [{ date, value: 0.8 }]
-            : date < "2026-01-02"
-              ? []
-              : [{ date, value: date === "2026-01-02" ? 125 : 150 }],
-        ),
-      ]),
-    ),
-  };
-}
+
 beforeEach(async () => {
   vi.resetAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-01-04T12:00Z"));
   bookId = `pre-start-${++serial}`;
   symbol = `PREFUND${serial}`;
-  inputs = fixture(false);
+  inputs = preStartReturnInputs(symbol, false);
   mocks.inputs.mockImplementation(async () => inputs);
-  mocks.fetch.mockImplementation(async (task: HistoryTask) => quoteBatch(task));
+  mocks.fetch.mockImplementation(async (task: HistoryTask) =>
+    preStartQuoteBatch(task),
+  );
   mocks.capability.mockImplementation(async () => ({
     supported: true,
     set: vi.fn(),
@@ -232,7 +168,7 @@ it.each(["range", "day"] as const)(
   },
 );
 it("plans the omitted pre-start day even when EUR already has an in-range single-day dependency", async () => {
-  inputs = fixture(true);
+  inputs = preStartReturnInputs(symbol, true);
   mocks.capability.mockImplementation(async () => ({
     supported: false,
     set: vi.fn(),
@@ -245,15 +181,40 @@ it("plans the omitted pre-start day even when EUR already has an in-range single
   );
   expect(dates.sort()).toEqual(["2025-12-31", "2026-01-02"]);
 });
-it("deduplicates pre-start dependencies and keeps future dates and identity conversions out of the plan", () => {
+it("deduplicates pre-start dependencies and keeps future dates and identity conversions out of the plan", async () => {
   inputs.transactions[0]!.bookings.push(
-    booking("future", "2026-01-05", "1", { currency: "EUR" }),
-    booking("identity", "2025-12-31", "1"),
+    booking("identity", "2026-01-02", "1", {
+      accountId: "fee",
+      accountType: "EQUITY",
+      equityAccountSubtype: "EXPENSE",
+    }),
   );
-  const requests = capitalRateRequests({
-    ...inputs,
-    transactions: [...inputs.transactions, ...inputs.transactions],
-  });
+  inputs.transactions = [
+    ...inputs.transactions,
+    ...inputs.transactions,
+    {
+      bookings: [
+        booking("future-stock", "2026-01-03", "1", {
+          accountId: "stock",
+          unit: "SECURITY",
+          currency: null,
+          symbol,
+          tradeCurrency: "USD",
+        }),
+        booking("future-payment", "2026-01-05", "-100", {
+          accountId: "eur",
+          currency: "EUR",
+        }),
+      ],
+    },
+  ];
+  const planned = await getReturnPlan(
+    ledger(),
+    "revision",
+    inputs.asOfDate,
+    publication,
+  );
+  const requests = planned!.plan.scopes[0]!.requests;
   expect(
     requests.filter((r) => r.currency === "EUR" && r.date === "2025-12-31"),
   ).toHaveLength(1);
@@ -263,7 +224,7 @@ it("deduplicates pre-start dependencies and keeps future dates and identity conv
   ).toBe(false);
 });
 
-it("rebuilds incomplete v2 plans and results while reusing the unchanged transaction basis", async () => {
+it("rebuilds legacy plans and results while reusing the unchanged transaction basis", async () => {
   const artifacts = await returnArtifacts(bookId);
   const basisId = returnArtifactId([
     "basis-v1",
@@ -273,7 +234,7 @@ it("rebuilds incomplete v2 plans and results while reusing the unchanged transac
   ]);
   const key = returnArtifactId(["stock"]);
   const oldPlanId = returnArtifactId([
-    "plan-v2",
+    "plan-v3",
     "revision",
     inputs.asOfDate,
     publication,
@@ -339,4 +300,49 @@ it("rebuilds incomplete v2 plans and results while reusing the unchanged transac
   expect(planned!.id).not.toBe(oldPlanId);
   expect(planned!.plan.basisId).toBe(basisId);
   expect(mocks.inputs).not.toHaveBeenCalled();
+});
+
+it("finishes a cached in-transit transfer without probing an unused pre-start payment date", async () => {
+  inputs.accounts = [
+    account("from", { currency: "EUR" }),
+    account("to", { currency: "EUR" }),
+  ];
+  inputs.transactions = [
+    {
+      bookings: [
+        booking("out", "2025-12-29", "-100", {
+          accountId: "from",
+          currency: "EUR",
+        }),
+        booking("in", "2026-01-02", "100", {
+          accountId: "to",
+          currency: "EUR",
+        }),
+      ],
+    },
+  ];
+  await storeHistorySeries(
+    {
+      provider: "CURRENCYLAYER",
+      code: "EUR",
+      currency: "USD",
+      key: "valuation:currencylayer:USD:EUR",
+    },
+    [
+      { date: "2025-12-31", value: 0.8 },
+      { date: "2026-01-01", value: 0.8 },
+      { date: "2026-01-02", value: 0.8 },
+      { date: "2026-01-03", value: 0.8 },
+    ],
+  );
+  mocks.fetch.mockRejectedValue(new Error("Provider unavailable"));
+  const response = await queryAccountReturnWork(
+    { ...scope(), target: { kind: "total" } },
+    "user",
+  );
+  expect(response).toMatchObject({
+    status: "complete",
+    data: { mwr: 0, diagnostics: [] },
+  });
+  expect(mocks.fetch).not.toHaveBeenCalled();
 });

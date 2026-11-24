@@ -541,9 +541,10 @@ clear must include `valuation:coverage:*` and restart processes to discard local
 fallbacks; never clear prices while leaving their gap proofs behind. Book/user
 deletion keeps these global valuation keys and removes all book-scoped return
 summary/work/artifact versions. Version 6 isolates plans and derived results
-that include pre-start execution dependencies; plan/result artifact schemas are
-v3 while the transaction basis stays v1. Global historical quotes and coverage
-proofs are not cleared by this change. Restored books receive fresh
+that include pre-start execution dependencies; plan artifacts use v4, result
+artifacts use v3, and the transaction basis stays v1. Work contexts include the
+plan version so earlier planning continuations restart. Global historical quotes
+and coverage proofs are not cleared by this change. Restored books receive fresh
 revision-bound work.
 
 Return summary v6 retains stable results for 24 hours. Temporary complete

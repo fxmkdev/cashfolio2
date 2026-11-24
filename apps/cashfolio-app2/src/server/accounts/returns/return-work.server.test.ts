@@ -189,27 +189,30 @@ it("restarts unknown, mismatched-user, scope, revision and publication continuat
     status: "restart",
   });
 });
-it("restarts a locally retained continuation from the previous calculation schema", async () => {
-  const first = await queryAccountReturnWork(scope, "user");
-  if (first.status !== "pending") throw new Error("Expected pending");
-  const store = await returnWorkStore(scope.accountBookId, "user");
-  const previous = await store.read(first.continuation);
-  if (!previous) throw new Error("Expected checkpoint");
-  previous.context = returnArtifactId([
-    "money-weighted-v5",
-    previous.binding,
-    previous.revision,
-    previous.asOfDate,
-    previous.publication,
-  ]);
-  await store.save(first.continuation, previous);
-  expect(
-    await queryAccountReturnWork(
-      { ...scope, continuation: first.continuation },
-      "user",
-    ),
-  ).toEqual({ status: "restart" });
-});
+it.each(["money-weighted-v5", "money-weighted-v6"])(
+  "restarts a locally retained continuation from the previous context %s",
+  async (previousSchema) => {
+    const first = await queryAccountReturnWork(scope, "user");
+    if (first.status !== "pending") throw new Error("Expected pending");
+    const store = await returnWorkStore(scope.accountBookId, "user");
+    const previous = await store.read(first.continuation);
+    if (!previous) throw new Error("Expected checkpoint");
+    previous.context = returnArtifactId([
+      previousSchema,
+      previous.binding,
+      previous.revision,
+      previous.asOfDate,
+      previous.publication,
+    ]);
+    await store.save(first.continuation, previous);
+    expect(
+      await queryAccountReturnWork(
+        { ...scope, continuation: first.continuation },
+        "user",
+      ),
+    ).toEqual({ status: "restart" });
+  },
+);
 it("bounds temporary summary validity by the earliest dependency expiry", async () => {
   const snapshot = groupingReturnInputs();
   mocks.inputs.mockResolvedValue(snapshot);

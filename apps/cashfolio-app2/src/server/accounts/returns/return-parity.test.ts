@@ -9,9 +9,8 @@ import {
 import {
   createReturnEngine,
   returnTargets,
-  capitalRateRequests,
   returnRateKey,
-  rateInput,
+  type ReturnRateInput,
 } from "./return-engine.server";
 import { scopeInputs } from "./return-plan.server";
 
@@ -39,9 +38,17 @@ it("preserves pre-simplification MWR, dates, diagnostics and membership with no 
       let value = scopes.get(key);
       if (!value) {
         const subset = scopeInputs(inputs, target.accountIds);
-        const engine = await createReturnEngine(subset, async (input) =>
-          stagingReturnRate(input),
-        );
+        const recordRequest = (input: ReturnRateInput) => {
+          if (!(
+            input.unit === "CURRENCY" &&
+            input.currency?.toUpperCase() === inputs.referenceCurrency
+          ))
+            requests.add(returnRateKey(input));
+        };
+        const engine = await createReturnEngine(subset, async (input) => {
+          recordRequest(input);
+          return stagingReturnRate(input);
+        });
         const data = await engine.calculate(target);
         expect(data.valuations).toEqual([]);
         expect(data.cashFlows).toEqual([]);
@@ -56,16 +63,10 @@ it("preserves pre-simplification MWR, dates, diagnostics and membership with no 
           diagnostics: data.diagnostics,
         };
         scopes.set(key, value);
-        for (const request of capitalRateRequests(subset))
-          requests.add(returnRateKey(rateInput(request)));
         const draft = await engine.calculate(
           target,
           async (input) => {
-            if (!(
-              input.unit === "CURRENCY" &&
-              input.currency?.toUpperCase() === inputs.referenceCurrency
-            ))
-              requests.add(returnRateKey(input));
+            recordRequest(input);
             return toMoney(1);
           },
           { valuationOnly: true, includeDetails: true },

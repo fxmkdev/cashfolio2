@@ -141,29 +141,3 @@ export async function createReturnEngine(
     });
   return { calculate };
 }
-
-/** Normalization consumes complete peers, including execution payments before book start. */
-export function capitalRateRequests(inputs: ReturnInputs) {
-  const requests = new Map<string, ReturnRateRequest>();
-  const add = (input: ReturnRateInput) => {
-    const date = input.date.toISOString().slice(0, 10);
-    if (date > inputs.asOfDate) return;
-    if (
-      input.unit === "CURRENCY" &&
-      input.currency?.toUpperCase() === inputs.referenceCurrency
-    )
-      return;
-    requests.set(returnRateKey(input), rateRequest(input));
-  };
-  for (const tx of inputs.transactions) {
-    for (const booking of tx.bookings)
-      if (!booking.value.isZero()) add(booking);
-    const gain = tx.bookings.find(
-      (b) => b.equityAccountSubtype === "GAIN_LOSS",
-    );
-    if (gain)
-      for (const peer of tx.bookings.filter((b) => b.accountType === "BALANCE"))
-        add({ ...gain, date: peer.date });
-  }
-  return [...requests.values()];
-}

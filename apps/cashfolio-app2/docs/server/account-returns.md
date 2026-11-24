@@ -49,22 +49,26 @@ those complete peers, such as a foreign-currency payment before book start for a
 security received afterwards. Dependency dates and displayed capital-movement
 dates have different bounds: reporting dates and in-range movement filtering
 remain unchanged. Future dates remain excluded from the capital dependency plan.
+Planning runs normalization with a recording rate resolver and records scope
+valuations through the same resolver. Only consumed conversions are planned; an
+unused pre-start transfer date cannot trigger a provider probe.
 
 `account:returns-work:v6` stores small mutable envelopes (256 KiB limit), with a
 15-minute lifetime. Separate immutable artifacts hold a coherent transaction
 basis, canonical membership plans, and individual scope results (8 MiB each).
 Account indexes retain complete transaction peers. Distinct memberships
 calculate once and attach all displayed IDs/names; both grouping modes share
-matching results. Plan/result artifact IDs use `plan-v3`/`result-v3`; the
+matching results. Plan/result artifact IDs use `plan-v4`/`result-v3`; the
 unchanged transaction basis remains `basis-v1`. Versioned calculation contexts
 restart incompatible old continuations, including locally retained work. Version
-6 and plan/result v3 prevent reuse of incomplete pre-start dependency plans or
-their derived results; the unchanged transaction basis remains reusable.
-Process-local artifacts are bounded to 64 MiB/4096 entries and 15 minutes,
-checkpoints to 16 entries, and work indexes to 64. Redis artifacts last at most
-24 hours. These keys participate in existing book/user deletion and restore
-cleanup. Each batch rechecks revision, reporting day, and cutoff before
-publishing.
+6 and result v3 prevent reuse of results with incomplete pre-start dependencies.
+The plan version is included in calculation contexts, so updates to dependency
+planning restart earlier continuations. Transaction bases and valid completed
+results remain reusable. Process-local artifacts are bounded to 64 MiB/4096
+entries and 15 minutes, checkpoints to 16 entries, and work indexes to 64. Redis
+artifacts last at most 24 hours. These keys participate in existing book/user
+deletion and restore cleanup. Each batch rechecks revision, reporting day, and
+cutoff before publishing.
 
 The shared historical-series loader reads each raw Redis series/window plus its
 predecessor once per batch, resolves dates in memory, and shares FX dependencies

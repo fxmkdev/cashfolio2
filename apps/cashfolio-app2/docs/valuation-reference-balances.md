@@ -406,7 +406,9 @@ excluded.
 Execution normalization retains complete transaction peers. A payment before
 book start for a holding received afterwards still needs its dated conversion in
 the historical plan. These pre-start dependencies do not extend the reporting
-range or add pre-start capital movements to the calculation tables.
+range or add pre-start capital movements to the calculation tables. The planner
+records conversions consumed by normalization and valuations, avoiding provider
+probes for unused transfer dates.
 
 The calculation solves dated investor cash flows and terminal value with Decimal
 arithmetic, using actual days/365. Contributions and opening capital use
