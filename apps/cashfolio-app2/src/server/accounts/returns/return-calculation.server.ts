@@ -91,6 +91,9 @@ export async function calculateAccountReturns(args: {
   const capital = [...netFlows.values()]
     .filter((flow) => !flow.exact.isZero())
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const capitalByDate = new Map<string, typeof capital>();
+  for (const flow of capital)
+    capitalByDate.getOrInsertComputed(flow.date, () => []).push(flow);
   if (args.includeDetails && !args.valuationOnly)
     result.cashFlows = capital.map(({ exact, ...flow }) => ({
       ...flow,
@@ -150,7 +153,7 @@ export async function calculateAccountReturns(args: {
       observe(before, previous, end, false);
       previous = end;
     }
-    const movements = capital.filter((flow) => flow.date === date);
+    const movements = capitalByDate.get(date) ?? [];
     const end = await valueAt(date);
     if (!effectiveStart && movements.some((flow) => flow.exact.gt(0)))
       effectiveStart = date;

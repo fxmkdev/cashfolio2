@@ -6,6 +6,7 @@ import type {
   AccountReturnWorkResponse,
 } from "../../../shared/accounts/account-returns";
 import type { ReturnPlan } from "./return-plan.server";
+import type { ReturnInputs } from "./return-engine.server";
 import type {
   ReturnWorkState,
   returnWorkStore,
@@ -29,6 +30,7 @@ export type ReturnWorkSession = {
   id: string;
   identity: ReturnWorkContext;
   plan: ReturnPlan;
+  inputs?: ReturnInputs;
   store: ReturnWorkStore;
   initial: () => ReturnWorkState;
 };

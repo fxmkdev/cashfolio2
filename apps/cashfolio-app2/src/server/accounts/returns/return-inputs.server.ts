@@ -82,7 +82,7 @@ export function loadAccountReturnInputs(
               ],
             },
             orderBy: { id: "asc" },
-            take: 200,
+            take: 1000,
             ...(cursor
               ? {
                   cursor: { id_accountBookId: { id: cursor, accountBookId } },
@@ -123,7 +123,7 @@ export function loadAccountReturnInputs(
                 equityAccountSubtype: account.equityAccountSubtype,
               })),
             });
-          if (page.length < 200) break;
+          if (page.length < 1000) break;
           cursor = page.at(-1)!.id;
         }
       return {

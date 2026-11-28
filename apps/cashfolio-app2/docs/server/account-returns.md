@@ -53,22 +53,37 @@ Planning runs normalization with a recording rate resolver and records scope
 valuations through the same resolver. Only consumed conversions are planned; an
 unused pre-start transfer date cannot trigger a provider probe.
 
-`account:returns-work:v6` stores small mutable envelopes (256 KiB limit), with a
+`account:returns-work:v7` stores small mutable envelopes (256 KiB limit), with a
 15-minute lifetime. Separate immutable artifacts hold a coherent transaction
-basis, canonical membership plans, and individual scope results (8 MiB each).
-Account indexes retain complete transaction peers. Distinct memberships
-calculate once and attach all displayed IDs/names; both grouping modes share
-matching results. Plan/result artifact IDs use `plan-v4`/`result-v3`; the
-unchanged transaction basis remains `basis-v1`. Versioned calculation contexts
-restart incompatible old continuations, including locally retained work. Version
-6 and result v3 prevent reuse of results with incomplete pre-start dependencies.
-The plan version is included in calculation contexts, so updates to dependency
-planning restart earlier continuations. Transaction bases and valid completed
-results remain reusable. Process-local artifacts are bounded to 64 MiB/4096
-entries and 15 minutes, checkpoints to 16 entries, and work indexes to 64. Redis
-artifacts last at most 24 hours. These keys participate in existing book/user
-deletion and restore cleanup. Each batch rechecks revision, reporting day, and
-cutoff before publishing.
+basis, canonical membership plans, and individual scope results. Each artifact
+uses a versioned manifest and immutable, generation-specific chunks of at most 1
+MiB in UTF-8. A bounded record stream preserves Decimal values, UTC dates,
+ordering, and complete transaction peers without encoding or joining a second
+whole-book JSON string. Large individual strings can span records as well.
+Manifests publish only after all chunks are written; readers verify chunk
+hashes, lengths, expiry, stream completeness, and the domain payload. Corrupt,
+missing, or partially written snapshots are cache misses. Chunks and manifests
+share an absolute expiry through ordinary `SET PXAT`, compatible with the
+existing ACL. Account indexes retain complete transaction peers. Distinct
+memberships calculate once and attach all displayed IDs/names; both grouping
+modes share matching results. Plan/result artifact IDs use
+`plan-v5`/`result-v4`, and the transaction basis uses `basis-v2`. Versioned
+calculation contexts restart incompatible old continuations, including locally
+retained work. The plan version is included in calculation contexts, so updates
+to dependency planning restart earlier continuations. Transaction bases and
+valid completed results remain reusable. Process-local artifacts are bounded to
+64 MiB of encoded data, 4096 entries, and 15 minutes; eviction removes complete
+logical artifacts. Larger artifacts bypass local retention and remain usable
+within their request. When a basis is unavailable, the next batch reloads its
+coherent inputs at the verified revision while retaining the existing plan and
+checkpoint. Fresh inputs pass directly to that batch, avoiding cache-size
+restart loops without Redis. Database reads use pages of 1,000 transactions
+within the existing 30-second read-only snapshot transaction; request deadlines
+remain unchanged. Account, position-change, and capital-date indexes avoid
+repeated full-array scans. Checkpoints remain bounded to 16 entries, and work
+indexes to 64. Redis artifacts last at most 24 hours. These keys participate in
+existing book/user deletion and restore cleanup. Each batch rechecks revision,
+reporting day, and cutoff before publishing.
 
 The shared historical-series loader reads each raw Redis series/window plus its
 predecessor once per batch, resolves dates in memory, and shares FX dependencies
@@ -107,6 +122,22 @@ response assembly live in `return-work-response.server.ts`. Both calculation
 passes share one counter and timer, and ready or recovered results publish
 before provider work. Internal work contracts live in the type-only
 `return-work-types.ts`.
+
+Both RPC handlers log unexpected failures inside the handler, before RPC error
+serialization. Logs retain the original error message, stack, code, and cause,
+with operation, book ID, grouping, account state, target kind, and a boolean
+continuation indicator. They omit financial payloads and request credentials.
+Cache failure diagnostics include the artifact ID, encoded bytes, chunk count,
+and chunk limit; malformed JSON errors omit payload previews. Expected
+authorization redirects and request cancellations do not produce error logs.
+Cleanup failures are logged separately and cannot replace the original
+calculation error. Existing successful summary caches remain on version 6.
+
+Synthetic regression coverage includes 100,000 transactions exceeding the 64 MiB
+local retention budget, with summaries, both grouping modes, totals, and detail
+tables using deterministic cached rates. A database-backed scale test in the
+mutation integration suite verifies real pagination and chunk encoding against a
+disposable PostgreSQL database; it performs no provider calls.
 
 Transaction normalization remains ordered: collect position changes, handle
 recorded G/L adjustments exclusively, then decompose transfers and price

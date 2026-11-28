@@ -68,5 +68,5 @@ export function getAccountReturnCacheEntryKey(
 export function getAccountReturnWorkKey(
   args: BookCacheScope & { userId: string; id: string },
 ): string {
-  return `${ACCOUNT_RETURN_WORK_FAMILY}:v6:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
+  return `${ACCOUNT_RETURN_WORK_FAMILY}:v7:${args.cacheEnv}:${args.accountBookId}:${args.userId}:${args.id}`;
 }

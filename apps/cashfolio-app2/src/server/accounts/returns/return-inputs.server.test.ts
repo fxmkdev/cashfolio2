@@ -105,20 +105,21 @@ it("retains complete peers and paginates without truncating a busy book", async 
   });
   mocks.transactions
     .mockResolvedValueOnce(
-      Array.from({ length: 200 }, (_, index) => transaction(String(index))),
+      Array.from({ length: 1000 }, (_, index) => transaction(String(index))),
     )
     .mockResolvedValueOnce([transaction("last")]);
   const result = await loadAccountReturnInputs(
     "book",
     new Date("2026-01-03T00:00:00Z"),
   );
-  expect(result.transactions).toHaveLength(201);
+  expect(result.transactions).toHaveLength(1001);
+  expect(mocks.transactions.mock.calls[0]![0].take).toBe(1000);
   expect(result.transactions[0]!.bookings[1]!.date.toISOString()).toContain(
     "2026-01-05",
   );
   expect(result.transactions[0]!.bookings[0]!.value.toString()).toBe("-100");
   expect(mocks.transactions.mock.calls[1]![0]).toMatchObject({
-    cursor: { id_accountBookId: { id: "199", accountBookId: "book" } },
+    cursor: { id_accountBookId: { id: "999", accountBookId: "book" } },
     skip: 1,
   });
 });

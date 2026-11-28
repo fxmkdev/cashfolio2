@@ -27,7 +27,7 @@ export const scopeResultId = (
   includeDetails: boolean,
 ) =>
   returnArtifactId([
-    "result-v3",
+    "result-v4",
     state.revision,
     state.asOfDate,
     state.publication,

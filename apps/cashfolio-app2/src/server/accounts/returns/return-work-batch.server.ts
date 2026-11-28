@@ -28,7 +28,7 @@ export type ReturnWorkBatch = {
   started: number;
 };
 type CalculationBatch = ReturnWorkBatch & {
-  session: Pick<ReturnWorkSession, "plan" | "identity">;
+  session: Pick<ReturnWorkSession, "plan" | "identity" | "inputs">;
   current: ReturnWorkState;
   inputs: ReturnInputs;
   missingScopes: ReturnScopePlan[];
@@ -49,7 +49,8 @@ async function prepareBatch(
     plan,
     args.includeDetails ?? false,
   );
-  const inputs = await readReturnBasis(args.accountBookId, plan.basisId);
+  const inputs =
+    session.inputs ?? (await readReturnBasis(args.accountBookId, plan.basisId));
   if (!inputs) return;
   const missingScopes = plan.scopes.filter((s) => !results.has(s.key));
   const loader = missingScopes.some((s) => s.applicable)

@@ -15,11 +15,15 @@ export function createReturnScopeValuer(args: {
   bridges: ReturnBridge[];
   resolveRate: HoldingRateResolver;
 }) {
+  const changesByAccount = new Map<string, ReturnPositionChange[]>();
+  for (const change of args.changes)
+    changesByAccount
+      .getOrInsertComputed(change.accountId, () => [])
+      .push(change);
   const quantities = new Map(
     args.accounts.map((account) => {
       let quantity = args.initialBalances.get(account.id) ?? toMoney(0);
-      const points = args.changes
-        .filter((change) => change.accountId === account.id)
+      const points = (changesByAccount.get(account.id) ?? [])
         .sort((a, b) => a.date.localeCompare(b.date))
         .map((change) => {
           quantity = quantity.plus(change.quantity);

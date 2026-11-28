@@ -60,5 +60,5 @@ it("keeps return summary and temporary work versions app-owned", () => {
   );
   expect(
     getAccountReturnWorkKey({ ...scope, userId: "user-1", id: "work-1" }),
-  ).toBe("account:returns-work:v6:local:book-1:user-1:work-1");
+  ).toBe("account:returns-work:v7:local:book-1:user-1:work-1");
 });
