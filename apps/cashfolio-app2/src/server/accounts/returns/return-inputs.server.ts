@@ -66,66 +66,75 @@ export function loadAccountReturnInputs(
         _sum: { value: true },
       });
       const transactions: HoldingTransaction[] = [];
-      let cursor: string | undefined;
-      if (asOfDate >= startDate)
-        while (true) {
-          checkResourceBudget();
-          const page = await db.transaction.findMany({
-            where: {
-              accountBookId,
-              ...(accountId ? { bookings: { some: { accountId } } } : {}),
-              AND: [
-                { bookings: { some: { date: { gte: startDate } } } },
-                {
-                  bookings: { some: { date: { lt: addUtcDays(asOfDate, 1) } } },
-                },
-              ],
-            },
-            orderBy: { id: "asc" },
-            take: 1000,
-            ...(cursor
-              ? {
-                  cursor: { id_accountBookId: { id: cursor, accountBookId } },
-                  skip: 1,
-                }
-              : {}),
-            select: {
-              id: true,
-              description: true,
-              bookings: {
-                orderBy: [{ date: "asc" }, { id: "asc" }],
-                select: {
-                  id: true,
-                  accountId: true,
-                  date: true,
-                  description: true,
-                  value: true,
-                  unit: true,
-                  currency: true,
-                  cryptocurrency: true,
-                  symbol: true,
-                  tradeCurrency: true,
-                  account: {
-                    select: { type: true, equityAccountSubtype: true },
+      checkResourceBudget();
+      // Resolve eligibility once within this snapshot. Repeating the peer/date
+      // semi-joins per page rescans a large book; Prisma compound cursors also
+      // remove SQL LIMIT and paginate those matching transactions in memory.
+      const matching =
+        asOfDate >= startDate
+          ? await db.transaction.findMany({
+              where: {
+                accountBookId,
+                ...(accountId ? { bookings: { some: { accountId } } } : {}),
+                AND: [
+                  { bookings: { some: { date: { gte: startDate } } } },
+                  {
+                    bookings: {
+                      some: { date: { lt: addUtcDays(asOfDate, 1) } },
+                    },
                   },
+                ],
+              },
+              orderBy: { id: "asc" },
+              select: { id: true },
+            })
+          : [];
+      for (let offset = 0; offset < matching.length; offset += 1000) {
+        checkResourceBudget();
+        const page = await db.transaction.findMany({
+          where: {
+            accountBookId,
+            id: {
+              in: matching.slice(offset, offset + 1000).map((tx) => tx.id),
+            },
+          },
+          orderBy: { id: "asc" },
+          take: 1000,
+          select: {
+            id: true,
+            description: true,
+            bookings: {
+              orderBy: [{ date: "asc" }, { id: "asc" }],
+              select: {
+                id: true,
+                accountId: true,
+                date: true,
+                description: true,
+                value: true,
+                unit: true,
+                currency: true,
+                cryptocurrency: true,
+                symbol: true,
+                tradeCurrency: true,
+                account: {
+                  select: { type: true, equityAccountSubtype: true },
                 },
               },
             },
+          },
+        });
+        for (const transaction of page)
+          transactions.push({
+            bookings: transaction.bookings.map(({ account, ...booking }) => ({
+              ...booking,
+              value: toMoney(booking.value),
+              transactionId: transaction.id,
+              transactionDescription: transaction.description,
+              accountType: account.type,
+              equityAccountSubtype: account.equityAccountSubtype,
+            })),
           });
-          for (const transaction of page)
-            transactions.push({
-              bookings: transaction.bookings.map(({ account, ...booking }) => ({
-                ...booking,
-                value: toMoney(booking.value),
-                transactionId: transaction.id,
-                transactionDescription: transaction.description,
-                accountType: account.type,
-                equityAccountSubtype: account.equityAccountSubtype,
-              })),
-            });
-          if (page.length < 1000) break;
-          cursor = page.at(-1)!.id;
-        }
+      }
       return {
         accounts,
         groups,

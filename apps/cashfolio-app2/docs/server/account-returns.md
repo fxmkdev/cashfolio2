@@ -77,13 +77,15 @@ logical artifacts. Larger artifacts bypass local retention and remain usable
 within their request. When a basis is unavailable, the next batch reloads its
 coherent inputs at the verified revision while retaining the existing plan and
 checkpoint. Fresh inputs pass directly to that batch, avoiding cache-size
-restart loops without Redis. Database reads use pages of 1,000 transactions
-within the existing 30-second read-only snapshot transaction; request deadlines
-remain unchanged. Account, position-change, and capital-date indexes avoid
-repeated full-array scans. Checkpoints remain bounded to 16 entries, and work
-indexes to 64. Redis artifacts last at most 24 hours. These keys participate in
-existing book/user deletion and restore cleanup. Each batch rechecks revision,
-reporting day, and cutoff before publishing.
+restart loops without Redis. Within the existing 30-second read-only snapshot
+transaction, the loader selects matching transaction IDs once, then reads their
+complete peers in batches of 1,000 IDs. This avoids repeating eligibility
+semi-joins and Prisma compound-cursor pagination in memory on every batch.
+Request deadlines remain unchanged. Account, position-change, and capital-date
+indexes avoid repeated full-array scans. Checkpoints remain bounded to 16
+entries, and work indexes to 64. Redis artifacts last at most 24 hours. These
+keys participate in existing book/user deletion and restore cleanup. Each batch
+rechecks revision, reporting day, and cutoff before publishing.
 
 The shared historical-series loader reads each raw Redis series/window plus its
 predecessor once per batch, resolves dates in memory, and shares FX dependencies
