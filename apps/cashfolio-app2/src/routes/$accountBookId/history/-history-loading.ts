@@ -155,6 +155,33 @@ function completeHistory(
   };
 }
 
+function publishRecentHistory(
+  batch: PeriodHistoryBatchResponse,
+  request: HistoryLoadRequest,
+  onProgress: ((snapshot: HistoryLoadSnapshot) => void) | undefined,
+) {
+  if (
+    !onProgress ||
+    !batch.nextBefore ||
+    batch.points.length < (request.mode === "month" ? 24 : 10)
+  )
+    return;
+  const metric = request.scopedMetric;
+  const scope = metric ? batch.scopeSelection[metric] : "total";
+  if (
+    metric &&
+    scope !== "total" &&
+    !batch.scopeOptions[metric].some((option) => option.value === scope)
+  )
+    return;
+  onProgress({
+    history: batch,
+    revision: batch.revision,
+    nextBefore: batch.nextBefore,
+    complete: false,
+  });
+}
+
 /** Publish a consistent recent window, then backfill without mixing revisions. */
 export async function loadCompleteHistory(
   request: HistoryLoadRequest,
@@ -176,25 +203,7 @@ export async function loadCompleteHistory(
       pageSize = result.pageSize;
       validateBatch(accumulated, result.batch, before);
       accumulated = mergeBatch(accumulated, result.batch);
-      const metric = currentRequest.scopedMetric;
-      const scope = metric ? accumulated.scopeSelection[metric] : "total";
-      const hasActiveScope =
-        !metric ||
-        scope === "total" ||
-        accumulated.scopeOptions[metric].some(
-          (option) => option.value === scope,
-        );
-      if (
-        accumulated.nextBefore &&
-        accumulated.points.length >= (request.mode === "month" ? 24 : 10) &&
-        hasActiveScope
-      )
-        onProgress?.({
-          history: accumulated,
-          revision: accumulated.revision,
-          nextBefore: accumulated.nextBefore,
-          complete: false,
-        });
+      publishRecentHistory(accumulated, currentRequest, onProgress);
     } while (accumulated.nextBefore);
     const history = completeHistory(accumulated);
     const metric = currentRequest.scopedMetric;

@@ -6,6 +6,7 @@ import { Temporal } from "@/shared/temporal";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import { HistoryChart } from "./-chart";
 import { useHistoryChartModel } from "./-use-chart-model";
+import type { HistoryMetric } from "./-page-types";
 
 const points: PeriodHistoryResponse["points"] = Array.from(
   { length: 36 },
@@ -58,13 +59,13 @@ const history: PeriodHistoryResponse = {
   },
 };
 
-function BackfillChart() {
+function BackfillChart({ metric = "income" }: { metric?: HistoryMetric }) {
   const [phase, setPhase] = useState(0);
   const [state, setState] = useState("");
   const model = useHistoryChartModel({
     accountBookId: "story",
     selectedMode: "month",
-    selectedMetric: "income",
+    selectedMetric: metric,
     history: {
       ...history,
       points: phase === 0 ? points.slice(-24) : points,
@@ -109,42 +110,52 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const PreservesViewportAndLegend: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const capture = canvas.getByRole("button", { name: "Read Chart State" });
-    const state = canvas.getByRole("textbox", { name: "Chart State" });
-    await waitFor(async () => {
-      await userEvent.click(capture);
-      expect(
-        JSON.parse((state as HTMLInputElement).value).rangeX,
-      ).toBeDefined();
-    });
+async function checkBackfillState(
+  canvasElement: HTMLElement,
+  toggleLegend: boolean,
+) {
+  const canvas = within(canvasElement);
+  const capture = canvas.getByRole("button", { name: "Read Chart State" });
+  const state = canvas.getByRole("textbox", { name: "Chart State" });
+  await waitFor(async () => {
+    await userEvent.click(capture);
+    expect(JSON.parse((state as HTMLInputElement).value).rangeX).toBeDefined();
+  });
+  if (toggleLegend)
     await userEvent.click(
       canvas.getByRole("switch", { name: /^Cumulative Income, Legend item/ }),
     );
-    await userEvent.click(capture);
-    const initial = (state as HTMLInputElement).value;
+  await userEvent.click(capture);
+  const initial = (state as HTMLInputElement).value;
+  if (toggleLegend)
     expect(
       JSON.parse(initial).legend.find(
         (item: { itemId: string }) => item.itemId === "cumulativeMetric",
       ).visible,
     ).toBe(true);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Prepend Older Points" }),
-    );
-    await userEvent.click(capture);
-    await expect(state).toHaveValue(initial);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Complete History" }),
-    );
-    await waitFor(() =>
-      expect(canvas.getByRole("button", { name: /^All$/ })).toHaveAttribute(
-        "aria-disabled",
-        "false",
-      ),
-    );
-    await userEvent.click(capture);
-    await expect(state).toHaveValue(initial);
-  },
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Prepend Older Points" }),
+  );
+  await userEvent.click(capture);
+  await expect(state).toHaveValue(initial);
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Complete History" }),
+  );
+  await waitFor(() =>
+    expect(canvas.getByRole("button", { name: /^All$/ })).toHaveAttribute(
+      "aria-disabled",
+      "false",
+    ),
+  );
+  await userEvent.click(capture);
+  await expect(state).toHaveValue(initial);
+}
+
+export const PreservesViewportAndLegend: Story = {
+  play: async ({ canvasElement }) => checkBackfillState(canvasElement, true),
+};
+
+export const PreservesBalanceViewport: Story = {
+  args: { metric: "netWorth" },
+  play: async ({ canvasElement }) => checkBackfillState(canvasElement, false),
 };
