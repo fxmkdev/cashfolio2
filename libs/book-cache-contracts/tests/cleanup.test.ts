@@ -22,6 +22,8 @@ const fixtureKeys = [
     `period:history:metrics:${version}:preview:book-1:revision:2026-01:total`,
     `account:gain-loss:${version}:preview:book-1:revision:2026-05-11:2026-05-10`,
     `account:gain-loss-basis:${version}:preview:book-1:revision:2026-05-10`,
+    `account:returns-work:${version}:preview:book-1:user:work`,
+    `account:returns:${version}:preview:book-1:revision:2026-05-11:2026-05-10:accountStructure:all`,
   ]),
 ];
 const otherBookKeys = fixtureKeys.map((key) =>

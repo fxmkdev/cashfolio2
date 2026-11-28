@@ -5,6 +5,7 @@ import {
   findVisibleDialog,
   assetClassCell,
   selectAssignmentAccount,
+  showAccountColumn,
 } from "./interaction-helpers";
 import { AccountsPageStoryHarness } from "./harness";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -75,6 +76,7 @@ export const BulkAssetClassSelection: Story = {
     await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
       "invalidations: 1",
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(
       canvasElement.querySelector(
         '[row-id="account-checking"] [col-id="assetClass"]',
@@ -108,6 +110,7 @@ export const BulkAssetClassFilteredSelection: Story = {
         "1 account selected",
       ),
     );
+    await showAccountColumn(canvasElement, "assetClass");
     await expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
       "Mixed",
     );
@@ -215,6 +218,7 @@ export const GroupAssetClassSummaries: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    await showAccountColumn(canvasElement, "assetClass");
     await waitFor(() =>
       expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
         "Mixed",

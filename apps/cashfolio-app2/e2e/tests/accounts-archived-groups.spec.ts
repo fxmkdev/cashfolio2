@@ -168,6 +168,8 @@ for (const tab of ["BALANCE", "EQUITY-INCOME", "EQUITY-EXPENSE"] as const) {
     ).toHaveCount(0);
     const leafActionRow = await revealRowActions(leaf);
     await expect(await getRowAction(leafActionRow, "Unarchive")).toBeDisabled();
+    // Revealing the leaf's actions can move its ancestors into sticky rows.
+    await expect(closedRow).toBeVisible();
     await clickRowAction(closedRow, "Edit");
     const dialog = page.getByRole("dialog").filter({
       has: page.getByRole("heading", {

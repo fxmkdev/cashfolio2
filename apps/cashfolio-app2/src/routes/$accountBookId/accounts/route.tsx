@@ -15,6 +15,7 @@ import {
 } from "@/shared/accounts/account-management-search";
 import { loadAccountsPageData } from "@/components/account-management/loading/loader";
 import { useAccountsPageController } from "@/components/account-management/controller";
+import { AccountReturnDrawer } from "@/components/account-returns/return-drawer";
 
 const AccountsPageView = lazy(async () => {
   const module = await import("@/components/account-management/view");
@@ -85,6 +86,21 @@ function AccountsPage() {
   return (
     <Suspense fallback={null}>
       <AccountsPageView {...viewProps} />
+      {viewProps.returnCalculation ? (
+        <AccountReturnDrawer
+          accountBookId={accountBookId}
+          accountState="all"
+          grouping={grouping ?? "accountStructure"}
+          {...viewProps.returnCalculation}
+          onOpenTransaction={(transactionId, date) =>
+            void navigate({
+              to: "/$accountBookId/transactions",
+              params: { accountBookId },
+              search: { transactionId, period: date.slice(0, 7) },
+            })
+          }
+        />
+      ) : null}
     </Suspense>
   );
 }

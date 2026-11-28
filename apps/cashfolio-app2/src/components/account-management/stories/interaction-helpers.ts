@@ -1,4 +1,25 @@
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { getGridApi } from "ag-grid-enterprise";
+
+/** Metadata may be virtualized until the widened Accounts grid is scrolled. */
+export async function showAccountColumn(
+  canvasElement: HTMLElement,
+  colId: string,
+) {
+  await waitFor(() =>
+    expect(
+      getGridApi(canvasElement.querySelector(".ag-root-wrapper")),
+    ).toBeDefined(),
+  );
+  getGridApi(
+    canvasElement.querySelector(".ag-root-wrapper"),
+  )!.ensureColumnVisible(colId);
+  await waitFor(() =>
+    expect(
+      canvasElement.querySelector(`[role="columnheader"][col-id="${colId}"]`),
+    ).toBeVisible(),
+  );
+}
 export async function findVisibleDialog(
   body: ReturnType<typeof within>,
   name: string,

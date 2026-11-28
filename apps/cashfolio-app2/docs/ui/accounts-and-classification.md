@@ -224,6 +224,44 @@ sign; debt amounts are positive magnitudes in those reports.
   cells must also be right-aligned (for example dotted loaders in
   `Balance (<referenceCurrency>)` cells).
 
+## Account Return Percentages
+
+Accounts shows one **Return (Annualized)** or **Return (Cumulative)** numeric
+column. A **Return Basis** selector beside **Group By** selects **Annualized**
+(the default) or **Cumulative**; ledger cards use the same selector under
+**Return Since Start**, identifying the selected basis. Controls wrap on narrow
+screens and are hidden in Organize mode or views without return columns. The
+per-book session preference remains shared between Accounts and ledgers.
+
+Return uses the money-weighted method, accounting for the amounts and dates
+invested or withdrawn. Tooltips explain the method without requiring acronym
+knowledge. The methodology explicitly excludes dividends, interest, and
+separately booked fees; Return covers price/FX performance and recorded G/L
+adjustments.
+
+Switching basis selects existing response fields without new requests, cache
+invalidation, or resetting progressive results. Refresh `account-return` even
+when both values are null. Annualized values require at least 365 inclusive
+effective investment days; shorter spans show an explanatory dash and retain
+cumulative figures. Never substitute a cumulative percentage under an annualized
+heading. Solver/input failures retain their explanations.
+
+Values use the active locale and two percentage decimal places; raw fractional
+values remain available for sorting. Individual eligibility matches G/L.
+Group/footer returns include idle cash and archived descendants and use combined
+capital movements, never sums or averages of percentages.
+
+Return cells open **Return Calculation** for the account, displayed group, or
+footer, with the shared grid button keyboard/mouse handling. Unavailable values
+show a dash and an accessible explanation, with diagnostics in the drawer.
+Ledger return cards load independently from G/L and use their own retry action.
+Calculation details distinguish reporting dates from the effective investment
+span and show explicitly labeled Cumulative and Annualized figures, including an
+explanatory dash when annualization is unavailable. **Valuations** shows Date,
+Purpose, and reference-currency Value; **Capital Movements** retains dates,
+amounts, descriptions, and transaction navigation. All calculation tables use
+`DataGrid`.
+
 ## Deletion Pattern
 
 - Add `deletable` and `deleteDisabledReason` fields to data returned from the

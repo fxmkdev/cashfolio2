@@ -1,3 +1,4 @@
+import { ReturnBasisSelect } from "@/components/account-returns/return-basis-select";
 import { reportingGroupingOptions } from "@/shared/reporting/reporting-grouping";
 import { getAccountManagementPath } from "@/shared/accounts/account-presentation";
 import {
@@ -23,6 +24,8 @@ import classes from "./header.module.css";
 type HeaderProps = Pick<
   AccountsPageViewProps,
   | "managementContext"
+  | "returnBasis"
+  | "onReturnBasisChange"
   | "grouping"
   | "onGroupingChange"
   | "accountBookId"
@@ -75,7 +78,13 @@ type CategoriesHeaderProps = Pick<
 >;
 type AccountsHeaderProps = Pick<
   HeaderLayoutProps,
-  "organizing" | "grouping" | "onGroupingChange" | "managementActions"
+  | "organizing"
+  | "grouping"
+  | "onGroupingChange"
+  | "managementActions"
+  | "returnBasis"
+  | "onReturnBasisChange"
+  | "tab"
 >;
 
 function ManagementTabs({
@@ -233,6 +242,9 @@ function CategoriesHeader({
   );
 }
 function AccountsHeader({
+  returnBasis = "annualized",
+  onReturnBasisChange,
+  tab,
   organizing,
   grouping,
   onGroupingChange,
@@ -247,10 +259,18 @@ function AccountsHeader({
             Organizing
           </Badge>
         ) : (
-          <AccountsGroupingControl
-            grouping={grouping}
-            onGroupingChange={onGroupingChange}
-          />
+          <Group gap="md">
+            <AccountsGroupingControl
+              grouping={grouping}
+              onGroupingChange={onGroupingChange}
+            />
+            {!tab.startsWith("EQUITY-") && onReturnBasisChange && (
+              <ReturnBasisSelect
+                value={returnBasis}
+                onChange={onReturnBasisChange}
+              />
+            )}
+          </Group>
         )
       }
       actions={managementActions}

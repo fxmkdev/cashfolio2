@@ -166,6 +166,74 @@ describe("E2E valuation provider interception", () => {
     ]);
   });
 
+  it("keeps return-history ranges separate from exchange-scoped Securities history", async () => {
+    enableMocks();
+    const prices = await (
+      await fetch(
+        "https://api.marketstack.com/v2/eod?symbols=AAPL,MSFT&date_from=2026-01-10&date_to=2026-01-11&limit=2&offset=1",
+      )
+    ).json();
+    expect(prices).toEqual({
+      pagination: { offset: 1, total: 4, count: 2, limit: 2 },
+      data: [
+        { symbol: "MSFT", date: "2026-01-10", close: 12 },
+        { symbol: "AAPL", date: "2026-01-11", close: 10 },
+      ],
+    });
+    const selected = await (
+      await fetch(
+        "https://api.marketstack.com/v2/eod?symbols=E2E.SEC&exchange=XSWX&date_from=2021-01-01&date_to=2026-01-01&limit=2&offset=1",
+      )
+    ).json();
+    expect(selected.pagination).toEqual({
+      offset: 1,
+      limit: 2,
+      count: 2,
+      total: 61,
+    });
+    expect(selected.data).toEqual([
+      {
+        date: "2021-02-01",
+        close: 101,
+        symbol: "E2E.SEC",
+        exchange: "XSWX",
+        price_currency: "CHF",
+        asset_type: "Stock",
+      },
+      {
+        date: "2021-03-01",
+        close: 102,
+        symbol: "E2E.SEC",
+        exchange: "XSWX",
+        price_currency: "CHF",
+        asset_type: "Stock",
+      },
+    ]);
+  });
+
+  it("preserves nullable and zero Securities quotes in the combined range handler", async () => {
+    enableMocks();
+    const selected = await (
+      await fetch(
+        "https://api.marketstack.com/v2/eod?symbols=E2E.PARTIAL&exchange=XNAS&date_from=2021-01-01&date_to=2026-01-01&limit=3&offset=58",
+      )
+    ).json();
+    expect(selected.pagination).toEqual({
+      offset: 58,
+      limit: 3,
+      count: 3,
+      total: 61,
+    });
+    expect(
+      selected.data.map((row: { close: number | null }) => row.close),
+    ).toEqual([null, 0, 160]);
+    expect(
+      selected.data.every(
+        (row: { price_currency: string }) => row.price_currency === "USD",
+      ),
+    ).toBe(true);
+  });
+
   it("mocks selected ticker metadata, missing ISINs and metadata outages", async () => {
     enableMocks();
     const ticker = await (

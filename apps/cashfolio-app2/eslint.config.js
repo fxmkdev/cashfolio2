@@ -90,6 +90,7 @@ export default tseslint.config(
             "account-books",
             "account-book-creation",
             "account-gain-loss",
+            "account-returns",
             "accounts",
             "admin-users",
             "app-version",

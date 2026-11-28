@@ -23,6 +23,7 @@ export function combineValuationRateSources(
   if (sources.includes("missing")) return "missing";
   if (sources.includes("provider")) return "provider";
   if (sources.includes("fallback")) return "fallback";
+  if (sources.includes("covered")) return "covered";
   if (sources.includes("timeSeries")) return "timeSeries";
   return "identity";
 }

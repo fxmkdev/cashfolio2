@@ -16,7 +16,7 @@ explicit internal entrypoints:
   without closing valuation, finalize, combined calculation, and open-lot
   inspection
 - `transactions.ts`: transaction decomposition, prefetch classification, unit
-  identity, multi-unit detection, and date-window membership
+  identity, multi-unit detection, date-window membership, and execution pricing
 - `types.ts`: named operation inputs, Decimal state/results, conversion/rate
   callbacks, and explain payload contracts
 - `lots.ts` and `quantity-policy.ts`: priced FIFO execution for the synthetic
