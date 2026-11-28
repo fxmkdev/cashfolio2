@@ -16,7 +16,7 @@ import {
   type ReturnRateInput,
 } from "./return-engine.server";
 
-export const RETURN_PLAN_VERSION = "plan-v4";
+export const RETURN_PLAN_VERSION = "plan-v5";
 
 export type ReturnScopePlan = {
   key: string;
@@ -177,10 +177,8 @@ export async function getReturnPlan(
     args.target ?? null,
   ]);
   const cached = await artifacts.read(id, isReturnPlan);
-  if (cached && (await readReturnBasis(args.accountBookId, cached.basisId)))
-    return { id, plan: cached };
   const basisId = returnArtifactId([
-    "basis-v1",
+    "basis-v2",
     revision,
     asOfDate,
     args.target?.kind === "account" ? args.target.id : null,
@@ -199,6 +197,9 @@ export async function getReturnPlan(
       Date.now() + 86400_000,
     );
   }
+  // A basis can exceed the bounded local cache. Rehydrate it without discarding
+  // the existing plan/checkpoint, and carry it through this request's batch.
+  if (cached && cached.basisId === basisId) return { id, plan: cached, inputs };
   const targets = returnTargets(inputs, args, args.target);
   const scopes = new Map<string, ReturnScopePlan>();
   const mapped = [];
@@ -245,5 +246,5 @@ export async function getReturnPlan(
     ),
   };
   await artifacts.save(id, plan, Date.now() + 86400_000);
-  return { id, plan };
+  return { id, plan, inputs };
 }

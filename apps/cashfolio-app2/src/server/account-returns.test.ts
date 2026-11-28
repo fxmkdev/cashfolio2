@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { emptyAccountReturnResult } from "../shared/accounts/account-returns";
+import { ResourceLimitError } from "./resource-error";
 import {
   unitRowId,
   assetClassRowId,
@@ -36,6 +37,7 @@ const scope = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(console, "error").mockImplementation(() => {});
   mocks.authorize.mockResolvedValue({ userId: "user" });
   mocks.work.mockImplementation(async (args) =>
     args.target
@@ -53,6 +55,70 @@ beforeEach(() => {
         },
   );
 });
+
+it.each(["summaries", "details"] as const)(
+  "logs the original %s failure inside the RPC handler",
+  async (kind) => {
+    const error = Object.assign(
+      new Error("Artifact publication failed", {
+        cause: new Error("Redis connection dropped"),
+      }),
+      { code: "E_ARTIFACT", chunkCount: 12, bytes: 10_453_755 },
+    );
+    mocks.work.mockRejectedValue(error);
+    const request =
+      kind === "summaries"
+        ? getAccountReturnSummaries({
+            data: { ...scope, continuation: "work" },
+          })
+        : getAccountReturnDetails({
+            data: { ...scope, target: { kind: "total" }, continuation: "work" },
+          });
+    await expect(request).rejects.toBe(error);
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      "Account return request failed.",
+      expect.objectContaining({
+        operation:
+          kind === "summaries"
+            ? "getAccountReturnSummaries"
+            : "getAccountReturnDetails",
+        accountBookId: "book",
+        continuationRequest: true,
+        targetKind: kind === "summaries" ? "summaries" : "total",
+        grouping: "accountStructure",
+        accountState: "all",
+        error: expect.objectContaining({
+          message: error.message,
+          stack: expect.any(String),
+          code: "E_ARTIFACT",
+          chunkCount: 12,
+          cause: expect.objectContaining({
+            message: "Redis connection dropped",
+          }),
+        }),
+      }),
+    );
+  },
+);
+it.each([
+  new Response(null, { status: 403 }),
+  { isRedirect: true, statusCode: 302 },
+  new ResourceLimitError("Cancelled", 503, 0, "cancelled"),
+])(
+  "does not error-log expected authorization, redirect or cancellation responses",
+  async (error) => {
+    mocks.authorize.mockRejectedValue(error);
+    await expect(getAccountReturnSummaries({ data: scope })).rejects.toBe(
+      error,
+    );
+    await expect(
+      getAccountReturnDetails({
+        data: { ...scope, target: { kind: "total" } },
+      }),
+    ).rejects.toBe(error);
+    expect(console.error).not.toHaveBeenCalled();
+  },
+);
 it("authorizes summaries and account/group/total calculations before reading financial data", async () => {
   await getAccountReturnSummaries({ data: scope });
   for (const target of [

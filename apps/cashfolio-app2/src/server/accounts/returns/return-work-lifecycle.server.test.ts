@@ -55,6 +55,7 @@ beforeEach(() => {
     pump: vi.fn(),
   });
   vi.spyOn(console, "info").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -65,7 +66,7 @@ async function interceptedStore() {
   vi.spyOn(workStores, "returnWorkStore").mockResolvedValue(store);
   return store;
 }
-it("resumes an existing v6 checkpoint with the original binding and context hash", async () => {
+it("resumes an existing v7 checkpoint with the original binding and context hash", async () => {
   const store = await interceptedStore();
   const binding = JSON.stringify([
     "user",
@@ -77,14 +78,14 @@ it("resumes an existing v6 checkpoint with the original binding and context hash
     false,
   ]);
   const context = returnArtifactId([
-    "money-weighted-v6",
-    "plan-v4",
+    "money-weighted-v7",
+    "plan-v5",
     binding,
     "revision",
     "2026-11-07",
     "2026-11-06",
   ]);
-  await store.save("existing-v6", {
+  await store.save("existing-v7", {
     binding,
     context,
     revision: "revision",
@@ -100,7 +101,7 @@ it("resumes an existing v6 checkpoint with the original binding and context hash
   });
   expect(
     await queryAccountReturnWork(
-      { ...args, continuation: "existing-v6" },
+      { ...args, continuation: "existing-v7" },
       "user",
     ),
   ).toMatchObject({ status: "complete", progress: { context, sequence: 5 } });
@@ -165,3 +166,22 @@ it.each(["success", "restart", "error"] as const)(
     expect(invalidate).toHaveBeenCalledTimes(outcome === "success" ? 0 : 1);
   },
 );
+
+it("preserves the calculation error when both invalidation and lease release fail", async () => {
+  const store = await interceptedStore();
+  const original = new Error("Historical provider failed");
+  const cleanup = new Error("Cleanup unavailable");
+  vi.spyOn(store, "lease").mockResolvedValue(
+    vi.fn().mockRejectedValue(cleanup),
+  );
+  vi.spyOn(store, "invalidate").mockRejectedValue(cleanup);
+  mocks.history.mockRejectedValue(original);
+  await expect(queryAccountReturnWork(args, "user")).rejects.toBe(original);
+  expect(console.error).toHaveBeenCalledTimes(2);
+  expect(console.error).toHaveBeenCalledWith(
+    expect.stringContaining("invalidate"),
+    expect.objectContaining({
+      error: expect.objectContaining({ message: "Cleanup unavailable" }),
+    }),
+  );
+});

@@ -41,7 +41,7 @@ export async function createReturnWorkContext(
   const publication = day(createValuationLookupContext().latestFetchableDate);
   const revision = await readRevision(args, asOfDate);
   const context = returnArtifactId([
-    "money-weighted-v6",
+    "money-weighted-v7",
     RETURN_PLAN_VERSION,
     binding,
     revision,
@@ -77,6 +77,7 @@ export async function openReturnWorkSession(
     id,
     identity,
     plan,
+    inputs: planned.inputs,
     store,
     initial: () => initialWorkState(identity, planned.id),
   };

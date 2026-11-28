@@ -227,7 +227,7 @@ it("deduplicates pre-start dependencies and keeps future dates and identity conv
 it("rebuilds legacy plans and results while reusing the unchanged transaction basis", async () => {
   const artifacts = await returnArtifacts(bookId);
   const basisId = returnArtifactId([
-    "basis-v1",
+    "basis-v2",
     "revision",
     inputs.asOfDate,
     "stock",

@@ -116,8 +116,9 @@ export async function createReturnEngine(
       return rate === null ? null : booking.value.mul(rate);
     },
   });
+  const accountsById = new Map(inputs.accounts.map((a) => [a.id, a]));
   const eligible = (id: string) => {
-    const a = inputs.accounts.find((a) => a.id === id)!;
+    const a = accountsById.get(id)!;
     return (
       !(
         a.unit === "CURRENCY" &&
