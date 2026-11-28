@@ -17,6 +17,7 @@ import {
   NavigatorModule,
   RangesModule,
   WaterfallSeriesModule,
+  ZoomModule,
 } from "ag-charts-enterprise";
 
 let chartModulesRegistered = false;
@@ -37,6 +38,7 @@ const CHART_MODULES = [
   WaterfallSeriesModule,
   NavigatorModule,
   RangesModule,
+  ZoomModule,
 ];
 
 export function ensureChartModulesRegistered() {

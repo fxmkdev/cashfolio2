@@ -29,6 +29,30 @@ import {
   isHistoryScopeSelection,
   type HistoryScopeOption,
 } from "../../../shared/reporting/history-scope";
+import { rethrowResourceError } from "../../resource-error";
+
+type MetricsInput = {
+  accountBookId: string;
+  period: string;
+  metricScopeFilter?: HistoryMetricScopeFilter;
+  valuationContext?: HistoryValuationContext;
+};
+
+type MetricsBatchInput = {
+  accountBookId: string;
+  periods: string[];
+  generation: string;
+  metricScopeFilter?: HistoryMetricScopeFilter;
+};
+type RedisClient = NonNullable<Awaited<ReturnType<typeof getRedisClient>>>;
+
+export type HistoryMetricsBatchStats = {
+  cacheReadMs: number;
+  calculationMs: number;
+  hits: number;
+  misses: number;
+  uncacheablePoints: number;
+};
 
 const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
@@ -114,12 +138,9 @@ function isHistoryMetricsCacheEntry(
   );
 }
 
-export async function getOrLoadPeriodHistoryPointMetrics(args: {
-  accountBookId: string;
-  period: string;
-  metricScopeFilter?: HistoryMetricScopeFilter;
-  valuationContext?: HistoryValuationContext;
-}): Promise<PeriodHistoryPointMetrics> {
+export async function getOrLoadPeriodHistoryPointMetrics(
+  args: MetricsInput,
+): Promise<PeriodHistoryPointMetrics> {
   const redis = await getRedisClient();
   if (!redis) {
     const result = await loadPeriodHistoryPointMetricsWithCacheability({
@@ -156,14 +177,133 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     scopeKey: getScopeKey(args.metricScopeFilter),
   });
 
+  return loadMetricsAtRevision(args, { redis, generation, cacheKey });
+}
+
+function readMetrics(read: () => Promise<string | null>) {
+  return readValidatedMoneyCache({
+    read,
+    maxBytes: PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES,
+    validate: isHistoryMetricsCacheEntry,
+    reportFailure: reportHistoryMetricsCacheReadFailure,
+  });
+}
+
+function createBatchStats(): HistoryMetricsBatchStats {
+  return {
+    cacheReadMs: 0,
+    calculationMs: 0,
+    hits: 0,
+    misses: 0,
+    uncacheablePoints: 0,
+  };
+}
+
+async function readBatchEntries(
+  args: MetricsBatchInput,
+  redis: RedisClient | null,
+) {
+  const cacheEnv = redis ? getPeriodCacheEnvOrThrowWhenRedisAvailable() : "";
+  const keys = await Promise.all(
+    args.periods.map(async (period) =>
+      getHistoryMetricsCacheEntryKey({
+        cacheEnv,
+        accountBookId: args.accountBookId,
+        generation: args.generation,
+        periodCacheKey: await resolvePeriodCachePeriodKey({
+          accountBookId: args.accountBookId,
+          periodValue: period,
+        }),
+        scopeKey: getScopeKey(args.metricScopeFilter),
+      }),
+    ),
+  );
+  let encoded: (string | null)[] = [];
+  if (redis && keys.length) {
+    try {
+      checkResourceBudget();
+      encoded = await redis.mGet(keys);
+      checkResourceBudget();
+    } catch (error) {
+      rethrowResourceError(error);
+      reportHistoryMetricsCacheReadFailure(error);
+    }
+  }
+  const cached = await Promise.all(
+    keys.map((_key, index) => readMetrics(async () => encoded[index] ?? null)),
+  );
+  return { keys, cached };
+}
+
+async function loadBatchMiss(
+  input: MetricsInput,
+  options: {
+    redis: RedisClient | null;
+    generation: string;
+    cacheKey: string;
+    stats: HistoryMetricsBatchStats;
+  },
+) {
+  const started = performance.now();
+  try {
+    if (options.redis)
+      return await loadMetricsAtRevision(input, {
+        ...options,
+        redis: options.redis,
+      });
+    const result = await loadPeriodHistoryPointMetricsWithCacheability(input);
+    if (!result.cacheableFromPermanentValuationCache)
+      options.stats.uncacheablePoints++;
+    return result.metrics;
+  } finally {
+    options.stats.calculationMs += performance.now() - started;
+  }
+}
+
+/** The revision must come from the authorized batch's database context. */
+export async function readPeriodHistoryMetricsBatch(args: MetricsBatchInput) {
+  const stats = createBatchStats();
+  const started = performance.now();
+  const redis = await getRedisClient();
+  const { keys, cached } = await readBatchEntries(args, redis);
+  stats.hits = cached.filter((value) => value !== undefined).length;
+  stats.misses = args.periods.length - stats.hits;
+  stats.cacheReadMs = performance.now() - started;
+  const indexByPeriod = new Map(
+    args.periods.map((period, index) => [period, index]),
+  );
+  return {
+    stats,
+    async load(input: MetricsInput): Promise<PeriodHistoryPointMetrics> {
+      const index = indexByPeriod.get(input.period);
+      if (index === undefined || input.accountBookId !== args.accountBookId)
+        throw new Error("History point is outside its cache batch.");
+      const hit = cached[index];
+      if (hit !== undefined) return hit;
+      return loadBatchMiss(input, {
+        redis,
+        generation: args.generation,
+        cacheKey: keys[index],
+        stats,
+      });
+    },
+  };
+}
+
+async function loadMetricsAtRevision(
+  args: MetricsInput,
+  options: {
+    redis: RedisClient;
+    generation: string;
+    cacheKey: string;
+    stats?: HistoryMetricsBatchStats;
+  },
+): Promise<PeriodHistoryPointMetrics> {
+  const { redis, generation, cacheKey, stats } = options;
+
   return runSharedLoad(cacheKey, async () => {
-    const cached = await readValidatedMoneyCache({
-      read: () => redis.get(cacheKey),
-      maxBytes: PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES,
-      validate: (value: unknown): value is PeriodHistoryPointMetrics =>
-        isHistoryMetricsCacheEntry(value),
-      reportFailure: reportHistoryMetricsCacheReadFailure,
-    });
+    // A concurrent request may have filled a miss after the batch MGET.
+    const cached = await readMetrics(() => redis.get(cacheKey));
     if (cached !== undefined) return cached;
 
     const result = await loadPeriodHistoryPointMetricsWithCacheability({
@@ -176,6 +316,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     });
 
     if (!result.cacheableFromPermanentValuationCache) {
+      if (stats) stats.uncacheablePoints++;
       return result.metrics;
     }
 

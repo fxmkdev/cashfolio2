@@ -49,6 +49,18 @@ vi.mock("./period-history-point.server", () => ({
 vi.mock("./period-history-opening-balance.server", () => ({
   loadHistoryOpeningBalancePoint,
 }));
+vi.mock("../cache/period-history-metrics-cache.server", () => ({
+  readPeriodHistoryMetricsBatch: vi.fn(async () => ({
+    load: vi.fn(),
+    stats: {
+      cacheReadMs: 0,
+      calculationMs: 0,
+      hits: 0,
+      misses: 0,
+      uncacheablePoints: 0,
+    },
+  })),
+}));
 const resetHistory = () => {
   vi.clearAllMocks();
   revisionQuery.mockResolvedValue({ periodCacheRevision: "revision" });

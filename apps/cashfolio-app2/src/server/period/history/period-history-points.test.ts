@@ -112,6 +112,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     expect(loadPeriodHistoryPoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
@@ -129,6 +130,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     expect(loadPeriodHistoryPoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
@@ -146,6 +148,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     const valuationContexts = loadPeriodHistoryPoint.mock.calls.map(
       ([args]) =>
@@ -310,6 +313,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
   });
 });

@@ -36,6 +36,20 @@ type FetchBatch = (
   request: HistoryBatchRequest,
 ) => Promise<PeriodHistoryBatchResponse>;
 
+export type HistoryDisplayData = Omit<
+  PeriodHistoryResponse,
+  "openingBalancePoint"
+> & {
+  openingBalancePoint: PeriodHistoryResponse["openingBalancePoint"] | null;
+};
+
+export type HistoryLoadSnapshot = {
+  history: HistoryDisplayData;
+  revision: string;
+  nextBefore?: string;
+  complete: boolean;
+};
+
 function mergeBatch(
   current: PeriodHistoryBatchResponse | undefined,
   batch: PeriodHistoryBatchResponse,
@@ -141,11 +155,39 @@ function completeHistory(
   };
 }
 
-/** Each invocation starts fresh and publishes only a complete, consistent history. */
+function publishRecentHistory(
+  batch: PeriodHistoryBatchResponse,
+  request: HistoryLoadRequest,
+  onProgress: ((snapshot: HistoryLoadSnapshot) => void) | undefined,
+) {
+  if (
+    !onProgress ||
+    !batch.nextBefore ||
+    batch.points.length < (request.mode === "month" ? 24 : 10)
+  )
+    return;
+  const metric = request.scopedMetric;
+  const scope = metric ? batch.scopeSelection[metric] : "total";
+  if (
+    metric &&
+    scope !== "total" &&
+    !batch.scopeOptions[metric].some((option) => option.value === scope)
+  )
+    return;
+  onProgress({
+    history: batch,
+    revision: batch.revision,
+    nextBefore: batch.nextBefore,
+    complete: false,
+  });
+}
+
+/** Publish a consistent recent window, then backfill without mixing revisions. */
 export async function loadCompleteHistory(
   request: HistoryLoadRequest,
   fetchBatch: FetchBatch,
   signal: AbortSignal,
+  onProgress?: (snapshot: HistoryLoadSnapshot) => void,
 ): Promise<PeriodHistoryResponse> {
   let pageSize = readHistoryPageSize(undefined, request.mode);
   let currentRequest = request;
@@ -161,14 +203,17 @@ export async function loadCompleteHistory(
       pageSize = result.pageSize;
       validateBatch(accumulated, result.batch, before);
       accumulated = mergeBatch(accumulated, result.batch);
+      publishRecentHistory(accumulated, currentRequest, onProgress);
     } while (accumulated.nextBefore);
     const history = completeHistory(accumulated);
     const metric = currentRequest.scopedMetric;
     if (
       !metric ||
       history.scopeSelection[metric] === accumulated.scopeSelection[metric]
-    )
+    ) {
+      onProgress?.({ history, revision: accumulated.revision, complete: true });
       return history;
+    }
     if (normalization > 0)
       throw new Error("History scopes changed. Please retry.");
     currentRequest = {

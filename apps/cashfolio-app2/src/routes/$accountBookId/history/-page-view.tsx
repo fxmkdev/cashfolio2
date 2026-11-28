@@ -7,7 +7,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useMemo, type ReactNode } from "react";
-import type { PeriodHistoryResponse } from "@/server/period-history";
+import type { HistoryDisplayData } from "./-history-loading";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import {
@@ -32,7 +32,9 @@ export type HistoryPageViewProps = {
   selectedMode: HistoryPeriodMode;
   selectedMetric: HistoryMetric;
   isViewPending: boolean;
-  history: PeriodHistoryResponse;
+  history: HistoryDisplayData;
+  isHistoryComplete?: boolean;
+  isBackfilling?: boolean;
   loadError?: ReactNode;
   onAccountPeriodDoubleClick: (
     target: HistoryAccountDrillTarget,
@@ -47,6 +49,8 @@ export function HistoryPageView({
   selectedMode,
   selectedMetric,
   isViewPending,
+  isHistoryComplete = true,
+  isBackfilling = false,
   history,
   loadError,
   onAccountPeriodDoubleClick,
@@ -94,6 +98,7 @@ export function HistoryPageView({
     selectedMode,
     selectedMetric,
     history,
+    isHistoryComplete,
     selectedMetricSeriesLabel,
     drillTarget,
     onAccountPeriodDoubleClick,
@@ -144,6 +149,12 @@ export function HistoryPageView({
             />
           </div>
         </Group>
+
+        {isBackfilling && (
+          <Text c="dimmed" size="sm" role="status">
+            Loading earlier history…
+          </Text>
+        )}
 
         {drillTarget &&
           !shouldShowCashFlowEmptyState &&

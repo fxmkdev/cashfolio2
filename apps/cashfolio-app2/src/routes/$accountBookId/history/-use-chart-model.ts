@@ -4,7 +4,7 @@ import type {
   AgZoomEvent,
 } from "ag-charts-community";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { PeriodHistoryResponse } from "@/server/period-history";
+import type { HistoryDisplayData } from "./-history-loading";
 import { getDashboardChartThemeColors } from "@/components/charts/dashboard-chart-theme";
 import {
   createDisplayNumberFormatter,
@@ -27,7 +27,8 @@ export type HistoryChartModelArgs = {
   accountBookId: string;
   selectedMode: HistoryPeriodMode;
   selectedMetric: HistoryMetric;
-  history: PeriodHistoryResponse;
+  history: HistoryDisplayData;
+  isHistoryComplete?: boolean;
   selectedMetricSeriesLabel?: string;
   drillTarget: HistoryAccountDrillTarget | null;
   onAccountPeriodDoubleClick: (
@@ -41,6 +42,7 @@ export function useHistoryChartModel({
   selectedMode,
   selectedMetric,
   history,
+  isHistoryComplete = true,
   selectedMetricSeriesLabel,
   drillTarget,
   onAccountPeriodDoubleClick,
@@ -168,6 +170,7 @@ export function useHistoryChartModel({
         onPeriodDoubleClick: drillTarget ? handlePeriodDoubleClick : undefined,
         onZoom: handleChartZoom,
         onSeriesVisibilityChange: handleSeriesVisibilityChange,
+        isHistoryComplete,
       }),
     [
       amountCompactFormatter,
@@ -184,6 +187,7 @@ export function useHistoryChartModel({
       selectedMetric,
       selectedMetricSeriesLabel,
       isDarkMode,
+      isHistoryComplete,
       theme,
     ],
   );
@@ -191,6 +195,7 @@ export function useHistoryChartModel({
   const chartRef = useDefaultHistoryChartRange({
     selectedMode,
     chartData: rebasedChartData,
+    isHistoryComplete,
   });
   useEffect(() => {
     setVisibleRangeX(null);

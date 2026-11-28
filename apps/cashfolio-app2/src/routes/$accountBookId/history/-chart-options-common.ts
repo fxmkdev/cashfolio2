@@ -1,6 +1,10 @@
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import type { HistoryChartOptionsArgs } from "./-chart-options-types";
-import { isAreaHistoryMetric, type HistoryChartDatum } from "./-chart-data";
+import {
+  getHistoryDefaultRange,
+  isAreaHistoryMetric,
+  type HistoryChartDatum,
+} from "./-chart-data";
 import { getHistoryMetricLabel } from "./-page-types";
 import { getAxisDomainForMetric } from "./-chart-options-axis-domain";
 import {
@@ -90,6 +94,18 @@ export function createHistoryCommonOptions(
 
   return {
     data: args.chartData,
+    initialState: { zoom: { rangeX: getHistoryDefaultRange(args) } },
+    zoom: {
+      enabled: true,
+      enableAxisDragging: false,
+      enableAxisScrolling: false,
+      enableDoubleClickToReset: false,
+      enablePanning: false,
+      enableScrolling: false,
+      enableSelecting: false,
+      enableTwoFingerZoom: false,
+      onDataChange: { strategy: "preserveDomain" },
+    },
     background: {
       visible: false,
     },
@@ -108,14 +124,17 @@ export function createHistoryCommonOptions(
       enabled: !isAreaHistoryMetric(selectedMetricKey),
     },
     navigator: {
-      enabled: true,
+      enabled: args.isHistoryComplete !== false,
       miniChart: {
         enabled: false,
       },
     },
     ranges: {
       enabled: true,
-      buttons: rangeButtons,
+      buttons:
+        args.isHistoryComplete === false
+          ? rangeButtons.map((button) => ({ ...button, enabled: false }))
+          : rangeButtons,
       ...rangeControlStyles,
     },
     listeners:
