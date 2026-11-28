@@ -10,8 +10,6 @@ import {
   largeReturnDescription,
   LARGE_RETURN_TRANSACTION_COUNT,
 } from "./return-large-book.test-support";
-import { loadAccountReturnInputs } from "./return-inputs.server";
-import { returnArtifacts } from "./return-artifacts.server";
 vi.mock("../../../redis.server", () => ({ getRedisClient: async () => null }));
 
 beforeAll(async () => {
@@ -20,6 +18,9 @@ beforeAll(async () => {
 });
 afterAll(disposeMutationDatabase);
 it("reads and chunks 100,000 database transactions within the existing snapshot transaction budget", async () => {
+  // The shared harness installs the disposable DATABASE_URL before runtime imports.
+  const { loadAccountReturnInputs } = await import("./return-inputs.server");
+  const { returnArtifacts } = await import("./return-artifacts.server");
   await db.account.createMany({
     data: [
       ...Array.from({ length: 8 }, (_, i) => ({
