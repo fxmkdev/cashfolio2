@@ -72,11 +72,16 @@ environment namespaces and preserves global valuation caches.
   inserts/updates/deletes. A settings trigger also advances the revision when
   reference currency or start date changes. The revision commits or rolls back
   with the write, including writes from seed scripts and administrative tools.
-- Every cache lookup reads the committed revision from PostgreSQL, including
-  warm hits. If that read fails, both Redis reads and writes are bypassed.
-  Inflight loads are scoped by revision, so a request after a commit cannot join
-  a pre-commit load. Every application process uses the same authoritative
-  database revision when choosing cache keys.
+- Standalone cache lookups read the committed revision from PostgreSQL,
+  including warm hits. History batches reuse the revision from their authorized
+  database context and read all point entries with one Redis `MGET`. Entries
+  retain the same per-payload size limit, validation, and Decimal decoding. Warm
+  batches do not query the revision per point; misses retain a revision check
+  before writes, and the handler checks the revision again before returning the
+  batch. If a standalone revision read fails, both Redis reads and writes are
+  bypassed. Inflight loads are scoped by revision, so a request after a commit
+  cannot join a pre-commit load. Every application process uses the same
+  authoritative database revision when choosing cache keys.
 - Mutation handlers retain best-effort Redis cleanup through the previous
   base-data index. The cleanup hint is updated before deletion. Redis outages,
   failed cleanup, and process crashes after commit cannot make old cache keys
@@ -94,6 +99,11 @@ environment namespaces and preserves global valuation caches.
   quotes are classified as fallback and do not qualify. Metrics that needed
   provider fetches, short-lived fallback entries, or missing valuation results
   are returned but not persisted as derived History metrics.
+- `HISTORY_PERF_LOG=1` enables structured History batch diagnostics: point
+  counts, cache hits/misses, uncacheable points, cache-read time, accumulated
+  point-load time, and batch elapsed time. Point-load time can exceed wall time
+  because up to four points run concurrently. Logs contain no book IDs or
+  financial values.
 - `updateAccountBookSettings` (`src/server/accounts/settings/handlers.ts`) also
   invalidates period caches when `referenceCurrency` or `startDate` changes.
 - When `startDate` changes via `updateAccountBookSettings`, all bookings in

@@ -6,6 +6,7 @@ import {
 } from "@/shared/reporting/period";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import type { HistoryMetric, HistoryPeriodMode } from "./-page-types";
+import { fromUtcPlainDate, toUtcPlainDate } from "@/shared/temporal-adapters";
 
 export type HistoryChartDatum = {
   periodValue: string;
@@ -38,6 +39,25 @@ export function isAreaHistoryMetric(
   metric: HistoryMetric,
 ): metric is AreaHistoryMetric {
   return (AREA_HISTORY_METRICS as readonly string[]).includes(metric);
+}
+
+export function getHistoryDefaultRange(args: {
+  chartData: HistoryChartDatum[];
+  selectedMetric: HistoryMetric;
+  periodMode: HistoryPeriodMode;
+}) {
+  const latest = args.chartData.at(-1);
+  if (!latest) return undefined;
+  const end = isAreaHistoryMetric(args.selectedMetric)
+    ? latest.periodMetricDate
+    : latest.periodStart;
+  const start = fromUtcPlainDate(
+    toUtcPlainDate(end).subtract({ years: args.periodMode === "year" ? 5 : 1 }),
+  );
+  return {
+    start: { __type: "date" as const, value: start.getTime() },
+    end: { __type: "date" as const, value: end.getTime() },
+  };
 }
 
 function toRangeBoundaryTimestamp(

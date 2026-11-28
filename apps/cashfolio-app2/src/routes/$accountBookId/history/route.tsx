@@ -18,7 +18,12 @@ import { useGlobalLoading } from "@/components/navigation/global-loading";
 import { useUserLocale } from "@/user-locale-context";
 import { useHistoryLoading } from "./-use-history-loading";
 import { HistoryLoadingView, HistoryLoadError } from "./-loading-view";
-import type { PeriodHistoryResponse } from "@/server/period-history";
+import type { HistoryDisplayData } from "./-history-loading";
+import {
+  createHistoryLoadRequest,
+  getHistoryDataSelection,
+  selectHistoryDisplayScopes,
+} from "./-data-selection";
 import { createDocumentTitleHead } from "@/shared/navigation/document-title";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import {
@@ -31,8 +36,6 @@ import {
 import {
   getHistoryMetric,
   getHistoryMode,
-  getHistoryScopeForMetric,
-  getHistoryScopedMetric,
   parseHistorySearch,
   type HistorySearch,
 } from "./-page-types";
@@ -45,31 +48,7 @@ const HistoryPageView = lazy(async () => {
 export const Route = createFileRoute("/$accountBookId/history")({
   validateSearch: parseHistorySearch,
   ssr: false,
-  loaderDeps: ({ search }) => ({
-    mode: getHistoryMode(search),
-    metric: getHistoryMetric(search),
-    cashFlowScope: getHistoryScopeForMetric({
-      search,
-      metric: "cashFlow",
-    }),
-    incomeScope: getHistoryScopeForMetric({
-      search,
-      metric: "income",
-    }),
-    expenseScope: getHistoryScopeForMetric({
-      search,
-      metric: "expenses",
-    }),
-    gainLossScope: getHistoryScopeForMetric({
-      search,
-      metric: "gainsLosses",
-    }),
-    netWorthScope: getHistoryScopeForMetric({
-      search,
-      metric: "netWorth",
-    }),
-    scopedMetric: getHistoryScopedMetric(getHistoryMetric(search)),
-  }),
+  loaderDeps: ({ search }) => getHistoryDataSelection(search),
   beforeLoad: ({ location, params }) => {
     const navigation = buildHistoryLegacySearchNavigation(location.search);
     if (navigation) {
@@ -90,45 +69,51 @@ function HistoryPage() {
   const search = Route.useSearch();
   const locale = useUserLocale();
   const { reloadKey } = Route.useLoaderData();
+  const { mode, scopedMetric, scope } = getHistoryDataSelection(search);
   const request = useMemo(
-    () => ({
-      accountBookId,
-      mode: getHistoryMode(search),
-      scopedMetric: getHistoryScopedMetric(getHistoryMetric(search)),
-      cashFlowScope: getHistoryScopeForMetric({ search, metric: "cashFlow" }),
-      incomeScope: getHistoryScopeForMetric({ search, metric: "income" }),
-      expenseScope: getHistoryScopeForMetric({ search, metric: "expenses" }),
-      gainLossScope: getHistoryScopeForMetric({
-        search,
-        metric: "gainsLosses",
+    () =>
+      createHistoryLoadRequest({
+        accountBookId,
+        mode,
+        scopedMetric,
+        scope,
+        locale,
       }),
-      netWorthScope: getHistoryScopeForMetric({ search, metric: "netWorth" }),
-      locale,
-    }),
-    [accountBookId, search, locale],
+    [accountBookId, mode, scopedMetric, scope, locale],
   );
   const loading = useHistoryLoading(request, reloadKey);
+  const displayHistory = useMemo(
+    () =>
+      loading.history &&
+      selectHistoryDisplayScopes(
+        loading.history,
+        search,
+        loading.complete === true,
+      ),
+    [loading.history, loading.complete, search],
+  );
   const navigate = useNavigate({ from: "/$accountBookId/history" });
   const normalization = useMemo(
     () =>
-      loading.history &&
+      displayHistory &&
       buildHistoryScopeNormalization({
         search,
-        scopeSelection: loading.history.scopeSelection,
+        scopeSelection: displayHistory.scopeSelection,
       }),
-    [loading.history, search],
+    [displayHistory, search],
   );
   useEffect(() => {
     if (normalization) void navigate(normalization);
   }, [navigate, normalization]);
   // Finish URL normalization before publishing an interactive chart. Otherwise
   // its pending replacement can interrupt the first chart interaction.
-  const readyHistory = normalization ? undefined : loading.history;
+  const readyHistory = normalization ? undefined : displayHistory;
   useGlobalLoading(!readyHistory && !loading.error);
   const [previous, setPrevious] = useState<{
     book: string;
     locale: string;
-    history: PeriodHistoryResponse;
+    history: HistoryDisplayData;
+    complete: boolean;
     search: HistorySearch;
   }>();
   useEffect(() => {
@@ -137,11 +122,12 @@ function HistoryPage() {
         book: accountBookId,
         locale,
         history: readyHistory,
+        complete: loading.complete === true,
         search,
       });
-  }, [readyHistory, accountBookId, locale, search]);
+  }, [readyHistory, loading.complete, accountBookId, locale, search]);
   const shown = readyHistory
-    ? { history: readyHistory, search }
+    ? { history: readyHistory, search, complete: loading.complete === true }
     : previous?.book === accountBookId && previous.locale === locale
       ? previous
       : undefined;
@@ -153,10 +139,12 @@ function HistoryPage() {
   return (
     <LoadedHistoryPage
       history={shown.history}
+      isHistoryComplete={shown.complete}
+      isBackfilling={!!readyHistory && !loading.complete && !loading.error}
       search={shown.search}
       isRefreshing={!readyHistory && !loading.error}
       feedback={
-        !readyHistory ? (
+        loading.error ? (
           <HistoryLoadError
             error={loading.error}
             onRetry={loading.retry}
@@ -176,11 +164,15 @@ function LoadedHistoryPage({
   history,
   search,
   isRefreshing,
+  isHistoryComplete,
+  isBackfilling,
   feedback,
 }: {
-  history: PeriodHistoryResponse;
+  history: HistoryDisplayData;
   search: HistorySearch;
   isRefreshing: boolean;
+  isHistoryComplete: boolean;
+  isBackfilling: boolean;
   feedback?: ReactNode;
 }) {
   const ledgerNavigationState = useLedgerNavigationState();
@@ -199,6 +191,8 @@ function LoadedHistoryPage({
         selectedMode={selectedMode}
         selectedMetric={selectedMetric}
         isViewPending={isViewPending || isRefreshing}
+        isHistoryComplete={isHistoryComplete}
+        isBackfilling={isBackfilling}
         loadError={feedback}
         history={history}
         onAccountPeriodDoubleClick={(target, periodValue) => {

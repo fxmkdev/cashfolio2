@@ -36,9 +36,11 @@ function clickRangeButtonByLabel(args: {
 export function useDefaultHistoryChartRange({
   selectedMode,
   chartData,
+  isHistoryComplete = true,
 }: {
   selectedMode: HistoryPeriodMode;
   chartData: HistoryChartDatum[];
+  isHistoryComplete?: boolean;
 }) {
   const chartRef = useRef<AgChartInstance<AgChartOptions> | null>(null);
   const appliedDefaultRangeModeRef = useRef<HistoryPeriodMode | null>(null);
@@ -47,7 +49,7 @@ export function useDefaultHistoryChartRange({
     [selectedMode],
   );
   useEffect(() => {
-    if (chartData.length === 0) {
+    if (chartData.length === 0 || !isHistoryComplete) {
       return;
     }
 
@@ -91,7 +93,7 @@ export function useDefaultHistoryChartRange({
     return () => {
       window.cancelAnimationFrame(animationFrameId);
     };
-  }, [defaultRangeButtonLabel, chartData, selectedMode]);
+  }, [defaultRangeButtonLabel, chartData, selectedMode, isHistoryComplete]);
 
   return chartRef;
 }

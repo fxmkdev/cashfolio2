@@ -6,6 +6,7 @@ import { HistoryPageView, type HistoryPageViewProps } from "./-page-view";
 import type { HistoryMetric } from "./-page-types";
 import type { PeriodHistoryResponse } from "@/server/period-history";
 import { netWorthScopeOptions } from "./-story-fixtures";
+import { HistoryLoadError } from "./-loading-view";
 
 const history: PeriodHistoryResponse = {
   referenceCurrency: "CHF",
@@ -88,6 +89,40 @@ export const SignedAccountHistory: Story = {
     await expect(
       canvas.queryByRole("list", { name: "Legend" }),
     ).not.toBeInTheDocument();
+  },
+};
+
+export const LoadingEarlierHistory: Story = {
+  args: {
+    history: { ...history, openingBalancePoint: null },
+    isHistoryComplete: false,
+    isBackfilling: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Loading earlier history…",
+    );
+    await expect(canvas.getByRole("textbox", { name: "View" })).toBeEnabled();
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: /^All$/ })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      ),
+    );
+  },
+};
+
+export const EarlierHistoryFailed: Story = {
+  args: {
+    history: { ...history, openingBalancePoint: null },
+    isHistoryComplete: false,
+    loadError: (
+      <HistoryLoadError
+        error={new Error("Earlier history could not be loaded.")}
+        onRetry={fn()}
+      />
+    ),
   },
 };
 

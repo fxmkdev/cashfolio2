@@ -49,6 +49,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     expect(loadHistoryOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-assets",
@@ -104,6 +105,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     expect(loadHistoryOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-gains",
@@ -150,6 +152,7 @@ describe("getPeriodHistory", () => {
         exchangeRateByKey: expect.any(Map),
       },
       locale: "en-US",
+      metricsLoader: expect.any(Function),
     });
     expect(loadHistoryOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-cash-flow",

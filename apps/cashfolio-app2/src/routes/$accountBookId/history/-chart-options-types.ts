@@ -13,6 +13,7 @@ export type HistoryChartOptionsArgs = {
   selectedMetric: HistoryMetric;
   selectedMetricSeriesLabel?: string;
   showCumulativeSeries?: boolean;
+  isHistoryComplete?: boolean;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
   pointDateFormatter?: Intl.DateTimeFormat;

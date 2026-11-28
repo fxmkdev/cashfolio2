@@ -5,7 +5,10 @@ import {
   type PeriodHistoryPointContext,
 } from "./period-history-point-context.server";
 import { getOrLoadPeriodHistoryPointMetrics } from "../cache/period-history-metrics-cache.server";
-import type { HistoryValuationContext } from "./period-history-point-metrics.server";
+import type {
+  HistoryValuationContext,
+  PeriodHistoryPointMetrics,
+} from "./period-history-point-metrics.server";
 import type {
   HistoryScopeSelection,
   HistoryScopedMetric,
@@ -25,6 +28,9 @@ export async function loadPeriodHistoryPoint(args: {
   };
   valuationContext?: HistoryValuationContext;
   locale?: UserLocale;
+  metricsLoader?: (
+    args: Parameters<typeof getOrLoadPeriodHistoryPointMetrics>[0],
+  ) => Promise<PeriodHistoryPointMetrics>;
 }) {
   const data = {
     accountBookId: args.accountBookId,
@@ -70,7 +76,9 @@ export async function loadPeriodHistoryPoint(args: {
     };
   }
 
-  const metrics = await getOrLoadPeriodHistoryPointMetrics({
+  const metrics = await (
+    args.metricsLoader ?? getOrLoadPeriodHistoryPointMetrics
+  )({
     accountBookId: data.accountBookId,
     period: data.period,
     metricScopeFilter: args.metricScopeFilter,

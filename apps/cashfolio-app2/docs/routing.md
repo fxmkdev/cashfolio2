@@ -49,8 +49,8 @@ failures; do not translate them into 404s.
 
 The app uses server-side rendering (SSR) without React Server Components (RSC).
 History opts out of SSR so its client-side loader can fetch bounded batches and
-handle resource limits before publishing the complete chart. Its route loader
-supplies a refresh key so router invalidation restarts loading. The surrounding
+publish a recent chart while earlier history loads. Its route loader supplies a
+refresh key so router invalidation restarts loading. The surrounding
 authenticated account-book shell still uses SSR. Dependencies such as Mantine
 and TanStack Router ship `"use client"` directives for RSC consumers. These
 markers have no role in this app's bundles, but Rolldown warns for each module
@@ -504,14 +504,26 @@ controllers.
   ms start delay. It completes only after every registration is released;
   completion waits one frame to allow a destination's client task to take over.
   Hook cleanup releases work on completion, failure, cancellation, or unmount.
-- History registers its full automatic load, including retries, URL scope
-  normalization, and refreshes after invalidation. It uses no local spinner,
-  batch counts, or waiting messages. Initial loading retains the heading; active
-  refreshes retain the previous chart with disabled selection controls. Failures
-  stop progress and re-enable selectors on the retained chart. **Retry History**
-  retries the failed selection; **Restore Previous View** appears when
-  selections differ and restores the last successful mode, metric, and scopes
-  through replacement navigation and a fresh load.
+- History registers initial and foreground loading, including retries, URL scope
+  normalization, and refreshes after invalidation. It publishes the recent chart
+  after 24 monthly or 10 yearly points (or the complete shorter book), covering
+  the default range and rolling-average lookback. It then loads earlier batches
+  automatically with a muted “Loading earlier history…” status. Selection
+  controls are usable once recent data is ready; range buttons stay disabled and
+  the navigator stays hidden until all history arrives. Chart state preserves
+  the visible dates and legend choices while older points are prepended.
+- Aggregate metric changes reuse the active dataset. Concrete scope,
+  granularity, locale, retry, and invalidation changes start fresh loads.
+  Inactive saved scopes are retained until the complete option set is available;
+  an undiscovered active scope delays publication. Batches never mix book
+  revisions. Opening balances appear only with the oldest batch.
+- Initial loading retains the heading; foreground refreshes retain the previous
+  chart with disabled selection controls. Background failures retain the recent
+  chart and keep historical navigation unavailable. **Retry History** starts the
+  failed selection fresh; **Restore Previous View** appears when selections
+  differ and restores the last successful mode, metric, and scopes through
+  replacement navigation and a fresh load. No local spinner or batch counts are
+  displayed.
 
 ### Loader Pattern
 

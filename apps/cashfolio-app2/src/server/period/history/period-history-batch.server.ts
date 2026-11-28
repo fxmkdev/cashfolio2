@@ -7,6 +7,7 @@ import type { HistoryInput } from "./period-history-input";
 import type { HistoryMetricScopeFilter } from "./period-history-scopes.server";
 import type { HistoryValuationContext } from "./period-history-point-metrics.server";
 import { mapWithConcurrencyLimit } from "../../concurrency.server";
+import { readPeriodHistoryMetricsBatch } from "../cache/period-history-metrics-cache.server";
 
 const HISTORY_POINT_LOAD_CONCURRENCY = 4;
 
@@ -51,6 +52,13 @@ export async function loadHistoryBatchPoints(args: {
   activeMetricScopeFilter?: HistoryMetricScopeFilter;
 }) {
   const { data, context, periodValues, activeMetricScopeFilter } = args;
+  const started = performance.now();
+  const metrics = await readPeriodHistoryMetricsBatch({
+    accountBookId: data.accountBookId,
+    periods: periodValues,
+    generation: context.revision,
+    metricScopeFilter: activeMetricScopeFilter,
+  });
   const openingBalancePoint = args.nextBefore
     ? null
     : await loadHistoryOpeningBalancePoint({
@@ -77,8 +85,17 @@ export async function loadHistoryBatchPoints(args: {
         metricScopeFilter: activeMetricScopeFilter,
         valuationContext,
         locale: data.locale,
+        metricsLoader: metrics.load,
       }),
   );
+
+  if (process.env.HISTORY_PERF_LOG === "1")
+    console.info("History batch performance", {
+      granularity: data.granularity,
+      points: periodValues.length,
+      batchMs: performance.now() - started,
+      ...metrics.stats,
+    });
 
   return { loadedPoints, openingBalancePoint };
 }

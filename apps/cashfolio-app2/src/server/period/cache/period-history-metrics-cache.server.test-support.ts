@@ -8,6 +8,9 @@ const redisState = vi.hoisted(() => ({
 
 const redisClient = vi.hoisted(() => ({
   get: vi.fn(async (key: string) => redisState.kv.get(key) ?? null),
+  mGet: vi.fn(async (keys: string[]) =>
+    keys.map((key) => redisState.kv.get(key) ?? null),
+  ),
   setEx: vi.fn(async (key: string, _ttl: number, value: string) => {
     redisState.kv.set(key, value);
   }),
@@ -76,6 +79,7 @@ export {
   cleanupHistoryMetricsCache,
   createMetrics,
   getOrLoadPeriodHistoryPointMetrics,
+  readPeriodHistoryMetricsBatch,
   getRedisClient,
   loadPeriodHistoryPointMetricsWithCacheability,
   prisma,
@@ -85,5 +89,5 @@ export {
 };
 
 // Register mocks before importing the tested modules and their dependencies.
-const { getOrLoadPeriodHistoryPointMetrics } =
+const { getOrLoadPeriodHistoryPointMetrics, readPeriodHistoryMetricsBatch } =
   await import("./period-history-metrics-cache.server");
